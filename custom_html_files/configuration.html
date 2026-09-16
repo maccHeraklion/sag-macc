@@ -1,0 +1,1106 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Παραμετροποίηση Εγκατάστασης</title>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+  /* ============================================================================
+   * [CLEANFIX 2026-07-02] UI aligned with the main AgroGenius dashboard
+   * (Dashboard.css / Modals.css design system). Same tokens, cards, pills,
+   * buttons and inputs — HTML structure & JS untouched.
+   * ==========================================================================*/
+  :root{
+    /* dashboard palette */
+    --bg:#f7f9fc; --ink:#1a2b3c; --sub:#6c7a89; --muted:#6c7a89;
+    --card:#fff; --line:#e8eef3;
+    --blue:#2f6feb; --accent:#2f6feb;
+    --green:#2ecc71; --ok:#16a34a; --yellow:#f1c40f; --orange:#f39c12; --warn:#f39c12;
+    --red:#e74c3c; --bad:#e74c3c;
+    --radius:16px;
+    --label-min-h:46px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    font-size:15px; line-height:1.4;
+  }
+  .wrap{max-width:1100px; margin:0 auto; padding:16px;}
+
+  /* ---- top bar ---- */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 14px;
+    box-shadow:0 2px 12px rgba(0,0,0,.04); margin-bottom:14px;
+  }
+  .title-main{
+    font-weight:900; margin:0;
+    font-size:clamp(1.2rem, 1.4vw + .8rem, 1.8rem);
+    display:flex; align-items:center; gap:10px;
+  }
+  .home-btn{
+    display:inline-flex; align-items:center; gap:8px;
+    background:#111827; color:#fff; border:none; border-radius:10px;
+    padding:9px 14px; font-weight:800; cursor:pointer; transition:background .12s ease;
+  }
+  .home-btn:hover{background:#0f172a}
+
+  /* ---- layout ---- */
+  .row{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; align-items:start;}
+  @media (max-width:920px){ .row{grid-template-columns:1fr} }
+
+  /* ---- cards ---- */
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px; box-shadow:0 2px 12px rgba(0,0,0,.05);
+    transition:transform .02s ease, box-shadow .12s ease;
+  }
+  .card:hover{ box-shadow:0 4px 14px rgba(0,0,0,.08); }
+  .title{font-weight:800; margin:0 0 12px; font-size:1.12rem;}
+  .muted{color:var(--muted); font-size:.9rem;}
+
+  /* ---- banners ---- */
+  .banner{border-radius:10px; padding:10px 14px; font-weight:600; margin-bottom:12px; font-size:.95rem;}
+  .banner.warn{background:#fde8e8; color:#b91c1c; border:1px solid #fca5a5}
+  .banner.info{background:#e8f0ff; color:#163970; border:1px solid #cbd9ff}
+
+  /* ---- fields ---- */
+  .field{margin:10px 0}
+  .field label{
+    display:flex; align-items:flex-end; min-height:var(--label-min-h);
+    margin-bottom:6px; line-height:1.15;
+    font-size:.86rem; font-weight:600; color:var(--sub);
+  }
+  .field .help{ margin-top:auto; color:var(--muted); font-size:.82rem; }
+
+  input[type=text],
+  input[type=number],
+  input[type=datetime-local],
+  select{
+    width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:10px;
+    background:#fff; color:var(--ink); font-size:14px; font-weight:600;
+    transition:border-color .12s ease, box-shadow .12s ease;
+  }
+  input[type=text]:focus,
+  input[type=number]:focus,
+  input[type=datetime-local]:focus,
+  select:focus{
+    outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(47,111,235,.15);
+  }
+  input[type=checkbox]{transform:scale(1.15); margin-right:0; accent-color:var(--blue);}
+
+  /* equal-height rows of fields */
+  .grid-3{
+    display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px; align-items:stretch;
+  }
+  @media (max-width:920px){ .grid-3{grid-template-columns:1fr} }
+  .grid-3 > .field{ display:flex; flex-direction:column; align-items:stretch; height:100%; }
+
+  .checkwrap{ display:flex; align-items:center; gap:8px; padding-top:8px; }
+
+  /* ---- map ---- */
+  .mapbox{height:360px; border-radius:12px; overflow:hidden; border:1px solid var(--line)}
+  .map-actions{display:flex; gap:8px; margin:10px 0 0; flex-wrap:wrap;}
+
+  /* ---- buttons (dashboard style) ---- */
+  .btn{
+    border:none; border-radius:10px; padding:10px 14px; font-weight:800; cursor:pointer;
+    font-size:.95rem; transition:transform .02s ease, box-shadow .12s ease, background .12s ease, opacity .12s ease;
+  }
+  .btn:hover{ box-shadow:0 3px 10px rgba(0,0,0,.10); }
+  .btn:active{ transform:translateY(1px); }
+  .btn.primary{background:var(--blue); color:#fff}
+  .btn.primary:hover{background:#2560d0}
+  .btn.ghost{background:#fff; border:1px solid var(--line); color:var(--ink)}
+  .btn.ghost:hover{background:#f3f6fb}
+  .btn.warn{background:var(--orange); color:#111}
+  .btn.save{background:var(--ok); color:#fff}
+  .btn.save:hover{background:#128a3e}
+  .btn.danger{background:var(--bad); color:#fff}
+  .btn:disabled{opacity:.6; cursor:not-allowed; box-shadow:none;}
+
+  .savebar{display:flex; justify-content:flex-end; gap:10px; margin-top:16px}
+  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+
+  /* ---- status pill (rounded like dashboard badges) ---- */
+  .pill{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:6px 12px; border-radius:999px; font-weight:800; white-space:nowrap;
+    background:#e8f0ff; color:#163970; border:1px solid #cbd9ff;
+  }
+  .dot{ display:inline-block; }
+
+  /* ===== Modal (dashboard modal look) ===== */
+  .modalBackdrop{
+    position:fixed; inset:0; background:rgba(0,0,0,.45);
+    display:none; align-items:center; justify-content:center; z-index:1000;
+  }
+  .modalCard{
+    width:min(560px, 92vw);
+    background:#fff; border:1px solid var(--line);
+    border-radius:16px; padding:20px;
+    box-shadow:0 12px 34px rgba(0,0,0,.22);
+  }
+  .modalTitle{font-size:1.1rem; font-weight:900; margin:0 0 8px}
+  .modalBody{color:var(--ink); line-height:1.5}
+  .modalActions{display:flex; gap:10px; justify-content:flex-end; margin-top:18px}
+
+  /* ===== Multi-crops rows ===== */
+  .cropRow{
+    border:1px solid var(--line); border-radius:12px; padding:14px; background:#fff;
+    box-shadow:0 1px 6px rgba(0,0,0,.03);
+  }
+  .cropRowTop{
+    display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:12px;
+  }
+  .cropRowTop .left{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-weight:700; }
+  .cropGrid{
+    display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px;
+  }
+  @media (max-width:920px){ .cropGrid{ grid-template-columns:1fr; } }
+
+  /* dynamic crop sub-sections built by the JS */
+  .cropExtra{ margin-top:12px; }
+  .cropPeriodsWrap{ margin-top:12px; border-top:1px dashed var(--line); padding-top:12px; }
+  .cropPeriods{ display:flex; flex-direction:column; gap:10px; }
+  .periodCard{
+    border:1px solid var(--line); border-radius:10px; padding:12px; background:var(--bg);
+  }
+  .crop_remove{ padding:8px 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Top bar with Αρχική -->
+  <div class="topbar">
+    <h1 class="title-main">Παραμετροποίηση Εγκατάστασης</h1>
+    <button id="homeBtn" type="button" class="home-btn">Αρχική</button>
+  </div>
+
+  <div id="banner" class="banner" style="display:none"></div>
+
+  <div class="row">
+    <div class="card">
+      <p class="title">Τοποθεσία</p>
+      <div id="map" class="mapbox"></div>
+      <div class="map-actions">
+        <button id="btnClearMarker" class="btn ghost">Καθαρισμός σημείου</button>
+      </div>
+      <div class="field">
+        <label>Συντεταγμένες</label>
+        <input id="coordinates" type="text" class="mono" placeholder="π.χ. 35.3469073, 24.7392214" />
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="title">Βασικά στοιχεία καλλιέργειας</p>
+
+      <!-- Multi-crops -->
+      <div class="field">
+        <label>Καλλιέργειες στο χωράφι</label>
+        <div id="cropsList" style="display:flex; flex-direction:column; gap:10px;"></div>
+        <div class="map-actions" style="margin-top:10px">
+          <button id="btnAddCrop" class="btn ghost" type="button">+ Προσθήκη καλλιέργειας</button>
+        </div>
+      </div>
+
+      <!-- Legacy primary crop selects (kept for backward compatibility, auto-synced with 1st crop) -->
+      <div class="field" style="display:none">
+        <label>Κατηγορία καλλιέργειας (legacy)</label>
+        <select id="cultivation_type_general"></select>
+      </div>
+      <div class="field" style="display:none">
+        <label>Τύπος / Ποικιλία</label>
+        <select id="cultivation_type"></select>
+      </div>
+
+
+      <div class="grid-3">
+        <div class="field">
+          <label>Τύπος εδάφους</label>
+          <select id="soil_type"></select>
+        </div>
+        <div class="field">
+          <label>Μέθοδος ποτίσματος</label>
+          <select id="irrigation_system"></select>
+        </div>
+        <div class="field">
+          <label>Ποιότητα νερού</label>
+          <select id="water_quality"></select>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="field">
+          <label>Έκταση (m²)</label>
+          <input id="area" type="number" step="0.01" placeholder="π.χ. 100" />
+        </div>
+        <div class="field">
+          <label>Παροχή νερού </label>
+          <input id="supply_flow_rate" type="number" step="0.01" placeholder="π.χ. 10" />
+        </div>
+        <div class="field">
+          <label>Αριθμός Δέντρων / Φυτών</label>
+          <input id="total_plants" type="number" step="1" placeholder="π.χ. 300" />
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="field">
+          <label>Βάθος Αισθητήρα (Βαθύ) (cm)</label>
+          <input id="sensor_deep_depth_cm" type="number" step="1" placeholder="π.χ. 30" />
+        </div>
+        <div class="field">
+          <label>Βάθος Αισθητήρα (Ρηχό) (cm)</label>
+          <input id="sensorShallow_depth_cm" type="number" step="1" placeholder="π.χ. 10" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+
+    <div class="card">
+      <p class="title">Κατάσταση</p>
+      <div class="field">
+        <label>Τελευταία ειδοποίηση</label>
+        <div id="lastValidation" class="pill"><span class="dot" style="width:10px;height:10px;border-radius:50%;background:#bbb"></span>—</div>
+        <div id="lastValidationText" class="help"></div>
+      </div>
+      <div class="savebar">
+        <button id="btnSave" class="btn save">Καταχώριση</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modals -->
+<div id="confirmModal" class="modalBackdrop">
+  <div class="modalCard">
+    <p class="modalTitle">Επιβεβαίωση αλλαγών</p>
+    <div class="modalBody">
+      Είστε σίγουρος για την αλλαγή των στοιχείων παραμετροποίησης;
+      Η λογική που δουλεύει ο αλγόριθμος ενδέχεται να τροποποιηθεί!
+    </div>
+    <div class="modalActions">
+      <button id="confirmCancel" class="btn ghost">Άκυρο</button>
+      <button id="confirmOk" class="btn warn">OK</button>
+    </div>
+  </div>
+</div>
+
+<div id="validationModal" class="modalBackdrop">
+  <div id="validationCard" class="modalCard" style="border-color:#ddd">
+    <p class="modalTitle">Αποτέλεσμα</p>
+    <div id="validationMsg" class="modalBody mono">—</div>
+    <div class="modalActions">
+      <button id="validationOk" class="btn primary">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- TagoIO SDK -->
+<script src="https://admin.tago.io/dist/custom-widget.min.js"></script>
+<script>
+/* =========================
+   "Αρχική" button wiring
+========================= */
+const BASE_ORIGIN = "https://smart-agrogenius.tago.run"; // change if your Run origin differs
+function getDashboardID(widget){
+  const arr = widget?.display?.parameters || [];
+  const p = arr.find(x => String(x?.key||'') === 'dashboard_id');
+  return p?.value ?? null;
+}
+function makeURL(id, tab){ const u=new URL(`${BASE_ORIGIN}/dashboards/info/${id}`); u.searchParams.set('tab', String(tab)); return u.toString(); }
+function safeNav(url){
+  try{ if (window.top && window.top!==window){ window.top.location.href=url; return; } }catch(e){}
+  window.open(url,'_blank','noopener');
+}
+function wireHomeButton(widget){
+  const id = getDashboardID(widget);
+  const btn = document.getElementById('homeBtn');
+  if (!btn) return;
+  if (!id){ btn.onclick = () => alert("Λείπει το parameter 'dashboard_id' στο widget."); return; }
+  const url = makeURL(id, 0);
+  btn.onclick = () => safeNav(url);
+}
+
+/* =========================
+   Options & labels
+========================= */
+const CULTIVATION_GENERAL = {
+  olive: 'Ελιά',
+  vineCrops: 'Αμπέλι',
+  cerealCrops: 'Σιτηρά',
+  vegetableCrops: 'Λαχανικά',
+  citrusFruits: 'Εσπεριδοειδή',
+  stoneFruits: 'Πυρηνόκαρπα',
+  pomeFruits: 'Μηλοειδή',
+  subTropicalFruits: 'Υποτροπικά',
+  nutCrops: 'Καρποφόρα με κέλυφος',
+  industrialCrops: 'Βιομηχανικές',
+  specialtyMediterranean: 'Μεσογειακά ειδικά',
+  ornamentalCrops: 'Ανθοκομικά/Καλλωπιστικά'
+};
+const CULTIVATION_TYPES = {
+  olive: { koroneiki: 'Κορωνέικη' },
+
+  vineCrops: {
+    wine_grapes: 'Οινοποιήσιμες',
+    table_grapes: 'Επιτραπέζιες',
+    raisin_grapes: 'Σταφίδες'
+  },
+
+  cerealCrops: {
+    wheat: 'Σιτάρι',
+    barley: 'Κριθάρι',
+    maize: 'Καλαμπόκι',
+    oats: 'Βρώμη'
+  },
+
+  vegetableCrops: {
+    onion: 'Κρεμμύδι',
+    watermelon: 'Καρπούζι',
+    potato: 'Πατάτα',
+    dry_beans: 'Ξηρά Φασόλια',
+    green_beans: 'Φασολάκια',
+    cabbage: 'Λάχανο',
+    lettuce: 'Μαρούλι',
+    carrot: 'Καρότο',
+    // Νέα προσθήκες
+    cucumber: 'Αγγούρι',
+    tomato: 'Ντομάτα',
+    eggplant: 'Μελιτζάνα',
+    pepper: 'Πιπεριά',
+    strawberry: 'Φράουλα',
+    garlic: 'Σκόρδο',
+    zucchini: 'Κολοκύθι',
+    melon: 'Πεπόνι',
+    broccoli: 'Μπρόκολο'
+  },
+
+  citrusFruits: { 
+    orange: 'Πορτοκάλι', 
+    lemon: 'Λεμόνι', 
+    mandarin: 'Μανταρίνι' 
+  },
+
+  stoneFruits: { 
+    peach: 'Ροδακινιά', 
+    nectarine: 'Νεκταρινιά', 
+    apricot: 'Βερικοκιά', 
+    plum: 'Δαμασκηνιά', 
+    cherry: 'Κερασιά' 
+  },
+
+  pomeFruits: { 
+    apple: 'Μηλιά' 
+  },
+
+  subTropicalFruits: { 
+    kiwi: 'Ακτινίδιο', 
+    pomegranate: 'Ρόδι', 
+    fig: 'Συκιά' 
+  },
+
+  nutCrops: { 
+    almond: 'Αμυγδαλιά', 
+    pistachio: 'Φιστικιά', 
+    walnut: 'Καρυδιά', 
+    chestnut: 'Καστανιά' 
+  },
+
+  industrialCrops: { 
+    cotton: 'Βαμβάκι', 
+    tobacco: 'Καπνός', 
+    sunflower: 'Ηλίανθος', 
+    sugar_beet: 'Ζαχαρότευτλο' 
+  },
+
+  specialtyMediterranean: { 
+    saffron: 'Κρόκος', 
+    mastic_tree: 'Μαστιχόδενδρο', 
+    oregano: 'Ρίγανη', 
+    thyme: 'Θυμάρι', 
+    rosemary: 'Δενδρολίβανο', 
+    sage: 'Φασκόμηλο', 
+    mint: 'Μέντα', 
+    bay_laurel: 'Δάφνη', 
+    currants: 'Φραγκοστάφυλα', 
+    carob: 'Χαρουπιά', 
+    artichoke: 'Αγκινάρα' 
+  },
+
+  ornamentalCrops: {
+    floriculture_generic: 'Ανθοκομικά (γενικό)'
+  }
+};
+
+const SOIL_TYPES = {
+  sandy:'Αμμώδης Πηλός',
+  loamy:'Πηλώδες',
+  clay_loamy:'Αργιλώδες Πηλώδες',
+  calcareous_clay:'Ασβεστούχο Άργιλο'
+};
+
+const IRRIGATION_SYSTEMS = {
+  dripIrrigation:'Στάγδην',
+  microSprayers:'Μικροεκτοξευτήρες',
+  centerPivot:'Κεντρικός Άξονας',
+  stationarySprinklers:'Σταθεροί Εκτοξευτήρες',
+  floodIrrigation:'Κατάκλυση/Αυλάκια'
+};
+const WATER_QUALITY = { excellent:'Εξαιρετική', good:'Καλή', marginal:'Οριακή', poor:'Κακή' };
+
+/* =========================
+   STATE
+========================= */
+const state = {
+  map: null, marker: null, lastDataMap: {}, configWarnShown: false,
+  baseLayers: {}, overlayLayers: {},
+  waitingValidationSince: null
+};
+
+/* =========================
+   HELPERS
+========================= */
+function $(id){ return document.getElementById(id); }
+function fillSelect(el, options){
+  el.innerHTML = '';
+  Object.entries(options).forEach(([val, label])=>{
+    const op = document.createElement('option');
+    op.value = val; op.textContent = label;
+    el.appendChild(op);
+  });
+}
+function showBanner(msg, kind='warn'){
+  const el = $('banner'); el.style.display='block';
+  el.className = 'banner ' + (kind==='info'?'info':'warn');
+  el.textContent = msg;
+}
+function hideBanner(){ $('banner').style.display='none'; }
+function setSummary(){} /* no-op placeholder */
+function toPeriodString(startEl, endEl){
+  const s = $(startEl).value, e = $(endEl).value;
+  if (!s || !e) return '';
+  return `Start: ${new Date(s).toISOString()} End: ${new Date(e).toISOString()}`;
+}
+function parseCoordinates(str){
+  if (!str) return null;
+  const m = String(str).split(',').map(s=>+s.trim());
+  if (m.length===2 && isFinite(m[0]) && isFinite(m[1])) return {lat:m[0], lng:m[1]};
+  return null;
+}
+
+/* stored coords helper */
+function resolveStoredCoordinates(){
+  const loc = state.lastDataMap.location?.location?.coordinates;
+  if (Array.isArray(loc) && loc.length===2 && isFinite(loc[0]) && isFinite(loc[1])) {
+    const [lng, lat] = loc;
+    return { lat:+lat, lng:+lng };
+  }
+  const confStr = state.lastDataMap['coordinates']?.value || '';
+  const pc = parseCoordinates(confStr);
+  if (pc) return pc;
+  return null;
+}
+
+/* ====== MAP init with satellite + labels ====== */
+function initMap(){
+  state.map = L.map('map', { zoomControl:true, attributionControl:true }).setView([38.0, 23.7], 6);
+
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  });
+
+  const esri = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19,
+      attribution: 'Tiles &copy; Esri &mdash; Sources: Esri, Maxar, Earthstar Geographics, USDA, USGS, IGN, and the GIS User Community' }
+  );
+
+  const labels = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom: 19, attribution: 'Labels &copy; Esri' }
+  );
+
+  state.baseLayers = { 'Οδικός': osm, 'Δορυφορικός': esri };
+  state.overlayLayers = { 'Ετικέτες': labels };
+
+  esri.addTo(state.map); labels.addTo(state.map);
+  L.control.layers(state.baseLayers, state.overlayLayers, { collapsed: true }).addTo(state.map);
+
+  state.map.on('click', (e)=>{ placeMarker(e.latlng.lat, e.latlng.lng); });
+
+  $('btnClearMarker').onclick = ()=>{
+    if (state.marker) { state.map.removeLayer(state.marker); state.marker=null; }
+    $('coordinates').value = '';
+    setSummary();
+  };
+
+  $('coordinates').addEventListener('change', ()=>{
+    const c = parseCoordinates($('coordinates').value.trim());
+    if (c){
+      state.map.setView([c.lat, c.lng], Math.max(12, state.map.getZoom()));
+      placeMarker(c.lat, c.lng);
+    } else {
+      showBanner('Μη έγκυρες συντεταγμένες. Χρησιμοποίησε "lat, lng".', 'warn');
+    }
+  });
+
+  const pc = resolveStoredCoordinates();
+  if (pc){ state.map.setView([pc.lat, pc.lng], 12); placeMarker(pc.lat, pc.lng); }
+}
+function placeMarker(lat, lng){
+  if (state.marker) state.map.removeLayer(state.marker);
+  state.marker = L.marker([lat,lng]).addTo(state.map);
+  $('coordinates').value = `${lat.toFixed(7)}, ${lng.toFixed(7)}`;
+  setSummary();
+}
+
+/* =========================
+   MULTI-CROPS UI (per-crop periods)
+========================= */
+function slug(s){ return String(s||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,''); }
+function buildDefaultCropID(gen, type, idx){
+  const g = slug(gen), t = slug(type);
+  const n = (idx||1);
+  return `${g||'crop'}:${t||'type'}:${n}`;
+}
+function isVegFamily(gen){
+  return gen === 'vegetableCrops' || gen === 'vineCrops' || gen === 'vegetable';
+}
+
+const NO_FLOWERING_TYPES = new Set(['lettuce','garlic','onion','carrot']);
+
+function getPeriodSchema(gen, type){
+  if (isVegFamily(gen)){
+    const periods = [
+      { key:'transplantation', label:'Μεταφύτευση' },
+      { key:'vegetative_growth', label:'Βλαστική Ανάπτυξη' },
+      { key:'flowering', label:'Άνθιση' },
+      { key:'harvest', label:'Συγκομιδή' },
+    ];
+    if (NO_FLOWERING_TYPES.has(type)){
+      return periods.filter(p => p.key !== 'flowering');
+    }
+    return periods;
+  }
+  if (gen === 'olive'){
+    return [
+      { key:'dormant', label:'Λήθαργος' },
+      { key:'flowering', label:'Άνθιση' },
+      { key:'fruit_set', label:'Καρπόδεση' },
+      { key:'ripening', label:'Ωρίμανση' },
+    ];
+  }
+  return [];
+}
+
+function makeCropRow(crop, idx){
+  const row = document.createElement('div');
+  row.className = 'cropRow';
+  row.dataset.cropId = crop.id || '';
+  row.dataset.idx = String(idx||1);
+
+  row.innerHTML = `
+    <div class="cropRowTop">
+      <div class="left"><div class="muted">Καλλιέργεια</div></div>
+      <button type="button" class="btn danger crop_remove">Αφαίρεση</button>
+    </div>
+
+    <div class="cropGrid">
+      <div class="field" style="margin:0">
+        <label>Κατηγορία καλλιέργειας</label>
+        <select class="crop_gen"></select>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Είδος Καλλιέργειας</label>
+        <select class="crop_type"></select>
+      </div>
+    </div>
+
+    <div class="cropPeriodsWrap" style="margin-top:14px; display:none">
+      <div class="muted" style="margin:0 0 8px">Στάδια καλλιέργειας</div>
+      <div class="cropPeriods" style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px;"></div>
+      <div class="muted" style="margin-top:8px; font-size:.92rem">
+        Συμπλήρωσε μόνο αν θέλεις να ορίσεις συγκεκριμένες περιόδους για αυτή την καλλιέργεια.
+      </div>
+    </div>
+
+    <div class="cropExtra" style="margin-top:12px; display:none">
+      <div class="field" style="margin:0">
+        <label>Έτος φύτευσης</label>
+        <input class="crop_plantation_year" type="number" min="1900" max="2100" placeholder="π.χ. 2015" />
+      </div>
+    </div>
+  `;
+
+  const genSel = row.querySelector('.crop_gen');
+  const typeSel = row.querySelector('.crop_type');
+  const periodsWrap = row.querySelector('.cropPeriodsWrap');
+  const periodsGrid = row.querySelector('.cropPeriods');
+  const extraWrap = row.querySelector('.cropExtra');
+  const plantationYearInput = row.querySelector('.crop_plantation_year');
+
+  fillSelect(genSel, CULTIVATION_GENERAL);
+  genSel.value = crop.cultivation_type_general || Object.keys(CULTIVATION_GENERAL)[0];
+
+  function ensureInternalId(){
+    if (!row.dataset.cropId){
+      const n = Number(row.dataset.idx || '1');
+      row.dataset.cropId = buildDefaultCropID(genSel.value, typeSel.value, n);
+    }
+  }
+
+  function refreshTypes(){
+    const gen = genSel.value;
+    fillSelect(typeSel, CULTIVATION_TYPES[gen] || {});
+    if (crop.cultivation_type && (CULTIVATION_TYPES[gen]||{})[crop.cultivation_type]) {
+      typeSel.value = crop.cultivation_type;
+    } else {
+      typeSel.value = typeSel.options[0]?.value || '';
+    }
+  }
+
+  function renderPeriods(){
+    const gen = genSel.value;
+    const schema = getPeriodSchema(gen, typeSel.value);
+    periodsGrid.innerHTML = '';
+    if (!schema.length){
+      periodsWrap.style.display = 'none';
+      extraWrap.style.display = 'none';
+      return;
+    }
+    periodsWrap.style.display = 'block';
+
+    if (gen === 'olive'){
+      extraWrap.style.display = 'block';
+      plantationYearInput.value = crop.plantation_year ?? '';
+    } else {
+      extraWrap.style.display = 'none';
+      plantationYearInput.value = '';
+    }
+
+    schema.forEach((st)=>{
+      const startVal = crop.periods?.[st.key]?.start || '';
+      const endVal   = crop.periods?.[st.key]?.end || '';
+      const card = document.createElement('div');
+      card.className = 'periodCard';
+      card.innerHTML = `
+        <div class="field" style="margin:0">
+          <label>${st.label}: Έναρξη</label>
+          <input type="date" class="p_start" data-key="${st.key}" value="${startVal}"/>
+        </div>
+        <div class="field" style="margin:0; margin-top:8px">
+          <label>${st.label}: Λήξη</label>
+          <input type="date" class="p_end" data-key="${st.key}" value="${endVal}"/>
+        </div>
+      `;
+      periodsGrid.appendChild(card);
+    });
+
+    periodsGrid.querySelectorAll('.p_start').forEach(inp=>{
+      inp.addEventListener('change', ()=>{
+        const k = inp.getAttribute('data-key');
+        crop.periods = crop.periods || {};
+        crop.periods[k] = crop.periods[k] || { start:'', end:'' };
+        crop.periods[k].start = inp.value || '';
+      });
+    });
+    periodsGrid.querySelectorAll('.p_end').forEach(inp=>{
+      inp.addEventListener('change', ()=>{
+        const k = inp.getAttribute('data-key');
+        crop.periods = crop.periods || {};
+        crop.periods[k] = crop.periods[k] || { start:'', end:'' };
+        crop.periods[k].end = inp.value || '';
+      });
+    });
+  }
+
+  plantationYearInput.addEventListener('input', ()=>{
+    const v = plantationYearInput.value ? Number(plantationYearInput.value) : null;
+    crop.plantation_year = Number.isFinite(v) ? v : null;
+  });
+
+  genSel.addEventListener('change', ()=>{
+    crop.cultivation_type_general = genSel.value;
+    crop.cultivation_type = '';
+    crop.periods = {};
+    crop.plantation_year = null;
+    row.dataset.cropId = '';
+    refreshTypes();
+    renderPeriods();
+    syncLegacyFromFirstCrop();
+  });
+
+  typeSel.addEventListener('change', ()=>{
+    crop.cultivation_type = typeSel.value;
+
+    const n = Number(row.dataset.idx || '1');
+    row.dataset.cropId = buildDefaultCropID(genSel.value, typeSel.value, n); // <-- force recompute
+    crop.id = row.dataset.cropId; // optional αλλά χρήσιμο να μένει sync
+
+    renderPeriods();
+    syncLegacyFromFirstCrop();
+  });
+
+  refreshTypes();
+  renderPeriods();
+  ensureInternalId();
+
+  row.querySelector('.crop_remove').onclick = ()=>{
+    row.remove();
+    [...$('cropsList').children].forEach((r,i)=> r.dataset.idx = String(i+1));
+    if ($('cropsList').children.length === 0){
+      addCropRow({ cultivation_type_general:'olive', cultivation_type:'koroneiki', periods:{} });
+    }
+    syncLegacyFromFirstCrop();
+  };
+
+  return row;
+}
+
+function addCropRow(crop){
+  const idx = $('cropsList').children.length + 1;
+  const row = makeCropRow(crop, idx);
+  $('cropsList').appendChild(row);
+  syncLegacyFromFirstCrop();
+}
+
+function readCropsFromUI(){
+  const rows = [...document.querySelectorAll('#cropsList .cropRow')];
+  return rows.map((row, idx)=>{
+    const gen = row.querySelector('.crop_gen')?.value || '';
+    const type = row.querySelector('.crop_type')?.value || '';
+    const id = buildDefaultCropID(gen, type || `type${idx+1}`, idx+1);
+    row.dataset.cropId = id;
+
+    const periods = {};
+    row.querySelectorAll('.p_start').forEach(inp=>{
+      const k = inp.getAttribute('data-key');
+      periods[k] = periods[k] || { start:'', end:'' };
+      periods[k].start = inp.value || '';
+    });
+    row.querySelectorAll('.p_end').forEach(inp=>{
+      const k = inp.getAttribute('data-key');
+      periods[k] = periods[k] || { start:'', end:'' };
+      periods[k].end = inp.value || '';
+    });
+    Object.keys(periods).forEach(k=>{
+      const p = periods[k];
+      if (!p.start && !p.end) delete periods[k];
+    });
+
+    const plantation_year_el = row.querySelector('.crop_plantation_year');
+    const plantation_year = plantation_year_el && plantation_year_el.value ? Number(plantation_year_el.value) : null;
+
+    const out = { id, cultivation_type_general: gen, cultivation_type: type };
+    if (Object.keys(periods).length) out.periods = periods;
+    if (gen === 'olive' && plantation_year) out.plantation_year = plantation_year;
+    return out;
+  });
+}
+
+function syncLegacyFromFirstCrop(){
+  const crops = readCropsFromUI();
+  console.log('CROPS TO SAVE:', crops);
+  const first = crops[0] || {};
+  if (first.cultivation_type_general) $('cultivation_type_general').value = first.cultivation_type_general;
+  refreshTypeOptions();
+  if (first.cultivation_type) $('cultivation_type').value = first.cultivation_type;
+}
+
+$('btnAddCrop').onclick = ()=> addCropRow({ cultivation_type_general:$('cultivation_type_general').value || 'olive', cultivation_type:'', periods:{} });
+
+setTimeout(()=>{
+  if ($('cropsList').children.length===0){
+    addCropRow({ cultivation_type_general:'olive', cultivation_type:'koroneiki', periods:{} });
+  }
+}, 0);
+
+/* =========================
+   UI SETUP
+========================= */
+fillSelect($('cultivation_type_general'), CULTIVATION_GENERAL);
+fillSelect($('soil_type'), SOIL_TYPES);
+fillSelect($('irrigation_system'), IRRIGATION_SYSTEMS);
+fillSelect($('water_quality'), WATER_QUALITY);
+
+function refreshTypeOptions(){
+  const gen = $('cultivation_type_general').value;
+  const opts = CULTIVATION_TYPES[gen] || {};
+  fillSelect($('cultivation_type'), opts);
+}
+$('cultivation_type_general').onchange = refreshTypeOptions;
+$('cultivation_type').onchange = setSummary;
+$('coordinates').oninput = setSummary;
+
+/* =========================
+   DATA MARSHALLING
+========================= */
+function buildPayload(){
+  const coordsStr = $('coordinates').value.trim();
+  const coords = parseCoordinates(coordsStr);
+
+  const nowISO = new Date().toISOString();
+
+  // Multi-crops configuration object stored as a single variable
+  const crops = readCropsFromUI();
+  console.log('CROPS TO SAVE:', crops);
+
+  const configurationObj = {
+    version: 3,
+    crops,
+    soil_type: $('soil_type').value || null,
+    irrigation_system: $('irrigation_system').value || null,
+    water_quality: $('water_quality').value || null,
+    area: numOrNull($('area').value),
+    supply_flow_rate: numOrNull($('supply_flow_rate').value),
+    total_plants: intOrNull($('total_plants').value),
+    sensor_deep_depth_cm: intOrNull($('sensor_deep_depth_cm').value),
+    sensorShallow_depth_cm: intOrNull($('sensorShallow_depth_cm').value),
+  };
+
+  const vars = [
+    { variable:'configuration', value: JSON.stringify(configurationObj) },
+  ];
+
+  // Location remains separate (TagoIO location variable)
+  if (coords) {
+    // NOTE: We keep location separate from configuration (as requested)
+    vars.push({
+      variable: 'location',
+      value: 'coords',
+      location: { lat: +coords.lat, lng: +coords.lng }
+    });
+  }
+
+  vars.forEach(v => { v.time = nowISO; });
+  console.log('Built payload:', vars);
+  return vars;
+}
+function intOrNull(v){ const n = parseInt(v,10); return Number.isFinite(n)?n:null; }
+function numOrNull(v){ const n = parseFloat(v); return Number.isFinite(n)?n:null; }
+
+/* =========================
+   MODALS
+========================= */
+function open(el){ el.style.display='flex'; }
+function close(el){ el.style.display='none'; }
+function openConfirmModal(){ open($('confirmModal')); }
+function closeConfirmModal(){ close($('confirmModal')); }
+function openValidationModal(message, color){
+  $('validationMsg').textContent = String(message || '—');
+  $('validationCard').style.borderColor = color || '#ddd';
+  open($('validationModal'));
+}
+function closeValidationModal(){ close($('validationModal')); }
+
+/* =========================
+   TAGOIO Lifecycle
+========================= */
+function applyIncoming(buckets){
+  if (!Array.isArray(buckets)) return;
+
+  const latest = {};
+  const pick = (it)=>{
+    const v = it.variable;
+    const t = Date.parse(it.time || it.created_at || it.inserted_at || 0) || 0;
+    if (!latest[v] || t > latest[v]._t) latest[v] = Object.assign({_t: t}, it);
+  };
+  for (const b of buckets){ (Array.isArray(b?.result) ? b.result : []).forEach(pick); }
+  state.lastDataMap = {...state.lastDataMap, ...latest};
+
+  // -------- location (separate variable) --------
+  let coordApplied = false;
+  const loc = (latest.location?.location?.coordinates) || (state.lastDataMap.location?.location?.coordinates);
+  if (Array.isArray(loc) && loc.length===2) {
+    const [lng, lat] = loc;
+    if (isFinite(lat) && isFinite(lng)) {
+      $('coordinates').value = `${(+lat).toFixed(7)}, ${(+lng).toFixed(7)}`;
+      if (state.map) { state.map.setView([+lat, +lng], 12); placeMarker(+lat, +lng); }
+      coordApplied = true;
+    }
+  }
+  if (!coordApplied) {
+    // legacy fallback (old installations that saved "coordinates" as text)
+    const coordStr = (latest.coordinates?.value) || (state.lastDataMap.coordinates?.value) || '';
+    if (coordStr){
+      $('coordinates').value = coordStr;
+      const p = parseCoordinates(coordStr);
+      if (p){ state.map.setView([p.lat,p.lng], 12); placeMarker(p.lat,p.lng); }
+    }
+  }
+
+  // -------- primary source of truth: configuration --------
+  const confStr = latest.configuration?.value || state.lastDataMap.configuration?.value;
+  let usedConfiguration = false;
+
+  if (confStr){
+    try{
+      const conf = JSON.parse(confStr);
+      if (Array.isArray(conf?.crops) && conf.crops.length){
+        usedConfiguration = true;
+
+        // rebuild crops UI
+        $('cropsList').innerHTML = '';
+        conf.crops.forEach(c=> addCropRow({
+          id: c.id || '',
+          cultivation_type_general: c.cultivation_type_general || 'olive',
+          cultivation_type: c.cultivation_type || '',
+          periods: c.periods || {},
+          plantation_year: c.plantation_year || null
+        }));
+
+        // hydrate shared fields (if present)
+        if (conf.soil_type!=null) $('soil_type').value = conf.soil_type;
+        if (conf.irrigation_system!=null) $('irrigation_system').value = conf.irrigation_system;
+        if (conf.water_quality!=null) $('water_quality').value = conf.water_quality;
+        if (conf.area!=null) $('area').value = conf.area;
+        if (conf.supply_flow_rate!=null) $('supply_flow_rate').value = conf.supply_flow_rate;
+        if (conf.total_plants!=null) $('total_plants').value = conf.total_plants;
+        if (conf.sensor_deep_depth_cm!=null) $('sensor_deep_depth_cm').value = conf.sensor_deep_depth_cm;
+        if (conf.sensorShallow_depth_cm!=null) $('sensorShallow_depth_cm').value = conf.sensorShallow_depth_cm;
+
+        // Keep hidden legacy selectors in sync for UI logic (NOT for saving)
+        syncLegacyFromFirstCrop();
+      }
+    }catch(e){
+      console.warn('Could not parse configuration JSON', e);
+    }
+  }
+
+  // -------- fail-safe: legacy hydration only if configuration is missing/invalid --------
+  if (!usedConfiguration){
+    if (latest.cultivation_type_general) $('cultivation_type_general').value = latest.cultivation_type_general.value;
+    refreshTypeOptions();
+    if (latest.cultivation_type) $('cultivation_type').value = latest.cultivation_type.value;
+
+    ['soil_type','irrigation_system','water_quality','area','supply_flow_rate','total_plants',
+     'sensor_deep_depth_cm','sensorShallow_depth_cm'].forEach(k=>{
+      if (latest[k] && latest[k].value !== undefined) $(k).value = latest[k].value;
+    });
+
+    // Rebuild a single crop row from legacy (so UI still works on old installations)
+    const gen = latest.cultivation_type_general?.value || state.lastDataMap.cultivation_type_general?.value || '';
+    const type = latest.cultivation_type?.value || state.lastDataMap.cultivation_type?.value || '';
+    if (gen && type){
+      const parsePeriod = (varName)=>{
+        const v = (latest[varName]?.value) ?? (state.lastDataMap[varName]?.value) ?? '';
+        const s = String(v).match(/Start:\s*([^,]+)/)?.[1] || '';
+        const e = String(v).match(/End:\s*([^\s]+)/)?.[1] || '';
+        if (!s && !e) return null;
+        return { start: s || null, end: e || null };
+      };
+
+      const periods = {
+        dormant: parsePeriod('dormant_period'),
+        flowering: parsePeriod('flowering_period'),
+        fruit_set: parsePeriod('fruit_set_period'),
+        ripening: parsePeriod('ripening_period'),
+        transplantation: parsePeriod('transplantation_period'),
+        vegetative_growth: parsePeriod('vegetative_growth_period'),
+        veg_flowering: parsePeriod('flowering_period'),
+        harvest: parsePeriod('harvest_period'),
+      };
+
+      $('cropsList').innerHTML = '';
+      addCropRow({
+        id: `${gen}:${type}:1`,
+        cultivation_type_general: gen,
+        cultivation_type: type,
+        periods
+      });
+      syncLegacyFromFirstCrop();
+    }
+  }
+
+  // -------- validation bubble --------
+  const val = latest.validation || state.lastDataMap.validation;
+  if (val){
+    $('lastValidation').innerHTML = `<span class="dot" style="width:10px;height:10px;border-radius:50%;background:${val.metadata?.color||'#bbb'}"></span>${val.value||'—'}`;
+    $('lastValidationText').textContent = val.metadata?.text || '';
+    const vt = Date.parse(val.time || val.created_at || 0) || 0;
+    if (state.waitingValidationSince && vt >= state.waitingValidationSince){
+      openValidationModal(val.value || '—', val.metadata?.color || '#ddd');
+      state.waitingValidationSince = null;
+    }
+  }
+
+  // -------- "needs configuration" banner --------
+  const hasConf = !!(state.lastDataMap.configuration?.value);
+  const hasLegacy = !!(state.lastDataMap.cultivation_type_general && state.lastDataMap.cultivation_type);
+  if (!hasConf && !hasLegacy){ showBanner('Δεν έχει γίνει παραμετροποίηση της εγκατάστασης!', 'warn'); }
+  else { hideBanner(); }
+}
+
+async function saveNow(){
+  const payload = buildPayload();
+  console.log('Saving payload:', payload);
+  if (payload.length === 0){ showBanner('Δεν υπάρχουν δεδομένα προς αποστολή.', 'warn'); return; }
+  if (window.TagoIO && TagoIO.sendData){
+    try{
+      state.waitingValidationSince = Date.now();
+      
+      window.TagoIO.autofill = false;
+      await TagoIO.sendData(payload);
+      showBanner('Στάλθηκαν τα δεδομένα ρύθμισης.', 'info');
+    } catch (e){
+      console.error(e);
+      showBanner('Αποτυχία αποστολής δεδομένων.', 'warn');
+      state.waitingValidationSince = null;
+    }
+  } else {
+    console.log('Mock send:', payload);
+    state.waitingValidationSince = Date.now();
+    showBanner('Λειτουργία εκτός Tago: έγινε mock αποστολή (δες console).', 'info');
+  }
+}
+
+/* INIT */
+initMap();
+
+$('btnSave').onclick = openConfirmModal;
+$('confirmCancel').onclick = closeConfirmModal;
+$('confirmOk').onclick = async () => { closeConfirmModal(); await saveNow(); };
+$('validationOk').onclick = closeValidationModal;
+
+refreshTypeOptions();
+
+/* TagoIO Bindings + Home button */
+if (window.TagoIO && window.TagoIO.ready){
+  TagoIO.onStart((widget)=>{
+    wireHomeButton(widget);
+    if (Array.isArray(widget?.data)) applyIncoming(widget.data);
+  });
+  TagoIO.onRealtime(applyIncoming);
+  TagoIO.ready();
+} else {
+  // Local demo: wire Αρχική with a sample id and show some data
+  wireHomeButton({ display:{ parameters:[{ key:'dashboard_id', value:'685af825f27bb6000a07d5ca' }] }});
+  setTimeout(()=>{
+    applyIncoming([{
+      result:[
+        { variable:'cultivation_type_general', value:'olive', time:'2025-10-05T10:00:00Z' },
+        { variable:'cultivation_type', value:'koroneiki', time:'2025-10-05T10:00:00Z' },
+        { variable:'soil_type', value:'sandy', time:'2025-10-05T10:00:00Z' },
+        { variable:'irrigation_system', value:'centerPivot', time:'2025-10-05T10:00:00Z' },
+        { variable:'water_quality', value:'excellent', time:'2025-10-05T10:00:00Z' },
+        { variable:'location', value:'', time:'2025-10-05T17:54:32.529Z', location:{ type:'Point', coordinates:[35.3469073, 24.7392214] } },
+        { variable:'validation', value:'Επιτυχή καταχώριση δεδομένων εγκατάστασης!', metadata:{color:'green', text:'Demo'}, time:'2025-10-07T06:15:56.243Z' }
+      ]
+    }]);
+  }, 600);
+}
+</script>
+</body>
+</html>

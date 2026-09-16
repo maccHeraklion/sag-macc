@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>field_bundle_history • Debug Plot</title>
+
+  <!-- TagoIO Custom Widget SDK (required) -->
+  <script src="https://cdn.jsdelivr.net/npm/@tago-io/custom-widget"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#fff; --fg:#111827; --muted:#6b7280; --border:#e5e7eb;
+      --chip:#f3f4f6; --accent:#2563eb; --danger:#b91c1c;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+    }
+    html, body{ height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:var(--sans); }
+    .wrap{ height:100%; display:grid; grid-template-rows:auto 1fr; }
+    header{
+      padding:10px 12px; border-bottom:1px solid var(--border);
+      display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;
+    }
+    .left, .right{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .title{ font-weight:700; }
+    .chip{ background:var(--chip); border:1px solid var(--border); border-radius:999px; padding:3px 8px; font-size:12px; color:var(--muted); }
+    button, select, input{
+      font:inherit; font-size:13px; border:1px solid var(--border);
+      border-radius:8px; padding:7px 10px; background:#fff;
+    }
+    button.primary{ background:var(--accent); color:#fff; border-color:var(--accent); cursor:pointer; }
+    main{ min-height:0; display:grid; grid-template-columns: 66% 34%; }
+    .panel{ min-height:0; display:grid; grid-template-rows:auto 1fr; border-right:1px solid var(--border); }
+    .panel:last-child{ border-right:none; }
+    .phead{ padding:10px 12px; border-bottom:1px solid var(--border); display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap:wrap;}
+    .hint{ color:var(--muted); font-size:12px; }
+    .chartWrap{ min-height:0; padding:10px 12px; }
+    canvas{ width:100% !important; height:100% !important; }
+    .jsonWrap{ min-height:0; padding:10px 12px; overflow:auto; font-family:var(--mono); font-size:12px; line-height:1.45; white-space:pre; }
+    .err{ color:var(--danger); font-family:var(--mono); font-size:12px; white-space:pre-wrap; padding:10px 12px; border-top:1px solid var(--border); background:#fff5f5; }
+    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+    .kpi{ font-family:var(--mono); font-size:12px; color:#374151; }
+    .ok{ color:#059669; }
+    .bad{ color:var(--danger); }
+    .tiny{ font-size:12px; color:var(--muted); }
+    .spacer{ width: 10px; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div class="left">
+        <div class="title">field_bundle_history • Debug Plot</div>
+        <span id="chipDevice" class="chip">Device: —</span>
+        <span class="chip">Variable: field_bundle</span>
+        <span id="chipWidgetData" class="chip">widget.data items: 0</span>
+        <span id="chipGroups" class="chip">realtime groups: 0</span>
+        <span id="chipPoints" class="chip">extracted points: 0</span>
+      </div>
+      <div class="right">
+        <select id="srcSel" title="Source">
+          <option value="shared">Shared</option>
+          <option value="crop">Crop</option>
+        </select>
+
+        <select id="sharedKeySel" title="Shared key"></select>
+
+        <select id="cropSel" title="Crop"></select>
+
+        <select id="indSel" title="Indicator"></select>
+
+        <span class="spacer"></span>
+
+        <button id="btnExport" class="primary">Export CSV</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel">
+        <div class="phead">
+          <div>
+            <b>Chart</b>
+            <div class="hint">Plots any <code>shared.*.value</code> or <code>crops[].indicators.*.value</code> found in metadata.</div>
+          </div>
+          <div class="row">
+            <span class="kpi" id="kpiStatus">Status: waiting…</span>
+            <button id="btnReplot">Replot</button>
+          </div>
+        </div>
+        <div class="chartWrap">
+          <canvas id="chart"></canvas>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="phead">
+          <div>
+            <b>Raw Debug</b>
+            <div class="hint">Shows what TagoIO sent in <code>widget.data</code> and the last realtime group.</div>
+          </div>
+          <div class="row">
+            <button id="btnCopy">Copy JSON</button>
+          </div>
+        </div>
+        <div id="json" class="jsonWrap">{}</div>
+        <div id="err" class="err" style="display:none;"></div>
+      </section>
+    </main>
+  </div>
+
+<script>
+  const el = (id) => document.getElementById(id);
+
+  const state = {
+    widget: null,
+    widgetData: [],
+    realtimeGroups: [],
+    points: [],   // {time, meta, raw, ms}
+    lastRealtimeGroup: null,
+    chart: null,
+
+    // discovered keys
+    sharedKeys: [],      // ["vpd", ...]
+    cropIds: [],         // ["vegetablecrops:onion:1", ...]
+    indicatorKeys: new Map(), // cropId -> ["ipsi","bpi",...]
+  };
+
+  function setErr(msg) {
+    const box = el("err");
+    if (!msg) { box.style.display = "none"; box.textContent = ""; return; }
+    box.style.display = "block";
+    box.textContent = msg;
+  }
+
+  function status(text, ok=null) {
+    const k = el("kpiStatus");
+    k.textContent = "Status: " + text;
+    k.classList.remove("ok","bad");
+    if (ok === true) k.classList.add("ok");
+    if (ok === false) k.classList.add("bad");
+  }
+
+  function safeParseMeta(m) {
+    if (!m) return null;
+    if (typeof m === "object") return m;
+    if (typeof m === "string") {
+      try { return JSON.parse(m); } catch { return null; }
+    }
+    return null;
+  }
+
+  async function safeDecompressMeta(meta) {
+    if (!meta || meta.schema?.compression !== 'deflate-raw-base64' || !meta.data) return meta;
+    try {
+      const binary = atob(meta.data);
+      const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+      const ds = new DecompressionStream('deflate-raw');
+      const writer = ds.writable.getWriter();
+      const reader = ds.readable.getReader();
+      writer.write(bytes);
+      writer.close();
+      const chunks = [];
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+      }
+      const total = chunks.reduce((n, c) => n + c.length, 0);
+      const out = new Uint8Array(total);
+      let off = 0;
+      for (const c of chunks) { out.set(c, off); off += c.length; }
+      const parsed = JSON.parse(new TextDecoder().decode(out));
+      return { ...parsed, schema: meta.schema };
+    } catch (e) {
+      console.warn('[field_bundle] decompress failed:', e);
+      return meta;
+    }
+  }
+
+  function pushPoint(time, meta, raw) {
+    if (!time || !meta) return;
+    const ms = new Date(time).getTime();
+    if (!Number.isFinite(ms)) return;
+    state.points.push({ time, meta, raw, ms });
+  }
+
+  async function normalizeAll() {
+    state.points = [];
+
+    // 1) widget.data as direct points
+    for (const r of (state.widgetData || [])) {
+      const meta = await safeDecompressMeta(safeParseMeta(r?.metadata));
+      const time = r?.time || r?.datetime || r?.created_at || r?.createdAt;
+      if (meta && time) pushPoint(time, meta, r);
+    }
+
+    // 2) realtime groups with result[]
+    for (const g of (state.realtimeGroups || [])) {
+      const result = g?.result;
+      if (!Array.isArray(result)) continue;
+      for (const p of result) {
+        const meta = await safeDecompressMeta(safeParseMeta(p?.metadata));
+        const time = p?.time || p?.datetime || p?.created_at;
+        if (meta && time) pushPoint(time, meta, p);
+      }
+    }
+
+    state.points.sort((a,b) => a.ms - b.ms);
+
+    // Light de-dup
+    const seen = new Set();
+    state.points = state.points.filter(p => {
+      const k = p.ms + "|" + (p.raw?.id || p.raw?.time || "") + "|" + (p.meta?.schema?.version ?? "");
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+
+    el("chipWidgetData").textContent = `widget.data items: ${(state.widgetData||[]).length}`;
+    el("chipGroups").textContent = `realtime groups: ${(state.realtimeGroups||[]).length}`;
+    el("chipPoints").textContent = `extracted points: ${state.points.length}`;
+  }
+
+  function discoverKeys() {
+    const shared = new Set();
+    const crops = new Set();
+    const indByCrop = new Map();
+
+    for (const p of state.points) {
+      const meta = p.meta;
+
+      // shared keys: meta.shared.<key>.value
+      const sharedObj = meta?.shared;
+      if (sharedObj && typeof sharedObj === "object") {
+        for (const k of Object.keys(sharedObj)) {
+          const node = sharedObj[k];
+          if (node && typeof node === "object" && ("value" in node)) shared.add(k);
+        }
+      }
+
+      // crops + indicators
+      const cs = Array.isArray(meta?.crops) ? meta.crops : [];
+      for (const c of cs) {
+        if (!c?.id) continue;
+        crops.add(c.id);
+
+        const inds = c?.indicators;
+        if (inds && typeof inds === "object") {
+          if (!indByCrop.has(c.id)) indByCrop.set(c.id, new Set());
+          const set = indByCrop.get(c.id);
+          Object.keys(inds).forEach(k => {
+            const node = inds[k];
+            if (node && typeof node === "object" && ("value" in node)) set.add(k);
+          });
+        }
+      }
+    }
+
+    state.sharedKeys = Array.from(shared).sort();
+    state.cropIds = Array.from(crops).sort();
+    state.indicatorKeys = new Map();
+    for (const [cropId, set] of indByCrop.entries()) {
+      state.indicatorKeys.set(cropId, Array.from(set).sort());
+    }
+  }
+
+  function fillSelect(selectEl, options, keepValue=null, placeholder=null) {
+    const prev = keepValue ?? selectEl.value;
+    let html = "";
+    if (placeholder) html += `<option value="">${escapeHtml(placeholder)}</option>`;
+    html += options.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+    selectEl.innerHTML = html;
+    if (prev && options.includes(prev)) selectEl.value = prev;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+
+  function updateUIFromKeys() {
+    discoverKeys();
+
+    // shared select
+    const sharedSel = el("sharedKeySel");
+    fillSelect(sharedSel, state.sharedKeys, sharedSel.value, state.sharedKeys.length ? null : "(no shared keys)");
+
+    // crop select
+    const cropSel = el("cropSel");
+    fillSelect(cropSel, state.cropIds, cropSel.value, state.cropIds.length ? null : "(no crops)");
+
+    // indicator select depends on crop
+    const indSel = el("indSel");
+    const cropId = cropSel.value || state.cropIds[0] || "";
+    if (cropId && cropSel.value !== cropId) cropSel.value = cropId;
+
+    const inds = cropId ? (state.indicatorKeys.get(cropId) || []) : [];
+    fillSelect(indSel, inds, indSel.value, inds.length ? null : "(no indicators)");
+
+    // Default selections
+    if (!el("srcSel").value) el("srcSel").value = "shared";
+    if (el("srcSel").value === "shared") {
+      if (!sharedSel.value && state.sharedKeys.length) sharedSel.value = state.sharedKeys[0];
+    } else {
+      if (!cropSel.value && state.cropIds.length) cropSel.value = state.cropIds[0];
+      const inds2 = state.indicatorKeys.get(cropSel.value) || [];
+      if (!indSel.value && inds2.length) indSel.value = inds2[0];
+    }
+
+    applySrcVisibility();
+  }
+
+  function applySrcVisibility() {
+    const src = el("srcSel").value;
+    el("sharedKeySel").style.display = (src === "shared") ? "inline-block" : "none";
+    el("cropSel").style.display = (src === "crop") ? "inline-block" : "none";
+    el("indSel").style.display = (src === "crop") ? "inline-block" : "none";
+  }
+
+  function getSeriesValue(meta) {
+    const src = el("srcSel").value;
+
+    if (src === "shared") {
+      const k = el("sharedKeySel").value;
+      return meta?.shared?.[k]?.value;
+    }
+
+    // crop
+    const cropId = el("cropSel").value;
+    const indKey = el("indSel").value;
+    const crops = Array.isArray(meta?.crops) ? meta.crops : [];
+    const c = crops.find(x => x?.id === cropId);
+    if (!c) return null;
+    return c?.indicators?.[indKey]?.value;
+  }
+
+  function currentSeriesLabel() {
+    const src = el("srcSel").value;
+    if (src === "shared") return `shared.${el("sharedKeySel").value}.value`;
+    return `${el("cropSel").value} • ${el("indSel").value}`;
+  }
+
+  function ensureChart() {
+    if (state.chart) return state.chart;
+    const ctx = el("chart").getContext("2d");
+    state.chart = new Chart(ctx, {
+      type: "line",
+      data: { labels: [], datasets: [{ label: "", data: [], borderWidth: 2, pointRadius: 2, tension: 0.2 }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        scales: {
+          x: { ticks: { autoSkip: true, maxTicksLimit: 12 }, grid: { display: false } },
+          y: { grid: { color: "rgba(0,0,0,0.07)" } }
+        },
+        plugins: { legend: { display: true }, tooltip: { mode: "index", intersect: false } },
+        interaction: { mode: "nearest", intersect: false },
+      }
+    });
+    return state.chart;
+  }
+
+  async function replot() {
+    setErr("");
+    await normalizeAll();
+    updateUIFromKeys();
+
+    const labels = [];
+    const values = [];
+    for (const p of state.points) {
+      const v = getSeriesValue(p.meta);
+      if (v == null || v === "" || Number.isNaN(Number(v))) continue;
+      labels.push(new Date(p.ms).toLocaleString());
+      values.push(Number(v));
+    }
+
+    const chart = ensureChart();
+    chart.data.labels = labels;
+    chart.data.datasets[0].label = currentSeriesLabel();
+    chart.data.datasets[0].data = values;
+    chart.update();
+
+    // Status logic
+    if (!state.widget) status("waiting for onStart…", null);
+    else if ((state.widgetData?.length || 0) === 0 && (state.realtimeGroups?.length || 0) === 0)
+      status("connected, but no data received (check widget Data from / realtime)", false);
+    else if (state.points.length === 0)
+      status("data received, but no points had BOTH time+metadata (see Raw Debug)", false);
+    else if (values.length === 0)
+      status("points OK, but selected series missing or non-numeric", false);
+    else
+      status(`OK • plotted ${values.length} points`, true);
+
+    renderDebug();
+  }
+
+  function renderDebug() {
+    const widget = state.widget;
+    const sampleW = state.widgetData?.[0] ?? null;
+    const sampleG = state.lastRealtimeGroup ?? (state.realtimeGroups?.[state.realtimeGroups.length-1] ?? null);
+
+    const info = {
+      widget_keys: widget ? Object.keys(widget).sort() : [],
+      widget_display_keys: widget?.display ? Object.keys(widget.display).sort() : [],
+      widget_data_len: Array.isArray(widget?.data) ? widget.data.length : null,
+      widget_data_first_keys: sampleW && typeof sampleW === "object" ? Object.keys(sampleW).sort() : null,
+      widget_data_first_preview: sampleW,
+      last_realtime_group_keys: sampleG && typeof sampleG === "object" ? Object.keys(sampleG).sort() : null,
+      last_realtime_group_preview: sampleG,
+      extracted_points: state.points.length,
+      discovered_shared_keys: state.sharedKeys,
+      discovered_crop_ids: state.cropIds.slice(0, 50),
+      discovered_indicator_keys_sample: (() => {
+        const out = {};
+        for (const [k,v] of state.indicatorKeys.entries()) out[k] = v.slice(0, 50);
+        return out;
+      })(),
+      extracted_first_point_preview: state.points?.[0]?.raw ?? null,
+      extracted_first_meta_preview: state.points?.[0]?.meta ?? null,
+    };
+
+    el("json").textContent = JSON.stringify(info, null, 2);
+  }
+
+  async function exportCsv() {
+    await normalizeAll();
+    const header = currentSeriesLabel();
+
+    const rows = [["time", header]];
+    for (const p of state.points) {
+      const v = getSeriesValue(p.meta);
+      if (v == null || v === "" || Number.isNaN(Number(v))) continue;
+      rows.push([new Date(p.ms).toISOString(), Number(v)]);
+    }
+
+    const csv = rows.map(r => r.map(x => {
+      const s = String(x ?? "");
+      return /[",\n]/.test(s) ? `"${s.replaceAll('"','""')}"` : s;
+    }).join(",")).join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "field_bundle_debug_series.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function copyJson() {
+    const txt = el("json").textContent || "{}";
+    try { await navigator.clipboard.writeText(txt); }
+    catch {
+      const ta = document.createElement("textarea");
+      ta.value = txt; document.body.appendChild(ta);
+      ta.select(); document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+  }
+
+  // UI wiring
+  el("btnReplot").addEventListener("click", replot);
+  el("btnExport").addEventListener("click", exportCsv);
+  el("btnCopy").addEventListener("click", copyJson);
+
+  el("srcSel").addEventListener("change", () => { applySrcVisibility(); replot(); });
+  el("sharedKeySel").addEventListener("change", replot);
+  el("cropSel").addEventListener("change", () => {
+    // refresh indicator list for this crop
+    const cropId = el("cropSel").value;
+    const inds = state.indicatorKeys.get(cropId) || [];
+    fillSelect(el("indSel"), inds, null, inds.length ? null : "(no indicators)");
+    replot();
+  });
+  el("indSel").addEventListener("change", replot);
+
+  // --- TagoIO hooks
+  window.TagoIO.onError((e) => {
+    setErr("TagoIO error:\n" + (e?.message || JSON.stringify(e)));
+    status("TagoIO error", false);
+  });
+
+  window.TagoIO.onStart((widget) => {
+    state.widget = widget;
+
+    // display device info if possible
+    try {
+      const dev = widget?.display?.devices?.[0] || widget?.display?.device || widget?.device;
+      if (dev?.name) el("chipDevice").textContent = "Device: " + dev.name;
+      else if (dev?.id) el("chipDevice").textContent = "Device: " + dev.id;
+    } catch (_) {}
+
+    state.widgetData = Array.isArray(widget?.data) ? widget.data : [];
+    replot();
+  });
+
+  window.TagoIO.onRealtime((realtimeData) => {
+    // Realtime can deliver group objects that include result[] points.
+    const groups = Array.isArray(realtimeData) ? realtimeData : [realtimeData];
+    state.realtimeGroups = (state.realtimeGroups || []).concat(groups);
+    state.lastRealtimeGroup = groups[groups.length - 1] || state.lastRealtimeGroup;
+    replot();
+  });
+
+  window.TagoIO.ready();
+
+  // Initial UI state (before data arrives)
+  el("srcSel").value = "shared";
+  applySrcVisibility();
+</script>
+</body>
+</html>

@@ -1,0 +1,286 @@
+/* src/dashboard.css */
+
+:root{
+  --bg:#f7f9fc; --ink:#1a2b3c; --muted:#6c7a89; --line:#e8eef3; --card:#fff;
+  --green:#2ecc71; --yellow:#f1c40f; --orange:#f39c12; --red:#e74c3c; --blue:#2f6feb;
+  --radius:16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* IMPORTANT: allow vertical scroll, no flex on body */
+body {
+  margin: 0;
+  padding: 16px;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  font-size: 38px !important;
+  min-height: 100vh;
+  overflow-y: auto;
+}
+
+/* Center content with margin instead of flex on body */
+.wrap {
+  width: 100%;
+  font-size: 1.05rem !important;
+  max-width: 1250px;
+  margin: 0 auto;
+}
+
+.subscription-banner {
+  padding: 10px 16px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-align: left;
+}
+
+.subscription-banner--expired {
+  background: #fde8e8;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+}
+
+.subscription-banner--warning {
+  background: #fef9e7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+/* two-column layout with right sidebar */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 14px;
+  align-items: start;
+}
+
+@media (max-width:980px){
+  .layout { grid-template-columns: 1fr; }
+}
+
+.topbar{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:12px 14px; border:1px solid var(--line); border-radius:12px;
+  background:#fff; box-shadow:0 2px 12px rgba(0,0,0,.04);
+}
+
+.title{
+  display:flex; align-items:center; gap:10px;
+  font-weight:900;
+  font-size:clamp(1.2rem, 1.4vw + .8rem, 1.8rem);
+}
+
+.pill{
+  padding:6px 10px; border-radius:999px; font-weight:800; white-space:nowrap;
+}
+.pill.blue{
+  background:#e8f0ff; color:#163970; border:1px solid #cbd9ff;
+}
+.pill.red{
+  background:#ffecec; color:#7a1111; border:1px solid #ffd0d0;
+}
+
+.crop-picker{
+  display:flex; align-items:center; justify-content:flex-end; gap:8px;
+  white-space:nowrap;
+}
+.crop-picker select{
+  padding:6px 10px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#fff;
+  font-weight:700;
+}
+
+.grid{
+  display:grid; gap:14px; margin-top:14px; align-items:stretch;
+}
+.g-3{ grid-template-columns:repeat(3, 1fr); }
+
+@media (max-width:920px){
+  .g-3{ grid-template-columns:1fr 1fr; }
+}
+@media (max-width:680px){
+  .g-3{ grid-template-columns:1fr; }
+}
+
+.linkwrap{
+  text-decoration:none; color:inherit; display:block; height:100%;
+}
+
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+  box-shadow:0 2px 12px rgba(0,0,0,.05); padding:16px;
+  transition:transform .02s ease, box-shadow .12s ease;
+  height:100%; display:flex; flex-direction:column; justify-content:flex-start; min-height:150px;
+}
+.card:hover{
+  transform:translateY(-1px); box-shadow:0 4px 14px rgba(0,0,0,.08);
+}
+.card h3{
+  margin:0 0 10px 0; font-size:1.15rem;
+}
+.row h3{ margin-bottom:0; }
+
+.row{
+  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+}
+
+/* Shared icon+text layout used by Forecast and Spray cards */
+.card-icon-row{
+  display:flex; align-items:center; gap:12px; margin-top:6px; margin-bottom:8px;
+}
+.card-icon-row .card-icon-label{
+  font-weight:600; font-size:14px;
+}
+.card-icon-row .card-icon-sub{
+  font-size:12px; margin-top:2px;
+}
+
+/* Metric chips row (Forecast card) */
+.card-chips{
+  display:flex; gap:14px; flex-wrap:wrap;
+}
+.card-chip{ text-align:center; }
+.card-chip-label{ font-size:10px; color:var(--muted); margin-bottom:2px; }
+.card-chip-value{ font-size:13px; font-weight:500; }
+
+.badge{
+  padding:6px 10px; border-radius:999px; font-weight:800; color:#fff; white-space:nowrap; font-size:.92rem;
+}
+.b-green{ background:var(--green); }
+.b-yellow{ background:var(--yellow); color:#222; }
+.b-orange{ background:var(--orange); color:#222; }
+.b-red{ background:var(--red); }
+.b-blue{ background:var(--blue); }
+
+.desc{
+  margin:8px 0 0; color:#374151; line-height:1.45; font-size:.96rem;
+}
+.muted{ color:var(--muted); }
+
+.metric{
+  display:flex; align-items:baseline; gap:8px;
+}
+.metric .num{
+  font-size:1.8rem; font-weight:900;
+}
+.metric .unit{
+  color:#6c7a89; font-weight:700; font-size:.9rem;
+}
+
+.list{
+  display:flex; flex-direction:column; gap:10px;
+}
+.alert-item{
+  border:1px dashed var(--line); border-radius:12px; padding:10px 12px;
+  display:flex; align-items:center; gap:10px; justify-content:space-between;
+}
+.alert-label{ font-weight:800; }
+.empty{ color:var(--muted); }
+
+/* bullets for measurements */
+.bullets{
+  margin:0; padding-left:18px; display:block;
+}
+.bullets li{
+  margin:6px 0; line-height:1.35;
+}
+/* Make each bullet row a clickable box */
+.bullets li.bullet-item{
+  padding:8px 10px;
+  border-radius:8px;
+  cursor:pointer;
+  outline:none;
+}
+.bullets li.bullet-item:hover,
+.bullets li.bullet-item:focus{
+  background:#f4f7ff;
+}
+.bullets li.bullet-item:active{
+  transform: translateY(0.5px);
+}
+.bullets li.bullet-item--no-data{
+  cursor:default;
+  opacity:0.6;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:6px;
+}
+.bullets li.bullet-item--no-data:hover,
+.bullets li.bullet-item--no-data:focus{
+  background:none;
+}
+.no-data-note{
+  font-size:11px;
+  color:#999;
+  white-space:nowrap;
+}
+
+/* Config action link box */
+.cfg-link{
+  margin-top:12px;
+  padding:10px 12px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  font-weight:800;
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  cursor:pointer;
+}
+.cfg-link:hover{ background:#f7faff; }
+.cfg-link .hint{
+  color:#6c7a89; font-weight:600; font-size:.92rem;
+}
+
+
+/* --- Multi-crop display prefs --- */
+.mini-btn {
+  font-size: 12px;
+  padding: 6px 10px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.crop-stress-list {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.crop-stress-item {
+  padding: 8px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 10px;
+}
+
+.small {
+  font-size: 12px;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.prefs-crops {
+  padding-top: 8px;
+  border-top: 1px solid rgba(0,0,0,0.08);
+}

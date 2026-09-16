@@ -1,0 +1,24 @@
+{
+  "name": "uc51x-payload-parser-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tests for UC51x LoRaWAN payload parsers (uplink decoders and downlink builders)",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:verbose": "jest --verbose"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/test/**/*.test.js"],
+    "moduleNameMapper": {
+      "^@tago-io/sdk$": "<rootDir>/test/sdk-mock.js"
+    }
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

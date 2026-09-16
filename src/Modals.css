@@ -1,0 +1,1018 @@
+/* Generic modal shell for ALL modals */
+
+.ag-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  width: 100vw;                 /* ensure full width on mobile */
+  height: 100vh;                /* ensure full height on mobile */
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  overscroll-behavior: contain; /* prevent scroll from bubbling to page */
+  touch-action: none;           /* reduce accidental background scroll on mobile */
+}
+
+.ag-modal-content {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.35);
+  padding: 16px 18px 18px;
+  max-width: 1100px;
+  width: 95%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}/* Top-right close button that floats above the header */
+.ag-modal-close-topright {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  z-index: 2;              /* stays above header content */
+}
+
+/* Reserve space so header content doesn't collide with the ✕ */
+.ag-irrig-header {
+  padding-right: 56px;     /* room for the floating close button */
+}
+
+@media (max-width: 768px) {
+  .ag-modal-close-topright {
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+  }
+  .ag-irrig-header {
+    padding-right: 48px;
+  }
+}
+
+
+.ag-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.ag-modal-header h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.ag-modal-subtitle {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.ag-modal-close {
+  border: 0;
+  background: #ef1a1a;
+  border-radius: 999px;
+  font-size: 18px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+}
+
+.ag-modal-close:hover {
+  background: #e76a6a;
+}
+
+.ag-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Confirmation modal stacking */
+.ag-modal-backdrop.confirmation {
+  z-index: 10050 !important;
+}
+
+.ag-modal-content.confirmation {
+  z-index: 10051 !important;
+}
+
+/* Generic badges / stats usable by measurement & patho modals */
+
+.lastBadge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  padding: 8px 10px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+.lastBadge .lv-label {
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.lastBadge .lv-value {
+  font-weight: 900;
+  font-size: 20px;
+}
+
+.lastBadge .lv-unit {
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.lastBadge .lv-time {
+  font-size: 11px;
+  color: #4b5563;
+}
+
+.statsWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.statBadge {
+  display: inline-flex;
+  gap: 6px;
+  align-items: baseline;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+.statBadge .s-label {
+  font-weight: 700;
+  color: #374151;
+}
+
+.statBadge .s-val {
+  font-weight: 800;
+}
+
+/* ================================
+   Shared chart container for modals
+   ================================ */
+
+.ag-modal-chart {
+  width: 100%;
+  height: 380px;
+  margin-top: 12px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+}
+
+/* ================================
+   Mobile tweaks
+   ================================ */
+
+@media (max-width: 768px) {
+  .ag-modal-backdrop {
+    align-items: stretch;       /* modal fills height */
+    justify-content: flex-start;
+  }
+
+  .ag-modal-content {
+    width: 100%;
+    max-width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    padding: 12px;
+    box-shadow: none;          /* feels more �page-like� on mobile */
+  }
+
+  .ag-modal-body {
+    overflow-y: auto;
+  }
+
+  .ag-modal-chart {
+    height: 280px;
+  }
+}
+
+/* Extra: make Patho cards� grid responsive on small screens */
+@media (max-width: 480px) {
+  .card .row {
+    grid-template-columns: 1fr !important;
+    row-gap: 8px;
+    align-items: flex-start;
+  }
+}
+
+/* =========================
+   Cultivation calendar modal
+   ========================= */
+
+.ag-cal-wrap {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 14px;
+}
+
+.ag-cal-section-title {
+  font-weight: 800;
+  color: #1f2937;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.ag-cal-history,
+.ag-cal-form {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+}
+
+.ag-cal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ag-cal-item {
+  border: 1px solid #edf2f7;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fafafa;
+}
+
+.ag-cal-item-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ag-cal-item-title {
+  font-weight: 800;
+  color: #111827;
+  font-size: 13px;
+}
+
+.ag-cal-item-time {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.ag-cal-item-body {
+  margin-top: 10px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.ag-cal-row {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.ag-cal-row + .ag-cal-row {
+  border-top: 1px dashed #e5e7eb;
+}
+
+.ag-cal-k {
+  font-weight: 800;
+  color: #374151;
+  font-size: 12px;
+}
+
+.ag-cal-v {
+  color: #111827;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.ag-cal-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 10px;
+}
+
+.ag-cal-input,
+.ag-cal-textarea {
+  width: 100%;
+  margin-top: 6px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 13px;
+  outline: none;
+  background: #fff;
+}
+
+.ag-cal-input:focus,
+.ag-cal-textarea:focus {
+  border-color: #c7d2fe;
+  box-shadow: 0 0 0 3px rgba(199, 210, 254, 0.45);
+}
+
+.ag-cal-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+@media (max-width: 900px) {
+  .ag-cal-wrap {
+    grid-template-columns: 1fr;
+  }
+  .ag-cal-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================
+   Configuration modal 
+   ========================= */
+
+.ag-config-modal {
+  max-width: 1040px;
+}
+
+.ag-config-header {
+  align-items: center;
+}
+
+.ag-config-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ag-config-row {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 14px;
+}
+
+@media (max-width: 920px) {
+  .ag-config-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ag-config-card {
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  padding: 14px 16px 12px;
+  background: #ffffff;
+}
+
+.ag-config-title {
+  margin: 0 0 8px;
+  font-weight: 800;
+}
+
+.ag-config-field {
+  margin-bottom: 8px;
+}
+
+.ag-config-field label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.ag-config-field input,
+.ag-config-field select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 13px;
+}
+
+.ag-config-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 920px) {
+  .ag-config-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ag-config-map-placeholder {
+  height: 180px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+
+.ag-config-map-actions {
+  margin-top: 4px;
+}
+
+.ag-config-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ag-config-btn.primary {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.ag-config-btn.ghost {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #111827;
+}
+
+.ag-config-savebar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.ag-config-status-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.ag-config-validation {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ag-config-validation-meta {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.ag-config-muted {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+
+/* Measurement grid cards */
+.meas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.meas-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--card-bg, #fff);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  border: 1px solid rgba(0,0,0,0.06);
+  cursor: pointer;
+  transition: transform .08s ease, box-shadow .12s ease, border-color .12s ease;
+  text-align: left;
+}
+
+.meas-card:focus,
+.meas-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+  border-color: rgba(0,0,0,0.12);
+  outline: none;
+}
+
+.meas-card__title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  opacity: 0.85;
+  margin-bottom: 6px;
+}
+
+.meas-card__value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.meas-card__time {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+/* Rainfall cards — distinct cloud/rain icon; the "today" figure is highlighted. */
+.meas-card__rain-icon {
+  display: inline-flex;
+  color: #3b82f6;
+  margin-bottom: 2px;
+}
+.meas-card.meas-card--rain-today {
+  background: #1e3a8a;
+  border-color: #1e3a8a;
+  color: #fff;
+}
+.meas-card.meas-card--rain-today .meas-card__title,
+.meas-card.meas-card--rain-today .meas-card__value {
+  color: #fff;
+  opacity: 1;
+}
+.meas-card.meas-card--rain-today .meas-card__time {
+  color: #fff;
+  opacity: 0.85;
+}
+.meas-card.meas-card--rain-today .meas-card__rain-icon {
+  color: #fff;
+}
+/* Measurement grid card contrast */
+.meas-card {
+  color: #111;            /* base text */
+  background: #ffffff;    /* explicit light bg */
+  border: 1px solid rgba(0,0,0,0.06);
+  background-clip: padding-box;
+}
+
+.meas-card__title {
+  color: #374151;         /* label */
+}
+
+.meas-card__value {
+  color: #111827;         /* main number */
+}
+
+.meas-card__time {
+  color: #6b7280;         /* timestamp */
+}
+
+.meas-card:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.meas-card--no-data {
+  opacity: 0.55;
+  cursor: default;
+  background: #f9fafb;
+}
+.meas-card--no-data:hover,
+.meas-card--no-data:focus {
+  transform: none;
+  box-shadow: none;
+}
+.meas-card__value--empty {
+  color: #9ca3af;
+}
+
+/* device badge in measurement cards (all-devices modal) */
+.meas-card__device {
+  font-weight: 600;
+  opacity: 0.85;
+  margin-right: 6px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.06);
+  font-size: 0.8rem;
+}
+/* === Device accent for AllMeasurements grid === */
+.meas-card--accent {
+  /* use CSS var provided inline from React */
+  border-color: var(--accent, rgba(0,0,0,0.06));
+  position: relative;
+}
+
+/* Thin colored strip on top for quick scanning */
+.meas-card--accent::before {
+  content: "";
+  display: block;
+  height: 4px;
+  background: var(--accent, transparent);
+  border-radius: 14px 14px 0 0;
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: -1px;
+}
+
+/* Subtle hover keeps the accent visible */
+.meas-card--accent:hover {
+  box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+  border-color: var(--accent, rgba(0,0,0,0.12));
+}
+
+/* ==========================================================
+   IRRIGATION MODAL
+   ========================================================== */
+
+ .ag-irrig-modal {
+  max-height: 95vh;
+}
+
+/* header layout */
+
+.ag-irrig-header {
+  align-items: flex-start;
+}
+
+.ag-irrig-header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-width: 100%;
+}
+
+/* Battery */
+
+.ag-irrig-batt {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.ag-irrig-batt .icon {
+  font-size: 16px;
+}
+
+.ag-irrig-batt .bar {
+  width: 80px;
+  height: 10px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.ag-irrig-batt-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #16a34a;
+}
+
+.ag-irrig-batt-fill.low {
+  background: #f59e0b;
+}
+
+.ag-irrig-batt-fill.crit {
+  background: #e11d48;
+}
+
+.ag-irrig-batt .pct {
+  min-width: 40px;
+  text-align: right;
+  font-weight: 700;
+}
+
+/* Device selector + rules button */
+
+.ag-irrig-device-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.ag-irrig-device-select {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  font-size: 12px;
+  max-width: 100%;
+}
+
+.ag-irrig-rules-btn {
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: none;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ----- Header responsiveness ----- */
+
+@media (max-width: 768px) {
+  .ag-irrig-header {
+    flex-wrap: wrap;
+  }
+
+  .ag-irrig-header-right {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 600px) {
+  .ag-irrig-header-right {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ag-irrig-batt {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .ag-irrig-device-select,
+  .ag-irrig-rules-btn {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* ==========================================================
+   BODY LAYOUT
+   ========================================================== */
+
+.ag-irrig-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-height: calc(95vh - 140px);
+  overflow-y: auto;
+}
+
+/* 2-column grid that collapses to 1 on small screens */
+
+.ag-irrig-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 820px) {
+  .ag-irrig-grid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================
+   VALVE CARDS
+   ========================================================== */
+
+.ag-irrig-valve-card {
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  padding: 16px 16px 18px;
+  background: #ffffff;
+}
+
+.ag-irrig-valve-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+
+.ag-irrig-valve-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.ag-irrig-pill-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: -4px;
+}
+
+/* status pill */
+
+.ag-irrig-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.ag-irrig-pill.open {
+  background: #e0f2fe;
+  color: #0b5ed7;
+  border-color: #bfdbfe;
+}
+
+.ag-irrig-pill.closed {
+  background: #e5e7eb;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.ag-irrig-pill.unknown {
+  background: #f9fafb;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+}
+
+@media (max-width: 400px) {
+  .ag-irrig-pill {
+    font-size: 10px;
+    padding: 2px 8px;
+  }
+}
+
+/* toggle */
+
+.ag-irrig-toggle {
+  width: 48px;
+  height: 24px;
+  border-radius: 999px;
+  border: none;
+  background: #d1d5db;
+  position: relative;
+  padding: 0;
+  cursor: pointer;
+}
+
+.ag-irrig-toggle .handle {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #ffffff;
+  transition: transform 0.15s ease;
+}
+
+.ag-irrig-toggle.open {
+  background: #0b5ed7;
+}
+
+.ag-irrig-toggle.open .handle {
+  transform: translateX(20px);
+}
+.ag-irrig-toggle--readonly {
+  pointer-events: none;
+  cursor: default;
+  opacity: 0.7; /* subtle dimming to convey it's not interactive */
+}
+
+@media (max-width: 400px) {
+  .ag-irrig-toggle {
+    width: 42px;
+    height: 20px;
+  }
+}
+
+/* main buttons */
+
+.ag-irrig-btn {
+  margin-top: 10px;
+  width: 100%;
+  border-radius: 999px;
+  border: none;
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.ag-irrig-btn.close {
+  background: #dc2626;
+}
+
+/* timed open section */
+
+.ag-irrig-divider {
+  margin: 16px 0 10px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.ag-irrig-timed-title {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
+.ag-irrig-timed-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin: 8px 0 10px;
+}
+
+.ag-irrig-timed-row input[type="number"] {
+  width: 70px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  text-align: right;
+  font-size: 13px;
+}
+
+@media (max-width: 360px) {
+  .ag-irrig-timed-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ag-irrig-timed-row input[type="number"] {
+    width: 100%;
+  }
+}
+
+
+/* ==========================================================
+   WATER METER CARDS
+   ========================================================== */
+
+.ag-irrig-meters {
+  margin-top: 4px;
+}
+
+.ag-irrig-meter-card {
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  padding: 16px 16px 18px;
+  background: #ffffff;
+}
+
+.ag-irrig-meter-card .title {
+  font-size: 14px;
+  color: #4b5563;
+  margin-bottom: 6px;
+}
+
+.ag-irrig-meter-card .value {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.ag-irrig-meter-card .unit {
+  font-size: 14px;
+  margin-left: 4px;
+}
+
+/* ==========================================================
+   IRRIGATION RULES MODAL – Legacy weekday selector
+   ========================================================== */
+
+.weekday-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.weekday-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #f9fafb;
+  cursor: pointer;
+  user-select: none;
+}
+
+.weekday-pill input {
+  width: 14px;
+  height: 14px;
+}

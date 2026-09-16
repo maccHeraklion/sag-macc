@@ -1,0 +1,24 @@
+{
+  "name": "runpertich-tester",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Browser-based test harness and virtual dashboard for runPerTich.js",
+  "scripts": {
+    "start": "vite --mode development",
+    "build": "vite build",
+    "check:types": "tsc --noEmit"
+  },
+  "author": "AgroGenius",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/react": "18.2.25",
+    "@types/react-dom": "18.2.10",
+    "@vitejs/plugin-react": "^4.1.0",
+    "typescript": "5.2.2",
+    "vite": "^4.4.11"
+  },
+  "dependencies": {
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  }
+}

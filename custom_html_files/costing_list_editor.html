@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Costing List Editor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://admin.tago.io/dist/custom-widget.min.js"></script>
+  <style>
+    body { font-family: Inter, system-ui, sans-serif; background: #f8fafc; }
+    .tab-btn.active { background: #0f172a; color: white; }
+    .small-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
+    .small-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+    textarea { min-height: 56px; }
+    .compact-input { border-radius: 0.5rem; border: 1px solid #cbd5e1; padding: 0.3rem 0.5rem; font-size: 0.8125rem; width: 100%; }
+    .compact-input:focus { outline: 2px solid #3b82f6; outline-offset: -1px; border-color: transparent; }
+  </style>
+</head>
+<body>
+<div class="min-h-screen p-4">
+  <div class="max-w-7xl mx-auto space-y-4">
+
+    <!-- Header -->
+    <div class="bg-white rounded-2xl shadow-sm border p-4">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-800">Costing List Editor</h1>
+          <p class="text-sm text-slate-500">Επεξεργασία καταλόγου (schema v4) — μεταβλητή <strong>costing_list</strong>, αποθήκευση στο <code>metadata.cl</code>.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button id="reloadBtn" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm">Ανανέωση</button>
+          <button id="addItemBtn" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm">+ Προϊόν</button>
+          <button id="addPacketBtn" class="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm">+ Πακέτο</button>
+          <button id="addSubBtn" class="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm">+ Συνδρομή</button>
+          <button id="saveBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">Αποθήκευση</button>
+          <button id="downloadBtn" class="px-4 py-2 bg-slate-200 text-slate-800 rounded-lg text-sm">Export JSON</button>
+          <label class="px-4 py-2 bg-slate-200 text-slate-800 rounded-lg cursor-pointer text-sm">Import JSON
+            <input id="importInput" type="file" accept=".json,application/json" class="hidden" />
+          </label>
+        </div>
+      </div>
+      <div id="statusBar" class="mt-3 text-sm text-slate-600"></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="bg-white rounded-2xl shadow-sm border p-4">
+      <div class="flex flex-wrap gap-2">
+        <button class="tab-btn active px-4 py-2 rounded-lg border text-sm" data-tab="general">Γενικά</button>
+        <button class="tab-btn px-4 py-2 rounded-lg border text-sm" data-tab="products">Προϊόντα</button>
+        <button class="tab-btn px-4 py-2 rounded-lg border text-sm" data-tab="packets">Πακέτα</button>
+        <button class="tab-btn px-4 py-2 rounded-lg border text-sm" data-tab="subs">Συνδρομές</button>
+        <button class="tab-btn px-4 py-2 rounded-lg border text-sm" data-tab="lists">Λίστες</button>
+      </div>
+    </div>
+
+    <section id="tab-general" class="tab-panel bg-white rounded-2xl shadow-sm border p-4"></section>
+    <section id="tab-products" class="tab-panel hidden bg-white rounded-2xl shadow-sm border p-4"></section>
+    <section id="tab-packets" class="tab-panel hidden bg-white rounded-2xl shadow-sm border p-4"></section>
+    <section id="tab-subs" class="tab-panel hidden bg-white rounded-2xl shadow-sm border p-4"></section>
+    <section id="tab-lists" class="tab-panel hidden bg-white rounded-2xl shadow-sm border p-4"></section>
+  </div>
+</div>
+
+<script>
+window.TagoIO.autoFill = true;
+
+// ─── Empty catalog ────────────────────────────────────────────────────────
+function emptyCatalog() {
+  return {
+    v: 3, u: "", c: "EUR",
+    g: { n: "MACC", e: "info@macc.gr", p: "+30 210 220 0611", w: "www.macc.gr", vat: "801701688", a: "Αρχιμήδους 1 & Ικάρου, Ν. Αλικαρνασσός", vr: 0.24 },
+    i: [], pk: [], sb: [],
+    ls: { cat: [], ind: [], ven: [] }
+  };
+}
+
+const state = {
+  widget: null,
+  activeTab: "general",
+  catalog: emptyCatalog()
+};
+
+const el = {};
+
+// ─── Bootstrap ────────────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  ["reloadBtn","addItemBtn","addPacketBtn","addSubBtn","saveBtn","downloadBtn","importInput","statusBar",
+   "tab-general","tab-products","tab-packets","tab-subs","tab-lists"].forEach(id => {
+    el[id] = document.getElementById(id);
+  });
+
+  document.querySelectorAll("[data-tab]").forEach(btn => {
+    btn.addEventListener("click", () => activateTab(btn.dataset.tab));
+  });
+
+  el.reloadBtn.addEventListener("click", () => loadFromWidget(state.widget));
+  el.addItemBtn.addEventListener("click", () => {
+    state.catalog.i.unshift(newItem());
+    activateTab("products");
+    render();
+  });
+  el.addPacketBtn.addEventListener("click", () => {
+    state.catalog.pk.unshift(newPacket());
+    activateTab("packets");
+    render();
+  });
+  el.addSubBtn.addEventListener("click", () => {
+    if (!state.catalog.sb) state.catalog.sb = [];
+    state.catalog.sb.unshift(newSub());
+    activateTab("subs");
+    render();
+  });
+  el.saveBtn.addEventListener("click", saveCatalog);
+  el.downloadBtn.addEventListener("click", downloadJSON);
+  el.importInput.addEventListener("change", importJSON);
+
+  initTago();
+});
+
+// ─── TagoIO integration ───────────────────────────────────────────────────
+function initTago() {
+  window.TagoIO.onStart(async widget => {
+    state.widget = widget;
+    setStatus("Widget started. Αναζήτηση costing_list...");
+    await loadFromWidget(widget);
+  });
+
+  window.TagoIO.onRealtime(async payload => {
+    const cat = await extractCatalogFromPayload(payload);
+    if (cat) {
+      state.catalog = cat;
+      render();
+      setStatus("Realtime update ελήφθη.");
+    }
+  });
+
+  window.TagoIO.onError(err => {
+    console.error(err);
+    setStatus("Σφάλμα TagoIO: " + (err?.message || JSON.stringify(err)), true);
+  });
+
+  window.TagoIO.ready();
+}
+
+// ─── Catalog extraction ───────────────────────────────────────────────────
+function tryJSON(str) {
+  try { return JSON.parse(str); } catch (_) { return null; }
+}
+
+// Derive lookup lists from item values (used when ls is absent)
+function deriveListsFromItems(items) {
+  const u = f => [...new Set((items||[]).map(x => x[f]||"").filter(Boolean))].sort((a,b) => a.localeCompare(b,"el"));
+  return { cat: u("cat"), ind: u("ind"), ven: u("ven") };
+}
+
+// Merge any item values not already in ls into ls (keeps ls as superset)
+function mergeLists(ls, items) {
+  const r = { cat:[...(ls.cat||[])], ind:[...(ls.ind||[])], ven:[...(ls.ven||[])] };
+  (items||[]).forEach(item => {
+    ["cat","ind","ven"].forEach(f => { if (item[f] && !r[f].includes(item[f])) r[f].push(item[f]); });
+  });
+  r.cat.sort((a,b)=>a.localeCompare(b,"el"));
+  r.ind.sort((a,b)=>a.localeCompare(b,"el"));
+  r.ven.sort((a,b)=>a.localeCompare(b,"el"));
+  return r;
+}
+
+async function inflateCl(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const ds = new DecompressionStream('deflate');
+  const writer = ds.writable.getWriter();
+  const reader = ds.readable.getReader();
+  writer.write(bytes);
+  writer.close();
+  const chunks = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  let offset = 0, len = chunks.reduce((s, c) => s + c.length, 0);
+  const result = new Uint8Array(len);
+  for (const c of chunks) { result.set(c, offset); offset += c.length; }
+  return new TextDecoder().decode(result);
+}
+
+async function deflateCl(jsonStr) {
+  const bytes = new TextEncoder().encode(jsonStr);
+  const cs = new CompressionStream('deflate');
+  const writer = cs.writable.getWriter();
+  const reader = cs.readable.getReader();
+  writer.write(bytes);
+  writer.close();
+  const chunks = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  let offset = 0, len = chunks.reduce((s, c) => s + c.length, 0);
+  const result = new Uint8Array(len);
+  for (const c of chunks) { result.set(c, offset); offset += c.length; }
+  let bin = '';
+  for (let i = 0; i < result.length; i++) bin += String.fromCharCode(result[i]);
+  return btoa(bin);
+}
+
+function normalizeV4(raw) {
+  if (!raw || raw.v !== 4) return null;
+  const ct = raw.ct || [], inp = raw.in || [], vn = raw.vn || [];
+  const items = (raw.i || []).map(a => ({
+    sku: a[0] || "", cat: ct[a[1]] || "", ind: inp[a[2]] || "",
+    ven: vn[a[3]] || "", pr: a[4] || 0, d: a[5] || "",
+    mu: a[6] || "", nt: a[7] || "", sb: a[8] || ""
+  }));
+  return {
+    v: 3, u: raw.u || "", c: raw.c || "EUR",
+    g: Object.assign({ n:"", e:"", p:"", w:"", vat:"", a:"", vr:0.24 }, raw.g || {}),
+    i: items,
+    pk: Array.isArray(raw.pk) ? raw.pk : [],
+    sb: Array.isArray(raw.sb) ? raw.sb : [],
+    ls: mergeLists({ cat:[...ct], ind:[...inp], ven:[...vn] }, items)
+  };
+}
+
+function normalizeCatalog(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  if (raw.v === 4 || Array.isArray(raw.ct)) return normalizeV4(raw);
+  if (Array.isArray(raw.i)) {
+    const ls = raw.ls ? mergeLists(raw.ls, raw.i) : deriveListsFromItems(raw.i);
+    return {
+      v: raw.v || 3, u: raw.u || "", c: raw.c || "EUR",
+      g: Object.assign({ n:"", e:"", p:"", w:"", vat:"", a:"", vr:0.24 }, raw.g || {}),
+      i: raw.i,
+      pk: Array.isArray(raw.pk) ? raw.pk : [],
+      sb: Array.isArray(raw.sb) ? raw.sb : [],
+      ls
+    };
+  }
+  if (Array.isArray(raw.items) || raw.generalData) {
+    const g = raw.generalData || {};
+    const items = (raw.items||[]).map(item => ({
+      sku: item.SKU||"", cat: item.CategoryGR||item.Category||"",
+      ind: item.IndustryGR||"", d: item.DescriptionGR||item.Description||"",
+      ven: item.Vendor||"", pr: safeNum(item.Price, 0),
+      mu: item.manualUrl||"", nt: item.Notes||"", sb: ""
+    }));
+    return {
+      v: 3, u: raw.updated_at || "", c: raw.currency || "EUR",
+      g: { n: g.companyName||"", e: g.email||"", p: g.phone||"", w: g.website||"",
+           vat: g.vatNumber||"", a: g.address||"", vr: typeof g.vatRate==="number" ? g.vatRate : 0.24 },
+      i: items,
+      pk: (raw.packets||[]).map(pkt => ({
+        id: pkt.packetId||"", n: pkt.nameGR||pkt.name||"",
+        ds: pkt.descriptionGR||pkt.description||"", en: pkt.enabled!==false,
+        it: (pkt.items||[]).map(pi => ({ sku: pi.sku||"", q: safeInt(pi.qty||pi.q, 1) }))
+      })),
+      sb: [],
+      ls: deriveListsFromItems(items)
+    };
+  }
+  return null;
+}
+
+async function tryExtractFromPoint(pt) {
+  if (!pt || pt.variable !== "costing_list") return null;
+  const meta = pt.metadata;
+  if (meta && meta.cl) {
+    if (typeof meta.cl === "string") {
+      try {
+        const json = await inflateCl(meta.cl);
+        const raw = tryJSON(json);
+        const cat = normalizeV4(raw) || normalizeCatalog(raw);
+        if (cat) return cat;
+      } catch (e) { console.warn("inflateCl failed", e); }
+    } else if (typeof meta.cl === "object") {
+      const cat = normalizeCatalog(meta.cl);
+      if (cat) return cat;
+    }
+  }
+  if (meta && meta.costing_list) {
+    const raw = typeof meta.costing_list === "string" ? tryJSON(meta.costing_list) : meta.costing_list;
+    const cat = normalizeCatalog(raw);
+    if (cat) return cat;
+  }
+  if (pt.value && typeof pt.value === "string") {
+    const cat = normalizeCatalog(tryJSON(pt.value));
+    if (cat) return cat;
+  }
+  return null;
+}
+
+async function extractCatalogFromPayload(source) {
+  if (!source) return null;
+  if (Array.isArray(source)) {
+    for (const entry of source) {
+      const cat = await extractCatalogFromPayload(entry);
+      if (cat) return cat;
+    }
+    return null;
+  }
+  if (typeof source === "object") {
+    if (source.variable === "costing_list") {
+      const cat = await tryExtractFromPoint(source);
+      if (cat) return cat;
+    }
+    for (const val of Object.values(source)) {
+      if (val && typeof val === "object") {
+        const cat = await extractCatalogFromPayload(val);
+        if (cat) return cat;
+      }
+    }
+  }
+  return null;
+}
+
+async function loadFromWidget(widget) {
+  const cat = await extractCatalogFromPayload(widget);
+  state.catalog = cat || emptyCatalog();
+  render();
+  if (cat) {
+    const sc = (state.catalog.sb || []).length;
+    setStatus(`Φορτώθηκαν ${state.catalog.i.length} προϊόντα, ${state.catalog.pk.length} πακέτα, ${sc} συνδρομές.`);
+  } else {
+    setStatus("Δεν βρέθηκε costing_list. Ρύθμισε το widget να διαβάζει τη μεταβλητή costing_list.", true);
+  }
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────
+function safeNum(v, fallback = 0) { const n = Number(v); return Number.isFinite(n) ? n : fallback; }
+function safeInt(v, fallback = 1) { const n = parseInt(v, 10); return n > 0 ? n : fallback; }
+
+function escapeHTML(v) {
+  return String(v ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function setStatus(msg, isError = false) {
+  el.statusBar.innerHTML = `<span class="${isError ? "text-rose-600" : "text-slate-600"}">${escapeHTML(msg)}</span>`;
+}
+
+function activateTab(tabName) {
+  state.activeTab = tabName;
+  document.querySelectorAll("[data-tab]").forEach(x => x.classList.toggle("active", x.dataset.tab === tabName));
+  document.querySelectorAll(".tab-panel").forEach(p => p.classList.add("hidden"));
+  document.getElementById("tab-" + tabName).classList.remove("hidden");
+  render();
+}
+
+// ─── Factories ────────────────────────────────────────────────────────────
+function newItem() {
+  return { sku: "", cat: "", ind: "", d: "", ven: "", pr: 0, mu: "", nt: "", sb: "" };
+}
+function newPacket() {
+  return { id: "pkt_" + Math.random().toString(36).slice(2, 8), n: "", ds: "", en: true, it: [{ sku: "", q: 1 }] };
+}
+function newSub() {
+  return { id: "sub_" + Math.random().toString(36).slice(2, 8), n: "", pr: 0, ds: "" };
+}
+
+// ─── Two-way binding ──────────────────────────────────────────────────────
+function bind(root) {
+  root.querySelectorAll("[data-bind]").forEach(input => {
+    input.addEventListener("input", onBoundChange);
+    input.addEventListener("change", onBoundChange);
+  });
+}
+
+function onBoundChange(e) {
+  const { bind: path, type } = e.target.dataset;
+  let value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+  if (type === "number") value = safeNum(value);
+  setPath(state.catalog, path, value);
+}
+
+function setPath(obj, path, value) {
+  const parts = path.replace(/\[(\d+)\]/g, ".$1").split(".");
+  let cur = obj;
+  while (parts.length > 1) { const k = parts.shift(); if (!(k in cur)) cur[k] = {}; cur = cur[k]; }
+  cur[parts[0]] = value;
+}
+
+// ─── Render: General ─────────────────────────────────────────────────────
+function fi(label, path, value, type = "text", cls = "") {
+  return `<label class="block ${cls}">
+    <div class="text-xs text-slate-500 mb-1">${escapeHTML(label)}</div>
+    <input data-bind="${escapeHTML(path)}" data-type="${type}" type="${type}" class="w-full border rounded-lg px-3 py-2 text-sm" value="${escapeHTML(value)}" />
+  </label>`;
+}
+
+function fta(label, path, value, cls = "") {
+  return `<label class="block ${cls}">
+    <div class="text-xs text-slate-500 mb-1">${escapeHTML(label)}</div>
+    <textarea data-bind="${escapeHTML(path)}" class="w-full border rounded-lg px-3 py-2 text-sm">${escapeHTML(value)}</textarea>
+  </label>`;
+}
+
+function renderGeneral() {
+  if (state.activeTab !== "general") return;
+  const g = state.catalog.g;
+  el["tab-general"].innerHTML = `
+    <h2 class="text-lg font-semibold mb-4">Γενικά Στοιχεία</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      ${fi("Εταιρεία", "g.n", g.n || "")}
+      ${fi("Email", "g.e", g.e || "")}
+      ${fi("Τηλέφωνο", "g.p", g.p || "")}
+      ${fi("Website", "g.w", g.w || "")}
+      ${fi("ΑΦΜ", "g.vat", g.vat || "")}
+      ${fi("Νόμισμα", "c", state.catalog.c || "EUR")}
+      ${fi("Διεύθυνση", "g.a", g.a || "", "text", "md:col-span-2")}
+      ${fi("Συντελεστής ΦΠΑ (π.χ. 0.24)", "g.vr", g.vr ?? 0.24, "number")}
+    </div>
+  `;
+  bind(el["tab-general"]);
+}
+
+// ─── Render: Products ────────────────────────────────────────────────────
+function uniqueVals(field) {
+  return [...new Set((state.catalog.i || []).map(x => x[field] || "").filter(Boolean))].sort((a, b) => a.localeCompare(b, "el"));
+}
+
+function renderProducts() {
+  if (state.activeTab !== "products") return;
+  const items = state.catalog.i;
+  const ls = state.catalog.ls || deriveListsFromItems(items);
+  const dlCat = ls.cat.map(v => `<option value="${escapeHTML(v)}">`).join("");
+  const dlInd = ls.ind.map(v => `<option value="${escapeHTML(v)}">`).join("");
+  const dlVen = ls.ven.map(v => `<option value="${escapeHTML(v)}">`).join("");
+
+  el["tab-products"].innerHTML = `
+    <datalist id="dl-cat">${dlCat}</datalist>
+    <datalist id="dl-ind">${dlInd}</datalist>
+    <datalist id="dl-ven">${dlVen}</datalist>
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+      <h2 class="text-lg font-semibold">Προϊόντα</h2>
+      <div class="flex items-center gap-3">
+        <input id="productSearch" type="text" placeholder="Φίλτρο SKU / περιγραφή..." class="border rounded-lg px-3 py-1.5 text-sm w-52" />
+        <span class="text-sm text-slate-500">${items.length} εγγραφές</span>
+      </div>
+    </div>
+    <div id="productsList" class="space-y-2">
+      ${items.map((item, idx) => productCard(item, idx)).join("")}
+    </div>
+  `;
+  bind(el["tab-products"]);
+  bindProductActions();
+
+  document.getElementById("productSearch").addEventListener("input", e => {
+    const q = e.target.value.toLowerCase();
+    document.querySelectorAll("[data-product-card]").forEach(card => {
+      card.style.display = (!q || card.dataset.productText.includes(q)) ? "" : "none";
+    });
+  });
+}
+
+function productCard(item, idx) {
+  const txt = `${item.sku} ${item.cat} ${item.ind} ${item.d} ${item.ven}`.toLowerCase();
+  const subs = state.catalog.sb || [];
+  const subOpts = ['<option value="">— καμία —</option>'].concat(
+    subs.map(s => `<option value="${escapeHTML(s.id)}" ${s.id === (item.sb||"") ? "selected" : ""}>${escapeHTML(s.n || s.id)}</option>`)
+  ).join("");
+
+  return `
+    <div class="border rounded-xl p-3" data-product-card="${idx}" data-product-text="${escapeHTML(txt)}">
+      <!-- Single-line fields row -->
+      <div class="flex flex-wrap items-end gap-2 mb-2">
+        <label class="block shrink-0" style="width:110px">
+          <div class="text-xs text-slate-500 mb-0.5">SKU *</div>
+          <input data-bind="i[${idx}].sku" class="compact-input" value="${escapeHTML(item.sku)}" />
+        </label>
+        <label class="block flex-1" style="min-width:130px">
+          <div class="text-xs text-slate-500 mb-0.5">Κατηγορία *</div>
+          <input data-bind="i[${idx}].cat" list="dl-cat" class="compact-input" value="${escapeHTML(item.cat)}" />
+        </label>
+        <label class="block flex-1" style="min-width:130px">
+          <div class="text-xs text-slate-500 mb-0.5">Κλάδος / Εφαρμογή</div>
+          <input data-bind="i[${idx}].ind" list="dl-ind" class="compact-input" value="${escapeHTML(item.ind||'')}" />
+        </label>
+        <label class="block flex-1" style="min-width:120px">
+          <div class="text-xs text-slate-500 mb-0.5">Προμηθευτής</div>
+          <input data-bind="i[${idx}].ven" list="dl-ven" class="compact-input" value="${escapeHTML(item.ven||'')}" />
+        </label>
+        <label class="block shrink-0" style="width:88px">
+          <div class="text-xs text-slate-500 mb-0.5">Τιμή (€) *</div>
+          <input data-bind="i[${idx}].pr" data-type="number" type="number" class="compact-input" value="${escapeHTML(String(item.pr))}" />
+        </label>
+        <label class="block shrink-0" style="min-width:140px">
+          <div class="text-xs text-slate-500 mb-0.5">Συνδρομή</div>
+          <select data-bind="i[${idx}].sb" class="compact-input">${subOpts}</select>
+        </label>
+        <label class="block flex-1" style="min-width:140px">
+          <div class="text-xs text-slate-500 mb-0.5">Manual URL</div>
+          <input data-bind="i[${idx}].mu" class="compact-input" value="${escapeHTML(item.mu||'')}" />
+        </label>
+        <div class="flex gap-1.5 shrink-0 mt-4">
+          <button class="px-2.5 py-1.5 bg-slate-200 rounded-lg text-xs whitespace-nowrap" data-duplicate-item="${idx}">Αντιγρ.</button>
+          <button class="px-2.5 py-1.5 bg-rose-600 text-white rounded-lg text-xs whitespace-nowrap" data-delete-item="${idx}">Διαγρ.</button>
+        </div>
+      </div>
+      <!-- Description & notes full-width -->
+      <div class="space-y-1.5">
+        ${fta("Περιγραφή *", `i[${idx}].d`, item.d)}
+        ${fta("Εσωτερικές Σημειώσεις", `i[${idx}].nt`, item.nt || "")}
+      </div>
+    </div>
+  `;
+}
+
+function bindProductActions() {
+  el["tab-products"].querySelectorAll("[data-delete-item]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.catalog.i.splice(Number(btn.dataset.deleteItem), 1);
+      render();
+    });
+  });
+  el["tab-products"].querySelectorAll("[data-duplicate-item]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = Number(btn.dataset.duplicateItem);
+      const copy = JSON.parse(JSON.stringify(state.catalog.i[idx]));
+      copy.sku = copy.sku ? copy.sku + "_COPY" : "";
+      state.catalog.i.splice(idx + 1, 0, copy);
+      render();
+    });
+  });
+}
+
+// ─── Render: Packets ─────────────────────────────────────────────────────
+function renderPackets() {
+  if (state.activeTab !== "packets") return;
+  const pkts = state.catalog.pk;
+  el["tab-packets"].innerHTML = `
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold">Πακέτα</h2>
+      <span class="text-sm text-slate-500">${pkts.length} εγγραφές</span>
+    </div>
+    <div class="space-y-4">
+      ${pkts.map((pkt, idx) => packetCard(pkt, idx)).join("")}
+    </div>
+  `;
+  bind(el["tab-packets"]);
+  bindPacketActions();
+}
+
+function packetItemRowHTML(pIdx, rIdx, row) {
+  const opts = ['<option value="">-- SKU --</option>'].concat(
+    state.catalog.i
+      .slice()
+      .sort((a, b) => (a.sku || "").localeCompare(b.sku || ""))
+      .map(item => `<option value="${escapeHTML(item.sku)}" ${item.sku === row.sku ? "selected" : ""}>${escapeHTML(item.sku)} — ${escapeHTML(item.d || "")}</option>`)
+  ).join("");
+  return `
+    <div class="grid grid-cols-[1fr_100px_auto] gap-2 items-end">
+      <label class="block">
+        <div class="text-xs text-slate-500 mb-1">SKU</div>
+        <select class="w-full border rounded-lg px-3 py-2 text-sm" data-pkt-sku="${pIdx}" data-row="${rIdx}">${opts}</select>
+      </label>
+      <label class="block">
+        <div class="text-xs text-slate-500 mb-1">Ποσότητα</div>
+        <input type="number" min="1" step="1" class="w-full border rounded-lg px-3 py-2 text-sm" value="${row.q}" data-pkt-qty="${pIdx}" data-row="${rIdx}" />
+      </label>
+      <button class="px-3 py-2 bg-rose-600 text-white rounded-lg text-sm mt-5" data-remove-row="${pIdx}" data-row="${rIdx}">✕</button>
+    </div>
+  `;
+}
+
+function packetCard(pkt, idx) {
+  const itemRows = pkt.it.map((row, rIdx) => packetItemRowHTML(idx, rIdx, row)).join("");
+  return `
+    <div class="border rounded-2xl p-4">
+      <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div class="font-semibold text-slate-800 text-sm">${escapeHTML(pkt.n || `Πακέτο #${idx + 1}`)}</div>
+        <div class="flex gap-2">
+          <button class="px-3 py-1.5 bg-slate-200 rounded-lg text-sm" data-duplicate-pkt="${idx}">Αντιγραφή</button>
+          <button class="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-sm" data-delete-pkt="${idx}">Διαγραφή</button>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        ${fi("ID πακέτου *", `pk[${idx}].id`, pkt.id)}
+        <label class="block">
+          <div class="text-xs text-slate-500 mb-1">Ενεργό</div>
+          <select data-pkt-enabled="${idx}" class="w-full border rounded-lg px-3 py-2 text-sm">
+            <option value="true" ${pkt.en !== false ? "selected" : ""}>Ναι</option>
+            <option value="false" ${pkt.en === false ? "selected" : ""}>Όχι</option>
+          </select>
+        </label>
+        ${fta("Όνομα πακέτου *", `pk[${idx}].n`, pkt.n, "md:col-span-2")}
+        ${fta("Περιγραφή", `pk[${idx}].ds`, pkt.ds || "", "md:col-span-2")}
+      </div>
+      <div class="mt-4 border-t pt-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="font-medium text-sm">Προϊόντα πακέτου</div>
+          <button class="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm" data-add-row="${idx}">+ Γραμμή</button>
+        </div>
+        <div class="space-y-2">${itemRows}</div>
+      </div>
+    </div>
+  `;
+}
+
+function bindPacketActions() {
+  el["tab-packets"].querySelectorAll("[data-delete-pkt]").forEach(btn => {
+    btn.addEventListener("click", () => { state.catalog.pk.splice(Number(btn.dataset.deletePkt), 1); render(); });
+  });
+  el["tab-packets"].querySelectorAll("[data-duplicate-pkt]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = Number(btn.dataset.duplicatePkt);
+      const copy = JSON.parse(JSON.stringify(state.catalog.pk[idx]));
+      copy.id = copy.id + "_copy";
+      copy.n = copy.n ? copy.n + " (αντίγραφο)" : "Αντίγραφο";
+      state.catalog.pk.splice(idx + 1, 0, copy);
+      render();
+    });
+  });
+  el["tab-packets"].querySelectorAll("[data-add-row]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.catalog.pk[Number(btn.dataset.addRow)].it.push({ sku: "", q: 1 });
+      render();
+    });
+  });
+  el["tab-packets"].querySelectorAll("[data-remove-row]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const p = Number(btn.dataset.removeRow), r = Number(btn.dataset.row);
+      state.catalog.pk[p].it.splice(r, 1);
+      if (!state.catalog.pk[p].it.length) state.catalog.pk[p].it.push({ sku: "", q: 1 });
+      render();
+    });
+  });
+  el["tab-packets"].querySelectorAll("[data-pkt-sku]").forEach(sel => {
+    sel.addEventListener("change", () => {
+      state.catalog.pk[Number(sel.dataset.pktSku)].it[Number(sel.dataset.row)].sku = sel.value;
+    });
+  });
+  el["tab-packets"].querySelectorAll("[data-pkt-qty]").forEach(inp => {
+    inp.addEventListener("input", () => {
+      state.catalog.pk[Number(inp.dataset.pktQty)].it[Number(inp.dataset.row)].q = safeInt(inp.value, 1);
+    });
+  });
+  el["tab-packets"].querySelectorAll("[data-pkt-enabled]").forEach(sel => {
+    sel.addEventListener("change", () => {
+      state.catalog.pk[Number(sel.dataset.pktEnabled)].en = sel.value === "true";
+    });
+  });
+}
+
+// ─── Render: Subscriptions ────────────────────────────────────────────────
+function renderSubscriptions() {
+  if (state.activeTab !== "subs") return;
+  const subs = state.catalog.sb || [];
+  el["tab-subs"].innerHTML = `
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="text-lg font-semibold">Συνδρομές</h2>
+        <p class="text-sm text-slate-500 mt-0.5">Ετήσιες/περιοδικές χρεώσεις που συνοδεύουν προϊόντα. Αντιστοιχίζονται από το πεδίο «Συνδρομή» στα προϊόντα.</p>
+      </div>
+      <span class="text-sm text-slate-500">${subs.length} εγγραφές</span>
+    </div>
+    <div class="space-y-2">
+      ${subs.length ? subs.map((s, idx) => subCard(s, idx)).join("") : '<p class="text-sm text-slate-400 text-center py-10">Δεν υπάρχουν συνδρομές. Χρησιμοποιήστε «+ Συνδρομή».</p>'}
+    </div>
+  `;
+  bind(el["tab-subs"]);
+  el["tab-subs"].querySelectorAll("[data-delete-sub]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.catalog.sb.splice(Number(btn.dataset.deleteSub), 1);
+      render();
+    });
+  });
+}
+
+function subCard(sub, idx) {
+  return `
+    <div class="border rounded-xl p-3 flex flex-wrap items-end gap-2">
+      <label class="block shrink-0" style="width:130px">
+        <div class="text-xs text-slate-500 mb-0.5">ID *</div>
+        <input data-bind="sb[${idx}].id" class="compact-input font-mono" value="${escapeHTML(sub.id)}" />
+      </label>
+      <label class="block flex-1" style="min-width:180px">
+        <div class="text-xs text-slate-500 mb-0.5">Όνομα *</div>
+        <input data-bind="sb[${idx}].n" class="compact-input" value="${escapeHTML(sub.n)}" />
+      </label>
+      <label class="block shrink-0" style="width:100px">
+        <div class="text-xs text-slate-500 mb-0.5">Τιμή (€)</div>
+        <input data-bind="sb[${idx}].pr" data-type="number" type="number" class="compact-input" value="${escapeHTML(String(sub.pr))}" />
+      </label>
+      <label class="block flex-1" style="min-width:200px">
+        <div class="text-xs text-slate-500 mb-0.5">Περιγραφή</div>
+        <input data-bind="sb[${idx}].ds" class="compact-input" value="${escapeHTML(sub.ds||'')}" />
+      </label>
+      <div class="shrink-0 mt-4">
+        <button class="px-2.5 py-1.5 bg-rose-600 text-white rounded-lg text-xs" data-delete-sub="${idx}">Διαγρ.</button>
+      </div>
+    </div>
+  `;
+}
+
+// ─── Render: Lists ───────────────────────────────────────────────────────
+function renderLists() {
+  if (state.activeTab !== "lists") return;
+  if (!state.catalog.ls) state.catalog.ls = deriveListsFromItems(state.catalog.i);
+  const ls = state.catalog.ls;
+
+  function listSection(title, field, borderColor) {
+    const vals = ls[field] || [];
+    const rows = vals.map((v, idx) => {
+      const used = state.catalog.i.filter(x => x[field] === v).length;
+      return `
+        <div class="flex items-center gap-2 py-1.5 border-b last:border-0">
+          <input class="compact-input flex-1 ls-rename" data-ls-field="${field}" data-ls-idx="${idx}"
+                 data-ls-old="${escapeHTML(v)}" value="${escapeHTML(v)}" />
+          <span class="text-xs text-slate-400 shrink-0 w-24 text-right">${used ? used + " προϊόντα" : "αχρησιμοποίητη"}</span>
+          <button class="px-2 py-1 bg-rose-600 text-white rounded text-xs shrink-0"
+                  data-ls-del="${field}" data-ls-idx="${idx}" data-ls-val="${escapeHTML(v)}" data-ls-used="${used}">Διαγρ.</button>
+        </div>`;
+    }).join("");
+
+    return `
+      <div class="border-2 rounded-xl p-4" style="border-color:${borderColor}20">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-sm" style="color:${borderColor}">${escapeHTML(title)}</h3>
+          <span class="text-xs text-slate-400">${vals.length} τιμές</span>
+        </div>
+        <div class="mb-3 max-h-64 overflow-y-auto small-scroll">
+          ${rows || '<p class="text-xs text-slate-400 py-3 text-center">Κενή λίστα.</p>'}
+        </div>
+        <div class="flex gap-2 pt-3 border-t">
+          <input class="compact-input flex-1 ls-new-input" data-ls-field="${field}" placeholder="Νέα τιμή..." />
+          <button class="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs shrink-0 ls-add-btn"
+                  data-ls-field="${field}">Προσθήκη</button>
+        </div>
+      </div>`;
+  }
+
+  el["tab-lists"].innerHTML = `
+    <div class="mb-5">
+      <h2 class="text-lg font-semibold">Λίστες Τιμών</h2>
+      <p class="text-sm text-slate-500 mt-0.5">Διαχείριση κατηγοριών, κλάδων και προμηθευτών. Μετονομασία ενημερώνει αυτόματα όλα τα σχετικά προϊόντα.</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      ${listSection("Κατηγορίες", "cat", "#3b82f6")}
+      ${listSection("Κλάδοι / Εφαρμογές", "ind", "#8b5cf6")}
+      ${listSection("Προμηθευτές", "ven", "#f59e0b")}
+    </div>
+  `;
+
+  // Rename: on blur/enter update all matching items
+  el["tab-lists"].querySelectorAll(".ls-rename").forEach(inp => {
+    const commit = () => {
+      const field = inp.dataset.lsField;
+      const idx = Number(inp.dataset.lsIdx);
+      const oldVal = inp.dataset.lsOld;
+      const newVal = inp.value.trim();
+      if (!newVal || newVal === oldVal) { inp.value = oldVal; return; }
+      if ((ls[field] || []).includes(newVal)) {
+        setStatus(`Η τιμή "${newVal}" υπάρχει ήδη.`, true);
+        inp.value = oldVal; return;
+      }
+      // Rename in all items
+      state.catalog.i.forEach(item => { if (item[field] === oldVal) item[field] = newVal; });
+      ls[field][idx] = newVal;
+      inp.dataset.lsOld = newVal;
+      setStatus(`Μετονομάστηκε: "${oldVal}" → "${newVal}"`);
+    };
+    inp.addEventListener("blur", commit);
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
+  });
+
+  // Add new value
+  el["tab-lists"].querySelectorAll(".ls-add-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const field = btn.dataset.lsField;
+      const inputEl = btn.previousElementSibling;
+      const val = inputEl.value.trim();
+      if (!val) return;
+      if ((ls[field] || []).includes(val)) { setStatus(`"${val}" υπάρχει ήδη.`, true); return; }
+      if (!ls[field]) ls[field] = [];
+      ls[field].push(val);
+      ls[field].sort((a,b) => a.localeCompare(b,"el"));
+      render();
+      setStatus(`Προστέθηκε: "${val}"`);
+    });
+  });
+
+  // Allow Enter on new-value input
+  el["tab-lists"].querySelectorAll(".ls-new-input").forEach(inp => {
+    inp.addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); inp.nextElementSibling.click(); }
+    });
+  });
+
+  // Delete
+  el["tab-lists"].querySelectorAll("[data-ls-del]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const field = btn.dataset.lsField;
+      const idx = Number(btn.dataset.lsIdx);
+      const val = btn.dataset.lsVal;
+      const used = Number(btn.dataset.lsUsed);
+      if (used > 0 && !confirm(`Η τιμή "${val}" χρησιμοποιείται από ${used} προϊόντα. Να διαγραφεί από τη λίστα;`)) return;
+      ls[field].splice(idx, 1);
+      render();
+      setStatus(`Διαγράφηκε: "${val}"`);
+    });
+  });
+}
+
+// ─── Master render ────────────────────────────────────────────────────────
+function render() {
+  renderGeneral();
+  renderProducts();
+  renderPackets();
+  renderSubscriptions();
+  renderLists();
+}
+
+// ─── Validation ───────────────────────────────────────────────────────────
+function validate() {
+  const errors = [];
+  const skuSet = new Set();
+  const idSet = new Set();
+  const subIds = new Set((state.catalog.sb || []).map(s => s.id).filter(Boolean));
+
+  state.catalog.i.forEach((item, idx) => {
+    if (!item.sku) { errors.push(`Προϊόν #${idx + 1}: λείπει SKU`); return; }
+    if (skuSet.has(item.sku)) errors.push(`Διπλό SKU: ${item.sku}`);
+    else skuSet.add(item.sku);
+    if (!item.d) errors.push(`Προϊόν ${item.sku}: λείπει περιγραφή`);
+    if (!item.cat) errors.push(`Προϊόν ${item.sku}: λείπει κατηγορία`);
+    if (item.pr < 0) errors.push(`Προϊόν ${item.sku}: αρνητική τιμή`);
+    if (item.sb && !subIds.has(item.sb)) errors.push(`Προϊόν ${item.sku}: συνδρομή "${item.sb}" δεν υπάρχει`);
+  });
+
+  state.catalog.pk.forEach((pkt, idx) => {
+    if (!pkt.id) { errors.push(`Πακέτο #${idx + 1}: λείπει ID`); return; }
+    if (idSet.has(pkt.id)) errors.push(`Διπλό packet ID: ${pkt.id}`);
+    else idSet.add(pkt.id);
+    if (!pkt.n) errors.push(`Πακέτο ${pkt.id}: λείπει όνομα`);
+    pkt.it.forEach((row, rIdx) => {
+      if (!row.sku) errors.push(`Πακέτο ${pkt.id}, γραμμή ${rIdx + 1}: λείπει SKU`);
+      else if (!skuSet.has(row.sku)) errors.push(`Πακέτο ${pkt.id}: SKU "${row.sku}" δεν υπάρχει`);
+      if (row.q < 1) errors.push(`Πακέτο ${pkt.id}, γραμμή ${rIdx + 1}: ποσότητα < 1`);
+    });
+  });
+
+  (state.catalog.sb || []).forEach((sub, idx) => {
+    if (!sub.id) errors.push(`Συνδρομή #${idx + 1}: λείπει ID`);
+    if (!sub.n) errors.push(`Συνδρομή ${sub.id || idx + 1}: λείπει όνομα`);
+    if (sub.pr < 0) errors.push(`Συνδρομή ${sub.id}: αρνητική τιμή`);
+  });
+
+  const vr = state.catalog.g.vr;
+  if (typeof vr !== "number" || vr < 0 || vr > 1)
+    errors.push("Συντελεστής ΦΠΑ πρέπει να είναι αριθμός 0–1");
+
+  return errors;
+}
+
+// ─── Build payload ────────────────────────────────────────────────────────
+function buildPayload() {
+  const cat = JSON.parse(JSON.stringify(state.catalog));
+  cat.v = 3;
+  cat.u = new Date().toISOString();
+  cat.i = cat.i.slice().sort((a, b) =>
+    (a.cat || "").localeCompare(b.cat || "", "el") || (a.sku || "").localeCompare(b.sku || "")
+  );
+  cat.pk = cat.pk.slice().sort((a, b) => (a.n || "").localeCompare(b.n || "", "el"));
+  cat.sb = (cat.sb || []).slice().sort((a, b) => (a.n || "").localeCompare(b.n || "", "el"));
+  // Ensure ls is a superset of all item values (handles new free-typed values)
+  cat.ls = mergeLists(cat.ls || { cat:[], ind:[], ven:[] }, cat.i);
+  return cat;
+}
+
+function buildV4(cat) {
+  // Build pools from ls (the managed master lists), supplemented by any item values
+  const ls = cat.ls || deriveListsFromItems(cat.i);
+  const ct = [...ls.cat], inp = [...ls.ind], vn = [...ls.ven];
+  const ctMap = {}, inMap = {}, vnMap = {};
+  ct.forEach((v,i) => ctMap[v]=i); inp.forEach((v,i) => inMap[v]=i); vn.forEach((v,i) => vnMap[v]=i);
+  function idx(map, arr, val) {
+    const k = val || "";
+    if (!(k in map)) { map[k] = arr.length; arr.push(k); }
+    return map[k];
+  }
+  const items = cat.i.map(item => {
+    const row = [item.sku, idx(ctMap, ct, item.cat), idx(inMap, inp, item.ind), idx(vnMap, vn, item.ven), item.pr, item.d];
+    if (item.mu || item.nt || item.sb) row.push(item.mu || "");
+    if (item.nt || item.sb) row.push(item.nt || "");
+    if (item.sb) row.push(item.sb);
+    return row;
+  });
+  return { v: 4, u: cat.u, c: cat.c, g: cat.g, ct, in: inp, vn, i: items, pk: cat.pk, sb: cat.sb || [] };
+}
+
+// ─── Save ─────────────────────────────────────────────────────────────────
+async function saveCatalog() {
+  const errors = validate();
+  if (errors.length) {
+    setStatus("Σφάλματα: " + errors.slice(0, 3).join(" | ") + (errors.length > 3 ? ` (+${errors.length - 3} ακόμα)` : ""), true);
+    return;
+  }
+
+  const v3 = buildPayload();
+  const v4 = buildV4(v3);
+  let clEncoded;
+  try {
+    clEncoded = await deflateCl(JSON.stringify(v4));
+  } catch (err) {
+    console.error(err);
+    setStatus("Αποτυχία συμπίεσης: " + (err?.message || String(err)), true);
+    return;
+  }
+
+  try {
+    await window.TagoIO.sendData({
+      variable: "costing_list",
+      value: "catalog_v4",
+      metadata: {
+        cl: clEncoded,
+        v: 4,
+        u: v3.u,
+        ic: v3.i.length,
+        pc: v3.pk.length,
+        sc: (v3.sb || []).length
+      }
+    });
+    state.catalog = v3;
+    render();
+    setStatus(`Αποθηκεύτηκε (v4). ${v3.i.length} προϊόντα / ${v3.pk.length} πακέτα / ${(v3.sb||[]).length} συνδρομές. ${new Date(v3.u).toLocaleString("el-GR")}`);
+  } catch (err) {
+    console.error(err);
+    setStatus("Αποτυχία αποθήκευσης: " + (err?.message || JSON.stringify(err)), true);
+  }
+}
+
+// ─── Export / Import ─────────────────────────────────────────────────────
+function downloadJSON() {
+  const cl = buildPayload();
+  const blob = new Blob([JSON.stringify(cl, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "costing_list_v3.json"; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importJSON(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const parsed = tryJSON(reader.result);
+    const cat = normalizeCatalog(parsed);
+    if (cat) {
+      state.catalog = cat;
+      render();
+      setStatus(`Εισαγωγή ολοκληρώθηκε. ${cat.i.length} προϊόντα / ${cat.pk.length} πακέτα / ${(cat.sb||[]).length} συνδρομές.`);
+    } else {
+      setStatus("Μη έγκυρο JSON — δεν αναγνωρίστηκε ως κατάλογος.", true);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = "";
+}
+</script>
+</body>
+</html>

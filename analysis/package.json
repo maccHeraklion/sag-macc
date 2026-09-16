@@ -1,0 +1,18 @@
+{
+  "name": "agrogenius-analysis",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TagoIO analysis scripts for AgroGenius",
+  "scripts": {
+    "test": "node test/harness.js",
+    "test:scenario": "node test/harness.js"
+  },
+  "dependencies": {
+    "@tago-io/sdk": "^5.0.0",
+    "axios": "^1.6.0",
+    "moment-timezone": "^0.5.45"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

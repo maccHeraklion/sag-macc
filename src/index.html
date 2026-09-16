@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="el">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Καλλιέργεια — Σύνοψη Πεδίου</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/main.tsx"></script>
+    <!-- UC511 valve-command feedback overlay (runtime patch, served from /public).
+         Wraps TagoIO hooks to show send→downlink→valve-status feedback in Άρδευση.
+         Loads after the module bundle; its boot() polls for window.TagoIO. -->
+    <script src="/uc511-feedback-overlay.js"></script>
+  </body>
+</html>
