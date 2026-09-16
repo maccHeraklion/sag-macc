@@ -6,17 +6,14 @@
   "browserslist": "> 0.5%, last 2 versions, not dead",
   "scripts": {
     "start": "vite --mode development",
-    "build:staging": "vite build --base https://api.tago.io/file/67934c48e8e573000ae5964b/storage/sagMainStaging/ --outDir ../_dist-sagMainStaging --emptyOutDir",
-    "build:production": "vite build --base https://api.tago.io/file/67934c48e8e573000ae5964b/storage/sagMain/ --outDir ../_dist-sagMain --emptyOutDir",
-    "build:betaTesting": "vite build --base https://api.tago.io/file/67934c48e8e573000ae5964b/storage/betaTesting/",
-    "build": "vite build --base /67934c48e8e573000ae5964b/storage/line-chart/",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint src/",
     "check:types": "tsc --noEmit",
-    "deploy:staging": "npm --prefix scripts install && node scripts/deploy_dynamic.js storage/sagMainStaging",
-    "deploy:production": "npm --prefix scripts install && node scripts/deploy_dynamic.js storage/sagMain",
-    "deploy:betaTesting": "npm --prefix scripts install && node scripts/deploy_dynamic.js storage/betaTesting"
+    "build": "node -e \"console.error('\\n== DO NOT BUILD ==\\nThe widget has NO build source. The deployed widget is the HAND-PATCHED bundle in _dist-sagMain/. Edit it by hand and upload it. Rebuilding drops live-only features. See CONSOLIDATION.md.\\n'); process.exit(1)\"",
+    "build:production": "npm run build",
+    "build:staging": "npm run build",
+    "deploy": "node -e \"console.error('Deploy analyses via deploy/ (see deploy/README.md); the widget is uploaded by hand to TagoIO Files storage/sagMain.'); process.exit(1)\""
   },
   "babel": {
     "presets": [

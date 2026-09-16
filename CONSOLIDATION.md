@@ -70,6 +70,16 @@ See **[DEPLOY.md](DEPLOY.md)**. In short: analyses → paste into the matching T
 via the TagoIO MCP `upload_analysis_script`); widget → copy `_dist-sagMain/*` into TagoIO Files
 `storage/sagMain`; parsers → assign per device.
 
+## Cleanup done (2026-09-16)
+- Removed the stale `_dist-sagMainStaging/` (old build, not production truth).
+- Disabled the widget build: `npm run build` / `build:production` / `build:staging` now error with a
+  "DO NOT BUILD" guard (the widget is hand-patched — see above). `check:types`/`lint`/`start` remain
+  for reading `src/`. Old broken `deploy:*` scripts removed; deploy is now `deploy/`.
+- `src/` kept as **reference only**.
+- Local, out-of-repo cruft (7 folders, ~15 MB: old `dist-*`, `patched-sagMain`, `backup`, `dashboard`,
+  `admin`, `SAG_LEGACY_HANDOFF`) moved to `SAG/Administration/_archive_pre_consolidation_2026-09/`
+  (outside git, recoverable) — delete once you're confident the repo is complete.
+
 ## Follow-ups worth doing
 - Byte-verify `runPerTich.js` against live once (it exceeded the MCP 1 MiB download cap here).
 - Confirm parser→connector assignments and prune the duplicate `lse0x`/`se0x` parser names.

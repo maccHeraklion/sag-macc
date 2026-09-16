@@ -108,3 +108,5 @@ src/_dist
 
 myenv
 scripts/device_data
+
+.DS_Store
