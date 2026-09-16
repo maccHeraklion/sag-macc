@@ -1,0 +1,15 @@
+{
+  "name": "sag-deploy",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "git → TagoIO deploy tooling for sag-macc (analyses). See deploy/README.md.",
+  "scripts": {
+    "list": "node deploy.mjs --list",
+    "dry": "node deploy.mjs --dry-run all",
+    "deploy": "node deploy.mjs"
+  },
+  "dependencies": {
+    "@tago-io/sdk": "^12.0.0"
+  }
+}

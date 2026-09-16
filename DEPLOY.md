@@ -34,9 +34,13 @@ TagoIO Files:
 
 ---
 
-## 2. Analyses (TagoIO Analyses → paste script)
+## 2. Analyses (TagoIO Analyses)
 
-For each file below: open the matching Analysis in the TagoIO console, replace its script with the
+> **Automated:** don't hand-paste any more. Use `deploy/manifest.json` (full file→ID map) with the
+> TagoIO MCP `upload_analysis_script` (via Claude Code) or `deploy/deploy.mjs`. See
+> **[deploy/README.md](deploy/README.md)**. The table below is the reference map.
+
+For a manual fallback: open the matching Analysis in the TagoIO console, replace its script with the
 repo file, save. Match by purpose/name; two known IDs are noted.
 
 | Repo file | TagoIO Analysis | Trigger | Env vars |

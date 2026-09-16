@@ -1,5 +1,17 @@
 # CLAUDE.md — Developer Guide for Claude Code
 
+> ## ⚠️ READ FIRST — consolidated baseline (2026-09-16)
+> - **Canonical repo:** `github.com/maccHeraklion/sag-macc`, branch `main`. Older `cyriciot/macc-sag`
+>   and `cpatsianotakis/macc-custom-widget` are **dead**. Git is the source of truth; TagoIO is a
+>   deploy target — **never edit analyses in the console or patch the bundle without committing.**
+> - **The widget has NO build source.** The deployed dashboard is a **hand-patched compiled bundle**
+>   (`_dist-sagMain/index-7cbd9a4e.js`, 209 KB) with no regenerating source. **Do NOT `npm run build`
+>   and deploy** — it drops live-only features (rule seconds, hour-range cycles, spray-dose). Edit the
+>   bundle by hand. `src/` and the "Building"/build-script sections below are **reference only**.
+> - **Deploy** from the repo via `deploy/manifest.json` — TagoIO MCP `upload_analysis_script`
+>   (preferred) or `deploy/deploy.mjs`. See `deploy/README.md`, `CONTRIBUTING.md`, `CONSOLIDATION.md`.
+> - Verify analyses against LIVE TagoIO (`download_analysis_script`), not hand-copied folders.
+
 ## What this project is
 
 **AgroGenius Dashboard** — a React/TypeScript custom widget for the [TagoIO](https://tago.io) IoT platform.

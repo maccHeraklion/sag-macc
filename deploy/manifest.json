@@ -1,0 +1,42 @@
+{
+  "_comment": "Deploy manifest — the single source of truth mapping repo files to TagoIO. Used by deploy/deploy.mjs AND by Claude Code + MCP (see deploy/README.md). Keep IDs in sync if an analysis is recreated. Verified 2026-09-16.",
+  "region": "us-e1",
+  "analyses": [
+    { "file": "analysis/runPerTich.js",                       "id": "6898958ea9fc0d000a382484", "name": "runPerTich",                       "runtime": "node-legacy", "role": "indicator engine (per-push)" },
+    { "file": "analysis/runPerTichLegacy.js",                 "id": null,                       "name": "runPerTichLegacy",                 "runtime": "node-legacy", "role": "legacy engine — NO deployed analysis found; repo-only. Set id before deploying." },
+    { "file": "analysis/uc511_downlink.js",                   "id": "68deb0d47a8161000a558867", "name": "UC511_downlink",                   "runtime": "node-legacy", "role": "widget analysis_run: valve/rule downlinks + history fetch" },
+    { "file": "analysis/uc511_status_check.js",               "id": "68fba332f1f181000a1b4dce", "name": "UC511_status_check",               "runtime": "node-legacy", "role": "ack checker (cron, created by UC511_downlink)" },
+    { "file": "analysis/setFieldParametersFromDeviceData.js", "id": "68fe925b3607df0010ef833c", "name": "setFieldParametersFromDeviceData", "runtime": "node-legacy", "role": "builds field configuration tag (projection)" },
+    { "file": "analysis/KEKFlood.js",                         "id": "69468d1f8b9939001044697f", "name": "KEKFlood",                         "runtime": "node-legacy", "role": "Infobip SMS flood alert" },
+    { "file": "analysis/sag_declared_soil_check_readonly.js", "id": "6aa2d24f2f585a000b90b1a1", "name": "SAG — Έλεγχος δηλωμένου εδάφους (ΜΟΝΟ ΑΝΑΓΝΩΣΗ)", "runtime": "node-rt2025", "role": "READ-ONLY audit" },
+    { "file": "analysis/createField.js",                      "id": "68f1f881383cb400096c9b45", "name": "createField",                      "runtime": "node-legacy", "role": "provision new field + dashboard" },
+    { "file": "analysis/addSensorsToField.js",                "id": "6a4f5a00c1b8d1000dbd2025", "name": "addSensorsToField",                "runtime": "node-legacy", "role": "add sensors/controllers to a field" },
+    { "file": "analysis/removeSensorFromField.js",            "id": "6a4f635fc1b8d1000dbf1d38", "name": "removeSensorFromField",            "runtime": "node-legacy", "role": "detach a sensor" },
+    { "file": "analysis/createClient.js",                     "id": "68380ee0c4cfb6000a7728d7", "name": "createClient",                     "runtime": "node-legacy", "role": "create client" },
+    { "file": "analysis/createUserForClient.js",              "id": "6a4e09150b39b5000b1e9b0b", "name": "createUserForClient",              "runtime": "node-legacy", "role": "create RUN user + per-field access" },
+    { "file": "analysis/subscriptionControl.js",              "id": "681e2290d3c9ea000a86f998", "name": "subscriptionControl",              "runtime": "node-legacy", "role": "subscription gating" },
+    { "file": "analysis/migrateControllerRuleVars.js",        "id": "6a6b1483e4b1e5000bd58cce", "name": "migrateControllerRuleVars",        "runtime": "node-legacy", "role": "ONE-OFF migration" },
+    { "file": "analysis/migrateFieldBundle2.js",              "id": "6a4b706b0b39b5000b93024b", "name": "migrateFieldBundle2",              "runtime": "node-legacy", "role": "ONE-OFF migration" },
+    { "file": "analysis/migrateFieldCalendar.js",             "id": "6a6125a51471ac000c617ed7", "name": "migrateFieldCalendar",             "runtime": "node-legacy", "role": "ONE-OFF migration" },
+    { "file": "analysis/migrateHistoryVars.js",               "id": "6a63111db06dab000c41275e", "name": "migrateHistoryVars",               "runtime": "node-legacy", "role": "ONE-OFF migration" },
+    { "file": "analysis/calculate_old_rainHeightSums.js",     "id": "690e32179330e4000a5d16e5", "name": "calculate_old_rainHeightSums",     "runtime": "node-legacy", "role": "utility / one-off" },
+    { "file": "analysis/copy_fertility_index.js",             "id": "69f3a43b9a0b2400098258fb", "name": "copy_fertility_index",             "runtime": "node-legacy", "role": "utility — SAFE test target for the deploy script" },
+    { "file": "analysis/patchCreateFieldForm.js",             "id": "6a4b8eb893aca2000c9dd812", "name": "patchCreateFieldForm.js",          "runtime": "node-legacy", "role": "utility / one-off" }
+  ],
+  "widget": {
+    "note": "HAND-PATCHED compiled bundle — NO build step. Edit files by hand, then upload to TagoIO Files. See CONSOLIDATION.md. The deploy script does NOT touch the widget; upload via TagoIO UI or MCP.",
+    "target": "storage/sagMain",
+    "files": [
+      "_dist-sagMain/index.html",
+      "_dist-sagMain/index-7cbd9a4e.js",
+      "_dist-sagMain/index-2ae36874.css",
+      "_dist-sagMain/vendor-cc23ee3c.js",
+      "_dist-sagMain/vendor-08a390a6.css",
+      "_dist-sagMain/echarts-a72af00a.js",
+      "_dist-sagMain/uc511-feedback-overlay.js"
+    ]
+  },
+  "parsers": {
+    "note": "Payload parsers are assigned per DEVICE (Device → Payload Parser) — not deployable by ID here. Assign manually or via MCP. Confirm which parser each connector uses before pruning duplicates."
+  }
+}
