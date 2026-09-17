@@ -11,6 +11,9 @@
 > - **Deploy** from the repo via `deploy/manifest.json` — TagoIO MCP `upload_analysis_script`
 >   (preferred) or `deploy/deploy.mjs`. See `deploy/README.md`, `CONTRIBUTING.md`, `CONSOLIDATION.md`.
 > - Verify analyses against LIVE TagoIO (`download_analysis_script`), not hand-copied folders.
+> - **Always push after committing.** Every change lands on `origin/main` the same session it was
+>   made — don't leave commits sitting local-only. Commit subject lines end with `- Κώστας` (e.g.
+>   `Fix valve_1_command frame length - Κώστας`) so it's clear who requested/authored the change.
 
 ## What this project is
 
