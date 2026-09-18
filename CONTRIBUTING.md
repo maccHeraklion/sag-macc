@@ -22,6 +22,11 @@ you deploy *from* the repo, never the other way around. No more editing live wit
    - **Or:** `cd deploy && npm install && node deploy.mjs <name>` (terminal/CI).
 5. Verify on TagoIO (`get_analysis` shows a fresh `updated_at`, or check the dashboard).
 
+## Before you upload anything to TagoIO
+`git pull`, then open **`deploy/DEPLOY_LOG.md`**: its first line says whether someone is uploading
+right now (🔴) or the system is free (🟢). Set it to 🔴 with your name + what you upload, push, upload,
+then set it back to 🟢 and push. That is how the three of us avoid overwriting each other.
+
 ## Hard don'ts
 - ❌ Don't edit an analysis in the TagoIO console without committing the same change here.
 - ❌ Don't `npm run build` and deploy the widget. **The widget has NO build source** — it's a
