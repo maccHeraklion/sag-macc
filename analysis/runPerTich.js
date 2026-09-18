@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.136 · 2026-09-18';
+const SAG_KERNEL_VERSION = 'v50.138 · 2026-09-18';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -6424,6 +6424,33 @@ function _sagPerPlantTxt(grossLiters, parameters) {
 // Η ΛΥΣΗ ΕΙΝΑΙ ΑΝΤΙΣΤΟΙΧΙΣΗ, ΟΧΙ ΕΦΕΥΡΕΣΗ: κάθε γενικό στάδιο δοκιμάζει, με
 // σειρά, τα φαινολογικά ισοδύναμά του. ΚΑΜΙΑ τιμή Kc δεν επινοείται — αν καμία
 // αντιστοιχία δεν υπάρχει στην καμπύλη, επιστρέφεται null όπως πριν.
+// ── T-ROOTDEPTH-ALIAS-01 (v50.138 · 18/9/2026, έλεγχος Κ1) ─────────────────
+// Οι δύο χάρτες στάδιο→βάθος ρίζας (άρδευση + στάθμιση αισθητήρων) ήξεραν μόνο 8
+// κλειδιά. Τα στάδια που παράγει η ίδια η resolveStageForCrop από τη φόρμα
+// (tillering, stem_elongation, anthesis, grain_filling, dormancy, bloom, fruit_set)
+// και ο GDD (tasseling, tuberization, bulbing, maturity, establishment) έπεφταν
+// σιωπηλά στο «initial»: βάθος διαβροχής 50–300 mm αντί 400–700, δόση 3–10×
+// μικρότερη, και η στάθμιση των δύο βαθών έδινε όλο το βάρος στον ρηχό. Σιτηρά
+// σε αδέλφωμα/άνθηση, δενδρώδη σε άνθηση ή λήθαργο, εσπεριδοειδή/ακτινίδιο σε
+// καρπόδεση. ΕΝΑΣ χάρτης για ΚΑΙ τις δύο θέσεις (ίδια λογική με _SAG_KC_STAGE_ALIAS).
+// dormancy → full_canopy: το ριζικό σύστημα δέντρου δεν μικραίνει τον χειμώνα.
+// Άγνωστο κλειδί → «initial» ΚΑΙ καταγραφή, ώστε να μη χαθεί ξανά σιωπηλά.
+const _SAG_ROOT_STAGE_KEY = {
+  initial: 'initial', transplant: 'initial', germination: 'initial', establishment: 'initial',
+  vegetative: 'vegetative', tillering: 'vegetative', stem_elongation: 'vegetative',
+  flowering: 'full_canopy', bloom: 'full_canopy', anthesis: 'full_canopy', tasseling: 'full_canopy',
+  fruit_set: 'full_canopy', fruit_dev: 'full_canopy', fruiting: 'full_canopy',
+  tuberization: 'full_canopy', bulbing: 'full_canopy', bulking: 'full_canopy',
+  grain_filling: 'full_canopy', ripening: 'full_canopy', maturity: 'full_canopy',
+  harvest: 'full_canopy', full_canopy: 'full_canopy', dormancy: 'full_canopy', dormant: 'full_canopy',
+};
+function _sagRootDepthKey(stage) {
+  const k = _SAG_ROOT_STAGE_KEY[String(stage || 'initial')];
+  if (k) return k;
+  console.log('T-ROOTDEPTH-ALIAS-01: άγνωστο στάδιο «' + stage + '» — βάθος ρίζας «initial»');
+  return 'initial';
+}
+// ── End T-ROOTDEPTH-ALIAS-01 ──────────────────────────────────────────────────
 const _SAG_KC_STAGE_ALIAS = {
   // αρχικά στάδια
   // Στα πολυετή το «αρχικό στάδιο» είναι ο ΧΕΙΜΕΡΙΝΟΣ ΛΗΘΑΡΓΟΣ, όχι η φύτευση.
@@ -7430,18 +7457,8 @@ const rdCurve = CROP_PROFILE?.[parameters.cultivation_type_general]
   ?.[parameters.cultivation_type]?.root_depth_curve || {};
 const stageKey = parameters.stage || "initial";
 
-const stageToRootDepth = {
-  transplant: "initial",
-  germination: "initial",
-  vegetative: "vegetative",
-  flowering: "full_canopy",
-  fruit_dev: "full_canopy",
-  fruiting: "full_canopy",
-  ripening: "full_canopy",
-  harvest: "full_canopy",
-};
-
-const rdKey = stageToRootDepth[stageKey] || "initial";
+// T-ROOTDEPTH-ALIAS-01: κοινός χάρτης σταδίων (ήταν τοπικός με 8 κλειδιά).
+const rdKey = _sagRootDepthKey(stageKey);
 const rootDepthmm = rdCurve[rdKey] || rdCurve.full_canopy || rdCurve.initial || 200;
 
 // T-IRR-WD: ΒΑΘΟΣ ΔΙΑΒΡΟΧΗΣ αντί βιολογικού βάθους ρίζας.
@@ -8028,6 +8045,45 @@ if (netVolumeLiters > 0) {
          metadata: { color: 'orange', text: 'Η έκταση είναι μικρότερη από 100 m². Ελέγξτε μήπως γράφτηκε «10.000» αντί για «10000» — η τελεία διαβάζεται ως υποδιαστολή.' } }]
     : [];
 
+  // ── T-IRR-RATE-SANITY-01 (v50.138 · 18/9/2026, έλεγχος Κ8) ─────────────────
+  // Η δηλωμένη παροχή περνούσε χωρίς κανέναν έλεγχο (η T-IRR-DURATION-SANITY-01
+  // πιάνει ΜΟΝΟ την προεπιλογή). Μετρημένο 18/9: ΚΟΥΤΣΑΚΗΣ αποστάσεις 50 × 1,25 m
+  // (εκατοστά αντί μέτρα) → 0,06 mm/h → «22 ώρες»· Κουκιά 20 × 1,5 m → 0,13 mm/h →
+  // «44 ώρες»· ΚΕΚ 4 L/h ανά 10 m² → 0,4 mm/h → «66–75 ώρες». Τα ΛΙΤΡΑ ΔΕΝ
+  // αλλάζουν εδώ — μόνο η διάρκεια και το κείμενο. Όρια: απόσταση σταλακτών ή
+  // γραμμών > 12 m (καμία διάταξη δεν ξεπερνά τα 10 m της παλιάς ελιάς), παροχή
+  // < 0,3 mm/h (ένας σταλάκτης 4 L/h ανά > 13 m²) ή > 60 mm/h (πάνω από κάθε
+  // εκτοξευτήρα) = λάθος ρύθμισης → διάρκεια 0 + irrigation_config_error.
+  // Διάρκεια > 12 ω με σωστή παροχή = αληθινή, αλλά αδύνατη σε μία ημέρα →
+  // το κείμενο τη μοιράζει σε ποτίσματα έως 8 ωρών σε διαδοχικές ημέρες.
+  const _fmtR = (v, d = 2) => (Number.isFinite(Number(v)) ? Number(v).toLocaleString('el-GR', { maximumFractionDigits: d }) : '—');
+  let _rateCfgErr = null;
+  if (!_rateIsDefault) {
+    const _seR = Number(parameters?.irrig_emitter_spacing_m), _srR = Number(parameters?.irrig_row_spacing_m);
+    if ((Number.isFinite(_seR) && _seR > 12) || (Number.isFinite(_srR) && _srR > 12)) {
+      _rateCfgErr = 'Απόσταση σταλακτών ' + _fmtR(_seR) + ' m × γραμμών ' + _fmtR(_srR)
+        + ' m — πάνω από 12 m δεν υπάρχει διάταξη άρδευσης. Μάλλον γράφτηκαν εκατοστά αντί για μέτρα (π.χ. «50» αντί «0,5»).';
+    } else if (_rateField < 0.3) {
+      _rateCfgErr = 'Παροχή ' + _fmtR(_rateField) + ' mm/h — ένας σταλάκτης ' + _fmtR(parameters?.irrig_emitter_lph, 1)
+        + ' L/h ανά ' + _fmtR(_seR * _srR, 1) + ' m² είναι παράλογα αραιός. Ελέγξτε παροχή και αποστάσεις.';
+    } else if (_rateField > 60) {
+      _rateCfgErr = 'Παροχή ' + _fmtR(_rateField) + ' mm/h — πάνω από κάθε εκτοξευτήρα. Ελέγξτε παροχή και αποστάσεις.';
+    }
+  }
+  if (_rateCfgErr) { _durUnknown = true; irrigationDurationHours = 0; }
+  const _longDurTxt = (!_durUnknown && Number.isFinite(irrigationDurationHours) && irrigationDurationHours > 12)
+    ? (() => { const n = Math.ceil(irrigationDurationHours / 8); const h = irrigationDurationHours / n;
+        return ' Με παροχή ' + _fmtR(applicationRate) + ' mm/h αυτό ξεπερνά μία ημέρα ποτίσματος — μοιράστε τη δόση σε '
+          + n + ' ποτίσματα των περίπου ' + _fmtR(h, 1) + ' ωρών σε διαδοχικές ημέρες.'; })()
+    : '';
+  if (_rateCfgErr && _areaWarn.length) { _areaWarn[0].metadata.text += ' Επίσης: ' + _rateCfgErr; }
+  const _rateWarn = (_rateCfgErr && !_areaWarn.length)
+    ? [{ variable: 'irrigation_config_error', value: 'Λάθος παροχή ή αποστάσεις άρδευσης',
+         metadata: { color: 'orange', text: _rateCfgErr
+           + ' Η διάρκεια ποτίσματος δεν υπολογίζεται μέχρι να διορθωθεί (Παραμετροποίηση → Άρδευση). Τα λίτρα δεν επηρεάζονται.' } }]
+    : [];
+  // ── End T-IRR-RATE-SANITY-01 ─────────────────────────────────────────────────
+
   // T-M1: το irrigation_message ΠΡΕΠΕΙ να γράφεται και εδώ. Το carry-forward
   // (packCalculatedIndicators) γεμίζει κάθε κλειδί που δεν ξαναϋπολογίστηκε —
   // αν το θετικό μονοπάτι δεν το γράψει, το «Δεν χρειάζεται άρδευση» του T-B1
@@ -8045,6 +8101,7 @@ if (netVolumeLiters > 0) {
   const _durTxt = Number.isFinite(_durN) ? _durN.toLocaleString('el-GR', { maximumFractionDigits: 1 }) : '—';
   return emitIrrigationState([
     ..._areaWarn,
+    ..._rateWarn, // T-IRR-RATE-SANITY-01
     ..._wpWarn,   // T-SOIL-MISMATCH-01
     // T-MEASURED-BASIS-01: ο αγρότης πρέπει να ΒΛΕΠΕΙ αν η δική του μέτρηση
     // μπήκε στον υπολογισμό ή αν αγνοήθηκε — αλλιώς η υπόσχεση της φόρμας
@@ -8070,7 +8127,9 @@ if (netVolumeLiters > 0) {
         text: 'Χαλίκια ' + (_stoneFrac * 100).toFixed(0) + ' %: η δόση μειώθηκε αντίστοιχα.' } }] : [],
     _startMoistureOut,
     {variable: 'grossIrrigationLiters', value: grossIrrigationLiters},
-    {variable: 'irrigationDurationHours', value: irrigationDurationHours},
+    {variable: 'irrigationDurationHours', value: irrigationDurationHours,
+      metadata: { rate_mm_h: Number.isFinite(applicationRate) ? parseFloat(Number(applicationRate).toFixed(2)) : null,
+        rate_source: _rateIsDefault ? 'προεπιλογή' : 'φόρμα' } },   // T-IRR-RATE-SANITY-01
     // T-B10: όταν το έλλειμμα είναι απειροελάχιστο (τυπικά στο tick αμέσως μετά το
     // πότισμα) η δόση στρογγυλοποιείται σε 0 — «Απαιτείται άρδευση, 0 λίτρα, 0 ώρες».
     ...( (Number.isFinite(_grossN) && _grossN > 0)
@@ -8078,10 +8137,12 @@ if (netVolumeLiters > 0) {
           metadata: { color: _soilCaveat ? 'orange' : 'blue',
             text: `Συνιστώμενη ποσότητα ${_grossTxt} λίτρα`
               + (_durUnknown
-                  ? '. Η διάρκεια ποτίσματος ΔΕΝ υπολογίστηκε: για δεντρώδη χρειάζεται '
-                    + 'η παροχή και η απόσταση των σταλακτών σας (Παραμετροποίηση → '
-                    + 'Άρδευση). Χωρίς αυτά η προεπιλογή δίνει παράλογα σύντομο πότισμα.'
-                  : ` — διάρκεια περίπου ${_durTxt} ` + (_durTxt === '1' ? 'ώρα.' : 'ώρες.'))
+                  ? (_rateCfgErr
+                      ? '. Η διάρκεια ποτίσματος ΔΕΝ υπολογίστηκε — λάθος παροχή ή αποστάσεις, δείτε «Ρύθμιση άρδευσης».'
+                      : '. Η διάρκεια ποτίσματος ΔΕΝ υπολογίστηκε: για δεντρώδη χρειάζεται '
+                        + 'η παροχή και η απόσταση των σταλακτών σας (Παραμετροποίηση → '
+                        + 'Άρδευση). Χωρίς αυτά η προεπιλογή δίνει παράλογα σύντομο πότισμα.')
+                  : ` — διάρκεια περίπου ${_durTxt} ` + (_durTxt === '1' ? 'ώρα.' : 'ώρες.') + _longDurTxt)
               // T-PERCROP-PLANTS-01: ο αγρότης με σταλάκτες δεν ρυθμίζει «λίτρα
               // αγρού» — ρυθμίζει ανά δέντρο. Ο αριθμός βγαίνει ΜΟΝΟ όταν τα
               // φυτά είναι δηλωμένα ΓΙ' ΑΥΤΗ την καλλιέργεια.
@@ -10820,12 +10881,8 @@ function _sagNumFrom(measurements, keys) {
 function _sagRootDepthMm(parameters) {
   const rdCurve = CROP_PROFILE?.[parameters?.cultivation_type_general]
     ?.[parameters?.cultivation_type]?.root_depth_curve || {};
-  const stageToRootDepth = {
-    transplant: "initial", germination: "initial", vegetative: "vegetative",
-    flowering: "full_canopy", fruit_dev: "full_canopy", fruiting: "full_canopy",
-    ripening: "full_canopy", harvest: "full_canopy",
-  };
-  const rdKey = stageToRootDepth[parameters?.stage || "initial"] || "initial";
+  // T-ROOTDEPTH-ALIAS-01: κοινός χάρτης σταδίων (ήταν τοπικός με 8 κλειδιά).
+  const rdKey = _sagRootDepthKey(parameters?.stage || "initial");
   return rdCurve[rdKey] || rdCurve.full_canopy || rdCurve.initial || 200;
 }
 

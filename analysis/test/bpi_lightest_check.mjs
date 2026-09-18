@@ -39,7 +39,8 @@ const near = (a, b, tol = 0.5) => Number.isFinite(a) && Math.abs(a - b) <= tol;
 
 const CHECKS = [
   // ── στατικά · πυρήνας ──
-  ["core: έκδοση v50.136", f => /const SAG_KERNEL_VERSION = 'v50\.136 · 2026-09-18';/.test(f.core)],
+  ["core: έκδοση ≥ v50.136 (το T-BPI-LIGHTEST-01 μπήκε στη v50.136· νεότερες εκδόσεις το περιέχουν)",
+    f => { const m = f.core.match(/const SAG_KERNEL_VERSION = 'v50\.(\d+) · /); return !!m && Number(m[1]) >= 136; }],
   ["core: helper T-BPI-LIGHTEST-01 παρών, μία φορά", f => (f.core.match(/function _sagBpiLightEstimate\(/g) || []).length === 1],
   ["core: σταθερές 0,45 / 4,57 / 0,65 δηλωμένες", f => /_SAG_PAR_FRACTION = 0\.45;/.test(f.core) && /_SAG_PAR_UMOL_PER_J = 4\.57;/.test(f.core) && /_SAG_COVER_TRANS_DEFAULT = 0\.65;/.test(f.core)],
   ["core: το totalPAR παίρνει την εκτίμηση όταν λείπει ο αισθητήρας", f => f.core.includes("const totalPAR = _lightEst ? _lightEst.ppfd : lux_to_par(readVal(luxSeries));")],
