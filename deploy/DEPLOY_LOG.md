@@ -10,6 +10,9 @@
 
 ## 2026-09-18 — Φάση Α αλατότητας, βήματα 1–3 (Michalis, συνεννόηση με Κώστα)
 
+- **14:36 UTC · ΑΝΕΒΗΚΕ (βήμα 2):** πυρήνας v50.135 ζωντανός — sha256 μετά `2460bc88…` ✔ (1.256.921 B, CRLF, χωρίς
+  BOM), `SAG_KERNEL_VERSION = 'v50.135 · 2026-09-18'`, `_SAG_SERIES_KEYS` με soil_ec_pore1/2. Πριν: `9946dc6e…` (v50.134) ✔.
+  Επαλήθευση στο tick 15:20 UTC (console + νέες εγγραφές soil_ec_pore1/2 στη συσκευή αγρού). Widget (βήμα 3) μετά.
 - **14:36 UTC · ΑΝΕΒΑΙΝΕΙ (βήμα 2):** πυρήνας `runPerTich` v50.135 (analysis `6898958e…`, sha256 CRLF
   `2460bc88…`, 1.256.921 B) μέσω deploy probe από GitHub raw @ `c86a521`. Επαλήθευση στο tick 15:20 UTC.
 - **14:34 UTC · ΑΝΕΒΗΚΕ (βήμα 1):** `html_files/configuration.html` v19 → 190.507 B, modified 14:33:58 UTC,
