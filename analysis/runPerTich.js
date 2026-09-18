@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.135 · 2026-09-18';
+const SAG_KERNEL_VERSION = 'v50.136 · 2026-09-18';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -10123,6 +10123,83 @@ function _sagPtqWindow(ring, day) {
   return { n: n, ptq: r / t };
 }
 
+// ── T-BPI-LIGHTEST-01 (v50.136 · 18/9/2026, απόφαση Μιχάλη) · ΦΩΣ ΧΩΡΙΣ ΑΙΣΘΗΤΗΡΑ ──
+// ΜΕΤΡΗΘΗΚΕ (18/9): η ημερήσια αποδοτικότητα του BPI είναι f_Temp × f_Soil × f_IPSI —
+// το φως ΔΕΝ μπαίνει στο σημερινό συμπέρασμα. Χρησιμεύει μόνο (α) ως πύλη «νύχτα» και
+// (β) ως βάρος P_base = PAR × LUE στο σωρευτικό της σεζόν. Παρ' όλα αυτά, χωρίς
+// αισθητήρα φωτός η calculate_BPI σταματούσε ΠΡΙΝ υπολογίσει οτιδήποτε («Έλλειψη
+// αισθητήρα φωτός!» — Γρινιαράκης: em320 + se0x + lms01, χωρίς S2120).
+// ΤΩΡΑ, μόνο όταν ΛΕΙΠΕΙ ο αισθητήρας, το φως ΕΚΤΙΜΑΤΑΙ και δηλώνεται ρητά ως εκτίμηση:
+//   1) Open-Meteo: `forecast.metadata.radiation.shortwave_radiation_sum` (MJ/m²) της
+//      ΧΘΕΣΙΝΗΣ τοπικής ημέρας, για τις συντεταγμένες του αγρού (analysis forecast v9,
+//      past_days=1). Το ημερήσιο tick τρέχει 00:20 UTC = 02:20/03:20 Αθήνας, άρα
+//      αξιολογείται η ημέρα που μόλις έκλεισε.
+//   2) Εφεδρεία: Hargreaves Rs = 0,16·√(Tmax−Tmin)·Ra — ΙΔΙΟΣ τύπος και σταθερά kRs
+//      με την ET0 (calculate_ET0_Hargreaves), «η λιγότερο ακριβής».
+// Μετατροπή σε PAR (ΟΚ Μιχάλη 18/9): μέση ημερήσια PPFD = Rs·1e6·0,45·4,57/86400
+// (0,45 μερίδιο PAR στην ολική ακτινοβολία· 4,57 µmol/J, McCree 1972).
+// ΣΤΕΓΑΣΜΕΝΗ ΚΑΛΛΙΕΡΓΕΙΑ: η εκτίμηση είναι ακτινοβολία ΕΞΩ από το κάλυμμα →
+// × cover_transmissivity (δηλωμένη 0,2–1, αλλιώς 0,65) — ίδιος κανόνας με T-COVERED-ET0-01.
+// Οι εκτιμήσεις είναι ημερήσια ολοκληρώματα → η πύλη «Νύχτα» δεν τις αφορά.
+// ΔΕΝ ΑΓΓΙΖΕΙ: αγρούς με αισθητήρα (ίδια διαδρομή), ET0, PTQ, λίτρα, ηλεκτροβάνες.
+const _SAG_PAR_FRACTION = 0.45;        // μερίδιο PAR στην ολική ηλιακή ακτινοβολία
+const _SAG_PAR_UMOL_PER_J = 4.57;      // µmol φωτονίων ανά J PAR (McCree 1972)
+const _SAG_COVER_TRANS_DEFAULT = 0.65; // ίδια προεπιλογή με T-COVERED-ET0-01
+function _sagLocalDateStr(ms, tz) {
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: tz || 'Europe/Athens',
+      year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
+  } catch (_e) { return new Date(ms).toISOString().slice(0, 10); }
+}
+function _sagBpiLightEstimate(measurements, parameters) {
+  try {
+    const nowMs = Number(measurements && measurements.now) || Date.now();
+    const tz = (measurements && measurements.timezone) || 'Europe/Athens';
+    const yesterday = _sagLocalDateStr(nowMs - 86400000, tz);
+    let rsMJ = null, source = null;
+    const fc = measurements && measurements.data && measurements.data._sagForecast;
+    const rad = fc && fc.radiation;
+    if (rad && Array.isArray(rad.dates) && Array.isArray(rad.shortwave_radiation_sum)) {
+      const i = rad.dates.indexOf(yesterday);
+      const v = i >= 0 ? Number(rad.shortwave_radiation_sum[i]) : NaN;
+      if (Number.isFinite(v) && v >= 0) { rsMJ = v; source = 'openmeteo'; }
+    }
+    if (rsMJ === null) {
+      const tmax = readVal(measurements && measurements.data && measurements.data.air_temperature_max);
+      const tmin = readVal(measurements && measurements.data && measurements.data.air_temperature_min);
+      const lat = Number(parameters && parameters.latitude);
+      if (Number.isFinite(tmax) && Number.isFinite(tmin) && tmax > tmin && Number.isFinite(lat)) {
+        const d = new Date(nowMs);
+        const doy = Math.floor((nowMs - Date.UTC(d.getUTCFullYear(), 0, 0)) / 86400000);
+        const lat_rad = lat * Math.PI / 180;
+        const dr = 1 + 0.033 * Math.cos(2 * Math.PI * doy / 365);
+        const delta = 0.409 * Math.sin(2 * Math.PI * doy / 365 - 1.39);
+        const ws = Math.acos(-Math.tan(lat_rad) * Math.tan(delta));
+        const Ra = (24 * 60 / Math.PI) * 0.0820 * dr *
+          (ws * Math.sin(lat_rad) * Math.sin(delta) + Math.cos(lat_rad) * Math.cos(delta) * Math.sin(ws));
+        const rs = 0.16 * Math.sqrt(tmax - tmin) * Ra;   // kRs 0,16 — ίδια σταθερά με την ET0
+        if (Number.isFinite(rs) && rs >= 0) { rsMJ = rs; source = 'temperature'; }
+      }
+    }
+    if (rsMJ === null) return null;
+    const covered = (parameters && parameters.covered_cultivation === true)
+      || (typeof _SAG_COVERED_ACTIVE !== 'undefined' && _SAG_COVERED_ACTIVE === true);
+    let trans = 1;
+    if (covered) {
+      const t = Number(parameters && parameters.cover_transmissivity);
+      trans = (Number.isFinite(t) && t > 0.2 && t <= 1) ? t : _SAG_COVER_TRANS_DEFAULT;
+    }
+    const rsIn = rsMJ * trans;
+    const ppfd = rsIn * 1e6 * _SAG_PAR_FRACTION * _SAG_PAR_UMOL_PER_J / 86400;
+    const note = 'Φως: εκτίμηση ' + (source === 'openmeteo'
+        ? 'από Open-Meteo για το στίγμα του αγρού' : 'από θερμοκρασίες (η λιγότερο ακριβής)')
+      + ' (' + rsMJ.toFixed(1) + ' MJ/m², όχι μέτρηση)'
+      + (covered ? ' × διαπερατότητα καλύμματος ' + trans.toFixed(2) : '') + '.';
+    return { source: source, rsMJ: rsMJ, rsIn: rsIn, ppfd: ppfd, covered: covered, trans: trans, note: note, date: yesterday };
+  } catch (_e) { return null; }
+}
+// ── End T-BPI-LIGHTEST-01 ─────────────────────────────────────────────────
+
 function calculate_BPI(dailyTich, measurements, ipsi, parameters, ipsiError = "") {
   // Contextual BPI (Daily Efficiency vs Accumulated Potential) – per BPI correction spec
   if (!dailyTich) {
@@ -10147,16 +10224,23 @@ function calculate_BPI(dailyTich, measurements, ipsi, parameters, ipsiError = ""
   let soilTempAvgSeries;
   let airTempAvgSeries;
 
-  // Light intensity (lux)
+  // Light intensity (lux) — ή, χωρίς αισθητήρα, εκτίμηση (T-BPI-LIGHTEST-01)
+  let _lightEst = null;
   if (measurements?.data?.light_intensity_sum) {
     luxSeries = measurements.data.light_intensity_sum;
   } else if (measurements?.data?.light_intensity) { // SenseCAP S2120
     luxSeries = measurements.data.light_intensity;
   } else {
-    console.log(`[${parameters?.name || '—'}] Cannot calculate BPI due to lack of LUX`);
-    // T-PTQNIGHT-01: ο δακτύλιος PTQ δεν χρειάζεται φως — συνεχίζει.
-    return { bpi: undefined, bpiIndicators: _sagPtqRingIndicators(measurements, parameters),
-      bpiError: " έλλειψη αισθητήρα φωτός!" };
+    _lightEst = _sagBpiLightEstimate(measurements, parameters);
+    if (!_lightEst) {
+      console.log(`[${parameters?.name || '—'}] Cannot calculate BPI: no LUX, no forecast radiation, no temperature range`);
+      // T-PTQNIGHT-01: ο δακτύλιος PTQ δεν χρειάζεται φως — συνεχίζει.
+      return { bpi: undefined, bpiIndicators: _sagPtqRingIndicators(measurements, parameters),
+        bpiError: " έλλειψη αισθητήρα φωτός και εκτίμησης ακτινοβολίας (πρόγνωση/θερμοκρασίες)!" };
+    }
+    console.log(`[${parameters?.name || '—'}] T-BPI-LIGHTEST-01: φως από ${_lightEst.source} = `
+      + `${_lightEst.rsMJ.toFixed(1)} MJ/m² -> ${_lightEst.ppfd.toFixed(0)} µmol/m²/s`
+      + (_lightEst.covered ? ` (× κάλυμμα ${_lightEst.trans.toFixed(2)})` : ''));
   }
 
   // Soil temperature avg (multiple candidates)
@@ -10210,7 +10294,8 @@ function calculate_BPI(dailyTich, measurements, ipsi, parameters, ipsiError = ""
   }
 
   // Total PAR from lux
-  const totalPAR = lux_to_par(readVal(luxSeries));
+  // T-BPI-LIGHTEST-01: εκτίμηση = μέση ημερήσια PPFD (ολοκλήρωμα, όχι στιγμιαία)
+  const totalPAR = _lightEst ? _lightEst.ppfd : lux_to_par(readVal(luxSeries));
 
   if (totalPAR <= 0 || !Number.isFinite(totalPAR)) {
     // Νύχτα ή αισθητήρας εκτός λειτουργίας
@@ -10395,6 +10480,9 @@ function calculate_BPI(dailyTich, measurements, ipsi, parameters, ipsiError = ""
     efficiency_pct,
     limiting_factor,
     status: diagnosis,
+    // T-BPI-LIGHTEST-01: από πού ήρθε το φως — 'sensor' | 'openmeteo' | 'temperature'
+    light_source: _lightEst ? _lightEst.source : 'sensor',
+    light_note: _lightEst ? _lightEst.note : '',
     total_actual: Number(new_total_actual.toFixed(2)),
     total_potential: Number(new_total_potential.toFixed(2)),
     performance_pct,
@@ -10485,7 +10573,8 @@ function calculate_BPI(dailyTich, measurements, ipsi, parameters, ipsiError = ""
   const bpiIndicators = [
     ..._dliInd,
     { variable: "bpi_efficiency_pct", value: efficiency_pct },
-    { variable: "bpi_daily_status", value: diagnosis.message, metadata: diagnosis },
+    { variable: "bpi_daily_status", value: diagnosis.message,
+      metadata: _lightEst ? { ...diagnosis, light_source: _lightEst.source, light_note: _lightEst.note } : diagnosis },
     { variable: "bpi_total_actual", value: Number(new_total_actual.toFixed(2)) },
     { variable: "bpi_total_potential", value: Number(new_total_potential.toFixed(2)) },
     { variable: "bpi_performance_pct", value: performance_pct },
@@ -12445,17 +12534,21 @@ function getFertilizationGrowthMessages(bpi, bpiError, bpiContext) {
         dailyValue = "Ελάχιστο";
       }
 
+    // T-BPI-LIGHTEST-01: η σήμανση «εκτίμηση» ΦΑΙΝΕΤΑΙ στην κάρτα (metadata.text)
+    const _lightNote = (bpiContext && typeof bpiContext.light_note === 'string') ? bpiContext.light_note : '';
     const dailyMeta = {
       color: dailyColor,
       severity: daily.severity,
       // keep old style text field for UI tooltips
-      text: daily.message,
+      text: daily.message + (_lightNote ? ' ' + _lightNote : ''),
       code: bpiContext?.status?.code || "NONE",
+      light_source: (bpiContext && bpiContext.light_source) || 'sensor',
     };
 
     const seasonMeta = {
       color: (Number(bpiContext.performance_pct ?? 0) >= 90) ? "green" : (Number(bpiContext.performance_pct ?? 0) >= 75) ? "blue" : (Number(bpiContext.performance_pct ?? 0) >= 60) ? "orange" : "red",
-      text: accumulated.message,
+      text: accumulated.message + ((bpiContext && bpiContext.light_source && bpiContext.light_source !== 'sensor')
+        ? ' (σωρευτικό με εκτιμώμενο φως — όχι μέτρηση)' : ''),
       performance_pct: bpiContext.performance_pct,
       total_actual: bpiContext.total_actual,
       total_potential: bpiContext.total_potential,

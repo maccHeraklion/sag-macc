@@ -8,6 +8,14 @@
  *
  * Field selection: devices with tag isField=yes
  * Coordinates: device tag "coordinates" = "lat,lon"
+ *
+ * v9 · 2026-09-18 (SAG, T-BPI-LIGHTEST-01): a SECOND, separate Open-Meteo call fetches the
+ * DAILY shortwave radiation sum with past_days=1 and stores it as metadata.radiation
+ * { dates, shortwave_radiation_sum (MJ/m²), sunshine_duration (s), units, fetched_at }.
+ * The hourly 3-day payload (hourly_epoch, hourly.*) is UNCHANGED so the dashboard, the
+ * spray window and the kernel's frost/heat warnings keep reading exactly what they read.
+ * runPerTich (v50.136+) uses radiation of the previous local day to estimate light for
+ * the BPI card on fields WITHOUT a light sensor (flagged as an estimate).
  */
 
 const axios = require("axios");
@@ -72,6 +80,30 @@ async function fetchOpenMeteo(lat, lon) {
   }
 
   return data;
+}
+
+/* v9: daily radiation of yesterday + today (past_days=1). Separate call, separate try/catch:
+   if it fails the hourly forecast is still saved and metadata.radiation is null. */
+async function fetchOpenMeteoRadiation(lat, lon) {
+  const params = {
+    latitude: lat,
+    longitude: lon,
+    daily: "shortwave_radiation_sum,sunshine_duration",
+    past_days: 1,
+    forecast_days: 1,
+    timezone: TZ,
+  };
+  const { data } = await axios.get(OPEN_METEO_URL, { params, timeout: 20000 });
+  if (!data?.daily?.time || !Array.isArray(data.daily.time)) {
+    throw new Error("Open-Meteo returned no daily.time array");
+  }
+  return {
+    dates: data.daily.time,                                   // ["YYYY-MM-DD" (yesterday), "YYYY-MM-DD" (today)]
+    shortwave_radiation_sum: data.daily.shortwave_radiation_sum, // MJ/m² per day
+    sunshine_duration: data.daily.sunshine_duration,          // seconds per day
+    units: data.daily_units,
+    fetched_at: new Date().toISOString(),
+  };
 }
 
 async function listFieldDevices() {
@@ -142,6 +174,15 @@ async function main(context) {
       const pointsCount = resp.hourly?.time?.length ?? 0;
       context.log(`Field ${field.id}: received ${pointsCount} points`);
 
+      // v9: daily radiation (yesterday + today) — best effort, never blocks the forecast
+      let radiation = null;
+      try {
+        radiation = await fetchOpenMeteoRadiation(coords.lat, coords.lon);
+        context.log(`Field ${field.id}: radiation ${JSON.stringify(radiation.dates)} = ${JSON.stringify(radiation.shortwave_radiation_sum)} MJ/m²`);
+      } catch (radErr) {
+        context.log(`Field ${field.id}: radiation error (forecast still saved): ${radErr?.message || radErr}`);
+      }
+
       // Convert ISO times to epoch seconds to avoid Tago "time window" validation issues
       //
       // FIX 2026-09-06 (SAG): with timezone=Europe/Athens, Open-Meteo returns
@@ -197,6 +238,9 @@ async function main(context) {
 
         // actual hourly arrays (no time strings)
         hourly: hourly_no_time,
+
+        // v9: daily shortwave radiation (yesterday, today) for the BPI light estimate
+        radiation,
       };
 
       // IMPORTANT:

@@ -31,7 +31,8 @@ function nodeCheck(src, ext) {
 /* Κάθε έλεγχος: [όνομα, fn(files) → boolean]. files = { core, widget, form, sync } ως strings (raw). */
 const CHECKS = [
   // ── ΒΗΜΑ 2 · πυρήνας v50.135 ──
-  ["core: έκδοση v50.135", f => /const SAG_KERNEL_VERSION = 'v50\.135 · 2026-09-18';/.test(f.core)],
+  ["core: έκδοση ≥ v50.135 (η Φάση Α μπήκε στη v50.135· νεότερες εκδόσεις την περιέχουν)",
+    f => { const m = f.core.match(/const SAG_KERNEL_VERSION = 'v50\.(\d+) · /); return !!m && Number(m[1]) >= 135; }],
   ["core: _SAG_SERIES_KEYS περιέχει soil_ec_pore1 ΚΑΙ soil_ec_pore2 (μία δήλωση)",
     f => (f.core.match(/const _SAG_SERIES_KEYS = \[[^\]]*\]/g) || []).length === 1
       && /const _SAG_SERIES_KEYS = \['soil_ece1', 'soil_ece2', 'soil_ec_pore1', 'soil_ec_pore2'\]/.test(f.core)],
