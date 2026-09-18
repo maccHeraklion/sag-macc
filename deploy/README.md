@@ -63,3 +63,16 @@ MCP) from `../payload_parsers/*`. Confirm which parser each connector uses befor
 2. Deploy **only committed** files.
 3. Migrations (`migrate*`) are **one-off** — deploy the code if you must, but running them is a
    separate, deliberate act (see each migration's env flags).
+
+## Files > 1 MiB (the core) and TagoIO Files — deploy through the probe analysis
+
+The TagoIO MCP caps `download_analysis_script` / `upload_analysis_script` at **1 MiB** and has no
+Files upload at all. `analysis/runPerTich.js` is ~1.26 MB, so it cannot go through the MCP directly.
+`deploy/tago_deploy_probe.js` is a ~5 KB script that is uploaded to the read-only probe analysis
+`6aa2d24f2f585a000b90b1a1` (node-rt2025). It pulls the target file from **GitHub raw at a pinned
+commit**, normalises line endings (core → CRLF, widget/forms → LF, no BOM), checks the expected
+sha256, uploads with the analysis's own token, and re-downloads to verify. It needs the Access
+Management policy **"[Analysis] SAG deploy από GitHub"** (analysis `upload_script` on the core +
+`file/upload` on `storage/sagMain/` and `html_files/`) to be **active only during the deploy**; the
+existing read-only policy `6aa2e0cf8592a5000bec9547` stays as is. Upload windows: hh:25–hh:15 UTC,
+never 00:10–00:30 UTC (daily tick). Steps are in the header of the script.
