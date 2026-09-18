@@ -10,5 +10,10 @@
 
 ## 2026-09-18 — Φάση Α αλατότητας, βήματα 1–3 (Michalis, συνεννόηση με Κώστα)
 
+- **14:36 UTC · ΑΝΕΒΑΙΝΕΙ (βήμα 2):** πυρήνας `runPerTich` v50.135 (analysis `6898958e…`, sha256 CRLF
+  `2460bc88…`, 1.256.921 B) μέσω deploy probe από GitHub raw @ `c86a521`. Επαλήθευση στο tick 15:20 UTC.
+- **14:34 UTC · ΑΝΕΒΗΚΕ (βήμα 1):** `html_files/configuration.html` v19 → 190.507 B, modified 14:33:58 UTC,
+  md5 ζωντανού `f5447b98…` ✔ · analysis `setFieldParametersFromDeviceData` v12 → sha256 μετά `e62dd809…` ✔
+  (πριν: `02d2fe6e…` LF-normalized — διαφέρει από το `fe3d722e…` του μητρώου· πιθανότατα newline στο τέλος, ΥΠΟ ΕΛΕΓΧΟ).
 - **14:30 UTC · ΑΝΕΒΑΙΝΕΙ (βήμα 1):** `html_files/configuration.html` v19 (md5 `f5447b98…`) +
   analysis `setFieldParametersFromDeviceData` v12 (`68fe925b…`). Repo commit `c86a521`.
