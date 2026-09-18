@@ -44,7 +44,8 @@ function runRate(core, { rateField, se, sr, lph, hours, areaWarn = [] }) {
 
 const CHECKS = [
   // ── στατικά ──
-  ["core: έκδοση v50.138", f => /const SAG_KERNEL_VERSION = 'v50\.138 · 2026-09-18';/.test(f.core)],
+  ["core: έκδοση ≥ v50.138 (Κ1/Κ8 μπήκαν στη v50.138· νεότερες εκδόσεις τα περιέχουν)",
+    f => { const m = f.core.match(/const SAG_KERNEL_VERSION = 'v50\.(\d+) · /); return !!m && Number(m[1]) >= 138; }],
   ["core: ο παλιός τοπικός χάρτης stageToRootDepth ΔΕΝ υπάρχει πια", f => !f.core.includes("stageToRootDepth")],
   ["core: _sagRootDepthKey ορίζεται μία φορά και καλείται σε ΔΥΟ θέσεις (άρδευση + στάθμιση)",
     f => (f.core.match(/function _sagRootDepthKey\(/g) || []).length === 1
@@ -132,7 +133,7 @@ const MUTATIONS = [
   ["_rateWarn δεν εκπέμπεται", c => c.replace("    ..._rateWarn, // T-IRR-RATE-SANITY-01\n", "")],
   ["η πύλη τρέχει και με προεπιλογή", c => c.replace("  if (!_rateIsDefault) {\n    const _seR", "  if (true) {\n    const _seR")],
   ["διπλό irrigation_config_error", c => c.replace("const _rateWarn = (_rateCfgErr && !_areaWarn.length)", "const _rateWarn = (_rateCfgErr)")],
-  ["έκδοση πίσω στη v50.136", c => c.replace("'v50.138 · 2026-09-18'", "'v50.136 · 2026-09-18'")],
+  ["έκδοση πίσω πριν τη v50.138", c => c.replace(/const SAG_KERNEL_VERSION = 'v50\.\d+ · [^']+';/, "const SAG_KERNEL_VERSION = 'v50.137 · 2026-09-18';")],
 ];
 
 function load(coreText) { return { core: lf(coreText), coreRaw: coreText }; }

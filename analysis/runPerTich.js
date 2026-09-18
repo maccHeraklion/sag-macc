@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.138 · 2026-09-18';
+const SAG_KERNEL_VERSION = 'v50.139 · 2026-09-19';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -10416,14 +10416,21 @@ function calculate_BPI(dailyTich, measurements, ipsi, parameters, ipsiError = ""
   const optMax = Number.isFinite(Number(opt.max)) ? Number(opt.max) : peak + 10;
   const f_Temp = fTempAsymmetric(T_air, optMin, peak, optMax);
 
-    // Soil temperature factor (f_Soil): crop-specific trapezoid based on soil_base_temp
-  const soilBaseTemp = Number(crop?.soil_base_temp ?? 10);
-  const f_Soil = fTempAsymmetric(
-    soilTemp_avg,
-    soilBaseTemp - 2,   // Tmin
-    soilBaseTemp + 8,   // Topt
-    50                  // Tmax (very hot soil)
-  );
+  // ── T-BPI-SOILTEMP-01 (v50.139 · 19/9/2026, έλεγχος Κ2, ΟΚ Μιχάλη 18/9) ────
+  // Το soil_base_temp ΔΕΝ υπάρχει σε κανένα από τα 58 προφίλ → ο παράγοντας
+  // εδαφικής θερμοκρασίας είχε Topt 18 °C / Tmax 50 °C για ΟΛΕΣ τις καλλιέργειες.
+  // Θερινό έδαφος 28–32 °C → f_Soil 0,56–0,69 → αποδοτικότητα < 55 % → «Ελάχιστο»
+  // κόκκινο με IPSI 0 σε ~20 αγρούς (μετρημένο 18/9). Τώρα η καμπύλη βγαίνει από
+  // το optimal_temp_range της καλλιέργειας: Tmin = min · Topt = peak − 3 · Tmax = max + 5
+  // (το έδαφος ακολουθεί τον αέρα με υστέρηση· οι ρίζες ανέχονται λίγο περισσότερο
+  // από την κόμη). Αν κάποιο προφίλ δηλώσει ρητά soil_base_temp, ισχύει το παλιό
+  // τραπέζιο (−2 / +8 / 50) — καμία σιωπηλή αλλαγή σε δηλωμένη τιμή.
+  const _sbtRaw = Number(crop?.soil_base_temp);
+  const _soilTrap = Number.isFinite(_sbtRaw)
+    ? { min: _sbtRaw - 2, opt: _sbtRaw + 8, max: 50, src: 'soil_base_temp' }
+    : { min: optMin, opt: peak - 3, max: optMax + 5, src: 'optimal_temp_range' };
+  const f_Soil = fTempAsymmetric(soilTemp_avg, _soilTrap.min, _soilTrap.opt, _soilTrap.max);
+  // ── End T-BPI-SOILTEMP-01 ────────────────────────────────────────────────────
 
   // Product of factors
   const daily_efficiency = f_Temp * f_Soil * f_IPSI; // 0..1
@@ -10504,7 +10511,7 @@ function calculate_BPI(dailyTich, measurements, ipsi, parameters, ipsiError = ""
       }
     } else if (min_factor === f_Soil) {
       // FIX-13: το f_Soil πέφτει ΚΑΙ σε πολύ ζεστό έδαφος — το μήνυμα έλεγε πάντα «κρύο».
-      const _soilHot = soilTemp_avg > (soilBaseTemp + 8);
+      const _soilHot = soilTemp_avg > _soilTrap.opt;   // T-BPI-SOILTEMP-01
       diagnosis = _soilHot
         ? { code: "ROOT_HEAT", message: "Περιορισμός: Ζεστό Έδαφος (Ρίζα)", color: "#e67e22" }
         : { code: "ROOT_STRESS", message: "Περιορισμός: Κρύο Έδαφος (Ρίζα)", color: "#f1c40f" };
@@ -12444,6 +12451,13 @@ function buildBPIMessages({ efficiency_pct, limiting_factor, performance_pct }) 
 
   // DAILY
   // Downgrade severity αν ο limiting factor είναι "cool" (δροσερό, ΟΧΙ ζημιογόνο)
+  // ── T-BPI-WARMTEXT-01 (v50.139 · 19/9/2026, έλεγχος Κ6) ──────────────────
+  // Ο περιοριστικός παράγοντας «warm» σημαίνει «μεταξύ μέσου και Tmax — ζεστό αλλά
+  // ΕΝΤΟΣ ορίων» (WARM_SUBOPTIMAL). Χαρτογραφούνταν στα κείμενα του «heat» → η
+  // ίδια κάρτα έλεγε «Ελαφρώς υψηλή θερμοκρασία» ΚΑΙ «🔥 Έντονη θερμική καταπόνηση!»
+  // (Α2, Α5, Β3 στις 18/9). Τώρα: δικά του κείμενα, και όπως το «cool», δεν γίνεται
+  // κόκκινος συναγερμός όσο η αποδοτικότητα είναι ≥ 30 % — μένει «Μειωμένο».
+  const _warmCap = (limiting_factor === "warm" && efficiency_pct < 55 && efficiency_pct >= 30);
   if (limiting_factor === "cool") {
     // "Cool growth" δεν είναι stress — ενημερωτικό μήνυμα, ΟΧΙ alarm
     if (efficiency_pct >= 30) {
@@ -12476,7 +12490,9 @@ function buildBPIMessages({ efficiency_pct, limiting_factor, performance_pct }) 
         daily.message = "🌬️ Ήπια πίεση από ξηρό αέρα — το έδαφος έχει αρκετή υγρασία, δεν χρειάζεται πότισμα.";
       else if (limiting_factor === "cold" || limiting_factor === "cool")
         daily.message = "❄️ Ήπια μείωση ανάπτυξης λόγω δροσερού καιρού.";
-      else if (limiting_factor === "heat" || limiting_factor === "warm")
+      else if (limiting_factor === "warm")
+        daily.message = "☀️ Θερμοκρασία λίγο πάνω από το άριστο της καλλιέργειας — ήπια μείωση φωτοσύνθεσης.";
+      else if (limiting_factor === "heat")
         daily.message = "☀️ Ήπια μείωση ανάπτυξης λόγω ζέστης.";
       else if (limiting_factor === "temperature")
         daily.message = "⚠️ Ήπια θερμοκρασιακή μείωση ανάπτυξης.";
@@ -12484,7 +12500,7 @@ function buildBPIMessages({ efficiency_pct, limiting_factor, performance_pct }) 
         daily.message = "⚠️ Μέτρια δραστηριότητα ριζών.";
       else
         daily.message = "⚠️ Ήπιος περιορισμός ανάπτυξης.";
-    } else if (efficiency_pct >= 55) {
+    } else if (efficiency_pct >= 55 || _warmCap) {   // T-BPI-WARMTEXT-01: «warm» ≥ 30 % μένει «Μειωμένο»
       daily.severity = "warning";
       if (limiting_factor === "water")
         daily.message = "⚠️ Περιορισμός ανάπτυξης λόγω έλλειψης νερού. Ελέγξτε το πότισμα.";
@@ -12496,7 +12512,9 @@ function buildBPIMessages({ efficiency_pct, limiting_factor, performance_pct }) 
         daily.message = "🌬️ Πίεση από ξηρό αέρα/ατμόσφαιρα — το έδαφος επαρκεί, το πότισμα δεν είναι η λύση.";
       else if (limiting_factor === "cold" || limiting_factor === "cool")
         daily.message = "❄️ Σημαντική μείωση ανάπτυξης λόγω ψύχους. Η καλλιέργεια αναπτύσσεται αργά.";
-      else if (limiting_factor === "heat" || limiting_factor === "warm")
+      else if (limiting_factor === "warm")
+        daily.message = "☀️ Ζεστός καιρός, εντός των ορίων της καλλιέργειας — μειωμένη φωτοσύνθεση, όχι καταπόνηση.";
+      else if (limiting_factor === "heat")
         daily.message = "☀️ Θερμική καταπόνηση μειώνει τη φωτοσύνθεση.";
       else if (limiting_factor === "temperature")
         daily.message = "⚠️ Θερμοκρασιακός περιορισμός στην ανάπτυξη.";
@@ -12516,7 +12534,9 @@ function buildBPIMessages({ efficiency_pct, limiting_factor, performance_pct }) 
         daily.message = "🔥 Έντονη ατμοσφαιρική ζήτηση (ξηρός αέρας) — το έδαφος επαρκεί· σκίαση/δροσισμός βοηθούν, όχι περισσότερο νερό.";
       else if (limiting_factor === "cold" || limiting_factor === "cool")
         daily.message = "❄️ Πολύ χαμηλή θερμοκρασία — η ανάπτυξη είναι σχεδόν σταματημένη.";
-      else if (limiting_factor === "heat" || limiting_factor === "warm")
+      else if (limiting_factor === "warm")
+        daily.message = "☀️ Θερμοκρασία κοντά στο άνω όριο της καλλιέργειας — σημαντικά μειωμένη φωτοσύνθεση, χωρίς ζημιά.";
+      else if (limiting_factor === "heat")
         daily.message = "🔥 Έντονη θερμική καταπόνηση λόγω υψηλής θερμοκρασίας!";
       else if (limiting_factor === "temperature")
         daily.message = "🚨 Ακραίος θερμοκρασιακός περιορισμός.";
@@ -12566,6 +12586,20 @@ function getFertilizationGrowthMessages(bpi, bpiError, bpiContext) {
   // - Primary: daily efficiency + limiting factor
   // - Secondary: accumulated performance vs potential
   if (bpiContext && typeof bpiContext === "object" && Number.isFinite(Number(bpiContext.efficiency_pct))) {
+    // ── T-BPI-NIGHT-01 (v50.139 · 19/9/2026, έλεγχος Κ10) ─────────────────────
+    // Ο κλάδος «Νύχτα» (φως 0 ή αποτυχία της κλήσης sum) γύριζε efficiency 0 /
+    // limiting «light» → severity «alert» → bpi_message «Ελάχιστο» ΚΟΚΚΙΝΟ και
+    // bpi_season_message «Σημαντική απόκλιση» με performance 0 — ενώ το
+    // bpi_daily_status έλεγε «Νύχτα» γκρι. Μια νύχτα δεν είναι συναγερμός: γκρι
+    // ενημέρωση, και το σωρευτικό ΔΕΝ ξαναγράφεται (το carry-forward κρατά το
+    // τελευταίο πραγματικό).
+    if (bpiContext.status && bpiContext.status.code === 'NIGHT') {
+      return [{ variable: "bpi_message", value: "Νύχτα",
+        metadata: { color: "grey", severity: "info", code: "NIGHT",
+          text: "Δεν υπάρχει φωτοσύνθεση αυτή την ώρα — η ανάπτυξη της ημέρας δεν αξιολογείται. Το επόμενο αποτέλεσμα βγαίνει με το φως της ημέρας.",
+          light_source: (bpiContext.light_source) || 'sensor' } }];
+    }
+    // ── End T-BPI-NIGHT-01 ─────────────────────────────────────────────────────
     const { daily, accumulated } = buildBPIMessages({
       efficiency_pct: Number(bpiContext.efficiency_pct),
       limiting_factor: bpiContext.limiting_factor || "mixed",
