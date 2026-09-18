@@ -36,6 +36,12 @@
       "_dist-sagMain/uc511-feedback-overlay.js"
     ]
   },
+  "forms": {
+    "note": "Custom HTML widgets (TagoIO Files, html_files/). Uploaded by hand via TagoIO Files UI. Keep LF, no BOM. configuration.html = field parameter form v18 (verified live md5 75da935a9e4df51529232e8af45b845c, 2026-09-18).",
+    "files": [
+      { "file": "custom_html_files/configuration.html", "target": "html_files/configuration.html" }
+    ]
+  },
   "parsers": {
     "note": "Payload parsers are assigned per DEVICE (Device → Payload Parser) — not deployable by ID here. Assign manually or via MCP. Confirm which parser each connector uses before pruning duplicates."
   }

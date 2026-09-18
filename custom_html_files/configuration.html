@@ -10,169 +10,270 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <style>
-  /* ============================================================================
-   * [CLEANFIX 2026-07-02] UI aligned with the main AgroGenius dashboard
-   * (Dashboard.css / Modals.css design system). Same tokens, cards, pills,
-   * buttons and inputs — HTML structure & JS untouched.
-   * ==========================================================================*/
   :root{
-    /* dashboard palette */
-    --bg:#f7f9fc; --ink:#1a2b3c; --sub:#6c7a89; --muted:#6c7a89;
-    --card:#fff; --line:#e8eef3;
-    --blue:#2f6feb; --accent:#2f6feb;
-    --green:#2ecc71; --ok:#16a34a; --yellow:#f1c40f; --orange:#f39c12; --warn:#f39c12;
-    --red:#e74c3c; --bad:#e74c3c;
-    --radius:16px;
-    --label-min-h:46px;
+    --ink:#1a2b3c; --sub:#5b6775; --bg:#f6f8fb; --card:#fff; --line:#e8eef3;
+    --accent:#2e7be6; --ok:#16a34a; --warn:#f59e0b; --bad:#ef4444;
+    --radius:14px;
+    --label-min-h: 46px;
   }
   *{box-sizing:border-box}
-  body{
-    margin:0; background:var(--bg); color:var(--ink);
-    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-    font-size:15px; line-height:1.4;
-  }
-  .wrap{max-width:1100px; margin:0 auto; padding:16px;}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
+  .wrap{max-width:1000px; margin:0 auto; padding:16px;}
 
-  /* ---- top bar ---- */
+  /* top bar with Αρχική */
   .topbar{
     display:flex; align-items:center; justify-content:space-between; gap:12px;
-    background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 14px;
-    box-shadow:0 2px 12px rgba(0,0,0,.04); margin-bottom:14px;
+    background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 12px;
+    box-shadow:0 2px 12px rgba(0,0,0,.05); margin-bottom:12px;
   }
-  .title-main{
-    font-weight:900; margin:0;
-    font-size:clamp(1.2rem, 1.4vw + .8rem, 1.8rem);
-    display:flex; align-items:center; gap:10px;
-  }
+  .title-main{font-weight:900; font-size:clamp(1.2rem, 2vw + .6rem, 1.8rem); margin:0}
   .home-btn{
     display:inline-flex; align-items:center; gap:8px;
-    background:#111827; color:#fff; border:none; border-radius:10px;
-    padding:9px 14px; font-weight:800; cursor:pointer; transition:background .12s ease;
+    background:#111827; color:#fff; border:none; border-radius:10px; padding:8px 12px; font-weight:800; cursor:pointer;
   }
   .home-btn:hover{background:#0f172a}
 
-  /* ---- layout ---- */
-  .row{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; align-items:start;}
+  .row{display:grid; grid-template-columns:1fr 1fr; gap:16px}
   @media (max-width:920px){ .row{grid-template-columns:1fr} }
 
-  /* ---- cards ---- */
-  .card{
-    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
-    padding:16px; box-shadow:0 2px 12px rgba(0,0,0,.05);
-    transition:transform .02s ease, box-shadow .12s ease;
-  }
-  .card:hover{ box-shadow:0 4px 14px rgba(0,0,0,.08); }
-  .title{font-weight:800; margin:0 0 12px; font-size:1.12rem;}
-  .muted{color:var(--muted); font-size:.9rem;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px; box-shadow:0 2px 12px rgba(0,0,0,.05);}
+  .title{font-weight:800; margin:0 0 8px}
+  .muted{color:var(--sub)}
+  .banner{border-radius:12px; padding:10px 12px; font-weight:700; margin-bottom:12px}
+  .banner.warn{background:#fff3f0; color:#8a1c12; border:1px solid #ffd5cd}
+  .banner.info{background:#edf5ff; color:#0b3d91; border:1px solid #cfe2ff}
 
-  /* ---- banners ---- */
-  .banner{border-radius:10px; padding:10px 14px; font-weight:600; margin-bottom:12px; font-size:.95rem;}
-  .banner.warn{background:#fde8e8; color:#b91c1c; border:1px solid #fca5a5}
-  .banner.info{background:#e8f0ff; color:#163970; border:1px solid #cbd9ff}
-
-  /* ---- fields ---- */
+  /* fields */
   .field{margin:10px 0}
   .field label{
-    display:flex; align-items:flex-end; min-height:var(--label-min-h);
-    margin-bottom:6px; line-height:1.15;
-    font-size:.86rem; font-weight:600; color:var(--sub);
+    display:flex;
+    align-items:flex-end;      /* text sits at the bottom of the label box */
+    min-height:var(--label-min-h);
+    margin-bottom:6px;         /* gap to the control */
+    line-height:1.15;
   }
-  .field .help{ margin-top:auto; color:var(--muted); font-size:.82rem; }
-
+  .field .help{
+    margin-top:auto;           /* push help to the bottom */
+  }
   input[type=text],
   input[type=number],
   input[type=datetime-local],
   select{
-    width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:10px;
-    background:#fff; color:var(--ink); font-size:14px; font-weight:600;
-    transition:border-color .12s ease, box-shadow .12s ease;
+    padding:9px 12px;
   }
-  input[type=text]:focus,
-  input[type=number]:focus,
-  input[type=datetime-local]:focus,
-  select:focus{
-    outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(47,111,235,.15);
-  }
-  input[type=checkbox]{transform:scale(1.15); margin-right:0; accent-color:var(--blue);}
+  input[type=checkbox]{transform:scale(1.1); margin-right:0}
 
   /* equal-height rows of fields */
   .grid-3{
     display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px; align-items:stretch;
   }
   @media (max-width:920px){ .grid-3{grid-template-columns:1fr} }
-  .grid-3 > .field{ display:flex; flex-direction:column; align-items:stretch; height:100%; }
+  .grid-3 > .field{
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    height:100%;
+  }
 
+  /* checkbox row alignment */
   .checkwrap{ display:flex; align-items:center; gap:8px; padding-top:8px; }
 
-  /* ---- map ---- */
   .mapbox{height:360px; border-radius:12px; overflow:hidden; border:1px solid var(--line)}
-  .map-actions{display:flex; gap:8px; margin:10px 0 0; flex-wrap:wrap;}
+  .map-actions{display:flex; gap:8px; margin:10px 0 0}
+  .btn{border:none; border-radius:10px; padding:10px 12px; font-weight:800; cursor:pointer}
+  .btn.primary{background:var(--accent); color:#fff}
+  .btn.ghost{background:#fff; border:1px solid var(--line)}
+  .btn.warn{background:var(--warn); color:#111}
+  .btn:disabled{opacity:.6; cursor:not-allowed}
 
-  /* ---- buttons (dashboard style) ---- */
-  .btn{
-    border:none; border-radius:10px; padding:10px 14px; font-weight:800; cursor:pointer;
-    font-size:.95rem; transition:transform .02s ease, box-shadow .12s ease, background .12s ease, opacity .12s ease;
-  }
-  .btn:hover{ box-shadow:0 3px 10px rgba(0,0,0,.10); }
-  .btn:active{ transform:translateY(1px); }
-  .btn.primary{background:var(--blue); color:#fff}
-  .btn.primary:hover{background:#2560d0}
-  .btn.ghost{background:#fff; border:1px solid var(--line); color:var(--ink)}
-  .btn.ghost:hover{background:#f3f6fb}
-  .btn.warn{background:var(--orange); color:#111}
+  .savebar{display:flex; justify-content:flex-end; gap:10px; margin-top:12px}
   .btn.save{background:var(--ok); color:#fff}
-  .btn.save:hover{background:#128a3e}
-  .btn.danger{background:var(--bad); color:#fff}
-  .btn:disabled{opacity:.6; cursor:not-allowed; box-shadow:none;}
+  .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
 
-  .savebar{display:flex; justify-content:flex-end; gap:10px; margin-top:16px}
-  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
-
-  /* ---- status pill (rounded like dashboard badges) ---- */
-  .pill{
-    display:inline-flex; align-items:center; gap:8px;
-    padding:6px 12px; border-radius:999px; font-weight:800; white-space:nowrap;
-    background:#e8f0ff; color:#163970; border:1px solid #cbd9ff;
-  }
-  .dot{ display:inline-block; }
-
-  /* ===== Modal (dashboard modal look) ===== */
+  /* ===== Modal ===== */
+  /* v9: ΑΠΟΛΥΤΗ, ΟΧΙ ΣΤΑΘΕΡΗ θέση. Μέσα σε iframe που το TagoIO μεγαλώνει όσο
+     το περιεχόμενο, το «fixed» κεντράρει στη μέση ΟΛΟΥ του πλαισίου — εκτός
+     οθόνης. Το ύψος και η θέση της κάρτας ορίζονται από τη openModal(). */
   .modalBackdrop{
-    position:fixed; inset:0; background:rgba(0,0,0,.45);
-    display:none; align-items:center; justify-content:center; z-index:1000;
+    position:absolute; left:0; top:0; width:100%;
+    background:rgba(0,0,0,.45);
+    display:none; align-items:flex-start; justify-content:center; z-index:1000;
   }
+  /* Η κάρτα δεν ξεπερνά ποτέ το ύψος της οθόνης — αλλιώς το ΟΚ βγαίνει από κάτω
+     και ο χρήστης πάλι δεν το βρίσκει. Κυλά ΜΕΣΑ της. */
+  .modalCard{ max-height:82vh; overflow:auto; }
   .modalCard{
     width:min(560px, 92vw);
-    background:#fff; border:1px solid var(--line);
-    border-radius:16px; padding:20px;
-    box-shadow:0 12px 34px rgba(0,0,0,.22);
+    background:#fff; border:3px solid var(--line);
+    border-radius:16px; padding:18px;
+    box-shadow:0 10px 30px rgba(0,0,0,.2);
   }
-  .modalTitle{font-size:1.1rem; font-weight:900; margin:0 0 8px}
-  .modalBody{color:var(--ink); line-height:1.5}
-  .modalActions{display:flex; gap:10px; justify-content:flex-end; margin-top:18px}
+  .modalTitle{font-size:1.05rem; font-weight:900; margin:0 0 8px}
+  .modalBody{color:var(--ink); line-height:1.45}
+  .modalActions{display:flex; gap:10px; justify-content:flex-end; margin-top:16px}
 
   /* ===== Multi-crops rows ===== */
   .cropRow{
-    border:1px solid var(--line); border-radius:12px; padding:14px; background:#fff;
-    box-shadow:0 1px 6px rgba(0,0,0,.03);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:12px;
+    background:#fff;
   }
   .cropRowTop{
-    display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:12px;
+    display:flex; gap:10px; align-items:center; justify-content:space-between;
+    margin-bottom:10px;
   }
-  .cropRowTop .left{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-weight:700; }
+  .cropRowTop .left{
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+  }
   .cropGrid{
-    display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px;
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+    gap:12px;
   }
   @media (max-width:920px){ .cropGrid{ grid-template-columns:1fr; } }
+  .btn.danger{ background: var(--bad); color:#fff; }
 
-  /* dynamic crop sub-sections built by the JS */
-  .cropExtra{ margin-top:12px; }
-  .cropPeriodsWrap{ margin-top:12px; border-top:1px dashed var(--line); padding-top:12px; }
-  .cropPeriods{ display:flex; flex-direction:column; gap:10px; }
-  .periodCard{
-    border:1px solid var(--line); border-radius:10px; padding:12px; background:var(--bg);
+  /* ══════════════════════════════════════════════════════════════
+     ΕΜΦΑΝΙΣΗ v2 — μόνο οπτικές βελτιώσεις, καμία αλλαγή λειτουργίας.
+     Προστίθεται στο τέλος ώστε να υπερισχύει των παραπάνω κανόνων.
+     ══════════════════════════════════════════════════════════════ */
+  :root{ --r-sm:10px; --r-md:14px; --r-lg:18px; --ring:rgba(46,123,230,.18); }
+
+  body{ -webkit-font-smoothing:antialiased; }
+  .wrap{ max-width:1120px; padding:20px 18px 40px; }
+
+  .topbar{ border-radius:var(--r-lg); padding:14px 18px; box-shadow:0 1px 3px rgba(16,24,40,.04),0 8px 24px rgba(16,24,40,.05); }
+  .home-btn{ border-radius:12px; padding:10px 16px; transition:transform .12s ease, background .12s ease; }
+  .home-btn:hover{ transform:translateY(-1px); }
+
+  .card{ border-radius:var(--r-lg); padding:20px; box-shadow:0 1px 3px rgba(16,24,40,.04),0 8px 24px rgba(16,24,40,.05); }
+  .title{ font-size:1.02rem; letter-spacing:-.01em; margin-bottom:14px; }
+  .row{ gap:18px; }
+
+  /* ── Πεδία ── */
+  .field{ margin:14px 0; }
+  .field label{
+    min-height:auto; align-items:flex-start; display:block;
+    font-size:.9rem; font-weight:650; color:#33465c; margin-bottom:7px; line-height:1.3;
   }
-  .crop_remove{ padding:8px 12px; }
+  input[type=text], input[type=number], input[type=date], input[type=datetime-local], select, textarea{
+    width:100%; border:1.5px solid #dfe7ef; border-radius:var(--r-sm);
+    padding:11px 13px; font-size:.95rem; background:#fff; color:var(--ink);
+    transition:border-color .14s ease, box-shadow .14s ease, background .14s ease;
+    appearance:none; -webkit-appearance:none;
+  }
+  input:hover:not([readonly]), select:hover{ border-color:#c3d3e3; }
+  input:focus, select:focus, textarea:focus{
+    outline:none; border-color:var(--accent); box-shadow:0 0 0 4px var(--ring); background:#fff;
+  }
+  input::placeholder{ color:#a8b6c6; }
+  input[readonly]{ background:#f4f7fa !important; color:#5b6775; border-style:dashed; }
+
+  select{
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235b6775' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+    background-repeat:no-repeat; background-position:right 12px center; padding-right:38px; cursor:pointer;
+  }
+
+  /* ── Ημερολόγια: μεγάλο, ευδιάκριτο εικονίδιο και εύκολο κλικ ── */
+  input[type=date]{ position:relative; cursor:pointer; padding-right:42px; font-variant-numeric:tabular-nums; }
+  input[type=date]::-webkit-calendar-picker-indicator{
+    position:absolute; right:8px; top:50%; transform:translateY(-50%);
+    width:24px; height:24px; padding:4px; margin:0; cursor:pointer; opacity:.55;
+    border-radius:7px; transition:opacity .14s ease, background .14s ease;
+  }
+  /* T-DATEICON-01 (9/9/2026): το shorthand `background:` έσβηνε το background-image του εικονιδίου του Chrome — κενό κουτί στο hover. Μόνο background-color. */
+  input[type=date]:hover::-webkit-calendar-picker-indicator{ opacity:1; background-color:#eef4fb; }
+  input[type=date]::-webkit-datetime-edit{ padding:0; }
+
+  input[type=number]{ font-variant-numeric:tabular-nums; }
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{ opacity:.35; height:26px; }
+
+  /* ── Κουμπιά ── */
+  .btn{ border-radius:12px; padding:11px 16px; font-size:.93rem; letter-spacing:.01em;
+        transition:transform .12s ease, box-shadow .12s ease, filter .12s ease; }
+  .btn:hover:not(:disabled){ transform:translateY(-1px); }
+  .btn.primary{ box-shadow:0 2px 8px rgba(46,123,230,.28); }
+  .btn.save{ box-shadow:0 2px 10px rgba(22,163,74,.3); padding:13px 26px; font-size:.98rem; }
+  .btn.ghost{ border:1.5px solid #dfe7ef; }
+  .btn.ghost:hover{ border-color:#c3d3e3; background:#f7fafd; }
+  .btn.danger{ box-shadow:0 2px 8px rgba(239,68,68,.25); padding:8px 14px; font-size:.86rem; }
+
+  /* ── Κάρτες καλλιέργειας ── */
+  .cropRow{ border-radius:var(--r-md); padding:18px; border:1.5px solid #e8eef3; background:#fcfdff;
+            transition:border-color .14s ease, box-shadow .14s ease; }
+  .cropRow:hover{ border-color:#d6e2ee; box-shadow:0 2px 12px rgba(16,24,40,.05); }
+  .cropRowTop{ padding-bottom:12px; border-bottom:1px solid #edf2f7; margin-bottom:14px; }
+  .cropRowTop .muted{ font-weight:750; color:#33465c; font-size:.95rem; }
+  /* Κάθε στάδιο σε ΜΙΑ γραμμή — λιγότερος κατακόρυφος χώρος, πιο ευανάγνωστο */
+  .periodCard{ background:#fff; border:1px solid #edf2f7; border-radius:var(--r-sm); padding:10px 12px; }
+  .periodRow{ display:grid; grid-template-columns:minmax(120px,1.1fr) 1fr 1fr; gap:12px; align-items:end; }
+  .periodName{ font-weight:750; color:#33465c; font-size:.92rem; padding-bottom:11px; line-height:1.25; }
+  .periodRow .field label{ font-size:.82rem; font-weight:600; color:#6b7a8c; margin-bottom:5px; }
+  .periodRow input[type=date]{ padding:9px 11px; }
+  @media (max-width:640px){
+    .periodRow{ grid-template-columns:1fr 1fr; }
+    .periodName{ grid-column:1 / -1; padding-bottom:0; margin-bottom:2px; }
+  }
+  /* Προτεινόμενες ημερομηνίες — διακριτικά χρωματισμένες */
+  input[data-suggested="1"]{ border-style:dashed; }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     ΣΤΟΙΧΙΣΗ ΠΕΔΙΩΝ
+     Ετικέτα μίας γραμμής δίπλα σε ετικέτα δύο γραμμών έριχνε το πεδίο πιο
+     κάτω. Κάθε στήλη γίνεται στήλη flex· η ετικέτα καταλαμβάνει σταθερό ύψος
+     δύο γραμμών με το κείμενο στο κάτω μέρος, ώστε ΟΛΑ τα πεδία μιας σειράς
+     να ξεκινούν στο ίδιο ύψος — ανεξάρτητα από το μήκος του κειμένου.
+     ══════════════════════════════════════════════════════════════════════ */
+  .grid-3 > .field,
+  .cropGrid > .field,
+  .cropZoneGrid > .field,
+  .cropSprayGrid > .field{
+    display:flex; flex-direction:column; height:100%;
+  }
+  .grid-3 > .field > label,
+  .cropGrid > .field > label,
+  .cropZoneGrid > .field > label,
+  .cropSprayGrid > .field > label{
+    display:flex; align-items:flex-end;
+    min-height:2.5em;            /* χώρος για δύο γραμμές κειμένου */
+    margin-bottom:7px;
+  }
+  /* Οι βοηθητικές γραμμές κάτω από τα πεδία δεν σπρώχνουν τη σειρά */
+  .grid-3 > .field > .muted,
+  .cropZoneGrid > .field > .muted{ margin-top:5px; }
+
+  /* Στις σειρές σταδίων οι ετικέτες είναι πάντα μίας γραμμής */
+  .periodRow > .field > label{ min-height:0; align-items:flex-start; }
+  .periodRow{ align-items:end; }
+
+  /* Τα δύο dropdown της καλλιέργειας: ίδιο πλάτος και σωστή περικοπή */
+  .cropGrid > .field > select{ min-width:0; text-overflow:ellipsis; }
+
+  /* ── Πτυσσόμενες ενότητες ── */
+  details{ border-radius:var(--r-md) !important; }
+  details summary{ list-style:none; padding:4px 0; }
+  details summary::-webkit-details-marker{ display:none; }
+  details summary::before{ content:'▸ '; color:var(--accent); font-weight:900; }
+  details[open] summary::before{ content:'▾ '; }
+
+  /* ── Χάρτης & μηνύματα ── */
+  .mapbox{ border-radius:var(--r-md); border:1.5px solid #dfe7ef; }
+  .banner{ border-radius:var(--r-sm); padding:12px 15px; }
+  .muted{ line-height:1.45; }
+
+  /* ── Παράθυρα ── */
+  .modalCard{ border-radius:var(--r-lg); border-width:1px; border-color:#e8eef3;
+              box-shadow:0 20px 60px rgba(16,24,40,.22); padding:22px; }
+  .modalTitle{ font-size:1.1rem; }
+
+  @media (max-width:920px){
+    .wrap{ padding:14px 12px 32px; }
+    .card{ padding:16px; }
+    .cropZoneGrid, .cropSprayGrid{ grid-template-columns:1fr !important; }
+  }
+
 </style>
 </head>
 <body>
@@ -226,33 +327,173 @@
         <div class="field">
           <label>Τύπος εδάφους</label>
           <select id="soil_type"></select>
+          <div class="muted" style="font-size:.85rem; margin-top:4px" id="soilHint">Καθορίζει πόσο νερό συγκρατεί το χωράφι</div>
         </div>
         <div class="field">
           <label>Μέθοδος ποτίσματος</label>
           <select id="irrigation_system"></select>
+          <div class="muted" style="font-size:.85rem; margin-top:4px" id="irrigHint">—</div>
         </div>
         <div class="field">
           <label>Ποιότητα νερού</label>
           <select id="water_quality"></select>
+          <div class="muted" style="font-size:.85rem; margin-top:4px" id="waterHint">—</div>
+        </div>
+      </div>
+
+      <!-- v5: T-STONE-01 — σε πετρώδη εδάφη το διαθέσιμο νερό υπερεκτιμούνταν
+           και το πότισμα προτεινόταν αργότερα απ' όσο έπρεπε. -->
+      <div class="grid-3">
+        <div class="field">
+          <label>Πέτρες / χαλίκι στο έδαφος (%)</label>
+          <input id="stone_fraction_pct" type="number" step="1" min="0" max="70" placeholder="π.χ. 20" />
+          <div class="muted" style="font-size:.85rem; margin-top:4px">Κατ' όγκο, εκτίμηση. Κενό = 0 %. Οι πέτρες δεν κρατούν νερό — το σύστημα μικραίνει ανάλογα τη δεξαμενή του εδάφους.</div>
         </div>
       </div>
 
       <div class="grid-3">
         <div class="field">
-          <label>Έκταση (m²)</label>
-          <input id="area" type="number" step="0.01" placeholder="π.χ. 100" />
+          <label>Καλυμμένη καλλιέργεια (θερμοκήπιο)</label>
+          <select id="covered_cultivation">
+            <option value="false">Όχι — υπαίθρια</option>
+            <option value="true">Ναι — θερμοκήπιο / κάλυψη</option>
+          </select>
+          <div class="muted" style="font-size:.85rem; margin-top:4px">Σε καλυμμένη: η βροχή του σταθμού αγνοείται και το όριο θερμοκρασίας αέρα φτάνει 65 °C</div>
         </div>
-        <div class="field">
-          <label>Παροχή νερού </label>
-          <input id="supply_flow_rate" type="number" step="0.01" placeholder="π.χ. 10" />
+        <!-- v5: T-COVER-01 — μόνο για καλυμμένη καλλιέργεια· αλλιώς αγνοούνται. -->
+        <div class="field" id="fld_cover_transmissivity">
+          <label>Διαπερατότητα καλύμματος στο φως (%)</label>
+          <input id="cover_transmissivity_pct" type="number" step="1" min="20" max="100" placeholder="π.χ. 65" />
+          <div class="muted" style="font-size:.85rem; margin-top:4px">Πόσο φως περνά το πλαστικό/δίχτυ. Κενό = 65 % (τυπικό πολυαιθυλένιο). Μόνο για καλυμμένη καλλιέργεια.</div>
         </div>
-        <div class="field">
-          <label>Αριθμός Δέντρων / Φυτών</label>
-          <input id="total_plants" type="number" step="1" placeholder="π.χ. 300" />
+        <div class="field" id="fld_cover_light_inside">
+          <label>Ο αισθητήρας φωτός είναι ΜΕΣΑ στο θερμοκήπιο;</label>
+          <select id="cover_light_sensor_inside">
+            <option value="false">Όχι — έξω / στο ύπαιθρο</option>
+            <option value="true">Ναι — μέσα στο κάλυμμα</option>
+          </select>
+          <div class="muted" style="font-size:.85rem; margin-top:4px">Αν είναι μέσα, το φως που μετρά είναι ήδη μειωμένο και ΔΕΝ ξαναμειώνεται — αλλιώς το πότισμα υποεκτιμάται.</div>
+        </div>
+      </div>
+
+      <!-- T-SOILMODELS-01 (v50.17): ιστορικό εδαφογενών, νηματώδεις, πληγές.
+           Όλα προαιρετικά — χωρίς απάντηση τα μοντέλα μένουν ουδέτερα. -->
+      <p class="title" id="histSectionTitle" style="margin-top:18px">Ιστορικό αγρού &amp; πληγές <span class="muted" style="font-weight:400; font-size:.85rem">(προαιρετικό — ακριβέστερες προβλέψεις εδαφογενών ασθενειών)</span></p>
+
+      <div class="grid-3">
+        <div class="field" id="fld_hist_vert">
+          <label>Βερτισιλλίωση (αδρομύκωση) στο παρελθόν;</label>
+          <select id="hist_verticillium"><option value="">Άγνωστο</option><option value="no">Δεν έχει εμφανιστεί</option><option value="0">Φέτος</option><option value="1">Πριν 1-2 χρόνια</option><option value="3">Πριν 3-5 χρόνια</option><option value="7">Πριν 6+ χρόνια</option></select>
+          <div class="muted" style="font-size:.85rem; margin-top:4px">Μαράνσεις σε ελιά, ντομάτα, πιπεριά, μελιτζάνα, πατάτα, φράουλα, αγγούρι, πεπόνι, καρπούζι, αγκινάρα, βαμβάκι, ηλίανθο, μέντα</div>
+        </div>
+        <div class="field" id="fld_hist_phyt">
+          <label>Φυτόφθορα λαιμού/ριζών στο παρελθόν;</label>
+          <select id="hist_phytophthora"><option value="">Άγνωστο</option><option value="no">Δεν έχει εμφανιστεί</option><option value="0">Φέτος</option><option value="1">Πριν 1-2 χρόνια</option><option value="3">Πριν 3-5 χρόνια</option><option value="7">Πριν 6+ χρόνια</option></select>
+          <div class="muted" style="font-size:.85rem; margin-top:4px">Σήψεις λαιμού σε πιπεριά, ντομάτα, μελιτζάνα, αγγούρι, κολοκύθι, πεπόνι, καρπούζι</div>
+        </div>
+        <div class="field" id="fld_hist_scler">
+          <label>Σκληρωτινίαση (λευκή σήψη) στο παρελθόν;</label>
+          <select id="hist_sclerotinia"><option value="">Άγνωστο</option><option value="no">Δεν έχει εμφανιστεί</option><option value="0">Φέτος</option><option value="1">Πριν 1-2 χρόνια</option><option value="3">Πριν 3-5 χρόνια</option><option value="7">Πριν 6+ χρόνια</option></select>
+          <div class="muted" style="font-size:.85rem; margin-top:4px">Βαμβακώδης μούχλα με μαύρα σκληρώτια σε μαρούλι, λάχανο, μπρόκολο, καρότο, φασόλια, ντομάτα, πιπεριά, μελιτζάνα, πατάτα, φράουλα, κολοκυνθοειδή, αγκινάρα, ηλίανθο</div>
         </div>
       </div>
 
       <div class="grid-3">
+        <div class="field" id="fld_hist_rhizo">
+          <label>Ριζοκτόνια στο παρελθόν;</label>
+          <select id="hist_rhizoctonia"><option value="">Άγνωστο</option><option value="no">Δεν έχει εμφανιστεί</option><option value="0">Φέτος</option><option value="1">Πριν 1-2 χρόνια</option><option value="3">Πριν 3-5 χρόνια</option><option value="7">Πριν 6+ χρόνια</option></select>
+          <div class="muted" style="font-size:.85rem; margin-top:4px">Καστανά έλκη σε πατάτα και ζαχαρότευτλα</div>
+        </div>
+        <div class="field" id="fld_susc_years">
+          <label>Έτη με ευπαθή καλλιέργεια στην 5ετία</label>
+          <select id="susceptible_years_5yr">
+            <option value="">Άγνωστο</option>
+            <option value="0">Κανένα</option><option value="1">1</option>
+            <option value="2">2</option><option value="3">3</option>
+            <option value="4">4</option><option value="5">5 (μονοκαλλιέργεια)</option>
+          </select>
+          <div class="muted" style="font-size:.85rem; margin-top:4px">Πόσα από τα 5 τελευταία χρόνια είχε καλλιέργεια ευπαθή στα εδαφογενή παθογόνα που παρακολουθεί το σύστημα (ντομάτα, πιπεριά, μελιτζάνα, πατάτα, κολοκυνθοειδή, μαρούλι, λάχανο, καρότο, φασόλια, φράουλα, αγκινάρα, βαμβάκι, ηλίανθο, ελιά)</div>
+        </div>
+        <div class="field" id="fld_nem_found">
+          <label>Νηματώδεις (3ετία);</label>
+          <select id="nem_found_3yr">
+            <option value="">Άγνωστο</option>
+            <option value="yes">Ναι — βρέθηκαν κόμβοι στις ρίζες</option>
+            <option value="no">Όχι — έλεγχος χωρίς εύρημα</option>
+          </select>
+          <div class="muted" style="font-size:.85rem; margin-top:4px">Κομβοποίηση ριζών σε ντομάτα, μελιτζάνα, αγγούρι, κολοκύθι, πεπόνι, καρπούζι, πιπεριά· διακλάδωση ρίζας στο καρότο — την τελευταία τριετία</div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="field" id="fld_nem_solar">
+          <label>Ηλιοαπολύμανση τελευταίου 12μήνου;</label>
+          <!-- T-NEM3STATE-01 (v18 · 9/9/2026, παγίδα #22): η προεπιλογή ήταν «Όχι» —
+               κάθε αποθήκευση δήλωνε «όχι ηλιοαπολύμανση» για παραγωγό που δεν ρωτήθηκε.
+               Τώρα η προεπιλογή είναι κενή· το «Όχι» μετράει μόνο όταν επιλεγεί ρητά. -->
+          <select id="nem_solarization_12mo">
+            <option value="">Δεν γνωρίζω</option>
+            <option value="false">Όχι</option>
+            <option value="true">Ναι</option>
+          </select>
+        </div>
+        <div class="field" id="fld_nem_resistant">
+          <label>Ανθεκτική ποικιλία/υποκείμενο σε νηματώδεις;</label>
+          <!-- T-NEM3STATE-01: το «Όχι / Άγνωστο» έσμιγε δύο διαφορετικές απαντήσεις. -->
+          <select id="nem_resistant_cultivar">
+            <option value="">Δεν γνωρίζω</option>
+            <option value="false">Όχι</option>
+            <option value="true">Ναι</option>
+          </select>
+          <div class="muted" style="font-size:.85rem; margin-top:4px">π.χ. ντομάτα με γονίδιο Mi, εμβολιασμένα φυτά</div>
+        </div>
+        <div class="field" id="fld_knot">
+          <label>Καρκινώματα στα δέντρα (ελιά);</label>
+          <select id="knot_observations">
+            <option value="">Καθόλου / Άγνωστο</option>
+            <option value="scattered">Λίγα, διάσπαρτα</option>
+            <option value="heavy">Πολλά</option>
+          </select>
+          <div class="muted" style="font-size:.85rem; margin-top:4px">Εξογκώματα καρκίνωσης σε κλαδιά — δείχνουν εγκατεστημένο βακτήριο</div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="field" id="fld_wound_pruning" style="display:none">
+          <label>Τελευταίο κλάδεμα / ράβδισμα</label>
+          <input id="wound_pruning_date" type="date" />
+          <div class="muted" style="font-size:.85rem; margin-top:4px">Οι τομές είναι πύλες εισόδου βακτηρίων για ~2 εβδομάδες</div>
+        </div>
+        <div class="field" id="fld_wound_hail">
+          <label>Πρόσφατο χαλάζι</label>
+          <input id="wound_hail_date" type="date" />
+          <div class="muted" style="font-size:.85rem; margin-top:4px">Οι πληγές του χαλαζιού είναι πύλες εισόδου βακτηρίων</div>
+        </div>
+        <div class="field" id="fld_wound_frost">
+          <label>Πρόσφατος παγετός</label>
+          <input id="wound_frost_date" type="date" />
+          <div class="muted" style="font-size:.85rem; margin-top:4px">Τα σκασίματα παγετού μολύνονται έως και 6 μήνες μετά</div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="field">
+          <label>Συνολική έκταση αγρού (m²)</label>
+          <input id="area" type="number" step="1" min="0" placeholder="π.χ. 25000" />
+          <div class="muted" style="font-size:.85rem; margin-top:4px">1 στρέμμα = 1.000 m²</div>
+        </div>
+        <div class="field">
+          <label>Σύνολο δέντρων / φυτών</label>
+          <input id="total_plants" type="number" step="1" min="0" placeholder="π.χ. 650" />
+          <div class="muted" style="font-size:.85rem; margin-top:4px" id="totalPlantsNote">Ή δηλώστε τα φυτά ανά καλλιέργεια παραπάνω.</div>
+          <div class="muted" style="font-size:.85rem; margin-top:2px" id="densityHint">—</div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="field" style="grid-column:1/-1; margin:0 0 6px 0">
+          <div class="muted" id="depthMixNote" style="display:none; font-size:.85rem; padding:8px 10px; border-radius:8px; background:#fff7ed; border:1px solid #fed7aa; color:#8a4b12"></div>
+        </div>
         <div class="field">
           <label>Βάθος Αισθητήρα (Βαθύ) (cm)</label>
           <input id="sensor_deep_depth_cm" type="number" step="1" placeholder="π.χ. 30" />
@@ -261,7 +502,69 @@
           <label>Βάθος Αισθητήρα (Ρηχό) (cm)</label>
           <input id="sensorShallow_depth_cm" type="number" step="1" placeholder="π.χ. 10" />
         </div>
+        <div class="field">
+          <label>Υψόμετρο (m από τη θάλασσα)</label>
+          <input id="elevation_m" type="number" step="1" placeholder="π.χ. 350" />
+          <div class="muted" style="font-size:.85rem; margin-top:4px">Επηρεάζει τον υπολογισμό εξατμισοδιαπνοής</div>
+        </div>
       </div>
+
+      <details style="margin-top:14px; border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:#fafcff">
+        <summary style="cursor:pointer; font-weight:800; color:var(--ink)">Αλατότητα νερού — αν έχεις ανάλυση</summary>
+        <div class="muted" style="margin:10px 0">
+          Χωρίς αυτή, το σύστημα χρησιμοποιεί την τυπική τιμή της κατηγορίας που επέλεξες.
+          Με μετρημένη τιμή, η απαίτηση έκπλυσης αλάτων υπολογίζεται ακριβώς για το δικό σου νερό
+          — και το ταμπλό γράφει ποια τιμή χρησιμοποιήθηκε.
+        </div>
+        <div class="grid-3">
+          <div class="field">
+            <label>Αλατότητα ECw (dS/m)</label>
+            <input id="water_ecw_dsm" type="text" inputmode="decimal" placeholder="π.χ. 1,6" />
+            <div class="muted" style="font-size:.85rem; margin-top:4px">Αν η ανάλυση δίνει μS/cm, διαίρεσε με 1.000</div>
+          </div>
+        </div>
+      </details>
+
+      <details style="margin-top:14px; border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:#fafcff">
+        <summary style="cursor:pointer; font-weight:800; color:var(--ink)">Λεπτομέρειες άρδευσης — για ακριβέστερη δόση</summary>
+        <div class="muted" style="margin:10px 0">
+          Χωρίς αυτά, το σύστημα χρησιμοποιεί τυπικές τιμές για τη μέθοδο ποτίσματος.
+          Με αυτά, η δόση και η διάρκεια υπολογίζονται στα πραγματικά δεδομένα του δικτύου σου.
+        </div>
+        <div class="grid-3">
+          <div class="field">
+            <label>Παροχή σταλάκτη (L/h)</label>
+            <input id="irrig_emitter_lph" type="text" inputmode="decimal" placeholder="π.χ. 4" />
+          </div>
+          <div class="field">
+            <label>Απόσταση σταλακτήρων (m)</label>
+            <input id="irrig_emitter_spacing_m" type="text" inputmode="decimal" placeholder="π.χ. 0,75" />
+          </div>
+          <div class="field">
+            <label>Απόσταση γραμμών (m)</label>
+            <input id="irrig_row_spacing_m" type="text" inputmode="decimal" placeholder="π.χ. 5" />
+          </div>
+        </div>
+        <div class="grid-3">
+          <div class="field">
+            <label>Βρεχόμενο ποσοστό επιφάνειας (%)</label>
+            <input id="irrig_fw_pct" type="number" step="1" min="1" max="100" placeholder="π.χ. 30" />
+            <div class="muted" style="font-size:.85rem; margin-top:4px">
+              Στάγδην 15-40 % · Μικροεκτοξευτήρες 50-70 % · Εκτοξευτήρες/κατάκλυση 100 %
+            </div>
+          </div>
+          <div class="field">
+            <label>Μετρημένη απόδοση δικτύου (%)</label>
+            <input id="irrig_efficiency_pct" type="number" step="1" min="10" max="100" placeholder="π.χ. 90" />
+            <div class="muted" style="font-size:.85rem; margin-top:4px">Αν δεν ξέρεις, άφησέ το κενό</div>
+          </div>
+          <div class="field">
+            <label>Υπολογιζόμενος ρυθμός (mm/h)</label>
+            <input id="irrig_rate_calc" type="text" readonly style="background:#f2f5f9" placeholder="—" />
+            <div class="muted" style="font-size:.85rem; margin-top:4px">Προκύπτει αυτόματα</div>
+          </div>
+        </div>
+      </details>
     </div>
   </div>
 
@@ -289,6 +592,9 @@
     <div class="modalBody">
       Είστε σίγουρος για την αλλαγή των στοιχείων παραμετροποίησης;
       Η λογική που δουλεύει ο αλγόριθμος ενδέχεται να τροποποιηθεί!
+      <div id="confirmAreaWarn" style="display:none; margin-top:12px; padding:10px 12px; border-radius:8px; background:#fff3f0; color:#8a1c12; border:1px solid #ffd5cd; font-weight:700;">
+        ⚠ Η «Έκταση (m²)» είναι κενή. Χωρίς αυτήν ο αλγόριθμος <u>δεν υπολογίζει άρδευση</u> για αυτόν τον αγρό. Μπορείτε να συνεχίσετε, αλλά συμπληρώστε την το συντομότερο.
+      </div>
     </div>
     <div class="modalActions">
       <button id="confirmCancel" class="btn ghost">Άκυρο</button>
@@ -324,6 +630,23 @@ function safeNav(url){
   try{ if (window.top && window.top!==window){ window.top.location.href=url; return; } }catch(e){}
   window.open(url,'_blank','noopener');
 }
+/* Υπογραφή συσκευής/μεταβλητών — για ανίχνευση αλλαγής αγρού στο ίδιο iframe. */
+function deviceSignature(w){
+  try{
+    const v = (w && w.display && w.display.variables) || [];
+    const o = v.map(function(x){ return (x && x.origin && (x.origin.id || x.origin)) || ''; }).filter(Boolean);
+    if (o.length) return o.join('|');
+    const d = (w && w.display && (w.display.devices||[])[0]) || (w && w.device);
+    if (d) return d.id || String(d);
+    /* Γύρος 5: χωρίς εφεδρεία, μια άγνωστη μορφή widget γύριζε '' — ο
+       έλεγχος εναλλαγής συσκευής δεν έτρεχε ΠΟΤΕ και τα δεδομένα του
+       προηγούμενου αγρού «μόλυναν» τον επόμενο (με το _keepPrev να τα
+       ΞΑΝΑΓΡΑΦΕΙ κιόλας). Το id του widget αλλάζει ανά συσκευή σε
+       δυναμικά dashboards — αρκεί ως υπογραφή έσχατης ανάγκης. */
+    return (w && (w.id || w.widget_id)) ? String(w.id || w.widget_id) : '';
+  }catch(e){ return ''; }
+}
+
 function wireHomeButton(widget){
   const id = getDashboardID(widget);
   const btn = document.getElementById('homeBtn');
@@ -351,7 +674,14 @@ const CULTIVATION_GENERAL = {
   ornamentalCrops: 'Ανθοκομικά/Καλλωπιστικά'
 };
 const CULTIVATION_TYPES = {
-  olive: { koroneiki: 'Κορωνέικη' },
+  olive: {
+    koroneiki: 'Κορωνέικη',
+    kalamon: 'Καλαμών',
+    chalkidikis: 'Χαλκιδικής',
+    amfissis_konservolia: 'Αμφίσσης / Κονσερβολιά',
+    tsounati_mastoidis: 'Τσουνάτη / Μαστοειδής',
+    megaritiki: 'Μεγαρίτικη'
+  },
 
   vineCrops: {
     wine_grapes: 'Οινοποιήσιμες',
@@ -363,7 +693,8 @@ const CULTIVATION_TYPES = {
     wheat: 'Σιτάρι',
     barley: 'Κριθάρι',
     maize: 'Καλαμπόκι',
-    oats: 'Βρώμη'
+    oats: 'Βρώμη',
+    rice: 'Ρύζι'
   },
 
   vegetableCrops: {
@@ -371,6 +702,7 @@ const CULTIVATION_TYPES = {
     watermelon: 'Καρπούζι',
     potato: 'Πατάτα',
     dry_beans: 'Ξηρά Φασόλια',
+    faba_bean: 'Κουκιά',
     green_beans: 'Φασολάκια',
     cabbage: 'Λάχανο',
     lettuce: 'Μαρούλι',
@@ -402,13 +734,15 @@ const CULTIVATION_TYPES = {
   },
 
   pomeFruits: { 
-    apple: 'Μηλιά' 
+    apple: 'Μηλιά',
+    pear: 'Αχλαδιά'
   },
 
   subTropicalFruits: { 
     kiwi: 'Ακτινίδιο', 
     pomegranate: 'Ρόδι', 
-    fig: 'Συκιά' 
+    fig: 'Συκιά',
+    avocado: 'Αβοκάντο'
   },
 
   nutCrops: { 
@@ -422,7 +756,8 @@ const CULTIVATION_TYPES = {
     cotton: 'Βαμβάκι', 
     tobacco: 'Καπνός', 
     sunflower: 'Ηλίανθος', 
-    sugar_beet: 'Ζαχαρότευτλο' 
+    sugar_beet: 'Ζαχαρότευτλο',
+    safflower: 'Κνήκος'
   },
 
   specialtyMediterranean: { 
@@ -436,7 +771,9 @@ const CULTIVATION_TYPES = {
     bay_laurel: 'Δάφνη', 
     currants: 'Φραγκοστάφυλα', 
     carob: 'Χαρουπιά', 
-    artichoke: 'Αγκινάρα' 
+    artichoke: 'Αγκινάρα',
+    lavender: 'Λεβάντα',
+    sideritis: 'Τσάι βουνού (Σιδερίτης)'
   },
 
   ornamentalCrops: {
@@ -444,11 +781,224 @@ const CULTIVATION_TYPES = {
   }
 };
 
+/* ══════════════════════════════════════════════════════════════════════
+   ΚΑΛΛΙΕΡΓΕΙΕΣ ΠΟΥ Ο ΤΡΕΧΩΝ ΠΥΡΗΝΑΣ ΔΕΝ ΓΝΩΡΙΖΕΙ
+   Η φόρμα τις προσφέρει (για να καταγραφούν σωστά), αλλά στέλνει στον
+   πυρήνα την πλησιέστερη καλλιέργεια που ΞΕΡΕΙ. Χωρίς αυτό, η ζώνη δεν
+   θα παρήγαγε τίποτα — ούτε άρδευση, ούτε πρόγνωση ασθενειών.
+   Η πραγματική επιλογή αποθηκεύεται στο cultivation_variety.
+   ══════════════════════════════════════════════════════════════════════ */
+const CROP_KERNEL_MAP = {
+  kalamon:'koroneiki', chalkidikis:'koroneiki', amfissis_konservolia:'koroneiki',
+  tsounati_mastoidis:'koroneiki', megaritiki:'koroneiki',
+  pear:'apple', safflower:'sunflower', lavender:'rosemary', sideritis:'oregano',
+  rice:'maize', avocado:'kiwi'
+};
+/* Πόσο καλή είναι η προσέγγιση — φαίνεται στον χρήστη */
+const CROP_PROXY_NOTE = {
+  kalamon:['ok','Ίδιο είδος με την Κορωνέικη — οι υπολογισμοί είναι αξιόπιστοι.'],
+  chalkidikis:['ok','Ίδιο είδος με την Κορωνέικη — οι υπολογισμοί είναι αξιόπιστοι.'],
+  amfissis_konservolia:['ok','Ίδιο είδος με την Κορωνέικη — οι υπολογισμοί είναι αξιόπιστοι.'],
+  tsounati_mastoidis:['ok','Ίδιο είδος με την Κορωνέικη — οι υπολογισμοί είναι αξιόπιστοι.'],
+  megaritiki:['ok','Ίδιο είδος με την Κορωνέικη — οι υπολογισμοί είναι αξιόπιστοι.'],
+  pear:['ok','Υπολογίζεται με το προφίλ της Μηλιάς — πολύ κοντινή φαινολογία.'],
+  safflower:['ok','Υπολογίζεται με το προφίλ του Ηλίανθου — συγγενές ελαιούχο.'],
+  lavender:['ok','Υπολογίζεται με το προφίλ του Δενδρολίβανου — παρόμοιος μεσογειακός θάμνος.'],
+  sideritis:['ok','Υπολογίζεται με το προφίλ της Ρίγανης — παρόμοιο αρωματικό.'],
+  rice:['warn','Υπολογίζεται προσωρινά με το προφίλ του Καλαμποκιού. Το ρύζι αρδεύεται με κατάκλυση — οι συστάσεις άρδευσης είναι ΕΝΔΕΙΚΤΙΚΕΣ.'],
+  avocado:['warn','Ο πυρήνας δεν έχει ακόμη προφίλ αβοκάντο. Υπολογίζεται προσεγγιστικά με Ακτινίδιο — οι συστάσεις είναι ΕΝΔΕΙΚΤΙΚΕΣ.']
+};
+
+
+/* Παράχθηκε αυτόματα από το CROP_PROFILE του runPerTich (kc_curve ∩ LUE).
+   Στάδια που ο πυρήνας μπορεί ΠΡΑΓΜΑΤΙΚΑ να χρησιμοποιήσει ανά καλλιέργεια. */
+const STAGE_OK = {"olive/koroneiki":["flowering","fruit_dev","ripening","vegetative"],"vineCrops/wine_grapes":["flowering","fruiting","transplant","vegetative"],"vineCrops/table_grapes":["flowering","fruiting","transplant","vegetative"],"vineCrops/raisin_grapes":["flowering","fruiting","transplant","vegetative"],"cerealCrops/wheat":["anthesis","germination","grain_filling","stem_elongation","tillering"],"cerealCrops/barley":["anthesis","germination","grain_filling","stem_elongation","tillering"],"cerealCrops/maize":["germination","grain_filling","tasseling","vegetative"],"cerealCrops/oats":["anthesis","germination","grain_filling","stem_elongation","tillering"],"citrusFruits/orange":["flowering","fruit_dev","fruit_set","vegetative"],"citrusFruits/lemon":["flowering","fruit_dev","fruit_set","vegetative"],"citrusFruits/mandarin":["flowering","fruit_dev","fruit_set","vegetative"],"stoneFruits/peach":["bloom","dormancy","fruit_dev","harvest","vegetative"],"stoneFruits/nectarine":["bloom","dormancy","fruit_dev","harvest","vegetative"],"stoneFruits/apricot":["bloom","dormancy","fruit_dev","harvest","vegetative"],"stoneFruits/plum":["bloom","dormancy","fruit_dev","harvest","vegetative"],"stoneFruits/cherry":["bloom","dormancy","fruit_dev","harvest","vegetative"],"pomeFruits/apple":["bloom","dormancy","fruit_dev","harvest","vegetative"],"subTropicalFruits/kiwi":["flowering","fruit_dev","harvest","vegetative"],"subTropicalFruits/pomegranate":["flowering","fruit_dev","harvest","vegetative"],"subTropicalFruits/fig":["flowering","fruit_dev","harvest","vegetative"],"nutCrops/almond":["bloom","dormancy","fruit_dev","harvest","vegetative"],"nutCrops/pistachio":["bloom","dormancy","fruit_dev","harvest","vegetative"],"nutCrops/walnut":["bloom","dormancy","fruit_dev","harvest","vegetative"],"nutCrops/chestnut":["bloom","dormancy","fruit_dev","harvest","vegetative"],"industrialCrops/cotton":["flowering","fruit_dev","harvest","vegetative"],"industrialCrops/tobacco":["flowering","harvest","transplant","vegetative"],"industrialCrops/sunflower":["flowering","germination","harvest","vegetative"],"industrialCrops/sugar_beet":["germination","maturity","tuberization","vegetative"],"vegetableCrops/onion":["bulbing","germination","maturity","vegetative"],"vegetableCrops/watermelon":["flowering","fruiting","germination","vegetative"],"vegetableCrops/potato":["germination","maturity","tuberization","vegetative"],"vegetableCrops/dry_beans":["flowering","fruiting","transplant","vegetative"],"vegetableCrops/faba_bean":["flowering","germination","maturity","vegetative"],"vegetableCrops/green_beans":["flowering","fruiting","transplant","vegetative"],"vegetableCrops/cabbage":["flowering","harvest","transplant","vegetative"],"vegetableCrops/lettuce":["flowering","harvest","transplant","vegetative"],"vegetableCrops/carrot":["flowering","germination","maturity","vegetative"],"vegetableCrops/cucumber":["flowering","fruiting","transplant","vegetative"],"vegetableCrops/tomato":["flowering","fruiting","transplant","vegetative"],"vegetableCrops/eggplant":["flowering","fruiting","transplant","vegetative"],"vegetableCrops/pepper":["flowering","fruiting","transplant","vegetative"],"vegetableCrops/strawberry":["establishment","flowering","fruiting","vegetative"],"vegetableCrops/garlic":["bulbing","germination","maturity","vegetative"],"vegetableCrops/zucchini":["flowering","fruiting","transplant","vegetative"],"vegetableCrops/melon":["flowering","fruiting","transplant","vegetative"],"vegetableCrops/broccoli":["flowering","harvest","transplant","vegetative"],"specialtyMediterranean/saffron":["dormancy","flowering","harvest","vegetative"],"specialtyMediterranean/mastic_tree":["flowering","fruit_dev","harvest","vegetative"],"specialtyMediterranean/oregano":["flowering","harvest","vegetative"],"specialtyMediterranean/thyme":["flowering","harvest","vegetative"],"specialtyMediterranean/rosemary":["flowering","harvest","vegetative"],"specialtyMediterranean/sage":["flowering","harvest","vegetative"],"specialtyMediterranean/mint":["flowering","harvest","vegetative"],"specialtyMediterranean/bay_laurel":["flowering","harvest","vegetative"],"specialtyMediterranean/currants":["flowering","fruiting","harvest","vegetative"],"specialtyMediterranean/carob":["flowering","fruit_dev","harvest","vegetative"],"specialtyMediterranean/artichoke":["flowering","harvest","vegetative"],"ornamentalCrops/floriculture_generic":["flowering","harvest","vegetative"]};
+
+/* Ποιο στάδιο επιστρέφει ο πυρήνας για κάθε δηλωμένη περίοδο (resolveStageForCrop). */
+const PERIOD_TO_STAGE = {
+  transplantation:'transplant', vegetative_growth:'vegetative',
+  dormant:'vegetative', fruit_set_olive:'fruit_dev', ripening:'ripening',
+  germination:'germination', tillering:'tillering', stem_elongation:'stem_elongation',
+  anthesis:'anthesis', grain_filling:'grain_filling',
+  dormancy:'dormancy', bloom:'bloom', fruit_dev:'fruit_dev',
+  flowering:'flowering', fruit_set:'fruit_set', harvest:'harvest'
+};
+
+/* ══════════════════════════════════════════════════════════════════════
+   T-SEASONOPENER-01 · ΜΙΑ ΗΜΕΡΟΜΗΝΙΑ, ΟΧΙ ΟΛΟΣ Ο ΚΥΚΛΟΣ
+
+   ΓΙΑΤΙ: η φόρμα ζητούσε 4-5 στάδια ανά καλλιέργεια, αλλά ο πυρήνας ΔΕΝ τα
+   χρησιμοποιεί για να βρει το στάδιο. Το στάδιο προκύπτει από τις
+   ΒΑΘΜΟΗΜΕΡΕΣ και υπερισχύει πάντα του ημερολογίου:
+
+       const gddStage = resolveStageByGDD(cropParams, measurementsForCrop);
+       if (gddStage) { cropParams.stage = gddStage; ... }
+
+   Και οι 58 καλλιέργειες του CROP_PROFILE έχουν stage_gdd_thresholds, άρα
+   το gddStage δεν είναι ποτέ κενό όταν υπάρχουν βαθμοημέρες. Οι δηλωμένες
+   περίοδοι απλώς αγνοούνταν.
+
+   ΤΟ ΜΟΝΟ που διαβάζει πραγματικά ο πυρήνας από τα periods είναι Η ΜΙΑ
+   ημερομηνία που ΑΝΟΙΓΕΙ ΤΗ ΣΕΖΟΝ (_sagSeasonKey): αγκυρώνει τον
+   συσσωρευτή βαθμοημερών και ορίζει πότε μηδενίζει η χρονιά.
+
+   ΟΙ ΔΥΟ ΠΙΝΑΚΕΣ ΕΙΝΑΙ ΠΙΣΤΟ ΑΝΤΙΓΡΑΦΟ ΤΩΝ _SAG_SEASON_OPENER ΚΑΙ
+   _SAG_CROP_SEASON_OPENER ΤΟΥ ΠΥΡΗΝΑ. Αν αλλάξουν εκεί, ΠΡΕΠΕΙ να
+   αλλάξουν κι εδώ — αλλιώς η φόρμα ζητά άλλη ημερομηνία από αυτή που
+   διαβάζει ο πυρήνας.
+   ══════════════════════════════════════════════════════════════════════ */
+const SEASON_OPENER_BY_GEN = {
+  cerealCrops:            'germination',
+  vegetableCrops:         'transplantation',
+  vineCrops:              'transplantation',
+  olive:                  'dormant',
+  stoneFruits:            'dormancy',
+  nutCrops:               'dormancy',
+  pomeFruits:             'flowering',
+  citrusFruits:           'flowering',
+  subTropicalFruits:      'flowering',
+  industrialCrops:        'flowering',
+  specialtyMediterranean: 'flowering',
+  ornamentalCrops:        'flowering'
+};
+const SEASON_OPENER_BY_CROP = {
+  'vegetableCrops/garlic':    'germination',
+  'vegetableCrops/faba_bean': 'germination'
+};
+/* T-ONEDATE-01: «μεταφύτευση» και «σπορά» ΔΕΝ είναι το ίδιο πράγμα και δεν
+   επιτρέπεται να μοιράζονται ετικέτα. Η μεταφύτευση τοποθετεί στον αγρό φυτό
+   ΜΕ ΗΛΙΚΙΑ από φυτώριο· η σπορά ξεκινά από το μηδέν. Ο πυρήνας μετρά ημέρες
+   ανάπτυξης ΑΠΟ αυτή την ημερομηνία και μετά — άρα το ποιο από τα δύο δηλώνει
+   ο αγρότης αλλάζει το σημείο εκκίνησης.
+   ΓΝΩΣΤΟ ΚΕΝΟ: η ηλικία του φυταρίου κατά τη μεταφύτευση ΔΕΝ δηλώνεται
+   πουθενά· ο πυρήνας τη θεωρεί σιωπηρά μηδέν. */
+const SEASON_OPENER_LABEL = {
+  germination:     'Ημερομηνία σποράς',
+  transplantation: 'Ημερομηνία μεταφύτευσης',
+  dormant:         'Ημερομηνία έναρξης ληθάργου',
+  dormancy:        'Ημερομηνία έναρξης ληθάργου',
+  flowering:       'Ημερομηνία έναρξης άνθησης'
+};
+/* T-ONEDATE-01: η ΜΟΝΑΔΙΚΗ πηγή του «end». Χρησιμοποιείται ΚΑΙ στον ακροατή
+   ΚΑΙ στο readCropsFromUI, ώστε να μην μπορούν ποτέ να αποκλίνουν.
+   Μ5: καθαρά UTC — αλλιώς στην αλλαγή θερινής ώρας η ημερομηνία έβγαινε μία
+   ημέρα πίσω. */
+const _SAG_OPENER_SPAN_DAYS = 14;
+function _sagOpenerEnd(startVal){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(startVal||''));
+  if (!m) return '';
+  const d = new Date(Date.UTC(+m[1], +m[2]-1, +m[3]));
+  if (isNaN(d.getTime())) return '';
+  d.setUTCDate(d.getUTCDate() + _SAG_OPENER_SPAN_DAYS);
+  return d.toISOString().slice(0,10);
+}
+/* T-PRUNEPERCROP-01: το επίπεδο αγρού κρατά την ΠΙΟ ΠΡΟΣΦΑΤΗ δήλωση κλαδέματος
+   από τις καλλιέργειες, ώστε παλιότερος πυρήνας να συμπεριφέρεται ΑΚΡΙΒΩΣ
+   όπως σήμερα. */
+function _sagLatestPruning(crops){
+  let best = '';
+  (Array.isArray(crops) ? crops : []).forEach(function(c){
+    const d = String((c && c.wound_pruning_date) || '');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d) && d > best) best = d;
+  });
+  return best || null;
+}
+/* Δέχεται ΚΑΙ την επιλογή του χρήστη ΚΑΙ τον τύπο του πυρήνα: το
+   CROP_KERNEL_MAP είναι ταυτοτικό πάνω στους τύπους του πυρήνα. */
+function seasonOpenerKey(gen, type){
+  const t = CROP_KERNEL_MAP[type] || type;
+  return SEASON_OPENER_BY_CROP[gen + '/' + t] || SEASON_OPENER_BY_GEN[gen] || null;
+}
+
+/* Κρατά μόνο τα στάδια που ο πυρήνας μπορεί να αξιοποιήσει για ΤΗ ΣΥΓΚΕΚΡΙΜΕΝΗ
+   καλλιέργεια. Δηλώνοντας στάδιο που λείπει από τις καμπύλες Kc/LUE, ο πυρήνας
+   χάνει σιωπηλά το σκέλος εξατμισοδιαπνοής της δόσης. */
+function filterStagesForCrop(gen, type, schema){
+  const ok = STAGE_OK[gen + '/' + type];
+  if (!ok || !ok.length) return schema;
+  return schema.filter(function(st){
+    let resolved;
+    if (gen === 'olive'){
+      resolved = ({ dormant:'vegetative', flowering:'flowering', fruit_set:'fruit_dev', ripening:'ripening' })[st.key];
+    } else if (isVegFamily(gen)){
+      resolved = ({ transplantation:'transplant', vegetative_growth:'vegetative',
+                    flowering:'flowering', harvest:'fruiting' })[st.key];
+    } else {
+      resolved = PERIOD_TO_STAGE[st.key] || st.key;
+    }
+    return ok.indexOf(resolved) >= 0;
+  });
+}
+
 const SOIL_TYPES = {
   sandy:'Αμμώδης Πηλός',
   loamy:'Πηλώδες',
   clay_loamy:'Αργιλώδες Πηλώδες',
   calcareous_clay:'Ασβεστούχο Άργιλο'
+};
+
+/* ── Διευρυμένη κοκκομετρία (USDA) ──────────────────────────────────────
+   Ο ΠΥΡΗΝΑΣ γνωρίζει σήμερα ΜΟΝΟ 4 τύπους. Η φόρμα δέχεται 13 και
+   αποθηκεύει ΔΥΟ πεδία:
+     soil_type          → ένας από τους 4 (ό,τι διαβάζει ο πυρήνας σήμερα)
+     soil_texture_class → η ακριβής κλάση (για μελλοντική χρήση)
+   Έτσι δεν σπάει τίποτα και δεν χάνεται πληροφορία. */
+const SOIL_TEXTURES = {
+  sand:             { el:'Άμμος',                        group:'sandy',           hint:'Πολύ ελαφρύ, στραγγίζει αμέσως' },
+  loamy_sand:       { el:'Αμμώδες με λίγο πηλό',         group:'sandy',           hint:'Ελαφρύ, χαμηλή συγκράτηση νερού' },
+  sandy_loam:       { el:'Αμμώδης Πηλός',                group:'sandy',           hint:'Ελαφρύ αλλά καλλιεργήσιμο' },
+  loam:             { el:'Πηλώδες',                      group:'loamy',           hint:'Ισορροπημένο — ιδανικό γεωργικό' },
+  silt_loam:        { el:'Ιλυοπηλώδες',                  group:'loamy',           hint:'Καλή συγκράτηση, εύκολη κατεργασία' },
+  silt:             { el:'Ιλυώδες',                      group:'loamy',           hint:'Λεπτόκοκκο, κίνδυνος κρούστας' },
+  sandy_clay_loam:  { el:'Αμμοαργιλοπηλώδες',            group:'clay_loamy',      hint:'Μέτριο προς βαρύ' },
+  clay_loam:        { el:'Αργιλοπηλώδες',                group:'clay_loamy',      hint:'Βαρύ, καλή συγκράτηση νερού' },
+  silty_clay_loam:  { el:'Ιλυοαργιλοπηλώδες',            group:'clay_loamy',      hint:'Βαρύ, αργή στράγγιση' },
+  sandy_clay:       { el:'Αμμοαργιλώδες',                group:'clay_loamy',      hint:'Βαρύ' },
+  silty_clay:       { el:'Ιλυοαργιλώδες',                group:'clay_loamy',      hint:'Πολύ βαρύ, κίνδυνος υπερκορεσμού' },
+  clay:             { el:'Αργιλώδες',                    group:'clay_loamy',      hint:'Πολύ βαρύ, πολύ αργή στράγγιση' },
+  calcareous_clay:  { el:'Ασβεστούχο Αργιλώδες',         group:'calcareous_clay', hint:'Υψηλό pH — κίνδυνος χλώρωσης σιδήρου' }
+};
+/* Αντιπρόσωπος κάθε ομάδας, για υδροδότηση παλιών αγρών που έχουν μόνο soil_type */
+const SOIL_GROUP_DEFAULT = { sandy:'sandy_loam', loamy:'loam', clay_loamy:'clay_loam', calcareous_clay:'calcareous_clay' };
+
+/* ── Ποιότητα νερού με ΚΡΙΤΗΡΙΟ (FAO-29 Ayers & Westcot) ── */
+const WATER_INFO = {
+  excellent: { ecw:'< 0,7 dS/m',      us:'< 450 μS/cm',       note:'Χαμηλός κίνδυνος αλάτωσης — κατάλληλο για όλες τις καλλιέργειες' },
+  good:      { ecw:'0,7 – 2,0 dS/m',  us:'450 – 1.300 μS/cm', note:'Μέτριος κίνδυνος — ίσως χρειαστεί έκπλυση σε ευαίσθητες καλλιέργειες' },
+  marginal:  { ecw:'2,0 – 3,0 dS/m',  us:'1.300 – 2.000 μS/cm', note:'Υψηλός κίνδυνος — μόνο ανθεκτικές καλλιέργειες, με τακτική έκπλυση' },
+  poor:      { ecw:'> 3,0 dS/m',      us:'> 2.000 μS/cm',     note:'Πολύ υψηλός κίνδυνος — απαιτεί εξειδικευμένη διαχείριση' }
+};
+
+/* ── Επεξήγηση μεθόδων ποτίσματος ── */
+const IRRIG_INFO = {
+  dripIrrigation:       'Σταλάκτες στη ριζική ζώνη. Η πιο αποδοτική μέθοδος — βρέχει μόνο 15-40 % της επιφάνειας.',
+  microSprayers:        'Μικρά μπεκ κάτω από την κόμη. Βρέχουν 50-70 % της επιφάνειας, ευαίσθητα στον άνεμο.',
+  stationarySprinklers: 'Σταθεροί εκτοξευτήρες που καλύπτουν όλο το χωράφι. Συνήθεις σε λαχανικά και σιτηρά.',
+  centerPivot:          'Αρδευτική μηχανή που περιστρέφεται γύρω από κεντρικό άξονα και ποτίζει κυκλική έκταση. Για μεγάλα πεδινά χωράφια (καλαμπόκι, βαμβάκι) — σπάνια στην Κρήτη.',
+  floodIrrigation:      'Το νερό ρέει σε αυλάκια ή κατακλύζει το χωράφι. Παραδοσιακή μέθοδος, χαμηλή απόδοση (~50 %).'
+};
+
+/* ── Δραστική ουσία & υπολειμματική διάρκεια (από PESTICIDE_PROFILE του πυρήνα) ── */
+const PEST_INFO = {
+  copperHydroxide:         { sub:'Υδροξείδιο χαλκού · Ανόργανο (M1)',            days:10, kind:'Επαφής',       t:'Περονόσπορος, Φουζικλάδιο' },
+  copper_oxychloride:      { sub:'Οξυχλωριούχος χαλκός · Ανόργανο (M1)',         days:10, kind:'Επαφής',       t:'Περονόσπορος, Φουζικλάδιο, Αλτερνάρια' },
+  azoxystrobin:            { sub:'Αζοξυστρομπίνη · Στρομπιλουρίνη (QoI-11)',     days:14, kind:'Διασυστηματικό', t:'Ωίδιο, Περονόσπορος' },
+  tebuconazole:            { sub:'Τεβουκοναζόλη · DMI Τριαζόλη (3)',             days:12, kind:'Διασυστηματικό', t:'Ωίδιο, Τεφρά σήψη' },
+  sulfur:                  { sub:'Θείο · Ανόργανο (M2)',                         days:7,  kind:'Επαφής',       t:'Ωίδιο, Ακάρεα' },
+  cyprodinil_fludioxoni:   { sub:'Κυπροδινίλ (9) + Φλουντιοξονίλ (12)',          days:14, kind:'Διασυστ. & Επαφής', t:'Τεφρά σήψη' },
+  folpet:                  { sub:'Φολπέτ · Φθαλιμίδιο (M4)',                     days:7,  kind:'Επαφής',       t:'Περονόσπορος, Φουζικλάδιο' },
+  boscalid_pyraclostrobin: { sub:'Boscalid (7) + Pyraclostrobin (11)',           days:14, kind:'Διασυστ. & Διαφυλλικό', t:'Ωίδιο, Τεφρά σήψη' },
+  deltamethrin:            { sub:'Deltamethrin · Πυρεθροειδές (3A)',             days:7,  kind:'Επαφής & Στομάχου', t:'Δάκος, Μαργαρώνια' },
+  lambda_cyhalothrin:      { sub:'Λάμδα-σαϊχαλοθρίν · Πυρεθροειδές (3A)',        days:7,  kind:'Επαφής',       t:'Αφίδες, Αλευρώδεις, Δάκος' },
+  spinosad:                { sub:'Spinosad · Φυσικό (5)',                        days:7,  kind:'Βιολογικό',    t:'Tuta absoluta, Πυρηνοτρήτης' },
+  acetamiprid:             { sub:'Ασεταμιπρίδ · Νεονικοτινοειδές (4A)',          days:14, kind:'Διασυστηματικό', t:'Αφίδες, Αλευρώδεις' },
+  dimethoate_olive:        { sub:'Διμεθοάτη · Οργανοφωσφορικό (1B)',             days:14, kind:'Διασυστ. & Επαφής', t:'Δάκος, Μύγα Μεσογείου' },
+  bt:                      { sub:'Bacillus thuringiensis · Τοξίνη (11A)',        days:5,  kind:'Στομάχου',     t:'Tuta absoluta, Μαργαρώνια' },
+  pirimicarb:              { sub:'Pirimicarb · Καρβαμιδικό (1A)',                days:9,  kind:'Εκλεκτικό διασυστ.', t:'Αφίδες' },
+  cyantraniliprole:        { sub:'Cyantraniliprole · Διαμίδη (28)',              days:14, kind:'Διασυστηματικό', t:'Tuta absoluta, Αλευρώδεις, Αφίδες' },
+  abamectin:               { sub:'Abamectin · Αβερμεκτίνη (6)',                  days:12, kind:'Διαφυλλικό',   t:'Τετράνυχος' },
+  spirodiclofen:           { sub:'Spirodiclofen · Τετρονικό οξύ (23)',           days:15, kind:'Επαφής',       t:'Τετράνυχος' },
+  summer_oil:              { sub:'Θερινός πολτός · Ορυκτέλαιο',                  days:7,  kind:'Ασφυκτικό',    t:'Ακάρεα, Αφίδες, Κοκκοειδή' }
 };
 
 const IRRIGATION_SYSTEMS = {
@@ -460,14 +1010,77 @@ const IRRIGATION_SYSTEMS = {
 };
 const WATER_QUALITY = { excellent:'Εξαιρετική', good:'Καλή', marginal:'Οριακή', poor:'Κακή' };
 
+/* Κλειδιά ΑΚΡΙΒΩΣ όπως στο PESTICIDE_PROFILE του πυρήνα (runPerTich). */
+const PESTICIDES = {
+  '': '— κανένας / δεν γνωρίζω —',
+  copperHydroxide: 'Υδροξείδιο του Χαλκού',
+  copper_oxychloride: 'Οξυχλωριούχος Χαλκός',
+  azoxystrobin: 'Αζοξυστρομπίνη',
+  tebuconazole: 'Τεβουκοναζόλη',
+  sulfur: 'Θείο',
+  cyprodinil_fludioxoni: 'Κυπροδινίλ + Φλουντιοξονίλ',
+  folpet: 'Φολπέτ',
+  boscalid_pyraclostrobin: 'Boscalid + Pyraclostrobin',
+  deltamethrin: 'Deltamethrin',
+  lambda_cyhalothrin: 'Λάμδα-σαϊχαλοθρίν',
+  spinosad: 'Spinosad',
+  acetamiprid: 'Ασεταμιπρίδ',
+  dimethoate_olive: 'Διμεθοάτη',
+  bt: 'Bacillus thuringiensis (Bt)',
+  pirimicarb: 'Pirimicarb',
+  cyantraniliprole: 'Cyantraniliprole',
+  abamectin: 'Abamectin',
+  spirodiclofen: 'Spirodiclofen',
+  summer_oil: 'Θερινός Πολτός'
+};
+
+/* Τυπικό βρεχόμενο κλάσμα ανά μέθοδο (FAO-56 Πίν. 11) — μόνο ως υπόδειξη. */
+const FW_DEFAULT_PCT = {
+  dripIrrigation: 30, microSprayers: 60, centerPivot: 100,
+  stationarySprinklers: 100, floodIrrigation: 100
+};
+
 /* =========================
    STATE
 ========================= */
 const state = {
   map: null, marker: null, lastDataMap: {}, configWarnShown: false,
   baseLayers: {}, overlayLayers: {},
-  waitingValidationSince: null
+  waitingValidationSince: null,
+  dirty: false,
+  deviceSig: null,
+  loaded: false,          /* T-CFG-LOADGATE-01: true στο πρώτο στιγμιότυπο δεδομένων */
+  loadTimedOut: false,    /* T-CFG-LOADGATE-01: πέρασαν 15 s χωρίς στιγμιότυπο */
+  confirmNewField: false, /* T-CFG-LOADGATE-01: 1ο πάτημα μετά από timeout */
+  confCorrupt: false,     /* T-CFG-CORRUPT-01: το αποθηκευμένο JSON δεν διαβάζεται */
+  saving: false,          /* όσο τρέχει sendData, η υδροδότηση παγώνει */
+  hydrated: false,        /* M2: η φόρμα χτίστηκε από πραγματικά δεδομένα */
+  _loadTimer: null        /* το χρονόμετρο των 15 s — ένα κάθε φορά */
 };
+
+/* ── ΔΙΟΡΘΩΣΗ 1 · σημαία «ο χρήστης γράφει» ────────────────────────────
+   Εμποδίζει τα onRealtime/onStart να σβήσουν ό,τι πληκτρολογεί ο χρήστης.
+   ΦΙΛΤΡΟ: αγνοεί τα controls του Leaflet — η αλλαγή υποβάθρου χάρτη ΔΕΝ
+   είναι επεξεργασία δεδομένων και δεν πρέπει να κλειδώνει τη φόρμα.
+   Οι προγραμματιστικές αναθέσεις (.value = ...) δεν πυροδοτούν input/change. */
+function markDirty(e){
+  var t = e && e.target;
+  if (!t || !t.closest || !t.matches) return;
+  if (t.closest('#map')) return;
+  if (!t.matches('input, select, textarea')) return;
+  state.dirty = true;
+}
+document.addEventListener('input',  markDirty, true);
+document.addEventListener('change', markDirty, true);
+/* T-COVERGATE-01: η ίδια η επιλογή «καλυμμένη καλλιέργεια» πρέπει να
+   ξαναπερνά τις πύλες ΤΗ ΣΤΙΓΜΗ που αλλάζει — όχι μόνο όταν αλλάξει
+   καλλιέργεια. Δένεται στον καθολικό ακροατή για να μην εξαρτάται από τη
+   σειρά φόρτωσης του DOM. */
+document.addEventListener('change', function(ev){
+  if (ev && ev.target && ev.target.id === 'covered_cultivation') {
+    try { syncCoverGates(); } catch(e){}
+  }
+}, true);
 
 /* =========================
    HELPERS
@@ -538,9 +1151,10 @@ function initMap(){
   esri.addTo(state.map); labels.addTo(state.map);
   L.control.layers(state.baseLayers, state.overlayLayers, { collapsed: true }).addTo(state.map);
 
-  state.map.on('click', (e)=>{ placeMarker(e.latlng.lat, e.latlng.lng); });
+  state.map.on('click', (e)=>{ state.dirty = true; placeMarker(e.latlng.lat, e.latlng.lng); });
 
   $('btnClearMarker').onclick = ()=>{
+    state.dirty = true;
     if (state.marker) { state.map.removeLayer(state.marker); state.marker=null; }
     $('coordinates').value = '';
     setSummary();
@@ -602,7 +1216,112 @@ function getPeriodSchema(gen, type){
       { key:'ripening', label:'Ωρίμανση' },
     ];
   }
+
+  /* ── Στάδια για τις υπόλοιπες 9 κατηγορίες ──────────────────────────────
+     ΤΑ ΚΛΕΙΔΙΑ ΕΙΝΑΙ ΑΚΡΙΒΩΣ ΑΥΤΑ ΠΟΥ ΔΙΑΒΑΖΕΙ Ο ΠΥΡΗΝΑΣ
+     (resolveStageForCrop). Καμία μετάφραση, καμία παραλλαγή.
+     Η σειρά είναι χρονολογική, ώστε να δουλεύει η αλυσίδα ημερομηνιών. */
+  if (gen === 'cerealCrops'){
+    return [
+      { key:'germination',     label:'Φύτρωμα' },
+      { key:'tillering',       label:'Αδέλφωμα' },
+      { key:'stem_elongation', label:'Καλάμωμα' },
+      { key:'anthesis',        label:'Άνθηση' },
+      { key:'grain_filling',   label:'Γέμισμα κόκκου' },
+    ];
+  }
+  if (gen === 'stoneFruits' || gen === 'nutCrops'){
+    return [
+      { key:'dormancy',  label:'Λήθαργος' },
+      { key:'bloom',     label:'Άνθηση' },
+      { key:'fruit_dev', label:'Ανάπτυξη καρπού' },
+      { key:'harvest',   label:'Συγκομιδή' },
+    ];
+  }
+  if (gen === 'citrusFruits'){
+    return [
+      { key:'flowering', label:'Άνθηση' },
+      { key:'fruit_set', label:'Καρπόδεση' },
+      { key:'fruit_dev', label:'Ανάπτυξη καρπού' },
+    ];
+  }
+  if (gen === 'ornamentalCrops'){
+    /* Στα ανθοκομικά ΔΕΝ ορίζεται καρποφορία — το προϊόν είναι το άνθος. */
+    return [
+      { key:'flowering', label:'Άνθηση' },
+      { key:'harvest',   label:'Συγκομιδή ανθέων' },
+    ];
+  }
+  if (gen === 'pomeFruits' || gen === 'subTropicalFruits' ||
+      gen === 'industrialCrops' || gen === 'specialtyMediterranean'){
+    return [
+      { key:'flowering', label:'Άνθηση' },
+      { key:'fruit_dev', label:'Ανάπτυξη καρπού' },
+      { key:'harvest',   label:'Συγκομιδή' },
+    ];
+  }
   return [];
+}
+
+/* T-PERCROP-01: τυπικά m² ανά φυτό, από συνήθεις αποστάσεις φύτευσης Ελλάδας.
+   ΧΡΗΣΗ: ΜΟΝΟ έλεγχος ευλογοφάνειας στη φόρμα — κανένας υπολογισμός του πυρήνα
+   δεν τα διαβάζει. ΚΑΝΟΝΑΣ: προειδοποίηση αν per < min/2 ή per > max*2, δηλαδή
+   τα εύρη είναι ΤΥΠΙΚΑ, όχι όρια· η ζώνη ανοχής είναι τετραπλάσια. */
+const CROP_DENSITY_RANGE = {
+  /* Δεντρώδη: τα εύρη καλύπτουν ΚΑΙ την παραδοσιακή ΚΑΙ τη σύγχρονη πυκνή φύτευση.
+     Ελιά: παραδοσιακή 8x8-10x10 (64-100), εντατική 6x3 (18), υπερεντατική 4x1,5 (6).
+     Μηλιά/αχλαδιά: σύγχρονη ατρακτοειδής 3,5x1 (3,5) έως ημιεντατική 5x4 (20). */
+  koroneiki:[6,110], orange:[9,35], lemon:[9,35], mandarin:[9,35],
+  apple:[3,22], pear:[3,22], peach:[8,30], nectarine:[8,30], apricot:[10,30],
+  plum:[10,30], cherry:[10,40], almond:[15,50], walnut:[40,130], pistachio:[20,65],
+  avocado:[20,65],
+  /* Άμπελος: γραμμική 2,2x1 (2,2) έως κρεβατίνα 3x2,5 (7,5). */
+  wine_grapes:[1.5,7], table_grapes:[2,9], raisin_grapes:[1.5,7],
+  /* Κηπευτικά — δηλωμένα ΕΝΑ-ΕΝΑ, γιατί διαφέρουν κατά δύο τάξεις μεγέθους.
+     Το γενικό εύρος τα κοκκίνιζε όλα (καρότο 0,01 m²/φυτό, μαρούλι 0,10). */
+  tomato:[0.3,1.2], pepper:[0.25,1.0], eggplant:[0.4,1.5], cucumber:[0.25,1.2],
+  zucchini:[0.6,2.0], melon:[0.8,3], watermelon:[1.2,4.5],
+  potato:[0.15,0.5], sugar_beet:[0.1,0.3],
+  onion:[0.008,0.05], garlic:[0.015,0.08], carrot:[0.005,0.04],
+  lettuce:[0.06,0.35], cabbage:[0.2,0.7], broccoli:[0.2,0.7],
+  dry_beans:[0.02,0.15], green_beans:[0.03,0.2], strawberry:[0.1,0.4],
+  faba_bean:[0.04,0.25],
+  artichoke:[0.7,2.5], cotton:[0.05,0.2], sunflower:[0.1,0.4], mint:[0.05,0.3],
+  tobacco:[0.2,0.8], maize:[0.05,0.2], wheat:[0.002,0.02], barley:[0.002,0.02],
+  oats:[0.002,0.02], rice:[0.002,0.02], safflower:[0.05,0.3],
+  /* Ελιές: όλες οι ελληνικές ποικιλίες μοιράζονται το εύρος της ελιάς —
+     από υπερεντατική 4x1,5 έως παραδοσιακή αραιή. Οι επιτραπέζιες (Καλαμών,
+     Χαλκιδικής, Κονσερβολιά) φυτεύονται λίγο αραιότερα από τη λαδοελιά. */
+  kalamon:[8,120], chalkidikis:[10,130], amfissis_konservolia:[10,130],
+  tsounati_mastoidis:[6,110], megaritiki:[6,110],
+  /* Λοιπά δεντρώδη */
+  kiwi:[8,25], pomegranate:[9,30], fig:[16,60], chestnut:[50,150],
+  carob:[40,150], mastic_tree:[12,40],
+  /* Αρωματικά και ειδικές: πυκνές φυτεύσεις σε γραμμές */
+  oregano:[0.1,0.6], thyme:[0.15,0.8], rosemary:[0.5,2.5], sage:[0.3,1.5],
+  bay_laurel:[2,12], lavender:[0.5,2.5], sideritis:[0.1,0.6],
+  saffron:[0.005,0.05], currants:[1.5,7],
+  floriculture_generic:[0.05,4]
+};
+/* Τα ΓΕΝΙΚΑ εύρη είναι εφεδρεία για είδη χωρίς δική τους εγγραφή. Το
+   vegetableCrops καλύπτει ΟΛΟ το φάσμα (σπαρτά -> καρπουζιά): χαλαρό επίτηδες,
+   γιατί μια χαλαρή σιωπή είναι προτιμότερη από μια σίγουρη λάθος προειδοποίηση. */
+const CROP_DENSITY_GEN_RANGE = {
+  olive:[6,110], citrusFruits:[9,35], pomeFruits:[3,22], stoneFruits:[8,40],
+  nutCrops:[15,130], vineCrops:[1.5,9], vegetableCrops:[0.05,3],
+  cerealCrops:[0.002,0.25], industrialCrops:[0.05,0.4],
+  specialtyMediterranean:[0.1,60], ornamentalCrops:[0.05,20]
+};
+
+/* Ελληνικό υποδιαστολικό κόμμα, και αρκετά δεκαδικά για πυκνές σπορές:
+   το «0.0 m² ανά φυτό» για το καρότο (0,01) δεν έλεγε τίποτα. */
+function fmtDen(v){
+  if (!Number.isFinite(v)) return '—';
+  const s = v >= 10 ? String(Math.round(v))
+          : v >= 1  ? v.toFixed(1)
+          : v >= 0.1 ? v.toFixed(2)
+          : v.toFixed(3);
+  return s.replace('.', ',');
 }
 
 function makeCropRow(crop, idx){
@@ -627,19 +1346,62 @@ function makeCropRow(crop, idx){
         <select class="crop_type"></select>
       </div>
     </div>
+    <div class="cropProxy" style="display:none; font-size:.86rem; margin-top:8px; padding:9px 11px; border-radius:9px;"></div>
 
-    <div class="cropPeriodsWrap" style="margin-top:14px; display:none">
-      <div class="muted" style="margin:0 0 8px">Στάδια καλλιέργειας</div>
-      <div class="cropPeriods" style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px;"></div>
-      <div class="muted" style="margin-top:8px; font-size:.92rem">
-        Συμπλήρωσε μόνο αν θέλεις να ορίσεις συγκεκριμένες περιόδους για αυτή την καλλιέργεια.
+    <div class="cropZoneGrid" style="margin-top:12px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;">
+      <div class="field" style="margin:0">
+        <label>Έκταση αυτής της καλλιέργειας (m²)</label>
+        <input class="crop_area_m2" type="number" step="1" min="0" placeholder="π.χ. 25000" />
+        <div class="muted" style="font-size:.85rem; margin-top:4px">Αφήστε το κενό αν η καλλιέργεια καλύπτει όλο τον αγρό</div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Δέντρα / φυτά αυτής της καλλιέργειας</label>
+        <input class="crop_plants" type="number" step="1" min="0" placeholder="π.χ. 650" />
+        <div class="muted cropDensityHint" style="font-size:.85rem; margin-top:4px">—</div>
       </div>
     </div>
 
-    <div class="cropExtra" style="margin-top:12px; display:none">
+    <div class="cropIrrigGrid" style="margin-top:12px; display:none; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px;">
+      <div class="field" style="margin:0">
+        <label>Απόσταση σταλακτήρων πάνω στο λάστιχο (m)</label>
+        <input class="crop_emit_sp" type="text" inputmode="decimal" placeholder="π.χ. 1" />
+      </div>
+      <div class="field" style="margin:0">
+        <label>Απόσταση μεταξύ των λάστιχων (m)</label>
+        <input class="crop_row_sp" type="text" inputmode="decimal" placeholder="π.χ. 5" />
+      </div>
+      <div class="field" style="margin:0">
+        <label>Παροχή σταλακτήρα (L/h)</label>
+        <input class="crop_emit_lph" type="text" inputmode="decimal" placeholder="π.χ. 4" />
+      </div>
+    </div>
+    <div class="cropIrrigNote muted" style="display:none; font-size:.85rem; margin-top:6px">
+      Συμπληρώστε τα μόνο αν <b>αυτή η καλλιέργεια</b> έχει διαφορετικό δίκτυο από τον υπόλοιπο αγρό.
+      Όσα αφήσετε κενά παίρνουν την τιμή του αγρού.
+    </div>
+
+    <div class="cropPeriodsWrap" style="margin-top:14px; display:none">
+      <!-- T-STAGEHEAD-01 (v17 · 9/9/2026, παγίδα #25): η επικεφαλίδα ρωτούσε πότε μπήκε η καλλιέργεια, πάνω από
+           πεδία που αλλάζουν ανά καλλιέργεια (π.χ. «Ημερομηνία έναρξης ληθάργου» στην ελιά). Το «πότε» το απαντά
+           το «Έτος φύτευσης» παρακάτω. -->
+      <div class="muted" style="margin:0 0 8px">Ημερομηνίες σταδίων της καλλιέργειας</div>
+      <div class="cropPeriods" style="display:flex; flex-direction:column; gap:8px;"></div>
+      <div class="stageDropNote muted" style="display:none; font-size:.84rem; margin-top:8px; color:#8a4b12"></div>
+      <div class="muted" style="margin-top:8px; font-size:.92rem">
+        Η ημερομηνία αυτή αγκυρώνει τον μετρητή βαθμοημερών. Αν την αφήσεις κενή,
+        το σύστημα χρησιμοποιεί την τυπική ημερομηνία της καλλιέργειας.
+      </div>
+    </div>
+
+    <div class="cropExtra" style="margin-top:12px; display:none; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;">
       <div class="field" style="margin:0">
         <label>Έτος φύτευσης</label>
         <input class="crop_plantation_year" type="number" min="1900" max="2100" placeholder="π.χ. 2015" />
+      </div>
+      <div class="field" style="margin:0">
+        <label>Τελευταίο κλάδεμα / ράβδισμα</label>
+        <input class="crop_pruning_date" type="date" />
+        <div class="muted" style="font-size:.85rem; margin-top:4px">Οι τομές είναι πύλες εισόδου βακτηρίων για ~2 εβδομάδες — αφορά ΑΥΤΗ την καλλιέργεια</div>
       </div>
     </div>
   `;
@@ -650,9 +1412,95 @@ function makeCropRow(crop, idx){
   const periodsGrid = row.querySelector('.cropPeriods');
   const extraWrap = row.querySelector('.cropExtra');
   const plantationYearInput = row.querySelector('.crop_plantation_year');
+  const pruningDateInput = row.querySelector('.crop_pruning_date');   /* T-PRUNEPERCROP-01 */
 
   fillSelect(genSel, CULTIVATION_GENERAL);
   genSel.value = crop.cultivation_type_general || Object.keys(CULTIVATION_GENERAL)[0];
+
+  const proxyEl = row.querySelector('.cropProxy');
+
+  /* Σημείωση όταν ο πυρήνας δεν έχει προφίλ για την επιλεγμένη καλλιέργεια */
+  function refreshProxy(){
+    if (!proxyEl) return;
+    const note = CROP_PROXY_NOTE[typeSel.value];
+    if (!note){ proxyEl.style.display = 'none'; proxyEl.innerHTML = ''; return; }
+    const warn = note[0] === 'warn';
+    proxyEl.style.background = warn ? '#fff7ed' : '#f2f7fd';
+    proxyEl.style.border = '1px solid ' + (warn ? '#fed7aa' : '#dbe8f7');
+    proxyEl.style.color = warn ? '#8a4b12' : '#33465c';
+    proxyEl.innerHTML = (warn ? '⚠ ' : 'ℹ ') + note[1];
+    proxyEl.style.display = 'block';
+  }
+
+  /* ── νέα πεδία ζώνης ── */
+  const areaInput   = row.querySelector('.crop_area_m2');
+  const pestSel     = row.querySelector('.crop_pesticide');
+  const pestDate    = row.querySelector('.crop_pesticide_date');
+  (function(){
+    const o = {};
+    Object.keys(PESTICIDES).forEach(function(k){
+      const inf = PEST_INFO[k];
+      o[k] = k ? (PESTICIDES[k] + (inf ? '  —  ' + inf.days + ' ημ. προστασία' : '')) : PESTICIDES[k];
+    });
+    if (pestSel) fillSelect(pestSel, o);
+  })();
+  const plantsInput = row.querySelector('.crop_plants');
+  const cropDensity = row.querySelector('.cropDensityHint');
+  /* T-PERCROP-01: ο λόγος m²/φυτό ΕΞΑΡΤΑΤΑΙ ΑΠΟ ΤΗΝ ΚΑΛΛΙΕΡΓΕΙΑ και διαφέρει
+     κατά ΤΕΣΣΕΡΙΣ τάξεις μεγέθους — ελιά 6-110, αμπέλι 1,5-7, ντομάτα 0,3-1,2,
+     καρότο 0,005-0,04. Ένας ενιαίος αριθμός για ΟΛΟ τον μικτό αγρό δεν σήμαινε
+     τίποτα, ούτε καν ως έλεγχος ευλογοφάνειας. Τα εύρη είναι ΜΟΝΟ έλεγχος
+     ευλογοφάνειας στη φόρμα — κανένας υπολογισμός του πυρήνα δεν τα διαβάζει. */
+  function refreshCropDensity(){
+    if (!cropDensity) return;
+    const rows = document.querySelectorAll('#cropsList .cropRow').length;
+    const own = numOrNull(areaInput && areaInput.value);
+    /* Η έκταση του αγρού ισχύει ως δική της ΜΟΝΟ σε μονοκαλλιέργεια. */
+    const a = own !== null ? own : (rows <= 1 ? numOrNull($('area').value) : null);
+    const n = intOrNull(plantsInput && plantsInput.value);
+    const rng = CROP_DENSITY_RANGE[typeSel.value] || CROP_DENSITY_GEN_RANGE[genSel.value] || null;
+    if (!(a && n && n > 0)){
+      cropDensity.textContent = (n > 0 && a === null && rows > 1)
+        ? 'Δηλώστε την έκταση αυτής της καλλιέργειας για να ελεγχθεί η πυκνότητα'
+        : (rng ? ('Τυπικά ' + fmtDen(rng[0]) + '-' + fmtDen(rng[1]) + ' m² ανά φυτό') : '—');
+      cropDensity.style.color = '';
+      return;
+    }
+    const per = a / n;
+    const bad = rng ? (per < rng[0] * 0.5 || per > rng[1] * 2) : false;
+    cropDensity.textContent = fmtDen(per) + ' m² ανά φυτό'
+      + (rng ? ' (τυπικά ' + fmtDen(rng[0]) + '-' + fmtDen(rng[1]) + ')' : '')
+      + (bad ? ' ⚠ ελέγξτε έκταση ή αριθμό φυτών' : '');
+    cropDensity.style.color = bad ? '#8a1c12' : '';
+  }
+  row._refreshCropDensity = refreshCropDensity;
+  if (plantsInput){
+    plantsInput.value = (crop.plants ?? '');
+    plantsInput.addEventListener('input', function(){ state.dirty = true; refreshCropDensity(); syncTotalPlants(); });
+  }
+  if (areaInput) areaInput.addEventListener('input', refreshCropDensity);
+  if (areaInput)   areaInput.value   = (crop.area_m2 ?? '');
+  /* Ε4: γεωμετρία ΑΝΑ ΚΑΛΛΙΕΡΓΕΙΑ — προαιρετική, κενό = ισχύει του αγρού. */
+  const emitSp  = row.querySelector('.crop_emit_sp');
+  const rowSp   = row.querySelector('.crop_row_sp');
+  const emitLph = row.querySelector('.crop_emit_lph');
+  if (emitSp)  emitSp.value  = (crop.irrig_emitter_spacing_m ?? '');
+  if (rowSp)   rowSp.value   = (crop.irrig_row_spacing_m ?? '');
+  if (emitLph) emitLph.value = (crop.irrig_emitter_lph ?? '');
+  [emitSp, rowSp, emitLph].forEach(function(el){
+    if (el) el.addEventListener('input', function(){ state.dirty = true; });
+  });
+  /* Τα πεδία εμφανίζονται ΜΟΝΟ σε στάγδην: το μοντέλο βολβού δεν ισχύει για
+     εκτοξευτήρες ή κατάκλυση, οπότε η ερώτηση θα ήταν παραπλανητική. */
+  row._syncCropIrrig = function(){
+    const on = $('irrigation_system') && $('irrigation_system').value === 'dripIrrigation';
+    const g = row.querySelector('.cropIrrigGrid'), n = row.querySelector('.cropIrrigNote');
+    if (g) g.style.display = on ? 'grid' : 'none';
+    if (n) n.style.display = on ? 'block' : 'none';
+  };
+  row._syncCropIrrig();
+  if (pestSel)     pestSel.value     = (crop.last_pesticide_key || '');
+  if (pestDate)    pestDate.value    = (crop.last_pesticide_date || '');
 
   function ensureInternalId(){
     if (!row.dataset.cropId){
@@ -671,38 +1519,89 @@ function makeCropRow(crop, idx){
     }
   }
 
+  /* Υ3: το «Έτος φύτευσης» αφορά ΟΛΑ τα πολυετή, όχι μόνο την ελιά.
+     Πριν, κρυβόταν μαζί με τα στάδια και η τιμή χανόταν σε εσπεριδοειδή,
+     πυρηνόκαρπα, ακρόδρυα κ.λπ. */
+  const PERENNIAL = new Set(['olive','vineCrops','citrusFruits','stoneFruits','pomeFruits',
+                             'subTropicalFruits','nutCrops','specialtyMediterranean']);
+
   function renderPeriods(){
     const gen = genSel.value;
-    const schema = getPeriodSchema(gen, typeSel.value);
+    const schemaAll = getPeriodSchema(gen, typeSel.value);
+    const schemaOk = filterStagesForCrop(gen, typeSel.value, schemaAll);
+    /* T-SEASONOPENER-01: από όλον τον κύκλο κρατάμε ΜΟΝΟ την ημερομηνία που
+       ανοίγει τη σεζόν — τη μόνη που διαβάζει ο πυρήνας. Τα υπόλοιπα στάδια
+       τα βγάζει μόνος του από τις μετρημένες βαθμοημέρες. */
+    const _openKey = seasonOpenerKey(gen, typeSel.value);
+    const _lbl = function(k, fb){ return SEASON_OPENER_LABEL[k] || fb || k; };
+    let schema;
+    if (_openKey){
+      const _hit = schemaOk.filter(function(s){ return s.key === _openKey; });
+      /* Αν το κλειδί λείπει από το σχήμα της κατηγορίας (σκόρδο, κουκιά: ο
+         πυρήνας ζητά «germination» ενώ τα κηπευτικά έδειχναν μόνο
+         «transplantation»), το προσθέτουμε ΡΗΤΑ — αλλιώς η δήλωση του
+         αγρότη μένει απρόσιτη και ο συσσωρευτής μηδενίζει σε λάθος μέρα. */
+      schema = _hit.length
+        ? [{ key: _openKey, label: _lbl(_openKey, _hit[0].label) }]
+        : [{ key: _openKey, label: _lbl(_openKey, null) }];
+    } else {
+      schema = schemaOk;
+    }
+    const _noCurve = schemaAll.length - schemaOk.length;
     periodsGrid.innerHTML = '';
+
+    const isPerennial = PERENNIAL.has(gen);
+    /* T-PRUNEPERCROP-01: η ενότητα έχει πλέον ΔΥΟ πεδία — grid, όχι block. */
+    extraWrap.style.display = isPerennial ? 'grid' : 'none';
+    plantationYearInput.value = isPerennial ? (crop.plantation_year ?? '') : '';
+    if (pruningDateInput) pruningDateInput.value = isPerennial ? (crop.wound_pruning_date || '') : '';
+
     if (!schema.length){
       periodsWrap.style.display = 'none';
-      extraWrap.style.display = 'none';
+      if (schemaAll.length && proxyEl && proxyEl.style.display === 'none'){
+        proxyEl.style.background='#fff7ed'; proxyEl.style.border='1px solid #fed7aa'; proxyEl.style.color='#8a4b12';
+        proxyEl.innerHTML = '⚠ Ο πυρήνας δεν έχει ακόμη καμπύλες για τα στάδια αυτής της καλλιέργειας — θα χρησιμοποιήσει το προεπιλεγμένο στάδιο.';
+        proxyEl.style.display='block';
+      }
       return;
     }
     periodsWrap.style.display = 'block';
-
-    if (gen === 'olive'){
-      extraWrap.style.display = 'block';
-      plantationYearInput.value = crop.plantation_year ?? '';
-    } else {
-      extraWrap.style.display = 'none';
-      plantationYearInput.value = '';
+    const dropMsg = periodsWrap.querySelector('.stageDropNote');
+    if (dropMsg){
+      /* T-ONEDATE-01: έφυγε η πρόταση που απαριθμούσε τα στάδια που το
+         σύστημα υπολογίζει μόνο του. Η φόρμα δεν εξηγεί τι ΔΕΝ ζητά. Μένει
+         μόνο η προειδοποίηση που αφορά πραγματικό κενό του πυρήνα. */
+      dropMsg.style.display = _noCurve ? 'block' : 'none';
+      dropMsg.textContent = _noCurve
+        ? 'Σημείωση: ο πυρήνας δεν έχει ακόμη καμπύλες Kc για όλα τα στάδια '
+          + 'αυτής της καλλιέργειας.'
+        : '';
     }
 
+    /* ══ T-ONEDATE-01 · ΕΝΑ ΓΕΓΟΝΟΣ, ΜΙΑ ΗΜΕΡΟΜΗΝΙΑ ═══════════════════════
+       ΤΟ ΠΡΟΒΛΗΜΑ: η κάρτα ζητούσε «Έναρξη» ΚΑΙ «Λήξη» για γεγονός που ΔΕΝ
+       έχει διάρκεια. Η μεταφύτευση γίνεται μία ημέρα· η σπορά επίσης. Ο
+       αγρότης δεν είχε κανέναν τρόπο να ξέρει τι να γράψει στη «Λήξη».
+       ΤΙ ΔΕΝ ΑΛΛΑΖΕΙ: ο πυρήνας εξακολουθεί να αποθηκεύει {start, end}. Το
+       isNowInPeriod() ΑΠΑΙΤΕΙ και τα δύο (`if (!startStr || !endStr) return
+       false`) και το resolveStageForCrop() είναι η ΜΟΝΗ πηγή σταδίου όσο
+       gdd_crop_accumulated <= 0 — δηλαδή ακριβώς τις πρώτες ημέρες μετά τη
+       μεταφύτευση. Αν έφευγε το «end», το φρέσκο φυτό θα έπαιρνε Kc
+       «vegetative» αντί για «transplant».
+       ΓΙ' ΑΥΤΟ: το «end» το παράγει η ΦΟΡΜΑ με τον ΙΔΙΟ κανόνα των 14 ημερών
+       που ήδη πρότεινε μόνη της (`_plus(inp.value, 14)`) — καμία νέα
+       αγρονομική σταθερά, καμία ερώτηση στον αγρότη. */
     schema.forEach((st)=>{
       const startVal = crop.periods?.[st.key]?.start || '';
-      const endVal   = crop.periods?.[st.key]?.end || '';
       const card = document.createElement('div');
       card.className = 'periodCard';
       card.innerHTML = `
-        <div class="field" style="margin:0">
-          <label>${st.label}: Έναρξη</label>
-          <input type="date" class="p_start" data-key="${st.key}" value="${startVal}"/>
-        </div>
-        <div class="field" style="margin:0; margin-top:8px">
-          <label>${st.label}: Λήξη</label>
-          <input type="date" class="p_end" data-key="${st.key}" value="${endVal}"/>
+        <div class="periodRow">
+          <div class="periodName">${st.label}</div>
+          <div class="field" style="margin:0">
+            <label>Ημερομηνία</label>
+            <input type="date" class="p_start" data-key="${st.key}" value="${startVal}"/>
+          </div>
         </div>
       `;
       periodsGrid.appendChild(card);
@@ -714,21 +1613,47 @@ function makeCropRow(crop, idx){
         crop.periods = crop.periods || {};
         crop.periods[k] = crop.periods[k] || { start:'', end:'' };
         crop.periods[k].start = inp.value || '';
-      });
-    });
-    periodsGrid.querySelectorAll('.p_end').forEach(inp=>{
-      inp.addEventListener('change', ()=>{
-        const k = inp.getAttribute('data-key');
-        crop.periods = crop.periods || {};
-        crop.periods[k] = crop.periods[k] || { start:'', end:'' };
-        crop.periods[k].end = inp.value || '';
+        crop.periods[k].end   = _sagOpenerEnd(inp.value);
       });
     });
   }
 
+  /* ── Πλαίσιο πληροφοριών ψεκασμού: δραστική, τύπος, στόχοι, πότε λήγει ── */
+  const pestBox = row.querySelector('.pestInfo');
+  function refreshPestInfo(){
+    if (!pestBox) return;
+    const k = pestSel ? pestSel.value : '';
+    const inf = PEST_INFO[k];
+    if (!k || !inf){ pestBox.style.display = 'none'; pestBox.innerHTML = ''; return; }
+    let extra = '';
+    const d = pestDate && pestDate.value ? new Date(pestDate.value) : null;
+    if (d && !isNaN(d.getTime())){
+      const end = new Date(d.getTime() + inf.days * 86400000);
+      const left = Math.ceil((end - new Date()) / 86400000);
+      const dd = ('0'+end.getDate()).slice(-2) + '/' + ('0'+(end.getMonth()+1)).slice(-2) + '/' + end.getFullYear();
+      extra = (left > 0)
+        ? '<br><b>Ο αγρός προστατεύεται μέχρι ' + dd + '</b> — απομένουν ' + left + ' ημέρες.'
+        : '<br><b>Η προστασία έληξε στις ' + dd + '.</b>';
+    } else {
+      extra = '<br>Συμπλήρωσε ημερομηνία για να υπολογιστεί πότε λήγει η προστασία.';
+    }
+    pestBox.innerHTML = '<b>Δραστική:</b> ' + inf.sub
+      + '<br><b>Τρόπος δράσης:</b> ' + inf.kind
+      + '  ·  <b>Υπολειμματική διάρκεια:</b> ' + inf.days + ' ημέρες'
+      + '<br><b>Στοχεύει:</b> ' + inf.t + extra;
+    pestBox.style.display = 'block';
+  }
+  if (pestSel)  pestSel.addEventListener('change', refreshPestInfo);
+  if (pestDate) pestDate.addEventListener('change', refreshPestInfo);
+  refreshPestInfo();
+
   plantationYearInput.addEventListener('input', ()=>{
     const v = plantationYearInput.value ? Number(plantationYearInput.value) : null;
     crop.plantation_year = Number.isFinite(v) ? v : null;
+  });
+
+  if (pruningDateInput) pruningDateInput.addEventListener('change', ()=>{
+    crop.wound_pruning_date = pruningDateInput.value || '';   /* T-PRUNEPERCROP-01 */
   });
 
   genSel.addEventListener('change', ()=>{
@@ -736,10 +1661,14 @@ function makeCropRow(crop, idx){
     crop.cultivation_type = '';
     crop.periods = {};
     crop.plantation_year = null;
+    crop.wound_pruning_date = '';   /* T-PRUNEPERCROP-01: αλλαγή κατηγορίας μηδενίζει */
     row.dataset.cropId = '';
     refreshTypes();
     renderPeriods();
+    refreshProxy();
     syncLegacyFromFirstCrop();
+    refreshCropDensity();            /* T-PERCROP-01: άλλαξε το τυπικό εύρος */
+    syncConditionalCropFields();     /* T-PERCROP-01: άλλαξε ο ξενιστής */
   });
 
   typeSel.addEventListener('change', ()=>{
@@ -750,23 +1679,242 @@ function makeCropRow(crop, idx){
     crop.id = row.dataset.cropId; // optional αλλά χρήσιμο να μένει sync
 
     renderPeriods();
+    refreshProxy();
     syncLegacyFromFirstCrop();
+    refreshCropDensity();
+    syncConditionalCropFields();
   });
 
   refreshTypes();
   renderPeriods();
+  refreshProxy();
   ensureInternalId();
+  refreshCropDensity();
 
   row.querySelector('.crop_remove').onclick = ()=>{
+    state.dirty = true;
     row.remove();
     [...$('cropsList').children].forEach((r,i)=> r.dataset.idx = String(i+1));
     if ($('cropsList').children.length === 0){
       addCropRow({ cultivation_type_general:'olive', cultivation_type:'koroneiki', periods:{} });
     }
     syncLegacyFromFirstCrop();
+    syncTotalPlants();
+    syncConditionalCropFields();
   };
 
   return row;
+}
+
+/* T-PERCROP-01: μία πηγή αλήθειας. Το «Σύνολο δέντρων/φυτών» του αγρού γίνεται
+   ΑΘΡΟΙΣΜΑ και κλειδώνει ΜΟΝΟ όταν ΟΛΕΣ οι καλλιέργειες έχουν δηλώσει φυτά —
+   αλλιώς θα κλείδωνε σε μερικό άθροισμα που μοιάζει επιβεβαιωμένο. Με μερική
+   δήλωση το πεδίο μένει ελεύθερο και λέει τι λείπει· χωρίς καμία, όπως πριν.
+   Τιμή που γράψαμε ΕΜΕΙΣ (dataset.auto) την καθαρίζουμε ΕΜΕΙΣ· τιμή που
+   πληκτρολόγησε ο χρήστης δεν την αγγίζουμε ποτέ. */
+/* ── T-PERCROP-01: ΕΡΩΤΗΣΕΙΣ ΜΟΝΟ ΟΠΟΥ ΥΠΑΡΧΕΙ Ο ΞΕΝΙΣΤΗΣ ──────────────────
+   Οι ξενιστές είναι ΑΥΤΟΥΣΙΟΙ από το PATHOGEN_PROFILE του πυρήνα:
+     meloidogyne_incognita  -> ντομάτα, μελιτζάνα, αγγούρι, πεπόνι, καρπούζι, πιπεριά
+     pseudomonas_savastanoi -> ελιά (κορωνέικη)
+   Ρωτώντας για καρκινώματα ελιάς έναν καλλιεργητή ντομάτας δεν είναι απλώς
+   περιττό: υπονοεί ότι το σύστημα δεν ξέρει τι καλλιεργεί.
+   ΚΡΙΣΙΜΟ: όταν το πεδίο κρύβεται, η τιμή του ΣΒΗΝΕΤΑΙ — αλλιώς μια απάντηση
+   από παλιά καλλιέργεια θα συνέχιζε να ταξιδεύει στο tag για πάντα. */
+/* ΟΙ ΞΕΝΙΣΤΕΣ ΕΙΝΑΙ ΑΥΤΟΥΣΙΟΙ ΑΠΟ ΤΟ PATHOGEN_PROFILE ΤΟΥ ΠΥΡΗΝΑ.
+   Η σουίτα audit/test τους διασταυρώνει: αν προστεθεί ξενιστής στον πυρήνα και
+   ξεχαστεί εδώ, κοκκινίζει. Χωρίς αυτό, ο αγρότης θα έβλεπε ερώτηση για ασθένεια
+   που δεν αφορά την καλλιέργειά του — ή, χειρότερα, ΔΕΝ θα έβλεπε ερώτηση που
+   αφορά, και το μοντέλο θα έμενε ουδέτερο χωρίς να το ξέρει κανείς. */
+const NEM_HOSTS  = ['carrot','cucumber','eggplant','melon','pepper','tomato','watermelon','zucchini'];
+const KNOT_HOSTS = ['koroneiki'];
+const VERT_HOSTS = ['artichoke','cotton','cucumber','eggplant','koroneiki','melon','mint',
+                    'pepper','potato','strawberry','sunflower','tomato','watermelon'];
+const PHYT_HOSTS = ['cucumber','eggplant','melon','pepper','tomato','watermelon','zucchini'];
+const SCLE_HOSTS = ['artichoke','broccoli','cabbage','carrot','cucumber','dry_beans','eggplant',
+                    'faba_bean',
+                    'green_beans','lettuce','melon','pepper','potato','strawberry','sunflower',
+                    'tomato','watermelon','zucchini'];
+const RHIZ_HOSTS = ['potato','sugar_beet'];
+/* Τα «έτη με ευπαθή καλλιέργεια» τροφοδοτούν ΟΛΑ τα εδαφογενή μοντέλα —
+   άρα εμφανίζονται αν ο αγρός έχει ξενιστή έστω ΕΝΟΣ από αυτά. */
+const SUSC_HOSTS = [...new Set([].concat(VERT_HOSTS, PHYT_HOSTS, SCLE_HOSTS, RHIZ_HOSTS, NEM_HOSTS))];
+/* περιέκτης -> { έλεγχος, ξενιστές } */
+/* ══ T-COVERGATE-01 (v12) · ΛΟΓΙΚΗ ΣΥΝΕΠΕΙΑ ΤΗΣ ΦΟΡΜΑΣ ═══════════════════
+   Ερώτηση χωρίς νόημα στο πλαίσιό της είναι χειρότερη από απούσα ερώτηση:
+   ο αγρότης είτε τη συμπληρώνει στην τύχη (και μολύνει το μοντέλο) είτε
+   χάνει την εμπιστοσύνη του στη φόρμα.
+   Δύο κατευθύνσεις, και οι δύο υπήρχαν:
+     · ΘΕΡΜΟΚΗΠΙΟ  -> «Πρόσφατο χαλάζι» δεν έχει νόημα (δεν πέφτει χαλάζι
+       μέσα στο κάλυμμα· αν σπάσει το κάλυμμα, αυτό δηλώνεται αλλού).
+     · ΥΠΑΙΘΡΙΟ    -> «Διαπερατότητα καλύμματος» και «αισθητήρας φωτός μέσα
+       στο θερμοκήπιο» δεν έχουν νόημα. Ο ίδιος ο κώδικας το έλεγε ήδη σε
+       σχόλιο («μόνο για καλυμμένη· αλλιώς αγνοούνται») αλλά τα εμφάνιζε.
+   Όταν ένα πεδίο κρύβεται, ΚΑΘΑΡΙΖΕΤΑΙ κιόλας — αλλιώς μια τιμή που ο
+   αγρότης δεν βλέπει πια συνεχίζει να ταξιδεύει στη ρύθμιση. */
+const COVER_GATES = [
+  { id: 'fld_wound_hail',           input: 'wound_hail_date',           showWhenCovered: false },
+  /* T-COVERGATE-02 (v15): ο ΑΚΤΙΝΟΒΟΛΙΚΟΣ παγετός — αυτός που σκάει τον
+     φλοιό και ανοίγει πύλη στα βακτήρια — απαιτεί ελεύθερη θέα στον ουρανό.
+     Το κάλυμμα την κόβει. Σε θερμοκήπιο η ερώτηση δεν έχει νόημα.
+     ΓΝΩΣΤΟ ΟΡΙΟ: σε ΑΘΕΡΜΑΝΤΟ τούνελ ο παγετός ΕΙΝΑΙ πραγματικός (η
+     θερμοκρασία μέσα πέφτει κάτω από το μηδέν σε ψυχρή, άπνοη νύχτα).
+     Η πύλη κρύβει τη δήλωση και μηδενίζει την τιμή — δηλαδή ΜΕΙΩΝΕΙ τον
+     εκτιμώμενο κίνδυνο. Αν αποκτήσουμε αγρό με αθέρμαντο κάλυμμα και
+     παγετοπληξία, η πύλη πρέπει να ξαναδεί το φως. */
+  { id: 'fld_wound_frost',          input: 'wound_frost_date',          showWhenCovered: false },
+  { id: 'fld_cover_transmissivity', input: 'cover_transmissivity_pct',  showWhenCovered: true  },
+  { id: 'fld_cover_light_inside',   input: 'cover_light_sensor_inside', showWhenCovered: true  }
+];
+function syncCoverGates(){
+  try{
+    const sel = document.getElementById('covered_cultivation');
+    if (!sel) return;
+    const covered = String(sel.value) === 'true';
+    COVER_GATES.forEach(function(g){
+      const wrap = document.getElementById(g.id);
+      if (!wrap) return;
+      const on = (g.showWhenCovered === covered);
+      wrap.style.display = on ? '' : 'none';
+      if (!on){
+        const inp = document.getElementById(g.input);
+        if (inp){
+          if (inp.tagName === 'SELECT') inp.value = (inp.querySelector('option')||{}).value || '';
+          else inp.value = '';
+        }
+      }
+    });
+  }catch(e){}
+}
+
+const HOST_GATES = {
+  fld_nem_resistant: { sel: 'nem_resistant_cultivar', hosts: NEM_HOSTS },
+  fld_nem_found:     { sel: 'nem_found_3yr',          hosts: NEM_HOSTS },
+  fld_knot:          { sel: 'knot_observations',      hosts: KNOT_HOSTS },
+  fld_hist_vert:     { sel: 'hist_verticillium',      hosts: VERT_HOSTS },
+  fld_hist_phyt:     { sel: 'hist_phytophthora',      hosts: PHYT_HOSTS },
+  fld_hist_scler:    { sel: 'hist_sclerotinia',       hosts: SCLE_HOSTS },
+  fld_hist_rhizo:    { sel: 'hist_rhizoctonia',       hosts: RHIZ_HOSTS },
+  fld_susc_years:    { sel: 'susceptible_years_5yr',  hosts: SUSC_HOSTS },
+  /* ΑΝΑΙΡΕΘΗΚΕ το T-SOLARCOVER-01 (7/9/2026): η ηλιοαπολύμανση εφαρμόζεται
+     ΚΑΙ σε υπαίθριο αγρό (Katan 1976· Katan 1981 — διαφανές πλαστικό το
+     καλοκαίρι). Πύλη μόνο κατά ξενιστή, όπως πριν. */
+  fld_nem_solar:     { sel: 'nem_solarization_12mo',  hosts: NEM_HOSTS }
+};
+function currentCropTypes(){
+  return [...document.querySelectorAll('#cropsList .cropRow')]
+    .map(r => (r.querySelector('.crop_type')?.value || '')).filter(Boolean);
+}
+function syncConditionalCropFields(){
+  try{
+    syncCoverGates();                       /* T-COVERGATE-01 */
+    /* Ε4: αλλαγή συστήματος άρδευσης -> εμφάνιση/απόκρυψη της γεωμετρίας σε
+       ΚΑΘΕ γραμμή. Χωρίς αυτό, ο αγρότης που αλλάζει σε κατάκλυση θα έβλεπε
+       ακόμη ερωτήσεις για σταλακτήρες. */
+    document.querySelectorAll('#cropsList .cropRow').forEach(function(r){
+      if (typeof r._syncCropIrrig === 'function') r._syncCropIrrig();
+    });
+    const types = currentCropTypes();
+    const show = (id, on, sel) => {
+      const el = $(id);
+      if (!el) return;
+      el.style.display = on ? '' : 'none';
+      if (!on){ const s = $(sel); if (s) s.value = (s.querySelector('option')||{}).value || ''; }
+    };
+    let anyOn = false;
+    Object.keys(HOST_GATES).forEach(function(fid){
+      const g = HOST_GATES[fid];
+      const on = types.some(t => g.hosts.indexOf(t) >= 0);
+      if (on) anyOn = true;
+      show(fid, on, g.sel);
+    });
+    /* Χωρίς καμία ερώτηση, η επικεφαλίδα της ενότητας θα έμενε ορφανή. */
+    const secT = $('histSectionTitle');
+    if (secT) secT.style.display = anyOn ? '' : 'none';
+    /* Τα βάθη είναι ιδιότητα του ΑΙΣΘΗΤΗΡΑ, όχι της καλλιέργειας: ο πυρήνας
+       κρατά ΕΝΑ ζεύγος ανά αγρό και ανακατεύει τις υγρασίες όλων των αισθητήρων.
+       Σε μικτό αγρό αυτό πρέπει να λέγεται ρητά αντί να υπονοείται. */
+    const dn = $('depthMixNote');
+    if (dn){
+      const many = document.querySelectorAll('#cropsList .cropRow').length > 1;
+      dn.style.display = many ? 'block' : 'none';
+      if (many) dn.textContent = '⚠ Ο αγρός έχει ' + document.querySelectorAll('#cropsList .cropRow').length
+        + ' καλλιέργειες. Τα βάθη ισχύουν για ΟΛΟΝ τον αγρό — αν οι αισθητήρες είναι σε '
+        + 'διαφορετικά βάθη ανά καλλιέργεια, δηλώστε το βάθος του αισθητήρα που '
+        + 'εκπροσωπεί την κύρια καλλιέργεια.';
+    }
+  }catch(e){}
+}
+
+/* Η πυκνότητα ΤΟΥ ΑΓΡΟΥ έχει νόημα μόνο σε μονοκαλλιέργεια. */
+function refreshFieldDensityHint(){
+  try{
+    const dh = $('densityHint'); if (!dh) return;
+    const rows = document.querySelectorAll('#cropsList .cropRow').length;
+    if (rows > 1){
+      dh.textContent = 'Μικτός αγρός — δείτε τα m² ανά φυτό σε κάθε καλλιέργεια παραπάνω.';
+      dh.style.color = '';
+      return;
+    }
+    const a = numOrNull($('area').value), n = intOrNull($('total_plants').value);
+    if (a && n && n > 0){
+      const t = document.querySelector('#cropsList .cropRow .crop_type');
+      const g = document.querySelector('#cropsList .cropRow .crop_gen');
+      const rng = (t && CROP_DENSITY_RANGE[t.value]) || (g && CROP_DENSITY_GEN_RANGE[g.value]) || null;
+      const per = a / n;
+      const bad = rng ? (per < rng[0] * 0.5 || per > rng[1] * 2) : (per < 0.2 || per > 200);
+      dh.textContent = fmtDen(per) + ' m² ανά φυτό'
+        + (rng ? ' (τυπικά ' + fmtDen(rng[0]) + '-' + fmtDen(rng[1]) + ')' : '')
+        + (bad ? ' ⚠ ελέγξτε έκταση ή αριθμό φυτών' : '');
+      dh.style.color = bad ? '#8a1c12' : '';
+    } else { dh.textContent = 'Ή δηλώστε τα φυτά ανά καλλιέργεια παραπάνω.'; dh.style.color = ''; }
+  }catch(e){}
+}
+
+function syncTotalPlants(){
+  try{
+    const rows = [...document.querySelectorAll('#cropsList .cropRow')];
+    const vals = rows.map(r=> intOrNull(r.querySelector('.crop_plants')?.value));
+    const any = vals.some(v=> v !== null && v > 0);
+    const tp = $('total_plants');
+    const note = $('totalPlantsNote');
+    if (!tp) return;
+    const allDeclared = rows.length > 0 && vals.every(v => v !== null && v > 0);
+    if (allDeclared){
+      const sum = vals.reduce((s,v)=> s + (v||0), 0);
+      tp.value = String(sum);
+      tp.dataset.auto = '1';          /* σημάδι: η τιμή είναι ΔΙΚΗ ΜΑΣ */
+      tp.readOnly = true;
+      tp.style.background = '#f1f5f9';
+      if (note) note.textContent = (rows.length === 1)
+        ? 'Συμπληρώνεται αυτόματα από τη μία καλλιέργεια.'
+        : 'Άθροισμα των ' + rows.length + ' καλλιεργειών — συμπληρώνεται αυτόματα.';
+    } else if (any){
+      /* ΜΕΡΙΚΩΣ δηλωμένο: ΔΕΝ κλειδώνουμε και ΔΕΝ γράφουμε άθροισμα — θα ήταν
+         μικρότερο από την πραγματικότητα και θα φαινόταν επιβεβαιωμένο. */
+      const miss = vals.filter(v => !(v > 0)).length;
+      if (tp.dataset.auto === '1'){ tp.value = ''; delete tp.dataset.auto; }
+      tp.readOnly = false;
+      tp.style.background = '';
+      if (note) note.textContent = 'Λείπουν τα φυτά σε ' + miss
+        + (miss === 1 ? ' καλλιέργεια' : ' καλλιέργειες') + ' — συμπληρώστε τα για αυτόματο άθροισμα.';
+    } else {
+      if (tp.dataset.auto === '1'){ tp.value = ''; delete tp.dataset.auto; }
+      tp.readOnly = false;
+      tp.style.background = '';
+      if (note) note.textContent = 'Ή δηλώστε τα φυτά ανά καλλιέργεια παραπάνω.';
+    }
+    refreshAllCropDensities();
+    refreshFieldDensityHint();
+  }catch(e){}
+}
+
+/* Ξαναϋπολογίζει ΚΑΘΕ γραμμή: το αν μια γραμμή επιτρέπεται να χρησιμοποιήσει την
+   έκταση του αγρού εξαρτάται από το ΠΛΗΘΟΣ των καλλιεργειών, όχι μόνο από τη δική
+   της τιμή. Χωρίς αυτό, η πρώτη γραμμή έμενε με τον υπολογισμό που έκανε όσο ήταν
+   ακόμη μόνη της — δηλαδή με την έκταση ΟΛΟΥ του αγρού. */
+function refreshAllCropDensities(){
+  [...document.querySelectorAll('#cropsList .cropRow')]
+    .forEach(function(r){ if (r._refreshCropDensity) r._refreshCropDensity(); });
 }
 
 function addCropRow(crop){
@@ -774,6 +1922,8 @@ function addCropRow(crop){
   const row = makeCropRow(crop, idx);
   $('cropsList').appendChild(row);
   syncLegacyFromFirstCrop();
+  syncTotalPlants();
+  syncConditionalCropFields();
 }
 
 function readCropsFromUI(){
@@ -781,7 +1931,7 @@ function readCropsFromUI(){
   return rows.map((row, idx)=>{
     const gen = row.querySelector('.crop_gen')?.value || '';
     const type = row.querySelector('.crop_type')?.value || '';
-    const id = buildDefaultCropID(gen, type || `type${idx+1}`, idx+1);
+    const id = buildDefaultCropID(gen, type || `type${idx+1}`, idx+1);   /* σταθερό ανά επιλογή χρήστη */
     row.dataset.cropId = id;
 
     const periods = {};
@@ -790,10 +1940,12 @@ function readCropsFromUI(){
       periods[k] = periods[k] || { start:'', end:'' };
       periods[k].start = inp.value || '';
     });
-    row.querySelectorAll('.p_end').forEach(inp=>{
-      const k = inp.getAttribute('data-key');
-      periods[k] = periods[k] || { start:'', end:'' };
-      periods[k].end = inp.value || '';
+    /* T-ONEDATE-01: ΚΡΙΣΙΜΟ. Η αποθήκευση χτίζει τα periods ΑΠΟ ΤΟ DOM. Αν
+       εδώ έμενε μόνο το start, ΚΑΘΕ save θα έσβηνε το «end» και το
+       isNowInPeriod() θα γύριζε ΠΑΝΤΑ false. Το παράγουμε με τον ίδιο κανόνα
+       που χρησιμοποιεί και ο ακροατής της κάρτας. */
+    Object.keys(periods).forEach(k=>{
+      periods[k].end = _sagOpenerEnd(periods[k].start);
     });
     Object.keys(periods).forEach(k=>{
       const p = periods[k];
@@ -803,9 +1955,35 @@ function readCropsFromUI(){
     const plantation_year_el = row.querySelector('.crop_plantation_year');
     const plantation_year = plantation_year_el && plantation_year_el.value ? Number(plantation_year_el.value) : null;
 
-    const out = { id, cultivation_type_general: gen, cultivation_type: type };
+    /* ΚΡΙΣΙΜΟ: ο πυρήνας παίρνει μόνο καλλιέργειες που γνωρίζει. Η πραγματική
+       επιλογή του χρήστη διατηρείται στο cultivation_variety. */
+    const kernelType = CROP_KERNEL_MAP[type] || type;
+    const out = { id, cultivation_type_general: gen, cultivation_type: kernelType };
+    if (kernelType !== type) out.cultivation_variety = type;
     if (Object.keys(periods).length) out.periods = periods;
-    if (gen === 'olive' && plantation_year) out.plantation_year = plantation_year;
+    if (plantation_year) out.plantation_year = plantation_year;   /* για ΟΛΑ τα πολυετή, όχι μόνο ελιά */
+    /* T-PRUNEPERCROP-01: το κλάδεμα ΕΙΝΑΙ πράξη της καλλιέργειας. Σε μικτό
+       αγρό η ενιαία δήλωση δεν αντιπροσώπευε τίποτα. */
+    const _prd = row.querySelector('.crop_pruning_date')?.value || '';
+    if (_prd) out.wound_pruning_date = _prd;
+
+    const _pl = intOrNull(row.querySelector('.crop_plants')?.value);
+    if (_pl !== null && _pl > 0) out.plants = _pl;   /* T-PERCROP-01 */
+    const _a = numOrNull(row.querySelector('.crop_area_m2')?.value);
+    const _pk = row.querySelector('.crop_pesticide')?.value || '';
+    const _pd = row.querySelector('.crop_pesticide_date')?.value || '';
+    if (_a !== null) out.area_m2 = _a;
+    /* Ε4: κάθε πεδίο ΧΩΡΙΣΤΑ. Ο αγρότης που ξέρει μόνο την απόσταση των
+       σταλακτήρων της συγκεκριμένης καλλιέργειας δεν χάνει τη δήλωσή του
+       επειδή αγνοεί την απόσταση των λάστιχων. */
+    const _ges = numOrNull(row.querySelector('.crop_emit_sp')?.value);
+    const _grs = numOrNull(row.querySelector('.crop_row_sp')?.value);
+    const _gql = numOrNull(row.querySelector('.crop_emit_lph')?.value);
+    if (_ges !== null && _ges > 0) out.irrig_emitter_spacing_m = _ges;
+    if (_grs !== null && _grs > 0) out.irrig_row_spacing_m     = _grs;
+    if (_gql !== null && _gql > 0) out.irrig_emitter_lph       = _gql;
+    if (_pk) out.last_pesticide_key  = _pk;
+    if (_pd) out.last_pesticide_date = _pd;
     return out;
   });
 }
@@ -819,21 +1997,24 @@ function syncLegacyFromFirstCrop(){
   if (first.cultivation_type) $('cultivation_type').value = first.cultivation_type;
 }
 
-$('btnAddCrop').onclick = ()=> addCropRow({ cultivation_type_general:$('cultivation_type_general').value || 'olive', cultivation_type:'', periods:{} });
+$('btnAddCrop').onclick = ()=> { state.dirty = true; addCropRow({ cultivation_type_general:$('cultivation_type_general').value || 'olive', cultivation_type:'', periods:{} }); };
 
-setTimeout(()=>{
-  if ($('cropsList').children.length===0){
-    addCropRow({ cultivation_type_general:'olive', cultivation_type:'koroneiki', periods:{} });
-  }
-}, 0);
+/* T-CFG-LOADGATE-01: η προ-σπορά «ελιά/Κορωνέικη» γινόταν εδώ με setTimeout(0),
+   ΠΡΙΝ φτάσουν τα αποθηκευμένα δεδομένα — βλ. markLoaded() για το γιατί αυτό
+   έσβηνε πραγματικές καλλιέργειες σε αργό δίκτυο. Πλέον γίνεται στο markLoaded,
+   μόνο όταν το πρώτο στιγμιότυπο δείξει αγρό χωρίς καλλιέργειες. */
 
 /* =========================
    UI SETUP
 ========================= */
 fillSelect($('cultivation_type_general'), CULTIVATION_GENERAL);
-fillSelect($('soil_type'), SOIL_TYPES);
-fillSelect($('irrigation_system'), IRRIGATION_SYSTEMS);
-fillSelect($('water_quality'), WATER_QUALITY);
+/* «— επιλέξτε —» ώστε να μη μένει σιωπηλά η πρώτη τιμή σε αρύθμιστο αγρό */
+(function(){ const o = {'':'— επιλέξτε —'};
+  Object.keys(SOIL_TEXTURES).forEach(function(k){ o[k] = SOIL_TEXTURES[k].el; });
+  fillSelect($('soil_type'), o);
+})();
+fillSelect($('irrigation_system'), Object.assign({'':'— επιλέξτε —'}, IRRIGATION_SYSTEMS));
+fillSelect($('water_quality'),     Object.assign({'':'— επιλέξτε —'}, WATER_QUALITY));
 
 function refreshTypeOptions(){
   const gen = $('cultivation_type_general').value;
@@ -843,10 +2024,94 @@ function refreshTypeOptions(){
 $('cultivation_type_general').onchange = refreshTypeOptions;
 $('cultivation_type').onchange = setSummary;
 $('coordinates').oninput = setSummary;
+/* T-PERCROP-01: αλλαγή της συνολικής έκτασης αλλάζει τον λόγο m²/φυτό κάθε
+   καλλιέργειας που ΔΕΝ έχει δική της δηλωμένη έκταση. */
+document.addEventListener('input', function(ev){
+  if (!ev || !ev.target) return;
+  if (ev.target.id === 'area' || ev.target.id === 'total_plants'){
+    /* Ο refreshHints (που τρέχει ήδη για τα ίδια πεδία) καλεί στο τέλος του τον
+       refreshFieldDensityHint — μην τον καλέσεις δεύτερη φορά ανά πλήκτρο. */
+    refreshAllCropDensities();
+  }
+}, true);
+
+['area','total_plants','irrig_emitter_lph','irrig_emitter_spacing_m','irrig_row_spacing_m',
+ 'irrig_fw_pct','irrigation_system','soil_type','water_quality','covered_cultivation',
+ 'hist_verticillium','hist_phytophthora','hist_sclerotinia','hist_rhizoctonia',
+ 'susceptible_years_5yr','nem_found_3yr','nem_solarization_12mo','nem_resistant_cultivar',
+ 'knot_observations','wound_pruning_date','wound_hail_date','wound_frost_date'].forEach(function(id){
+  const el = $(id); if (el){ el.addEventListener('input', refreshHints); el.addEventListener('change', refreshHints); }
+});
+setTimeout(refreshHints, 0);
 
 /* =========================
    DATA MARSHALLING
 ========================= */
+/* T-CFG-NODOWNGRADE-01 (21/8/2026, αναθ. β)
+   Το configurationObj χτίζεται με Object.assign({}, prevConf, {…}): ΚΑΘΕ
+   διαχειριζόμενο κλειδί γράφεται ΠΑΝΤΑ, ακόμη και με null. Έτσι ένα άδειο
+   πεδίο της φόρμας έσβηνε μια ήδη σωστή αποθηκευμένη τιμή. Οι συνέπειες ανά
+   κλειδί διαφέρουν: για το elevation ο πυρήνας επέστρεφε σιωπηλά στην
+   προεπιλογή των 100 m· για το area έβγαζε irrigation_config_error· για το
+   soil_type κατέφευγε στα υδραυλικά χαρακτηριστικά του προφίλ καλλιέργειας.
+   Κοινό σημείο: μια σωστή τιμή χανόταν χωρίς ο παραγωγός να το καταλάβει.
+   Ο κανόνας μπαίνει ΜΟΝΟ όπου το κενό δεν είναι ποτέ έγκυρη πρόθεση: ένας
+   αγρός έχει πάντα έκταση, τύπο εδάφους, υψόμετρο, μέθοδο ποτίσματος και
+   ποιότητα νερού. Τα προαιρετικά αναλυτικά πεδία (pH, σκληρότητα, EC νερού,
+   λεπτομέρειες σταλακτήρων) παραμένουν διαγράψιμα, ώστε ο παραγωγός να
+   μπορεί να σβήσει λανθασμένη καταχώριση.
+   Όταν διατηρείται παλιά τιμή αντί κενού, το παράθυρο επιβεβαίωσης το ΛΕΕΙ
+   (βλ. btnSave) — καμία σιωπηλή διατήρηση. */
+function _keepPrev(v, prev){
+  if (v === null || v === undefined || v === '') {
+    return (prev === undefined ? null : prev);
+  }
+  return v;
+}
+
+/* T-CFG-LOADGATE-01 (21/8/2026)
+   Η αποθήκευση ΚΛΕΙΔΩΝΕΤΑΙ μέχρι να φτάσει το πρώτο στιγμιότυπο δεδομένων.
+   Χωρίς αυτό: σε αργό δίκτυο ο παραγωγός έβλεπε τη φόρμα με την προ-
+   σπαρμένη σειρά «ελιά/Κορωνέικη», πατούσε «Καταχώριση» πριν φορτώσουν τα
+   αποθηκευμένα, και το payload — με prevConf κενό — ΑΝΤΙΚΑΘΙΣΤΟΥΣΕ τις
+   πραγματικές καλλιέργειές του με την ψεύτικη προεπιλογή. Το _keepPrev ΔΕΝ
+   μπορεί να το πιάσει αυτό: prevConf και φόρμα τρέφονται από την ίδια πηγή
+   (state.lastDataMap), οπότε όταν η μία είναι άδεια είναι άδεια και η άλλη.
+   Η προ-σπορά της προεπιλεγμένης σειράς μεταφέρθηκε επίσης εδώ, ώστε να
+   γίνεται ΜΟΝΟ αφού μάθουμε ότι ο αγρός όντως δεν έχει καλλιέργειες. */
+function markLoaded(){
+  if (state.loaded) return;
+  state.loaded = true;
+  if (state._loadTimer){ clearTimeout(state._loadTimer); state._loadTimer = null; }
+  /* Γύρος 5: εδώ ΔΕΝ σπέρνεται πλέον προεπιλεγμένη καλλιέργεια. Δύο λόγοι:
+     (α) όταν ο χρήστης πληκτρολογεί (formLocked), η υδροδότηση παρακάμπτεται
+     αλλά το markLoaded έτρεχε — η ψεύτικη «ελιά» έμπαινε ΧΩΡΙΣ να φορτωθούν
+     ποτέ οι πραγματικές καλλιέργειες, και η επόμενη αποθήκευση τις έσβηνε·
+     (β) αποθηκευμένη ρύθμιση με ΡΗΤΑ κενό crops:[] ξαναγέμιζε με «ελιά» που
+     ο παραγωγός είχε αφαιρέσει. Η υδροδότηση χτίζει τις σειρές από τα
+     πραγματικά δεδομένα· για ολότελα νέο αγρό, η σπορά γίνεται μόνο στο
+     συνειδητό ξεκλείδωμα (btnSave, διπλό πάτημα). */
+}
+
+/* T-CFG-LOADGATE-01 (γύρος 3): στο timeout ΔΕΝ ξεκλειδώνουμε και ΔΕΝ
+   σπέρνουμε προεπιλεγμένη καλλιέργεια — αν τα δεδομένα αργούσαν απλώς
+   (αργό δίκτυο), το ξεκλείδωμα θα επέτρεπε αποθήκευση που σβήνει τον αγρό
+   με μια ψεύτικη «ελιά». Σηκώνουμε μόνο σημαία· το ξεκλείδωμα απαιτεί
+   ΔΕΥΤΕΡΟ συνειδητό πάτημα του κουμπιού (βλ. btnSave). Αν τα δεδομένα
+   φτάσουν αργότερα, το applyIncoming ξεκλειδώνει κανονικά. */
+function armLoadTimeout(){
+  /* γύρος 4: χωρίς ακύρωση, κάθε εναλλαγή συσκευής στοίβαζε ΚΙ ΑΛΛΟ
+     χρονόμετρο — το παλιό πυροδοτούσε 5 δευτ. μετά την εναλλαγή και όπλιζε
+     πρόωρα το διπλό πάτημα. */
+  if (state._loadTimer) clearTimeout(state._loadTimer);
+  state._loadTimer = setTimeout(function(){
+    if (!state.loaded){
+      state.loadTimedOut = true;
+      showBanner('Δεν φορτώθηκαν αποθηκευμένα στοιχεία για τον αγρό. Αν ο αγρός ΕΧΕΙ ρυθμιστεί στο παρελθόν, ανανεώστε τη σελίδα (F5). Αν είναι ΚΑΙΝΟΥΡΓΙΟΣ, πατήστε «Καταχώριση» για να συνεχίσετε.', 'warn');
+    }
+  }, 15000);
+}
+
 function buildPayload(){
   const coordsStr = $('coordinates').value.trim();
   const coords = parseCoordinates(coordsStr);
@@ -857,18 +2122,129 @@ function buildPayload(){
   const crops = readCropsFromUI();
   console.log('CROPS TO SAVE:', crops);
 
-  const configurationObj = {
-    version: 3,
+  /* ── ΔΙΟΡΘΩΣΗ 3 · ΣΥΓΧΩΝΕΥΣΗ αντί αντικατάστασης ────────────────────
+     Το configuration χτιζόταν από το μηδέν και ΣΒΗΝΕ κάθε κλειδί που η φόρμα
+     δεν διαχειρίζεται (automatic_irrigation, manual_low/high_threshold,
+     sensor_depths_cm, legacy cultivation_*). Τώρα γράφουμε ΠΑΝΩ στο υπάρχον. */
+  let prevConf = {};
+  try {
+    const _pc = JSON.parse(state.lastDataMap.configuration?.value || '{}');
+    /* M1: string/πίνακας εδώ σκορπούσε char-indexed κλειδιά μέσα στο
+       Object.assign — μόνο γνήσιο αντικείμενο γίνεται βάση. */
+    prevConf = (_pc && typeof _pc === 'object' && !Array.isArray(_pc)) ? _pc : {};
+  }
+  catch (e) { prevConf = {}; }
+
+  const configurationObj = Object.assign({}, prevConf, {
+    /* Γύρος 5 (F1): η έκδοση 4 δηλώνει «φόρμα με κλείδωμα φόρτωσης». Το
+       analysis απορρίπτει τη γυμνή προεπιλεγμένη «ελιά» ΜΟΝΟ από φόρμες
+       παλαιότερης έκδοσης (cached αντίγραφα) — μην την αλλάξετε χωρίς να
+       ενημερωθεί και ο φρουρός στο setFieldParametersFromDeviceData. */
+    version: 4,
     crops,
-    soil_type: $('soil_type').value || null,
-    irrigation_system: $('irrigation_system').value || null,
-    water_quality: $('water_quality').value || null,
-    area: numOrNull($('area').value),
-    supply_flow_rate: numOrNull($('supply_flow_rate').value),
+    /* Το soil_type μένει ΠΑΝΤΑ ένας από τους 4 που ξέρει ο πυρήνας.
+       Η ακριβής κλάση αποθηκεύεται χωριστά για μελλοντική χρήση. */
+    soil_type: _keepPrev((SOIL_TEXTURES[$('soil_type').value] || {}).group || $('soil_type').value || null, prevConf.soil_type),
+    soil_texture_class: _keepPrev($('soil_type').value || null,
+      /* διατήρηση ΜΟΝΟ αν η αποθηκευμένη κλάση υπάρχει ακόμη στη λίστα —
+         αλλιώς η φόρμα δεν μπορεί καν να τη δείξει και θα κολλούσε για πάντα */
+      (prevConf.soil_texture_class in SOIL_TEXTURES) ? prevConf.soil_texture_class : undefined),
+    irrigation_system: _keepPrev($('irrigation_system').value || null, prevConf.irrigation_system),
+    covered_cultivation: $('covered_cultivation').value === 'true',
+
+    /* T-SOILMODELS-01: ιστορικό εδαφογενών/νηματωδών/πληγών — ο πυρήνας τα
+       μετατρέπει σε field_history / wound_history / nematode_field_history */
+    hist_verticillium: $('hist_verticillium').value || null,
+    hist_phytophthora: $('hist_phytophthora').value || null,
+    hist_sclerotinia: $('hist_sclerotinia').value || null,
+    hist_rhizoctonia: $('hist_rhizoctonia').value || null,
+    susceptible_years_5yr: $('susceptible_years_5yr').value === '' ? null : +$('susceptible_years_5yr').value,
+    nem_found_3yr: $('nem_found_3yr').value || null,
+    /* T-NEM3STATE-01: true / false / null. Το null το σβήνει το analysis (LEAN),
+       το false το ΚΡΑΤΑ (ρητή εξαίρεση) — έτσι το tag ξεχωρίζει «δεν ξέρω» από «όχι». */
+    nem_solarization_12mo: (function(){ const v = $('nem_solarization_12mo').value;
+                                        return v === 'true' ? true : (v === 'false' ? false : null); })(),
+    nem_resistant_cultivar: (function(){ const v = $('nem_resistant_cultivar').value;
+                                         return v === 'true' ? true : (v === 'false' ? false : null); })(),
+    knot_observations: $('knot_observations').value || null,
+    /* T-PRUNEPERCROP-01: γράφεται ΚΑΙ στο επίπεδο αγρού — η πιο πρόσφατη από
+       τις δηλώσεις των καλλιεργειών — ώστε ΠΑΛΙΟΤΕΡΟΣ πυρήνας να συνεχίσει να
+       λειτουργεί ακριβώς όπως σήμερα. Ο νέος πυρήνας προτιμά τη δήλωση ΤΗΣ
+       ΚΑΛΛΙΕΡΓΕΙΑΣ. */
+    wound_pruning_date: _sagLatestPruning(crops) || $('wound_pruning_date').value || null,
+    wound_hail_date: $('wound_hail_date').value || null,
+    wound_frost_date: $('wound_frost_date').value || null,
+    water_quality: _keepPrev($('water_quality').value || null, prevConf.water_quality),
+    area: _keepPrev(numOrNull($('area').value), prevConf.area),
     total_plants: intOrNull($('total_plants').value),
     sensor_deep_depth_cm: intOrNull($('sensor_deep_depth_cm').value),
     sensorShallow_depth_cm: intOrNull($('sensorShallow_depth_cm').value),
-  };
+    /* v5: T-STONE-01 / T-COVER-01. Το transmissivity αποθηκεύεται ως ΚΛΑΣΜΑ
+       (0,2–1,0) γιατί έτσι το διαβάζει ο πυρήνας — το πεδίο είναι σε %. */
+    stone_fraction_pct: (function(){ const v = intOrNull($('stone_fraction_pct').value);
+                                     return v === null ? null : Math.min(70, Math.max(0, v)); })(),
+    cover_transmissivity: (function(){ const v = numOrNull($('cover_transmissivity_pct').value);
+                                       return v === null ? null : Math.min(1, Math.max(0.2, v / 100)); })(),
+    cover_light_sensor_inside: $('cover_light_sensor_inside').value === 'true',
+    elevation_m: _keepPrev(numOrNull($('elevation_m').value), prevConf.elevation_m),
+
+    /* Ο πυρήνας ψάχνει latitude/elevation ΜΕΣΑ στο configuration.
+       Χωρίς αυτά χρησιμοποιεί σιωπηλά 35,0° και 100 m για κάθε αγρό. */
+    latitude:  coords ? +coords.lat : (prevConf.latitude  ?? null),
+    longitude: coords ? +coords.lng : (prevConf.longitude ?? null),
+    elevation: _keepPrev(numOrNull($('elevation_m').value), prevConf.elevation),
+
+    /* Λεπτομέρειες άρδευσης */
+    irrig_emitter_lph:       numOrNull($('irrig_emitter_lph').value),
+    irrig_emitter_spacing_m: numOrNull($('irrig_emitter_spacing_m').value),
+    irrig_row_spacing_m:     numOrNull($('irrig_row_spacing_m').value),
+    irrig_fw_fraction:       (function(){ const v = numOrNull($('irrig_fw_pct').value);
+                                          return v === null ? null : Math.min(1, Math.max(0.05, v/100)); })(),
+    irrig_efficiency_measured: (function(){ const v = numOrNull($('irrig_efficiency_pct').value);
+                                            return v === null ? null : Math.min(1, Math.max(0.1, v/100)); })(),
+    irrig_application_rate_mm_h: numOrNull(computeAppRate()),
+
+    /* Ανάλυση νερού — ο πυρήνας θα τα προτιμά όταν μάθει να τα διαβάζει */
+    water_ecw_dsm:      numOrNull($('water_ecw_dsm').value),
+  });
+
+  /* M2 (δίχτυ ασφαλείας): η λίστα σειρών δεν μπορεί να είναι νόμιμα κενή —
+     η αφαίρεση της τελευταίας σειράς ξανασπέρνει αυτόματα (crop_remove).
+     Κενό crops εδώ σημαίνει «η φόρμα δεν υδροδοτήθηκε»: κρατάμε τις
+     αποθηκευμένες καλλιέργειες αντί να τις σβήσουμε. */
+  /* v5.1 · T-FORM-LEAN-01: τα ΝΕΑ κλειδιά δεν γράφονται κενά. Το tag
+     «configuration» έχει σκληρό όριο 1900 χαρακτήρων στο analysis συγχρονισμού
+     — κάθε «κλειδί: null» κοστίζει ~26 bytes σε ΚΑΘΕ αγρό χωρίς λόγο: ο
+     πυρήνας δεν ξεχωρίζει πουθενά το null από το απόν, και η υδροδότηση της
+     φόρμας ελέγχει με != null. Το false στο sensor_inside είναι η προεπιλογή
+     του πυρήνα — επίσης δεν χρειάζεται να ταξιδέψει. */
+  if (configurationObj.stone_fraction_pct == null) delete configurationObj.stone_fraction_pct;
+  if (configurationObj.cover_transmissivity == null) delete configurationObj.cover_transmissivity;
+  if (configurationObj.cover_light_sensor_inside !== true) delete configurationObj.cover_light_sensor_inside;
+
+  /* T-FORM-DEAD-03: τα πεδία που αφαιρέθηκαν στην v6 δεν τα γράφει πια η φόρμα,
+     αλλά ΕΠΙΒΙΩΝΟΥΝ από το prevConf σε κάθε αγρό που ρυθμίστηκε με την v5.
+     Σβήνονται ΕΔΩ, ώστε η πρώτη αποθήκευση να ελευθερώσει τους χαρακτήρες
+     αντί να τους κουβαλάει για πάντα. */
+  ['supply_flow_rate', 'water_hardness_dh', 'water_ph', 'variety_key', 'plants']
+    .forEach(function(k){ delete configurationObj[k]; });
+
+  /* T-PERCROP-01: ΞΕΠΕΡΑΣΜΕΝΕΣ ΑΠΑΝΤΗΣΕΙΣ. Αν ο αγρός δεν έχει πια ξενιστή, η
+     παλιά απάντηση ΔΕΝ επιτρέπεται να επιβιώσει στο tag: ο πυρήνας θα τη
+     διάβαζε και θα υπολόγιζε ρίσκο για καλλιέργεια που δεν υπάρχει. Το ίδιο
+     μοτίβο με το T-FORM-DEAD-03 παραπάνω. */
+  (function(){
+    var _t = (configurationObj.crops || []).map(function(c){ return c && c.cultivation_type; });
+    Object.keys(HOST_GATES).forEach(function(fid){
+      var g = HOST_GATES[fid];
+      if (!_t.some(function(x){ return g.hosts.indexOf(x) >= 0; })) delete configurationObj[g.sel];
+    });
+  })();
+
+  if ((!configurationObj.crops || configurationObj.crops.length === 0)
+      && Array.isArray(prevConf.crops) && prevConf.crops.length){
+    configurationObj.crops = prevConf.crops;
+  }
 
   const vars = [
     { variable:'configuration', value: JSON.stringify(configurationObj) },
@@ -888,13 +2264,94 @@ function buildPayload(){
   console.log('Built payload:', vars);
   return vars;
 }
-function intOrNull(v){ const n = parseInt(v,10); return Number.isFinite(n)?n:null; }
-function numOrNull(v){ const n = parseFloat(v); return Number.isFinite(n)?n:null; }
+/* Μ7: δέχεται και ελληνικό δεκαδικό «1,6» — αλλιώς η τιμή χανόταν σιωπηλά. */
+/* Γύρος 5: το replace χωρίς /g άλλαζε ΜΟΝΟ το πρώτο κόμμα — το «1,234,5»
+   γινόταν 1.234 (χίλιες φορές λάθος) και περνούσε ΚΑΙ τον έλεγχο εγκυρότητας.
+   Τιμή με πάνω από ένα κόμμα/τελεία δεν είναι αριθμός — απορρίπτεται. */
+function _clean(v){
+  var s = String(v == null ? '' : v).trim().replace(/,/g, '.');
+  if ((s.match(/\./g) || []).length > 1) return 'NaN';
+  return s;
+}
+function intOrNull(v){ const n = parseInt(_clean(v),10); return Number.isFinite(n)?n:null; }
+
+/* mm/h = (L/h σταλάκτη × 1000) / (απόσταση σταλακτήρων m × απόσταση γραμμών m) / 1000
+   ισοδύναμα: L/h ÷ (m × m)  →  L/h ανά m²  →  mm/h  */
+function computeAppRate(){
+  const lph = numOrNull($('irrig_emitter_lph').value);
+  const es  = numOrNull($('irrig_emitter_spacing_m').value);
+  const rs  = numOrNull($('irrig_row_spacing_m').value);
+  if (lph === null || es === null || rs === null || es <= 0 || rs <= 0) return null;
+  return Math.round((lph / (es * rs)) * 100) / 100;
+}
+
+/* Ενημερώνει τις υποδείξεις: ρυθμός mm/h, πυκνότητα φύτευσης, άθροισμα ζωνών */
+function refreshHints(){
+  try {
+    const r = computeAppRate();
+    const el = $('irrig_rate_calc');
+    if (el) el.value = (r === null) ? '' : (String(r).replace('.', ',') + ' mm/h');
+
+    const fwEl = $('irrig_fw_pct');
+    if (fwEl && !fwEl.value){
+      const d = FW_DEFAULT_PCT[$('irrigation_system').value];
+      fwEl.placeholder = d ? ('τυπικά ' + d) : 'π.χ. 30';
+    }
+
+    const st = SOIL_TEXTURES[$('soil_type').value];
+    const sh = $('soilHint');
+    if (sh) sh.textContent = st ? (st.hint + '  ·  ομάδα πυρήνα: ' + (SOIL_TYPES[st.group] || st.group))
+                                : 'Καθορίζει πόσο νερό συγκρατεί το χωράφι';
+
+    const wi = WATER_INFO[$('water_quality').value];
+    const wh = $('waterHint');
+    if (wh) wh.textContent = wi ? (wi.ecw + '   (' + wi.us + ')  ·  ' + wi.note)
+                                : 'Καθορίζει την ανάγκη έκπλυσης αλάτων';
+
+    const ih = $('irrigHint');
+    if (ih) ih.textContent = IRRIG_INFO[$('irrigation_system').value] || 'Καθορίζει την απόδοση εφαρμογής';
+
+    /* T-PERCROP-01: το ενιαίο «20-200 m² ανά φυτό» ίσχυε μόνο για δεντρώδη.
+       Σε αμπέλι (2-6) και κηπευτικά (0,3-3) κοκκίνιζε ΠΑΝΤΑ, και σε μικτό αγρό
+       δεν σήμαινε τίποτα. Πλέον ανά καλλιέργεια — βλ. refreshFieldDensityHint. */
+    refreshFieldDensityHint();
+  } catch(e){}
+}
+function numOrNull(v){ const t=_clean(v); if(t==='') return null; const n=parseFloat(t); return Number.isFinite(n)?n:null; }
 
 /* =========================
    MODALS
 ========================= */
-function open(el){ el.style.display='flex'; }
+/* ── v9 · ΤΟ ΠΑΡΑΘΥΡΟ ΠΑΕΙ ΕΚΕΙ ΠΟΥ ΕΙΝΑΙ ΤΟ ΒΛΕΜΜΑ ──────────────────────
+   Δεν μπορούμε να μάθουμε πού έχει κυλήσει ο γονέας (διαφορετική προέλευση),
+   ΟΥΤΕ χρειάζεται: ξέρουμε πού είναι το κουμπί που μόλις πατήθηκε. Η κάρτα
+   τοποθετείται δίπλα του. Λειτουργεί ΚΑΙ όταν κυλά το iframe ΚΑΙ όταν κυλά ο
+   γονέας, γιατί το getBoundingClientRect().top + η κύλιση του εγγράφου δίνει
+   τη θέση ΜΕΣΑ ΣΤΟ ΕΓΓΡΑΦΟ, που είναι το ίδιο πράγμα και στις δύο περιπτώσεις. */
+function modalTop(anchor){
+  var doc = document.documentElement;
+  var scroll = window.pageYOffset || doc.scrollTop || 0;
+  var a = anchor || document.getElementById('btnSave');
+  if (!a) return scroll + 24;
+  var r = a.getBoundingClientRect();
+  /* 140 px πιο πάνω από το κουμπί: η κάρτα μπαίνει ΠΑΝΩ από το σημείο που
+     κοιτάει, όχι από κάτω — αλλιώς το ΟΚ πέφτει έξω στα χαμηλά κουμπιά. */
+  return Math.max(12, r.top + scroll - 140);
+}
+function open(el, anchor){
+  el.style.display = 'flex';
+  /* Το φόντο καλύπτει ΟΛΟ το έγγραφο, όχι μια οθόνη — αλλιώς σκουραίνει λάθος
+     κομμάτι όταν ο γονέας έχει κυλήσει. */
+  var h = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+  el.style.height = h + 'px';
+  var card = el.querySelector('.modalCard');
+  if (card) {
+    card.style.marginTop = modalTop(anchor) + 'px';
+    /* Αν το iframe έχει ΔΙΚΗ του μπάρα, φέρ' το και οπτικά μπροστά. Αν δεν
+       έχει, η κλήση είναι αβλαβής. */
+    try { card.scrollIntoView({ block: 'nearest' }); } catch (e) {}
+  }
+}
 function close(el){ el.style.display='none'; }
 function openConfirmModal(){ open($('confirmModal')); }
 function closeConfirmModal(){ close($('confirmModal')); }
@@ -908,7 +2365,7 @@ function closeValidationModal(){ close($('validationModal')); }
 /* =========================
    TAGOIO Lifecycle
 ========================= */
-function applyIncoming(buckets){
+function applyIncoming(buckets, formLocked){
   if (!Array.isArray(buckets)) return;
 
   const latest = {};
@@ -918,7 +2375,44 @@ function applyIncoming(buckets){
     if (!latest[v] || t > latest[v]._t) latest[v] = Object.assign({_t: t}, it);
   };
   for (const b of buckets){ (Array.isArray(b?.result) ? b.result : []).forEach(pick); }
-  state.lastDataMap = {...state.lastDataMap, ...latest};
+  /* Γύρος 5 (Δ11): καθυστερημένο πακέτο με ΠΑΛΙΟΤΕΡΗ εγγραφή δεν
+     αντικαθιστά νεότερη που έχουμε ήδη — αλλιώς το prevConf (και μέσω του
+     _keepPrev η επόμενη αποθήκευση) γύριζε πίσω στον χρόνο. */
+  for (const k in latest){
+    const cur = state.lastDataMap[k];
+    if (!cur || (latest[k]._t || 0) >= (cur._t || 0)) state.lastDataMap[k] = latest[k];
+  }
+  /* T-CFG-LOADGATE-01 (γύρος 4): το ξεκλείδωμα γίνεται ΜΟΝΟ όταν έχουν
+     φτάσει πραγματικά δεδομένα ρύθμισης (configuration ή το παλαιό ζεύγος).
+     Ένα realtime πακέτο με ΜΟΝΟ validation/location θα ξεκλείδωνε — και θα
+     έσπερνε την προεπιλεγμένη «ελιά» — πριν φορτώσουν οι καλλιέργειες. Για
+     αγρό που δεν έχει ρυθμιστεί ποτέ, ο δρόμος είναι το timeout + διπλό
+     πάτημα, ΟΧΙ το ξεκλείδωμα από άσχετο πακέτο.
+     T-CFG-CORRUPT-01: ο έλεγχος αναγνωσιμότητας γίνεται ΕΔΩ — ανεξάρτητα
+     από το αν ο χρήστης πληκτρολογεί (formLocked) — ώστε κατεστραμμένη
+     ρύθμιση να μην ξεκλειδώσει ποτέ την αποθήκευση. */
+  const _cfgRow = state.lastDataMap.configuration;
+  let _cfgReadable = false;
+  if (_cfgRow && _cfgRow.value){
+    /* Γύρος 5 (M1): το «!!JSON.parse(...)» δεχόταν και primitives — ένα
+       διπλο-stringified config περνούσε ως «αναγνώσιμο», η υδροδότηση το
+       απέρριπτε (θέλει αντικείμενο), και η φόρμα ξεκλείδωνε ΑΔΕΙΑ. Ένα
+       κατηγόρημα, ίδιο με της υδροδότησης: πρέπει να είναι αντικείμενο. */
+    try {
+      const _p = JSON.parse(_cfgRow.value);
+      _cfgReadable = !!_p && typeof _p === 'object' && !Array.isArray(_p);
+      state.confCorrupt = !_cfgReadable;
+    }
+    catch (e1) { state.confCorrupt = true; }
+  }
+  if (_cfgReadable
+      || (state.lastDataMap.cultivation_type_general && state.lastDataMap.cultivation_type)){
+    markLoaded();
+  }
+
+  /* ── ΔΙΟΡΘΩΣΗ 2 · όσο ο χρήστης γράφει ΔΕΝ ξαναχτίζουμε τα πεδία.
+     Η μνήμη (lastDataMap) πιο πάνω και τα μηνύματα πιο κάτω ενημερώνονται ΠΑΝΤΑ. */
+  if (!formLocked) {
 
   // -------- location (separate variable) --------
   let coordApplied = false;
@@ -942,52 +2436,120 @@ function applyIncoming(buckets){
   }
 
   // -------- primary source of truth: configuration --------
-  const confStr = latest.configuration?.value || state.lastDataMap.configuration?.value;
+  /* Γύρος 5: μετά τη χρονο-συγκριτική συγχώνευση, ο νικητής είναι ΠΑΝΤΑ
+     στο lastDataMap — το latest μπορεί να κουβαλά παλιότερη εγγραφή που
+     η συγχώνευση σωστά απέρριψε. */
+  const confStr = state.lastDataMap.configuration?.value;
   let usedConfiguration = false;
 
   if (confStr){
     try{
       const conf = JSON.parse(confStr);
-      if (Array.isArray(conf?.crops) && conf.crops.length){
+      /* Μ8: τα κοινά πεδία υδροδοτούνται ΠΑΝΤΑ όταν το JSON είναι έγκυρο —
+         ακόμη κι αν ο πίνακας crops είναι κενός, ώστε να μη σβήνει η ρύθμιση αγρού. */
+      if (conf && typeof conf === 'object'){
         usedConfiguration = true;
+        /* T-CFG-CORRUPT-01 (γύρος 4): έγκυρη ρύθμιση αντικατέστησε την
+           κατεστραμμένη — το κλείδωμα λύνεται, δεν μένει για πάντα. */
+        state.confCorrupt = false;
+      }
+      /* Γύρος 5 (M2): «φορτώθηκε» ΚΑΙ «υδροδοτήθηκε» είναι διαφορετικά
+         πράγματα — όταν ο χρήστης πληκτρολογούσε στο πρώτο στιγμιότυπο, το
+         loaded γινόταν true αλλά οι σειρές καλλιεργειών δεν χτίζονταν ποτέ,
+         και η αποθήκευση έστελνε authoritative crops:[]. Μπαίνει ΜΟΝΟ για
+         γνήσιο αντικείμενο — primitive conf δεν είναι υδροδότηση. */
+      if (conf && typeof conf === 'object' && !Array.isArray(conf)) state.hydrated = true;
+      if (Array.isArray(conf?.crops) && conf.crops.length){
 
         // rebuild crops UI
         $('cropsList').innerHTML = '';
         conf.crops.forEach(c=> addCropRow({
           id: c.id || '',
           cultivation_type_general: c.cultivation_type_general || 'olive',
-          cultivation_type: c.cultivation_type || '',
+          /* αν είχε γίνει αντιστοίχιση, δείξε στον χρήστη την ΠΡΑΓΜΑΤΙΚΗ επιλογή του */
+          cultivation_type: c.cultivation_variety || c.cultivation_type || '',
           periods: c.periods || {},
-          plantation_year: c.plantation_year || null
+          plantation_year: c.plantation_year ?? null,
+          /* T-PRUNEPERCROP-01: αν η καλλιέργεια δεν έχει δική της δήλωση,
+             κληρονομεί ΜΙΑ ΦΟΡΑ αυτήν του αγρού — καμία απώλεια δεδομένων
+             στη μετάβαση. */
+          wound_pruning_date: c.wound_pruning_date || (conf.wound_pruning_date || ''),
+          /* Κ1: χωρίς αυτά, τα πεδία ζώνης εμφανίζονταν κενά και σβήνονταν στο επόμενο save */
+          area_m2: c.area_m2 ?? '',
+          plants: c.plants ?? '',
+          /* A-SPRAY-OUT: ο ψεκασμός δηλώνεται από το ταμπλό */
         }));
+      }
 
+      if (conf && typeof conf === 'object'){
         // hydrate shared fields (if present)
-        if (conf.soil_type!=null) $('soil_type').value = conf.soil_type;
+        if (conf.soil_texture_class!=null && SOIL_TEXTURES[conf.soil_texture_class]) $('soil_type').value = conf.soil_texture_class;
+        else if (conf.soil_type!=null) $('soil_type').value = SOIL_GROUP_DEFAULT[conf.soil_type]
+                                                          || (SOIL_TEXTURES[conf.soil_type] ? conf.soil_type : '');
         if (conf.irrigation_system!=null) $('irrigation_system').value = conf.irrigation_system;
         if (conf.water_quality!=null) $('water_quality').value = conf.water_quality;
+        if (conf.covered_cultivation!=null) $('covered_cultivation').value = String(conf.covered_cultivation) === 'true' ? 'true' : 'false';
+        try { syncCoverGates(); } catch(e){}   /* T-COVERGATE-01 */
+        /* T-SOILMODELS-01 */
+        ['hist_verticillium','hist_phytophthora','hist_sclerotinia','hist_rhizoctonia',
+         'nem_found_3yr','knot_observations','wound_pruning_date','wound_hail_date',
+         'wound_frost_date'].forEach(function(k){
+          if (conf[k]!=null) $(k).value = String(conf[k]);
+        });
+        if (conf.susceptible_years_5yr!=null) $('susceptible_years_5yr').value = String(conf.susceptible_years_5yr);
+        /* T-NEM3STATE-01: το `!=null` κρατά το κενό όταν το κλειδί λείπει — ο παραγωγός
+           βλέπει «Δεν γνωρίζω» και όχι ψεύτικο «Όχι». */
+        if (conf.nem_solarization_12mo!=null) $('nem_solarization_12mo').value = String(conf.nem_solarization_12mo)==='true' ? 'true' : 'false';
+        if (conf.nem_resistant_cultivar!=null) $('nem_resistant_cultivar').value = String(conf.nem_resistant_cultivar)==='true' ? 'true' : 'false';
         if (conf.area!=null) $('area').value = conf.area;
-        if (conf.supply_flow_rate!=null) $('supply_flow_rate').value = conf.supply_flow_rate;
         if (conf.total_plants!=null) $('total_plants').value = conf.total_plants;
         if (conf.sensor_deep_depth_cm!=null) $('sensor_deep_depth_cm').value = conf.sensor_deep_depth_cm;
         if (conf.sensorShallow_depth_cm!=null) $('sensorShallow_depth_cm').value = conf.sensorShallow_depth_cm;
+        /* v5 */
+        if (conf.stone_fraction_pct!=null) $('stone_fraction_pct').value = conf.stone_fraction_pct;
+        if (conf.cover_transmissivity!=null) $('cover_transmissivity_pct').value = Math.round(Number(conf.cover_transmissivity) * 100);
+        if (conf.cover_light_sensor_inside!=null) $('cover_light_sensor_inside').value = String(conf.cover_light_sensor_inside)==='true' ? 'true' : 'false';
+        /* T-CFG-ELEV-HYDRATE-01: παλαιότερες ρυθμίσεις έχουν μόνο «elevation».
+           Χωρίς την εφεδρεία, το πεδίο έμενε κενό και το elevation_m γραφόταν
+           null για πάντα, ενώ το υψόμετρο ΥΠΗΡΧΕ. */
+        if (conf.elevation_m!=null) $('elevation_m').value = conf.elevation_m;
+        else if (conf.elevation!=null) $('elevation_m').value = conf.elevation;
+        if (conf.irrig_emitter_lph!=null) $('irrig_emitter_lph').value = conf.irrig_emitter_lph;
+        if (conf.irrig_emitter_spacing_m!=null) $('irrig_emitter_spacing_m').value = conf.irrig_emitter_spacing_m;
+        if (conf.irrig_row_spacing_m!=null) $('irrig_row_spacing_m').value = conf.irrig_row_spacing_m;
+        if (conf.irrig_fw_fraction!=null) $('irrig_fw_pct').value = Math.round(conf.irrig_fw_fraction*100);
+        if (conf.irrig_efficiency_measured!=null) $('irrig_efficiency_pct').value = Math.round(conf.irrig_efficiency_measured*100);
+        if (conf.water_ecw_dsm!=null) $('water_ecw_dsm').value = conf.water_ecw_dsm;
+        refreshHints();
 
         // Keep hidden legacy selectors in sync for UI logic (NOT for saving)
         syncLegacyFromFirstCrop();
       }
     }catch(e){
       console.warn('Could not parse configuration JSON', e);
+      /* T-CFG-CORRUPT-01: υπάρχουν δεδομένα αλλά δεν διαβάζονται — η
+         αποθήκευση θα τα ισοπέδωνε. Κλειδώνουμε το κουμπί (βλ. btnSave). */
+      state.confCorrupt = true;
     }
   }
 
   // -------- fail-safe: legacy hydration only if configuration is missing/invalid --------
   if (!usedConfiguration){
+    /* M2: και η παλαιά διαδρομή μετρά ως υδροδότηση. */
+    if ((latest.cultivation_type_general || state.lastDataMap.cultivation_type_general)
+        && (latest.cultivation_type || state.lastDataMap.cultivation_type)) state.hydrated = true;
     if (latest.cultivation_type_general) $('cultivation_type_general').value = latest.cultivation_type_general.value;
     refreshTypeOptions();
     if (latest.cultivation_type) $('cultivation_type').value = latest.cultivation_type.value;
 
-    ['soil_type','irrigation_system','water_quality','area','supply_flow_rate','total_plants',
+    ['soil_type','irrigation_system','water_quality','area','total_plants',
      'sensor_deep_depth_cm','sensorShallow_depth_cm'].forEach(k=>{
-      if (latest[k] && latest[k].value !== undefined) $(k).value = latest[k].value;
+      if (!latest[k] || latest[k].value === undefined) return;
+      const v = latest[k].value;
+      if (k === 'soil_type'){
+        /* Υ2: το select έχει πλέον τις 13 κλάσεις — η παλιά ομάδα δεν υπάρχει ως option */
+        $(k).value = SOIL_TEXTURES[v] ? v : (SOIL_GROUP_DEFAULT[v] || '');
+      } else { $(k).value = v; }
     });
 
     // Rebuild a single crop row from legacy (so UI still works on old installations)
@@ -1024,10 +2586,15 @@ function applyIncoming(buckets){
     }
   }
 
+  } /* ── τέλος ΔΙΟΡΘΩΣΗ 2 ── */
+
   // -------- validation bubble --------
   const val = latest.validation || state.lastDataMap.validation;
   if (val){
-    $('lastValidation').innerHTML = `<span class="dot" style="width:10px;height:10px;border-radius:50%;background:${val.metadata?.color||'#bbb'}"></span>${val.value||'—'}`;
+    /* γύρος 4: το value γράφεται πλέον από το analysis με ελεύθερο κείμενο
+       (ονόματα ποικιλιών κ.λπ.) — μπαίνει ως ΚΕΙΜΕΝΟ, ποτέ ως HTML. */
+    $('lastValidation').innerHTML = `<span class="dot" style="width:10px;height:10px;border-radius:50%;background:${val.metadata?.color||'#bbb'}"></span>`;
+    $('lastValidation').appendChild(document.createTextNode(String(val.value||'—')));
     $('lastValidationText').textContent = val.metadata?.text || '';
     const vt = Date.parse(val.time || val.created_at || 0) || 0;
     if (state.waitingValidationSince && vt >= state.waitingValidationSince){
@@ -1039,29 +2606,53 @@ function applyIncoming(buckets){
   // -------- "needs configuration" banner --------
   const hasConf = !!(state.lastDataMap.configuration?.value);
   const hasLegacy = !!(state.lastDataMap.cultivation_type_general && state.lastDataMap.cultivation_type);
-  if (!hasConf && !hasLegacy){ showBanner('Δεν έχει γίνει παραμετροποίηση της εγκατάστασης!', 'warn'); }
-  else { hideBanner(); }
+  if (!hasConf && !hasLegacy && !state.loadTimedOut){ showBanner('Δεν έχει γίνει παραμετροποίηση της εγκατάστασης!', 'warn'); }
+  /* Γύρος 5 (Δ4): το hideBanner εδώ τρέχει σε ΚΑΘΕ εισερχόμενο πακέτο —
+     έσβηνε τις προειδοποιήσεις ασφαλείας (κατεστραμμένη ρύθμιση, κλείδωμα
+     φόρτωσης, «πατήστε ΞΑΝΑ») λίγα δευτερόλεπτα αφού εμφανίζονταν, όσο
+     έφταναν πακέτα αισθητήρων. Κρύβεται ΜΟΝΟ όταν δεν εκκρεμεί καμία. */
+  else if (state.loaded && !state.confCorrupt){ hideBanner(); }
 }
 
 async function saveNow(){
-  const payload = buildPayload();
+  /* Γύρος 5 (Δ8): όσο περιμένουμε το sendData, ένα realtime πακέτο
+     ξαναϋδροδοτούσε τη φόρμα με τα ΠΡΟ-αποθήκευσης δεδομένα μπροστά στα
+     μάτια του χρήστη. Το state.saving αντιμετωπίζεται σαν formLocked. */
+  const payload = buildPayload();   /* R3: πριν το saving — αν σκάσει, δεν κλειδώνει */
+  state.saving = true;
   console.log('Saving payload:', payload);
-  if (payload.length === 0){ showBanner('Δεν υπάρχουν δεδομένα προς αποστολή.', 'warn'); return; }
+  if (payload.length === 0){ state.saving = false; showBanner('Δεν υπάρχουν δεδομένα προς αποστολή.', 'warn'); return; }
   if (window.TagoIO && TagoIO.sendData){
     try{
       state.waitingValidationSince = Date.now();
-      
-      window.TagoIO.autofill = false;
+
+      /* T-CFG-AUTOFILL-01 (21/8/2026, αναθ. β): εδώ υπήρχε η γραμμή
+         «window.TagoIO.autofill = false;» — με πεζό «f». Κατά το README του
+         TagoIO custom-widget SDK, η πραγματική ιδιότητα λέγεται «autoFill»
+         (κεφαλαίο F) και ελέγχει την αυτόματη συμπλήρωση device/bucket id στο
+         sendData. Η γραμμή με το πεζό «f» έγραφε μια άσχετη ιδιότητα που δεν
+         διαβάζει κανείς (επαληθευμένο με αναζήτηση σε όλο το αρχείο και στον
+         πυρήνα), άρα η αφαίρεσή της δεν αλλάζει καμία συμπεριφορά.
+         ΚΑΝΟΝΑΣ ΓΙΑ ΤΟ ΜΕΛΛΟΝ: μην αναθέσετε ΠΟΤΕ autoFill = false εδώ. Το
+         payload της φόρμας ΔΕΝ περιέχει device id — στηρίζεται στην αυτόματη
+         συμπλήρωση. Απενεργοποίησή της = η αποθήκευση σταματά για όλους. */
+      state.dirty = false;   /* ΠΡΙΝ το await — αλλιώς χάνεται η επιβεβαίωση */
       await TagoIO.sendData(payload);
       showBanner('Στάλθηκαν τα δεδομένα ρύθμισης.', 'info');
     } catch (e){
       console.error(e);
-      showBanner('Αποτυχία αποστολής δεδομένων.', 'warn');
+      state.dirty = true;   /* αποτυχία → οι αλλαγές παραμένουν προστατευμένες */
+      showBanner('Αποτυχία αποστολής. Οι αλλαγές σας διατηρούνται — ξαναπατήστε «Καταχώριση». Για απόρριψη και επαναφόρτωση, ανανεώστε με F5.', 'warn');
       state.waitingValidationSince = null;
+    } finally {
+      /* γύρος 5: ΧΩΡΙΣ αυτό, το saving έμενε true για πάντα μετά την πρώτη
+         αποθήκευση και η φόρμα δεν ξαναϋδροδοτούνταν ποτέ. */
+      state.saving = false;
     }
   } else {
     console.log('Mock send:', payload);
     state.waitingValidationSince = Date.now();
+    state.saving = false;
     showBanner('Λειτουργία εκτός Tago: έγινε mock αποστολή (δες console).', 'info');
   }
 }
@@ -1069,7 +2660,225 @@ async function saveNow(){
 /* INIT */
 initMap();
 
-$('btnSave').onclick = openConfirmModal;
+$('btnSave').onclick = function(){
+  /* T-CFG-CORRUPT-01: αν τα αποθηκευμένα δεδομένα υπάρχουν αλλά ΔΕΝ
+     διαβάζονται (κατεστραμμένο JSON), κάθε αποθήκευση θα τα αντικαθιστούσε
+     με ό,τι δείχνει η μισοάδεια οθόνη. Φραγή — χρειάζεται τεχνικός. */
+  if (state.confCorrupt){
+    showBanner('Τα αποθηκευμένα στοιχεία του αγρού δεν μπορούν να διαβαστούν. Δοκιμάστε πρώτα ανανέωση της σελίδας (F5) — αν το μήνυμα επιμένει, επικοινωνήστε με την τεχνική υποστήριξη. ΜΗΝ αποθηκεύσετε.', 'warn');
+    return;
+  }
+  /* T-CFG-LOADGATE-01: πριν το πρώτο στιγμιότυπο δεδομένων δεν επιτρέπεται
+     αποθήκευση. Μετά από timeout, το ξεκλείδωμα απαιτεί δεύτερο συνειδητό
+     πάτημα — για αγρό που όντως δεν έχει ρυθμιστεί ποτέ. */
+  /* M2: αν τα δεδομένα φορτώθηκαν αλλά η φόρμα δεν πρόλαβε να υδροδοτηθεί
+     (ο χρήστης πληκτρολογούσε), μία αποθήκευση τώρα θα έστελνε ΑΔΕΙΕΣ
+     καλλιέργειες. Το δίχτυ του buildPayload κρατά τις αποθηκευμένες, αλλά
+     ο χρήστης πρέπει και να το δει. */
+  if (window.TagoIO && window.TagoIO.ready && state.loaded && !state.hydrated
+      && $('cropsList').children.length === 0){
+    /* ξαναζητάμε υδροδότηση από ό,τι έχει ήδη φτάσει — ΠΡΙΝ το banner,
+       γιατί η ουρά του applyIncoming καλεί hideBanner και θα το έσβηνε
+       στο ίδιο tick. Η υδροδότηση ΑΝΤΙΚΑΘΙΣΤΑ ό,τι πληκτρολογούσε ο
+       χρήστης — το μήνυμα το λέει καθαρά. */
+    try { applyIncoming([{ result: Object.values(state.lastDataMap) }], false); } catch (e2) {}
+    showBanner('Τα στοιχεία του αγρού ξαναφορτώθηκαν από τα αποθηκευμένα — τυχόν αλλαγές που δεν είχαν αποθηκευτεί χάθηκαν. Ελέγξτε τα και ξαναπατήστε «Καταχώριση».', 'warn');
+    return;
+  }
+  if (window.TagoIO && window.TagoIO.ready && !state.loaded){
+    if (state.loadTimedOut && state.confirmNewField){
+      state.loaded = true;   /* συνειδητό ξεκλείδωμα για αγρό που δεν ρυθμίστηκε ποτέ */
+      /* γύρος 4/5: σπορά αρχικής σειράς στο συνειδητό ξεκλείδωμα νέου
+         αγρού. (Δεύτερο σημείο σποράς: η επαναφορά όταν αφαιρεθεί η
+         τελευταία σειρά — βλ. crop_remove.) */
+      if ($('cropsList').children.length === 0){
+        addCropRow({ cultivation_type_general:'olive', cultivation_type:'koroneiki', periods:{} });
+      }
+      showBanner('Συνεχίζετε σε ΝΕΟ αγρό. Ελέγξτε την καλλιέργεια και τα στοιχεία, και μετά πατήστε ξανά «Καταχώριση» για να αποθηκεύσετε.', 'info');
+      return;   /* πρώτα βλέπει τη σπαρμένη φόρμα, μετά αποθηκεύει */
+    } else if (state.loadTimedOut){
+      state.confirmNewField = true;
+      showBanner('Δεν βρέθηκαν αποθηκευμένα στοιχεία για τον αγρό. Αν ο αγρός ΕΧΕΙ ρυθμιστεί στο παρελθόν, ανανεώστε τη σελίδα (F5). Αν είναι ΚΑΙΝΟΥΡΓΙΟΣ, πατήστε ξανά «Καταχώριση» για να συνεχίσετε.', 'warn');
+      return;
+    } else {
+      showBanner('Τα αποθηκευμένα στοιχεία του αγρού φορτώνονται ακόμη — περιμένετε λίγα δευτερόλεπτα και ξαναπατήστε «Καταχώριση».', 'warn');
+      return;
+    }
+  }
+  /* ── Προειδοποιήσεις, ΟΧΙ φραγμός ──
+     Ο χρήστης μπορεί να θέλει να σώσει άλλες διορθώσεις χωρίς να ξέρει τα πάντα.
+     T-CFG-NODOWNGRADE-01: όπου θα διατηρηθεί παλιά τιμή αντί κενού, το ΛΕΜΕ. */
+  var prevC = {};
+  try { prevC = JSON.parse(state.lastDataMap.configuration && state.lastDataMap.configuration.value || '{}') || {}; }
+  catch (e0) { prevC = {}; }
+  var msgs = [];
+  var a = parseFloat($('area').value);
+  /* Η prevC.area εμφανίζεται μέσω innerHTML — περνά ΜΟΝΟ αν είναι
+     πεπερασμένος αριθμός, ώστε κατεστραμμένη/κακόβουλη τιμή να μην
+     εκτελεστεί ως HTML. */
+  var _prevArea = Number.isFinite(+prevC.area) ? String(+prevC.area) : '';
+  if ($('area').validity && $('area').validity.badInput){
+    msgs.push(_prevArea
+      ? 'Η τιμή στη <b>συνολική έκταση</b> δεν είναι έγκυρος αριθμός — θα διατηρηθεί η προηγούμενη αποθηκευμένη τιμή (' + _prevArea + ' m²). Διορθώστε την πριν συνεχίσετε.'
+      : 'Η τιμή στη <b>συνολική έκταση</b> δεν είναι έγκυρος αριθμός — το πεδίο θα αποθηκευτεί ΚΕΝΟ. Διορθώστε την πριν συνεχίσετε.');
+  } else if (!Number.isFinite(a) || a <= 0){
+    if (_prevArea) msgs.push('Η <b>συνολική έκταση</b> είναι κενή — θα διατηρηθεί η αποθηκευμένη τιμή <b>' + _prevArea + ' m²</b>.');
+    else if (prevC.area) msgs.push('Η αποθηκευμένη <b>έκταση</b> δεν είναι έγκυρος αριθμός και το πεδίο είναι κενό — συμπληρώστε τη σωστή έκταση.');
+    else msgs.push('Λείπει η <b>συνολική έκταση</b> — χωρίς αυτήν δεν υπολογίζεται καθόλου άρδευση.');
+  }
+  if ($('elevation_m').validity && $('elevation_m').validity.badInput){
+    msgs.push((prevC.elevation_m != null || prevC.elevation != null)
+      ? 'Η τιμή στο <b>υψόμετρο</b> δεν είναι έγκυρος αριθμός — θα διατηρηθεί η προηγούμενη αποθηκευμένη τιμή.'
+      : 'Η τιμή στο <b>υψόμετρο</b> δεν είναι έγκυρος αριθμός — το πεδίο θα αποθηκευτεί ΚΕΝΟ.');
+  }
+  /* Στα ΜΗ προστατευμένα αριθμητικά, το άκυρο κείμενο καταλήγει ΚΕΝΟ στο
+     payload — ο παραγωγός πρέπει να το μάθει πριν πατήσει ΟΚ. */
+  /* γύρος 4: το validity.badInput ισχύει ΜΟΝΟ σε type="number" — 7 από τα
+     12 πεδία είναι type="text" (inputmode="decimal") και εκεί το άκυρο
+     κείμενο ΦΑΙΝΕΤΑΙ στο .value. Ο έλεγχος καλύπτει και τις δύο περιπτώσεις:
+     badInput Ή (μη κενή τιμή που δεν διαβάζεται ως αριθμός). */
+  [['total_plants','αριθμός φυτών'],
+   ['sensor_deep_depth_cm','βάθος βαθιού αισθητήρα'],['sensorShallow_depth_cm','βάθος ρηχού αισθητήρα'],
+   ['stone_fraction_pct','ποσοστό πετρών'],['cover_transmissivity_pct','διαπερατότητα καλύμματος'],
+   ['irrig_emitter_lph','παροχή σταλακτήρα'],['irrig_emitter_spacing_m','απόσταση σταλακτήρων'],
+   ['irrig_row_spacing_m','απόσταση γραμμών'],['irrig_fw_pct','ποσοστό διαβροχής'],
+   ['irrig_efficiency_pct','απόδοση δικτύου'],
+   ['water_ecw_dsm','αγωγιμότητα νερού']]
+  .forEach(function(pair){
+    var e = $(pair[0]);
+    if (!e) return;
+    var bad = (e.validity && e.validity.badInput)
+           || (String(e.value).trim() !== '' && numOrNull(e.value) === null);
+    if (bad){
+      msgs.push('Η τιμή στο πεδίο <b>' + pair[1] + '</b> δεν είναι έγκυρος αριθμός — το πεδίο θα αποθηκευτεί ΚΕΝΟ.');
+    }
+  });
+  /* γύρος 4: μισοσυμπληρωμένη σειρά καλλιέργειας (χωρίς είδος) — ο πυρήνας
+     θα την αγνοήσει σιωπηλά· ο παραγωγός πρέπει να το δει ΤΩΡΑ. */
+  readCropsFromUI().forEach(function(c, i){
+    if (!c.cultivation_type){
+      msgs.push('Η καλλιέργεια #' + (i+1) + ' δεν έχει <b>είδος</b> — θα αγνοηθεί από τους υπολογισμούς.');
+    }
+  });
+  /* ── Γ · Η ΗΜΕΡΟΜΗΝΙΑ ΕΝΑΡΞΗΣ ΔΕΝ ΕΙΝΑΙ ΔΙΑΚΟΣΜΗΤΙΚΗ ──────────────────────
+     Κάνει ΔΥΟ δουλειές, και η δεύτερη είναι η επικίνδυνη:
+       1. μηδενίζει τον μετρητή βαθμοημερών εκεί που ξεκίνησε η καλλιέργεια
+       2. ορίζει ΠΟΥ ΓΥΡΙΖΕΙ Η ΧΡΟΝΙΑ. Χωρίς αυτήν, μια φθινοπωρινή φύτευση
+          κληρονομεί την προεπιλογή της 1ης Ιανουαρίου και ο συσσωρευτής
+          ΜΗΔΕΝΙΖΕΤΑΙ στη μέση της περιόδου.
+     Προειδοποίηση και όχι φραγμός, όπως ΟΛΟΙ οι υπόλοιποι έλεγχοι αυτής της
+     φόρμας: ο παραγωγός πρέπει να μπορεί να σώσει άλλη διόρθωση χωρίς να
+     ξέρει ακόμη την ημερομηνία. */
+  (function(){
+    /* T-SEASONOPENER-FIX-01 · ΜΕΤΡΗΜΕΝΟ ΣΦΑΛΜΑ (6/9/2026).
+       Ο επικυρωτής είχε ΔΙΚΟΥΣ ΤΟΥ πίνακες, που διαφωνούσαν με τον πυρήνα σε
+       27 από τις 58 καλλιέργειες:
+         · onion, potato, carrot, watermelon -> η φόρμα έλεγχε «germination»,
+           ο πυρήνας διαβάζει «transplantation». Το «germination» δεν
+           εμφανιζόταν ποτέ στα κηπευτικά, οπότε η προειδοποίηση ΔΕΝ ΕΣΒΗΝΕ
+           ΠΟΤΕ, ό,τι κι αν συμπλήρωνε ο αγρότης.
+         · pomeFruits, citrusFruits, subTropicalFruits, industrialCrops,
+           specialtyMediterranean, ornamentalCrops -> έλειπαν εντελώς από τον
+           πίνακα, άρα ο έλεγχος έβγαινε σιωπηλά και ΔΕΝ προειδοποιούσε ποτέ.
+       Τώρα χρησιμοποιεί την ΙΔΙΑ συνάρτηση με τη φόρμα, που είναι αντίγραφο
+       του πυρήνα. Ένας πίνακας, όχι τρεις. */
+    readCropsFromUI().forEach(function(c, i){
+      if (!c.cultivation_type) return;
+      var key = seasonOpenerKey(c.cultivation_type_general, c.cultivation_type);
+      if (!key) return;
+      var st = c.periods && c.periods[key] && c.periods[key].start;
+      if (st) return;
+      var nm = (CULTIVATION_TYPES[c.cultivation_type_general] || {})[c.cultivation_type]
+               || c.cultivation_type;
+      msgs.push('Η καλλιέργεια <b>' + nm + '</b> δεν έχει <b>ημερομηνία έναρξης</b> '
+        + '(φύτευση ή μεταφύτευση). Χωρίς αυτήν οι βαθμοημέρες μετρώνται από '
+        + 'προεπιλεγμένη ημερομηνία, και σε φθινοπωρινή φύτευση <b>μηδενίζονται '
+        + 'την 1η Ιανουαρίου, στη μέση της καλλιέργειας</b>. Συμπληρώστε την '
+        + 'στο «Ημερομηνίες σταδίων της καλλιέργειας».');
+    });
+  })();
+  if (!$('soil_type').value){
+    if (prevC.soil_type) msgs.push('Ο <b>τύπος εδάφους</b> είναι κενός — θα διατηρηθεί ο αποθηκευμένος.');
+    else msgs.push('Λείπει ο <b>τύπος εδάφους</b> — καθορίζει πόσο νερό συγκρατεί το χωράφι.');
+  }
+  if (!$('irrigation_system').value){
+    if (prevC.irrigation_system) msgs.push('Η <b>μέθοδος ποτίσματος</b> είναι κενή — θα διατηρηθεί η αποθηκευμένη.');
+    else msgs.push('Λείπει η <b>μέθοδος ποτίσματος</b>.');
+  }
+  if (!$('water_quality').value){
+    if (prevC.water_quality) msgs.push('Η <b>ποιότητα νερού</b> είναι κενή — θα διατηρηθεί η αποθηκευμένη.');
+    else msgs.push('Λείπει η <b>ποιότητα νερού</b> — καθορίζει την ανάγκη έκπλυσης αλάτων.');
+  }
+  if (!parseCoordinates($('coordinates').value)) msgs.push('Λείπουν οι <b>συντεταγμένες</b> — ο αγρός δεν λαμβάνει σωστά δεδομένα καιρού.');
+
+  /* T-IRR-DURATION-SANITY-01: σε δεντρώδη/αμπέλι η προεπιλεγμένη ένταση
+     άρδευσης (φτιαγμένη για πυκνό δίκτυο λαχανικών) δίνει παράλογα σύντομο
+     πότισμα, οπότε ο πυρήνας ΔΕΝ δηλώνει καθόλου διάρκεια. Το λέμε εδώ, όσο
+     ο χειριστής είναι ακόμη στη φόρμα και μπορεί να το συμπληρώσει. */
+  (function(){
+    var WIDE = ['olive','citrusFruits','pomeFruits','stoneFruits','nutCrops','vineCrops',
+                'subTropicalFruits','specialtyMediterranean'];
+    var gens = [...document.querySelectorAll('#cropsList .cropRow .crop_gen')].map(function(x){ return x.value; });
+    if (!gens.some(function(g){ return WIDE.indexOf(g) >= 0; })) return;
+    var lph = numOrNull($('irrig_emitter_lph') && $('irrig_emitter_lph').value);
+    var es  = numOrNull($('irrig_emitter_spacing_m') && $('irrig_emitter_spacing_m').value);
+    var rs  = numOrNull($('irrig_row_spacing_m') && $('irrig_row_spacing_m').value);
+    if (!(lph > 0 && es > 0 && rs > 0)){
+      msgs.push('Δεντρώδης/αμπελουργική καλλιέργεια <b>χωρίς στοιχεία σταλακτών</b> '
+        + '(παροχή, απόσταση σταλακτών, απόσταση γραμμών) — χωρίς αυτά το σύστημα '
+        + '<b>δεν θα δείχνει διάρκεια ποτίσματος</b>: η προεπιλογή είναι για πυκνό '
+        + 'δίκτυο λαχανικών και θα έδινε δεκαπλάσια ένταση.');
+    }
+  })();
+
+  /* T-PERCROP-01: ο έλεγχος γίνεται ΑΝΑ ΚΑΛΛΙΕΡΓΕΙΑ, με το εύρος ΤΟΥ ΕΙΔΟΥΣ.
+     Καλλιέργεια χωρίς δηλωμένα φυτά απλώς παραλείπεται — δεν είναι σφάλμα. */
+  [...document.querySelectorAll('#cropsList .cropRow')].forEach(function(row, i){
+    var ca = numOrNull(row.querySelector('.crop_area_m2') && row.querySelector('.crop_area_m2').value) || a;
+    var cn = intOrNull(row.querySelector('.crop_plants') && row.querySelector('.crop_plants').value);
+    if (!(Number.isFinite(ca) && ca > 0 && cn && cn > 0)) return;
+    var tSel = row.querySelector('.crop_type'), gSel = row.querySelector('.crop_gen');
+    var rng = (tSel && CROP_DENSITY_RANGE[tSel.value])
+           || (gSel && CROP_DENSITY_GEN_RANGE[gSel.value]) || null;
+    if (!rng) return;                       /* άγνωστο είδος -> καμία εικασία */
+    var per = ca / cn;
+    if (per < rng[0] * 0.5 || per > rng[1] * 2){
+      var lbl = (tSel && tSel.options[tSel.selectedIndex] && tSel.options[tSel.selectedIndex].text)
+                || ('καλλιέργεια ' + (i + 1));
+      msgs.push('<b>' + lbl + '</b>: η αναλογία βγάζει <b>'
+        + fmtDen(per) + ' m² ανά φυτό</b> (τυπικά '
+        + fmtDen(rng[0]) + '-' + fmtDen(rng[1]) + ') — ελέγξτε έκταση και αριθμό φυτών.');
+    }
+  });
+
+  /* R6: το «25.000» (ελληνικός διαχωρισμός χιλιάδων) διαβάζεται 25 m² —
+     χίλιες φορές λάθος δόση. Αγρός με αισθητήρες κάτω από 100 m² δεν
+     υπάρχει στην πράξη — προειδοποίηση. */
+  if (Number.isFinite(a) && a > 0 && a < 100){
+    msgs.push('Η έκταση δηλώθηκε <b>' + a + ' m²</b> — ασυνήθιστα μικρή. Αν εννοούσατε ' + Math.round(a*1000) + ' m², γράψτε την ΧΩΡΙΣ τελεία χιλιάδων.');
+  }
+  var crops = readCropsFromUI();
+  var sum = crops.reduce(function(t,c){ return t + (Number(c.area_m2) || 0); }, 0);
+  if (sum > 0 && Number.isFinite(a) && a > 0 && Math.abs(sum - a) > Math.max(50, a * 0.02)){
+    msgs.push('Το άθροισμα των ζωνών είναι <b>' + Math.round(sum) + ' m²</b> ενώ ο αγρός δηλώνεται <b>' + Math.round(a) + ' m²</b>.');
+  }
+  if (crops.length > 1 && sum === 0){
+    msgs.push('Έχετε <b>' + crops.length + ' καλλιέργειες</b> χωρίς δηλωμένη έκταση ανά '
+      + 'καλλιέργεια — ο αλγόριθμος θα δώσει σε καθεμία ΟΛΟΚΛΗΡΗ την έκταση του αγρού, '
+      + 'και τα «λίτρα ανά φυτό» δεν θα εμφανιστούν.');
+  }
+
+  var w = $('confirmAreaWarn');
+  if (w){
+    if (msgs.length){
+      w.innerHTML = '<div style="margin-bottom:6px">Προσοχή:</div><ul style="margin:0 0 0 18px; padding:0">'
+                  + msgs.map(function(m){ return '<li style="margin:3px 0">' + m + '</li>'; }).join('')
+                  + '</ul><div style="margin-top:8px; font-weight:normal">Μπορείτε να συνεχίσετε — αλλά συμπληρώστε τα το συντομότερο.</div>';
+      w.style.display = 'block';
+    } else { w.style.display = 'none'; }
+  }
+  openConfirmModal();
+};
 $('confirmCancel').onclick = closeConfirmModal;
 $('confirmOk').onclick = async () => { closeConfirmModal(); await saveNow(); };
 $('validationOk').onclick = closeValidationModal;
@@ -1080,10 +2889,45 @@ refreshTypeOptions();
 if (window.TagoIO && window.TagoIO.ready){
   TagoIO.onStart((widget)=>{
     wireHomeButton(widget);
-    if (Array.isArray(widget?.data)) applyIncoming(widget.data);
+    /* Υ4: σε δυναμικό dashboard το ίδιο iframe μπορεί να αλλάξει αγρό. Χωρίς
+       καθάρισμα, τα δεδομένα του προηγούμενου «μολύνουν» τον επόμενο — και με
+       τη ΣΥΓΧΩΝΕΥΣΗ θα γράφονταν κιόλας πάνω του. */
+    try {
+      const sig = deviceSignature(widget);
+      /* Γύρος 5: η επανεκκίνηση τρέχει και όταν η ΝΕΑ υπογραφή είναι κενή
+         αλλά η παλιά υπήρχε — καλύτερα ένα περιττό καθάρισμα παρά διαρροή
+         ρυθμίσεων του προηγούμενου αγρού στον επόμενο. */
+      if (state.deviceSig !== null && sig !== state.deviceSig && (sig || !state.dirty)){
+        state.lastDataMap = {};
+        state.dirty = false;
+        /* T-CFG-LOADGATE-01 (γύρος 3): χωρίς αυτό, το state.loaded έμενε true
+           από τον ΠΡΟΗΓΟΥΜΕΝΟ αγρό — η αποθήκευση περνούσε αμέσως με άδεια
+           λίστα καλλιεργειών, και το κενό crops:[] έσβηνε τις καλλιέργειες
+           του ΝΕΟΥ αγρού. */
+        state.loaded = false;
+        state.hydrated = false;
+        state.loadTimedOut = false;
+        state.confirmNewField = false;
+        state.confCorrupt = false;
+        /* γύρος 4: αλλιώς καθυστερημένο validation του ΠΡΟΗΓΟΥΜΕΝΟΥ αγρού
+           άνοιγε το παράθυρο επιβεβαίωσης στον νέο. */
+        state.waitingValidationSince = null;
+        armLoadTimeout();
+        $('cropsList').innerHTML = '';
+        ['area','total_plants','sensor_deep_depth_cm','sensorShallow_depth_cm',
+         'stone_fraction_pct','cover_transmissivity_pct',
+         'elevation_m','coordinates','irrig_emitter_lph','irrig_emitter_spacing_m','irrig_row_spacing_m',
+         'irrig_fw_pct','irrig_efficiency_pct','water_ecw_dsm',
+         'soil_type','irrigation_system','water_quality']
+          .forEach(function(id){ const e=$(id); if(e) e.value=''; });
+      }
+      state.deviceSig = sig;   /* γύρος 5: καταγράφεται ΠΑΝΤΑ, και η κενή */
+    } catch(e){}
+    if (Array.isArray(widget?.data)) applyIncoming(widget.data, state.dirty || state.saving);
   });
-  TagoIO.onRealtime(applyIncoming);
+  TagoIO.onRealtime(function(d){ applyIncoming(d, state.dirty || state.saving); });
   TagoIO.ready();
+  armLoadTimeout();
 } else {
   // Local demo: wire Αρχική with a sample id and show some data
   wireHomeButton({ display:{ parameters:[{ key:'dashboard_id', value:'685af825f27bb6000a07d5ca' }] }});
