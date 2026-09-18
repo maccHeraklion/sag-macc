@@ -12,8 +12,11 @@
 >   (preferred) or `deploy/deploy.mjs`. See `deploy/README.md`, `CONTRIBUTING.md`, `CONSOLIDATION.md`.
 > - Verify analyses against LIVE TagoIO (`download_analysis_script`), not hand-copied folders.
 > - **Always push after committing.** Every change lands on `origin/main` the same session it was
->   made — don't leave commits sitting local-only. Commit subject lines end with `- Κώστας` (e.g.
->   `Fix valve_1_command frame length - Κώστας`) so it's clear who requested/authored the change.
+>   made — don't leave commits sitting local-only. Commit subject lines end with the name of the
+>   teammate who requested/authored the change: `- Κώστας` or `- Michalis` (e.g.
+>   `Fix valve_1_command frame length - Michalis`). Use the suffix of the account you are working from.
+> - **Before touching anything, `git pull`** and review the commits that landed since your last
+>   session, so you always work on top of the team's current state.
 
 ## What this project is
 

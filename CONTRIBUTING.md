@@ -13,7 +13,8 @@ you deploy *from* the repo, never the other way around. No more editing live wit
 1. `git pull` (always start current).
 2. Make the change **in the repo** (edit the file under `analysis/`, `_dist-sagMain/`,
    `payload_parsers/`).
-3. Commit (small, described, subject ending in `- Κώστας`). **Push immediately** — don't batch
+3. Commit (small, described, subject ending in the author's name: `- Κώστας` or `- Michalis`,
+   whichever account you are working from). **Push immediately** — don't batch
    local-only commits, `origin/main` should reflect the change the same session it was made.
 4. **Deploy from the repo** using `deploy/manifest.json` — see `deploy/README.md`:
    - **Preferred:** Claude Code + TagoIO MCP (`upload_analysis_script` for analyses; Files upload for
