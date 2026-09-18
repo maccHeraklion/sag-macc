@@ -106,7 +106,7 @@ if (!process.argv.includes("--mutate")) {
 const MUT = [
   ["core: αφαίρεση soil_ec_pore1 από τη λίστα", f => ({ ...f, core: f.core.replace("'soil_ec_pore1', ", "") })],
   ["core: αφαίρεση soil_ec_pore2 από τη λίστα", f => ({ ...f, core: f.core.replace(", 'soil_ec_pore2'", "") })],
-  ["core: έκδοση πίσω σε v50.134", f => ({ ...f, core: f.core.replace("v50.135 · 2026-09-18", "v50.134 · 2026-09-12") })],
+  ["core: έκδοση πίσω σε v50.134", f => ({ ...f, core: f.core.replace(/const SAG_KERNEL_VERSION = 'v50\.\d+ · [^']+';/, "const SAG_KERNEL_VERSION = 'v50.134 · 2026-09-12';") })],
   ["core: ένα γυμνό LF", f => ({ ...f, core: f.core.replace("\r\n", "\n") })],
   ["core: αφαίρεση του ελέγχου null στον βρόχο", f => ({ ...f, core: f.core.replace("if (_rv === null || _rv === undefined || _rv === '') continue;", "") })],
   ["core: συντακτικό σφάλμα", f => ({ ...f, core: f.core.replace("const _seriesRows = [];", "const _seriesRows = [;") })],
