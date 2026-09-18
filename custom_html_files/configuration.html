@@ -517,10 +517,22 @@
           — και το ταμπλό γράφει ποια τιμή χρησιμοποιήθηκε.
         </div>
         <div class="grid-3">
+          <!-- Φ1 · v19 · 18/9/2026 (Φάση Α αλατότητας, βήμα 1): δύο νερά, με ημερομηνία.
+               Το water_ecw_dsm μένει ως έχει (τροφοδοτεί την έκπλυση → λίτρα). Τα 3 νέα κλειδιά
+               μόνο αποθηκεύονται· ο πυρήνας τα διαβάζει από το Α4 (v50.137). -->
           <div class="field">
-            <label>Αλατότητα ECw (dS/m)</label>
+            <label>EC νερού άρδευσης / έκπλυσης (dS/m) — αυτή μπαίνει στον υπολογισμό έκπλυσης</label>
             <input id="water_ecw_dsm" type="text" inputmode="decimal" placeholder="π.χ. 1,6" />
             <div class="muted" style="font-size:.85rem; margin-top:4px">Αν η ανάλυση δίνει μS/cm, διαίρεσε με 1.000</div>
+            <label style="margin-top:6px">Ημερομηνία μέτρησης</label>
+            <input id="water_ecw_measured_on" type="date" />
+          </div>
+          <div class="field">
+            <label>EC μείγματος λίπανσης στον σταλάκτη (dS/m)</label>
+            <input id="fert_ecw_dsm" type="text" inputmode="decimal" placeholder="π.χ. 2,8" />
+            <div class="muted" style="font-size:.85rem; margin-top:4px">Το τελικό διάλυμα όπως πέφτει στο χωράφι. Αν δεν κάνετε υδρολίπανση αφήστε κενό.</div>
+            <label style="margin-top:6px">Ημερομηνία μέτρησης</label>
+            <input id="fert_ecw_measured_on" type="date" />
           </div>
         </div>
       </details>
@@ -2206,6 +2218,10 @@ function buildPayload(){
 
     /* Ανάλυση νερού — ο πυρήνας θα τα προτιμά όταν μάθει να τα διαβάζει */
     water_ecw_dsm:      numOrNull($('water_ecw_dsm').value),
+    water_ecw_measured_on: strOrNull($('water_ecw_measured_on').value),
+    /* Φ1 · v19: EC του μείγματος λίπανσης στον σταλάκτη — μόνο αποθήκευση μέχρι το Α4 (v50.137). */
+    fert_ecw_dsm:       numOrNull($('fert_ecw_dsm').value),
+    fert_ecw_measured_on: strOrNull($('fert_ecw_measured_on').value),
   });
 
   /* M2 (δίχτυ ασφαλείας): η λίστα σειρών δεν μπορεί να είναι νόμιμα κενή —
@@ -2318,6 +2334,8 @@ function refreshHints(){
   } catch(e){}
 }
 function numOrNull(v){ const t=_clean(v); if(t==='') return null; const n=parseFloat(t); return Number.isFinite(n)?n:null; }
+/* Φ1 · v19: κείμενο ή null (πεδία type=date δίνουν 'YYYY-MM-DD' ή ''). */
+function strOrNull(v){ const t=String(v==null?'':v).trim(); return t===''?null:t; }
 
 /* =========================
    MODALS
@@ -2520,6 +2538,9 @@ function applyIncoming(buckets, formLocked){
         if (conf.irrig_fw_fraction!=null) $('irrig_fw_pct').value = Math.round(conf.irrig_fw_fraction*100);
         if (conf.irrig_efficiency_measured!=null) $('irrig_efficiency_pct').value = Math.round(conf.irrig_efficiency_measured*100);
         if (conf.water_ecw_dsm!=null) $('water_ecw_dsm').value = conf.water_ecw_dsm;
+        if (conf.water_ecw_measured_on!=null) $('water_ecw_measured_on').value = conf.water_ecw_measured_on;
+        if (conf.fert_ecw_dsm!=null) $('fert_ecw_dsm').value = conf.fert_ecw_dsm;
+        if (conf.fert_ecw_measured_on!=null) $('fert_ecw_measured_on').value = conf.fert_ecw_measured_on;
         refreshHints();
 
         // Keep hidden legacy selectors in sync for UI logic (NOT for saving)
@@ -2743,7 +2764,7 @@ $('btnSave').onclick = function(){
    ['irrig_emitter_lph','παροχή σταλακτήρα'],['irrig_emitter_spacing_m','απόσταση σταλακτήρων'],
    ['irrig_row_spacing_m','απόσταση γραμμών'],['irrig_fw_pct','ποσοστό διαβροχής'],
    ['irrig_efficiency_pct','απόδοση δικτύου'],
-   ['water_ecw_dsm','αγωγιμότητα νερού']]
+   ['water_ecw_dsm','EC νερού άρδευσης'],['fert_ecw_dsm','EC μείγματος λίπανσης']]
   .forEach(function(pair){
     var e = $(pair[0]);
     if (!e) return;
@@ -2918,6 +2939,7 @@ if (window.TagoIO && window.TagoIO.ready){
          'stone_fraction_pct','cover_transmissivity_pct',
          'elevation_m','coordinates','irrig_emitter_lph','irrig_emitter_spacing_m','irrig_row_spacing_m',
          'irrig_fw_pct','irrig_efficiency_pct','water_ecw_dsm',
+         'water_ecw_measured_on','fert_ecw_dsm','fert_ecw_measured_on',
          'soil_type','irrigation_system','water_quality']
           .forEach(function(id){ const e=$(id); if(e) e.value=''; });
       }

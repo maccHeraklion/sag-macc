@@ -1,11 +1,11 @@
-﻿// T-DEADVAR-01: τα Utils/Device δεν χρησιμοποιούνται από αυτή τη δέσμευση — ο
+// T-DEADVAR-01: τα Utils/Device δεν χρησιμοποιούνται από αυτή τη δέσμευση — ο
 // κώδικας τα προσπελαύνει μέσω του import_sdk (βλ. getMeasurements).
 const { Analysis, Resources, Account, Services } = require("@tago-io/sdk");
 var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.134 · 2026-09-12';
+const SAG_KERNEL_VERSION = 'v50.135 · 2026-09-18';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -13620,7 +13620,8 @@ function packCalculatedIndicators({
   // ΣΙΩΠΗ ΟΤΑΝ ΔΕΝ ΞΕΡΟΥΜΕ: ο υπολογιστής αλατότητας εκπέμπει `value: null` όταν
   // δεν μπορεί να διορθώσει (γρ. 10943/10975). Το null ΔΕΝ γράφεται — μια
   // χρονοσειρά με μηδενικά θα ήταν ΨΕΥΤΙΚΗ μέτρηση, όχι κενό.
-  const _SAG_SERIES_KEYS = ['soil_ece1', 'soil_ece2'];
+  // T-ECPORE-SERIES-01 (v50.135): το ECπόρων (συγκρίσιμο μεταξύ βαθών) γίνεται σειρά — #207.
+  const _SAG_SERIES_KEYS = ['soil_ece1', 'soil_ece2', 'soil_ec_pore1', 'soil_ec_pore2'];
   const _seriesRows = [];
   for (const _sk of _SAG_SERIES_KEYS) {
     const _sv = sharedPacked[_sk];

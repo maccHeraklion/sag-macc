@@ -1,0 +1,7 @@
+# Deploy targets must be byte-identical on every OS (Windows / macOS / Linux).
+# The core analysis is deployed as CRLF (the SAG registry counts "0 bare LF");
+# the widget bundle and the HTML forms are deployed as LF, no BOM.
+* text=auto
+analysis/runPerTich.js   text eol=crlf
+_dist-sagMain/**         text eol=lf
+custom_html_files/**     text eol=lf
