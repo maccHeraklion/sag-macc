@@ -59,7 +59,9 @@ async function fetchGithub(path) {
   return Buffer.from(await r.arrayBuffer());
 }
 async function downloadAnalysis(id) {
-  const meta = await api(`/analysis/${id}/script`);
+  // Σωστή διαδρομή (μετρημένο 15/9 και 18/9): GET /analysis/{id}/download → { url, size, size_unit }.
+  // Το /analysis/{id}/script ΔΕΝ υπάρχει («Route Not Found»).
+  const meta = await api(`/analysis/${id}/download`);
   const url = typeof meta === "string" ? meta : meta.url;
   const buf = Buffer.from(await (await fetch(url)).arrayBuffer());
   return (buf[0] === 0x1f && buf[1] === 0x8b) ? zlib.gunzipSync(buf) : buf;
