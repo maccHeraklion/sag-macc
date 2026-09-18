@@ -72,7 +72,8 @@ Files upload at all. `analysis/runPerTich.js` is ~1.26 MB, so it cannot go throu
 `6aa2d24f2f585a000b90b1a1` (node-rt2025). It pulls the target file from **GitHub raw at a pinned
 commit**, normalises line endings (core → CRLF, widget/forms → LF, no BOM), checks the expected
 sha256, uploads with the analysis's own token, and re-downloads to verify. It needs the Access
-Management policy **"[Analysis] SAG deploy από GitHub"** (analysis `upload_script` on the core +
+Management policy **"[Analysis] SAG deploy από GitHub"** (id `6aad48f03c26e2000bde4710`, created
+2026-09-18 INACTIVE; analysis `upload_script` on the core +
 `file/upload` on `storage/sagMain/` and `html_files/`) to be **active only during the deploy**; the
 existing read-only policy `6aa2e0cf8592a5000bec9547` stays as is. Upload windows: hh:25–hh:15 UTC,
 never 00:10–00:30 UTC (daily tick). Steps are in the header of the script.
