@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SAG · Εποπτεία Στόλου</title>
+<style>
+/* ── ΠΑΛΕΤΑ ΚΑΤΑΣΤΑΣΗΣ (σταθερή, δεν θεματοποιείται) ─────────────────────
+   Τέσσερις καταστάσεις = τέσσερις ΔΟΥΛΕΙΕΣ. Κάθε μία φέρει ΠΑΝΤΑ εικονίδιο
+   και λεκτικό — το χρώμα δεν κουβαλά ποτέ μόνο του το νόημα. */
+:root {
+  color-scheme: light;
+  --s1: #fcfcfb; --s2: #ffffff; --s3: #f4f3f0;
+  --tx: #0b0b0b; --tx2: #52514e; --tx3: #78776f;
+  --line: #e3e1db; --line2: #d0cec6;
+  --visit: #d03b3b; --check: #ec835a; --office: #fab219; --ok: #0ca30c;
+  --visit-bg: #fdf0f0; --check-bg: #fdf3ef; --office-bg: #fdf7e8; --ok-bg: #eefaee;
+  --accent: #2a78d6;
+  --shadow: 0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --s1: #1a1a19; --s2: #232322; --s3: #2b2b29;
+    --tx: #ffffff; --tx2: #c3c2b7; --tx3: #96958c;
+    --line: #383835; --line2: #4a4945;
+    --visit-bg: #2e1c1c; --check-bg: #2d211c; --office-bg: #2c2517; --ok-bg: #182a18;
+    --accent: #3987e5;
+    --shadow: 0 1px 3px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --s1: #1a1a19; --s2: #232322; --s3: #2b2b29;
+  --tx: #ffffff; --tx2: #c3c2b7; --tx3: #96958c;
+  --line: #383835; --line2: #4a4945;
+  --visit-bg: #2e1c1c; --check-bg: #2d211c; --office-bg: #2c2517; --ok-bg: #182a18;
+  --accent: #3987e5;
+  --shadow: 0 1px 3px rgba(0,0,0,.4);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--s1); color: var(--tx);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1180px; margin: 0 auto; padding: 18px 16px 64px; }
+
+/* ── ΚΕΦΑΛΙΔΑ: ΜΙΑ ΓΡΑΜΜΗ ΑΠΟΦΑΣΗΣ ─────────────────────────────────────
+   Όχι μετρητές για επίδειξη. Ο διαχειριστής ρωτά ένα πράγμα το πρωί:
+   «πού πρέπει να πάω σήμερα;» — αυτό απαντά η κεφαλίδα. */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 18px; margin-bottom: 6px; }
+.brand { font-size: .78rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--tx3); }
+h1 { margin: 2px 0 0; font-size: 1.5rem; font-weight: 720; letter-spacing: -.02em; line-height: 1.15; }
+.pulse { margin-left: auto; text-align: right; font-size: .8rem; color: var(--tx3); }
+.pulse b { display: block; color: var(--tx2); font-size: .86rem; font-weight: 650; }
+.stale { color: var(--visit); font-weight: 700; }
+/* Δ3 (v50.95): ΔΕΝ αρκεί μια γκρίζα λέξη. Ο τεχνικός σχεδιάζει ΔΡΟΜΟΛΟΓΙΟ
+   πάνω σε αυτόν τον πίνακα — αν τα δεδομένα είναι πλαστά πρέπει να ουρλιάζει. */
+.demo { display: inline-block; background: var(--visit); color: #fff; font-weight: 800;
+  letter-spacing: .04em; padding: 2px 8px; border-radius: 4px; margin-right: 6px; }
+
+.hero { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 18px; }
+.tile {
+  flex: 1 1 150px; min-width: 140px; padding: 13px 15px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--s2); box-shadow: var(--shadow);
+  cursor: pointer; text-align: left; font: inherit; color: inherit;
+  transition: border-color .12s, transform .12s;
+}
+.tile:hover { border-color: var(--line2); transform: translateY(-1px); }
+.tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tile[aria-pressed="true"] { border-color: currentColor; box-shadow: inset 0 0 0 1px currentColor, var(--shadow); }
+.tile .n { font-size: 2rem; font-weight: 730; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.tile .l { display: flex; align-items: center; gap: 6px; margin-top: 7px; font-size: .82rem; font-weight: 650; }
+.tile .h { margin-top: 3px; font-size: .74rem; color: var(--tx3); line-height: 1.35; }
+.t-visit { color: var(--visit); } .t-visit .n, .t-visit .l { color: var(--visit); }
+.t-check { color: var(--check); } .t-check .n, .t-check .l { color: var(--check); }
+.t-office { color: var(--office); } .t-office .n, .t-office .l { color: var(--office); }
+.t-ok { color: var(--ok); } .t-ok .n, .t-ok .l { color: var(--ok); }
+.tile .h, .tile .n { color: inherit; }
+.t-visit .h, .t-check .h, .t-office .h, .t-ok .h { color: var(--tx3); }
+
+/* ── ΓΡΑΜΜΗ ΕΛΕΓΧΩΝ ───────────────────────────────────────────────────── */
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.srch { flex: 1 1 220px; min-width: 180px; position: relative; }
+.srch input {
+  width: 100%; padding: 8px 12px 8px 32px; border-radius: 9px;
+  border: 1px solid var(--line); background: var(--s2); color: var(--tx); font: inherit;
+}
+.srch input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+.srch svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); opacity: .45; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.seg button {
+  padding: 8px 12px; border: 0; background: var(--s2); color: var(--tx2);
+  font: inherit; font-size: .82rem; font-weight: 600; cursor: pointer;
+}
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--s3); color: var(--tx); }
+.seg button:hover { color: var(--tx); }
+
+/* ── Ο ΠΙΝΑΚΑΣ ────────────────────────────────────────────────────────── */
+.board { display: flex; flex-direction: column; gap: 7px; }
+.row {
+  border: 1px solid var(--line); border-radius: 11px; background: var(--s2);
+  box-shadow: var(--shadow); overflow: hidden;
+}
+.row.sev3 { border-left: 4px solid var(--visit); }
+.row.sev2 { border-left: 4px solid var(--check); }
+.row.sev1 { border-left: 4px solid var(--office); }
+.row.sev0 { border-left: 4px solid var(--ok); }
+.head {
+  display: flex; align-items: center; gap: 12px; padding: 11px 14px;
+  cursor: pointer; user-select: none; width: 100%; border: 0; background: none;
+  color: inherit; font: inherit; text-align: left;
+}
+.head:hover { background: var(--s3); }
+.head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.pill {
+  display: inline-flex; align-items: center; gap: 5px; flex: none;
+  padding: 3px 9px 3px 7px; border-radius: 999px; font-size: .71rem;
+  font-weight: 750; letter-spacing: .04em; white-space: nowrap;
+}
+.p3 { background: var(--visit-bg); color: var(--visit); }
+.p2 { background: var(--check-bg); color: var(--check); }
+.p1 { background: var(--office-bg); color: var(--office); }
+.p0 { background: var(--ok-bg); color: var(--ok); }
+.nm { font-weight: 660; font-size: .96rem; flex: none; max-width: 34%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.why { color: var(--tx2); font-size: .85rem; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cnt { flex: none; font-size: .76rem; color: var(--tx3); font-variant-numeric: tabular-nums; }
+.chev { flex: none; opacity: .4; transition: transform .16s; }
+.row.open .chev { transform: rotate(90deg); }
+
+.body { display: none; padding: 0 14px 14px; border-top: 1px solid var(--line); }
+.row.open .body { display: block; }
+.sect { margin-top: 13px; }
+.sect h3 {
+  margin: 0 0 7px; font-size: .72rem; font-weight: 750; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--tx3);
+}
+table { width: 100%; border-collapse: collapse; font-size: .83rem; }
+th { text-align: left; font-weight: 650; color: var(--tx3); font-size: .73rem;
+     text-transform: uppercase; letter-spacing: .05em; padding: 0 10px 6px 0; }
+td { padding: 7px 10px 7px 0; border-top: 1px solid var(--line); vertical-align: top; }
+td.mono, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .8rem; }
+.dim { color: var(--tx3); }
+.tagx { display: inline-block; padding: 1px 6px; border-radius: 5px; font-size: .72rem; font-weight: 700; }
+.x-kill { background: var(--visit-bg); color: var(--visit); }
+.x-warn { background: var(--check-bg); color: var(--check); }
+.x-low  { background: var(--office-bg); color: var(--office); }
+.x-ok   { background: var(--ok-bg); color: var(--ok); }
+.gaps { display: flex; flex-wrap: wrap; gap: 6px; }
+.gap { padding: 3px 9px; border-radius: 7px; background: var(--office-bg); color: var(--office);
+       font-size: .78rem; font-weight: 650; }
+.acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px; }
+.btn {
+  padding: 7px 13px; border-radius: 8px; border: 1px solid var(--line2);
+  background: var(--s2); color: var(--tx); font: inherit; font-size: .82rem;
+  font-weight: 640; cursor: pointer;
+}
+.btn:hover { background: var(--s3); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.btn.ok { border-color: var(--ok); color: var(--ok); }
+.sel { padding: 8px 10px; border-radius: 9px; border: 1px solid var(--line);
+       background: var(--s2); color: var(--tx); font: inherit; font-size: .82rem; }
+.sel:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.lbl { font-size: .8rem; color: var(--tx2); font-weight: 600; }
+
+/* ── ΟΜΑΔΑ ΠΕΡΙΟΧΗΣ ───────────────────────────────────────────────────── */
+.grp { margin-bottom: 20px; }
+.grpTop { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+          padding: 0 2px 9px; margin-bottom: 7px; border-bottom: 2px solid var(--line); }
+.grpName { font-size: 1.02rem; font-weight: 700; letter-spacing: -.01em; }
+.grpMeta { font-size: .79rem; color: var(--tx3); margin-top: 2px; }
+.grpTop .btn { margin-left: auto; }
+.grp .row { margin-bottom: 6px; }
+/* Ο αριθμός στάσης: ο τεχνικός τον διαβάζει σαν λίστα ψώνια, με τη σειρά. */
+.stop { flex: none; display: inline-flex; align-items: center; justify-content: center;
+        width: 22px; height: 22px; border-radius: 7px; background: var(--s3);
+        color: var(--tx2); font-size: .76rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+.leg { flex: none; font-size: .74rem; color: var(--tx3); font-variant-numeric: tabular-nums;
+       min-width: 52px; }
+.empty { padding: 44px 20px; text-align: center; color: var(--tx3); }
+.empty .big { font-size: 2.4rem; margin-bottom: 8px; }
+.foot { margin-top: 22px; padding-top: 12px; border-top: 1px solid var(--line);
+        font-size: .76rem; color: var(--tx3); line-height: 1.6; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.dot { width: 9px; height: 9px; border-radius: 3px; flex: none; }
+/* ── ΜΙΚΡΟ ΠΛΑΙΣΙΟ ───────────────────────────────────────────────────────
+   Το widget ζει μέσα σε iframe του TagoIO, του οποίου το μέγεθος το ορίζει ο
+   χειριστής σέρνοντας τη γωνία. Σε μικρό κουτί, τα περιθώρια και οι επεξηγήσεις
+   της κεφαλίδας τρώνε ΟΛΟΝ τον χώρο και δεν μένει τίποτα για τη λίστα — που
+   είναι το μόνο που έχει σημασία. Εδώ υποχωρούν σταδιακά. */
+@media (max-width: 860px) {
+  .wrap { padding: 12px 11px 24px; }
+  h1 { font-size: 1.22rem; }
+  .hero { gap: 7px; margin: 11px 0 12px; }
+  .tile { padding: 9px 11px; flex-basis: 116px; min-width: 104px; }
+  .tile .n { font-size: 1.5rem; }
+  .tile .l { margin-top: 4px; font-size: .74rem; }
+  .tile .h { display: none; }          /* η επεξήγηση μένει στο υπόμνημα κάτω */
+  .top { gap: 10px; }
+  .pulse { font-size: .72rem; }
+  .head { padding: 9px 11px; gap: 9px; }
+}
+@media (max-width: 640px) {
+  .nm { max-width: 100%; }
+  .head { flex-wrap: wrap; }
+  .why { flex-basis: 100%; white-space: normal; }
+}
+@media (max-width: 560px) {
+  .wrap { padding: 10px 9px 20px; }
+  .brand { font-size: .68rem; }
+  h1 { font-size: 1.06rem; }
+  .pulse { margin-left: 0; text-align: left; flex-basis: 100%; }
+  /* ΜΙΑ σειρά, όχι πλέγμα 2x2: σε κουτί 300px ύψος το πλέγμα έσπρωχνε την
+     πρώτη γραμμή αγρού ΚΑΤΩ από το ορατό — δηλαδή ο πίνακας έδειχνε μόνο
+     μετρητές και κανέναν αγρό. Οι τέσσερις αριθμοί χωράνε άνετα σε μία σειρά. */
+  .hero { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin: 9px 0 9px; }
+  .tile { min-width: 0; padding: 7px 6px; text-align: center; }
+  .tile .n { font-size: 1.28rem; }
+  .tile .l { justify-content: center; font-size: .62rem; letter-spacing: 0; margin-top: 2px; }
+  .bar { gap: 6px; }
+  .bar .btn, .seg button { padding: 7px 9px; font-size: .78rem; }
+  .cnt { display: none; }              /* το πλήθος οργάνων φαίνεται στον πίνακα */
+  table { font-size: .78rem; }
+  .grpTop .btn { margin-left: 0; }
+}
+/* ── Κ1 (v50.93) · Ο ΠΙΝΑΚΑΣ ΟΡΓΑΝΩΝ ΣΕ ΚΙΝΗΤΟ ────────────────────────────
+   Έξι στήλες θέλουν ~640 px. Σε οθόνη κινητού κόβονταν στη μέση: η στήλη
+   «Κατάσταση» — η ΜΟΝΗ που λέει τι να κάνει ο τεχνικός — έμενε εντελώς εκτός
+   οθόνης, χωρίς καν οριζόντια κύλιση για να τη βρει κανείς. Κάτω από 700 px
+   κάθε όργανο γίνεται ΚΑΡΤΑ: η ετικέτα της στήλης μπαίνει μπροστά από την
+   τιμή, ώστε να μη χάνεται η σημασία της. */
+@media (max-width: 700px) {
+  table, thead, tbody, tr, td { display: block; width: 100%; }
+  thead { display: none; }
+  tr { border-top: 1px solid var(--line); padding: 9px 0 7px; }
+  tbody tr:first-child { border-top: 0; }
+  td { border-top: 0; padding: 2px 0; overflow-wrap: anywhere; }
+  td::before {
+    content: attr(data-l) ' '; color: var(--tx3); font-size: .67rem;
+    text-transform: uppercase; letter-spacing: .05em; font-weight: 750;
+    margin-right: 6px;
+  }
+  td.nolabel::before { content: none; }
+  td.nolabel { font-size: .9rem; margin-bottom: 3px; }
+  td.stat { margin-top: 4px; }
+}
+@media print {
+  .bar, .acts, .chev { display: none !important; }
+  .body { display: block !important; }
+  .row { break-inside: avoid; box-shadow: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <div class="brand">Smart Agro Genius</div>
+      <h1>Εποπτεία Στόλου</h1>
+    </div>
+    <div class="pulse">
+      <b id="pulseTime">—</b>
+      <span id="pulseMeta">αναμονή δεδομένων…</span>
+    </div>
+  </div>
+
+  <div class="hero" id="hero"></div>
+
+  <div class="bar">
+    <div class="srch">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+           stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Αγρός, συσκευή, ταυτότητα ή βλάβη…"
+             aria-label="Αναζήτηση" autocomplete="off" />
+    </div>
+    <div class="seg" role="group" aria-label="Ταξινόμηση">
+      <button id="sortSev" aria-pressed="true">Σοβαρότητα</button>
+      <button id="sortName" aria-pressed="false">Όνομα</button>
+    </div>
+    <button class="btn" id="routeBtn" aria-pressed="false">Διαδρομή</button>
+    <button class="btn" id="expandAll">Άνοιγμα όλων</button>
+    <button class="btn" id="printBtn">Εκτύπωση</button>
+  </div>
+
+  <div class="bar" id="routeOpts" style="display:none">
+    <label class="lbl" for="kmSel">Ίδια περιοχή όταν απέχουν έως</label>
+    <select id="kmSel" class="sel">
+      <option value="2">2 km</option><option value="5" selected>5 km</option>
+      <option value="10">10 km</option><option value="20">20 km</option>
+      <option value="50">50 km</option>
+    </select>
+    <select id="startSel" class="sel" aria-label="Αφετηρία διαδρομής">
+      <option value="">Αφετηρία: ο σοβαρότερος</option>
+    </select>
+    <span class="dim" style="font-size:.78rem">Η σειρά είναι «πλησιέστερος επόμενος» — οδηγός, όχι βέλτιστη λύση.</span>
+  </div>
+
+  <div class="board" id="board"></div>
+
+  <div class="foot">
+    <div class="legend">
+      <span><i class="dot" style="background:var(--visit)"></i> <b>ΕΠΙΣΚΕΨΗ</b> — κάποιος πρέπει να πάει στο χωράφι</span>
+      <span><i class="dot" style="background:var(--check)"></i> <b>ΕΛΕΓΧΟΣ</b> — βλάβη που μπορεί να περιμένει τη διαδρομή</span>
+      <span><i class="dot" style="background:var(--office)"></i> <b>ΓΡΑΦΕΙΟ</b> — λείπει ρύθμιση, λύνεται από τη φόρμα</span>
+      <span><i class="dot" style="background:var(--ok)"></i> <b>ΕΝΤΑΞΕΙ</b></span>
+    </div>
+    <div id="footNote">Ο πίνακας ενημερώνεται σε κάθε παλμό του πυρήνα.</div>
+  </div>
+</div>
+<script>
+/* ΔΕΙΓΜΑ — πραγματικά ευρήματα από το log παραγωγής 2/9/2026 17:58.
+   Εμφανίζεται ΜΟΝΟ όταν το widget ΔΕΝ έχει συνδεθεί στο TagoIO, με ρητή
+   σήμανση στην κεφαλίδα ώστε να μη μπερδευτεί ποτέ με ζωντανά δεδομένα. */
+window.SAG_DEMO = [{"f": "ΠΑΝΕΤΕΚ", "i": "2bdff", "s": 3, "y": 35.3312, "x": 25.1041, "d": [{"n": "sensecap_s2120_0068", "i": "20068", "t": "s2120", "h": 648, "q": 1, "b": "41%", "l": 0}, {"n": "dragino_sph01_6b8b", "i": "016b8b", "t": "sph01", "h": 649, "q": 1, "b": "3.55V", "l": 0}, {"n": "dragino_lms01_ls_5ec8", "i": "05ec8", "t": "lms01_ls", "h": 651, "q": 1, "b": "18%", "l": 1}, {"n": "dragino_se0x_33cb", "i": "033cb", "t": "se0x", "h": 648, "q": 1, "b": "3.41V", "l": 0}, {"n": "dragino_se0x_33c7", "i": "033c7", "t": "se0x", "h": 650, "q": 1, "b": "3.38V", "l": 0}, {"n": "dragino_se0x_5eb6", "i": "05eb6", "t": "se0x", "h": 647, "q": 1, "b": null, "l": 0}, {"n": "milesight_em320_9587", "i": "09587", "t": "em320_th", "h": 649, "q": 1, "b": "22%", "l": 1}], "z": [{"d": "sensecap_s2120_0068", "t": "Λείπει μέτρηση από το όργανο", "w": "3 από 6 συγκεντρωτικές ερωτήσεις απέτυχαν", "c": "Ελέγξτε αν η συσκευή έχει δεδομένα στο 24ωρο", "y": "s2120", "k": 1}], "g": ["πλήθος φυτών", "γεωμετρία στάγδην"], "a": []}, {"f": "Κρασαγάκης Σπύρος", "i": "3aab4", "s": 3, "y": 35.1889, "x": 25.1622, "d": [{"n": "dragino_se0x_3ab4", "i": "03ab4", "t": "se0x", "h": 0.6, "q": 0, "b": "3.52V", "l": 0}, {"n": "dragino_se0x_3aaf", "i": "03aaf", "t": "se0x", "h": 0.5, "q": 0, "b": "3.49V", "l": 0}, {"n": "dragino_se0x_3aad", "i": "03aad", "t": "se0x", "h": 0.7, "q": 0, "b": "3.44V", "l": 0}], "z": [{"d": "dragino_se0x_3ab4", "t": "Ακίνητη ένδειξη υγρασίας", "w": "Όλα τα κανάλια στο 0 · έδαφος 41 °C", "c": "Ο αισθητήρας φαίνεται ΕΚΤΟΣ εδάφους — επανατοποθέτηση", "y": "se0x", "k": 1}, {"d": "dragino_se0x_3aaf", "t": "Ακίνητη ένδειξη υγρασίας", "w": "Όλα τα κανάλια στο 0 · έδαφος 41 °C", "c": "Επανατοποθέτηση στο ριζόστρωμα", "y": "se0x", "k": 1}, {"d": "dragino_se0x_3aad", "t": "Ακίνητη ένδειξη υγρασίας", "w": "Όλα τα κανάλια στο 0 · έδαφος 44 °C", "c": "Επανατοποθέτηση στο ριζόστρωμα", "y": "se0x", "k": 1}], "g": ["πλήθος φυτών"], "a": []}, {"f": "Α3 - Παντάλου", "i": "85bae", "s": 3, "y": 35.2104, "x": 25.0388, "d": [{"n": "dragino_lse01_71c9", "i": "071c9", "t": "lse01", "h": 0.4, "q": 0, "b": "3.51V", "l": 0}, {"n": "milesight_em320_2587", "i": "02587", "t": "em320_th", "h": 2776, "q": 1, "b": "9%", "l": 1}, {"n": "sensecap_s2120_0534", "i": "00534", "t": "s2120", "h": 0.3, "q": 0, "b": "88%", "l": 0}], "z": [{"d": "dragino_lse01_71c9", "t": "Ακίνητη ένδειξη υγρασίας", "w": "soil_moisture = 0, εκτός 0,5–60", "c": "Ελέγξτε επαφή αισθητήρα με το έδαφος", "y": "lse01", "k": 1}, {"d": "milesight_em320_2587", "t": "Το όργανο σιωπά", "w": "115,7 ημέρες χωρίς εκπομπή", "c": "Αντικατάσταση μπαταρίας ή απόσυρση", "y": "em320_th", "k": 0}], "g": ["γεωμετρία στάγδην"], "a": []}, {"f": "Α1 - Περαντωνάκης", "i": "9d76a5", "s": 3, "y": 35.2071, "x": 25.0412, "d": [{"n": "dragino_lse01_80c1", "i": "080c1", "t": "lse01", "h": 2248, "q": 1, "b": "3.31V", "l": 1}, {"n": "dragino_se0x_1a4d", "i": "01a4d", "t": "se0x", "h": 1354, "q": 1, "b": null, "l": 0}, {"n": "sensecap_s2120_053E", "i": "0053e", "t": "s2120", "h": 0.4, "q": 0, "b": "91%", "l": 0}], "z": [{"d": "dragino_lse01_80c1", "t": "Το όργανο σιωπά", "w": "93,7 ημέρες χωρίς εκπομπή", "c": "Επίσκεψη — τροφοδοσία/κεραία", "y": "lse01", "k": 0}], "g": ["πλήθος φυτών", "γεωμετρία στάγδην"], "a": []}, {"f": "ΚΟΥΤΣΑΚΗΣ ΜΙΧΑΛΗΣ", "i": "3ab0f", "s": 3, "y": 35.1912, "x": 25.1588, "d": [{"n": "dragino_se0x_3ab0", "i": "03ab0", "t": "se0x", "h": 0.5, "q": 0, "b": "3.47V", "l": 0}, {"n": "dragino_lms01_ls_7857", "i": "07857", "t": "lms01_ls", "h": 0.6, "q": 0, "b": "3.50V", "l": 0}], "z": [{"d": "dragino_se0x_3ab0", "t": "Επικοινωνεί αλλά δεν μετράει", "w": "Όλα τα κανάλια 0 — αποσυνδεδεμένος αισθητήρας", "c": "ΑΠΟΣΥΡΣΗ — το όργανο δεν επισκευάζεται επιτόπου", "y": "se0x", "k": 1}, {"d": "dragino_lms01_ls_7857", "t": "Ακίνητη ένδειξη υγρασίας", "w": "Ίδια τιμή για >24 ώρες", "c": "Έλεγχος τοποθέτησης", "y": "lms01_ls", "k": 0}], "g": ["πλήθος φυτών"], "a": []}, {"f": "Innodays", "i": "528af0", "s": 3, "y": 35.3298, "x": 25.1015, "d": [{"n": "dragino_se0x_3aaf", "i": "03aaf", "t": "se0x", "h": 0.5, "q": 0, "b": "3.49V", "l": 0}, {"n": "milesight_ws558ln_5860", "i": "05860", "t": null, "h": 1.2, "q": 0, "b": null, "l": 0}, {"n": "sensecap_s2120_047e", "i": "0047e", "t": "s2120", "h": 0.4, "q": 0, "b": "76%", "l": 0}, {"n": "legacy_node_8af0", "i": "28af0", "t": "se0x", "h": 6624, "q": 1, "b": null, "l": 0}], "z": [{"d": "dragino_se0x_3aaf", "t": "Ακίνητη ένδειξη υγρασίας", "w": "soil_moisture1/2 = 0", "c": "Επανατοποθέτηση", "y": "se0x", "k": 1}, {"d": "milesight_ws558ln_5860", "t": "Χωρίς δηλωμένο τύπο", "w": "Λείπει η ετικέτα type", "c": "Συμπληρώστε type στο TagoIO — δουλειά γραφείου", "y": "", "k": 0}], "g": ["τύπος εδάφους"], "a": []}, {"f": "Α2 - Σταυρακάκης", "i": "16a174", "s": 3, "y": 35.2088, "x": 25.0359, "d": [{"n": "dragino_lms01_ls_784f", "i": "0784f", "t": "lms01_ls", "h": 797, "q": 1, "b": "3.28V", "l": 1}, {"n": "sensecap_s2120_03A4", "i": "003a4", "t": "s2120", "h": 0.3, "q": 0, "b": "84%", "l": 0}], "z": [{"d": "dragino_lms01_ls_784f", "t": "Το όργανο σιωπά", "w": "33,2 ημέρες χωρίς εκπομπή", "c": "Επίσκεψη — μπαταρία", "y": "lms01_ls", "k": 0}], "g": ["πλήθος φυτών"], "a": []}, {"f": "ΚΑΜΠΑΝΗΣ ΧΡΗΣΤΟΣ", "i": "4e78d5", "s": 3, "y": 35.0411, "x": 24.8102, "d": [{"n": "dragino_se0x_33c9", "i": "033c9", "t": "se0x", "h": 0.4, "q": 0, "b": "3.55V", "l": 0}, {"n": "dragino_se0x_5eba", "i": "05eba", "t": "se0x", "h": 485, "q": 1, "b": null, "l": 0}, {"n": "sensecap_s2120_0089", "i": "00089", "t": "s2120", "h": 0.3, "q": 0, "b": "93%", "l": 0}], "z": [{"d": "dragino_se0x_5eba", "t": "Το όργανο σιωπά", "w": "20,2 ημέρες χωρίς εκπομπή", "c": "Επίσκεψη — τροφοδοσία", "y": "se0x", "k": 0}], "g": ["πλήθος φυτών", "γεωμετρία στάγδην"], "a": []}, {"f": "Β4 - Ζωνουδάκη", "i": "26471", "s": 2, "y": 35.2117, "x": 25.0441, "d": [{"n": "milesight_em320_2647", "i": "02647", "t": "em320_th", "h": 3.4, "q": 0, "b": "31%", "l": 0}], "z": [{"d": "milesight_em320_2647", "t": "Δεν ήταν δυνατός ο έλεγχος", "w": "2 από 4 συγκεντρωτικές ερωτήσεις απέτυχαν (TypeError)", "c": "Ελέγξτε αν υπάρχουν δεδομένα air_temperature στο 24ωρο — ΔΕΝ φταίει η ετικέτα", "y": "em320_th", "k": 0}], "g": ["πλήθος φυτών", "γεωμετρία στάγδην"], "a": []}, {"f": "Μιχάλης Χ", "i": "033c8", "s": 2, "y": 35.0388, "x": 24.8145, "d": [{"n": "dragino_se0x_33c8", "i": "033c8", "t": "se0x", "h": 1.1, "q": 0, "b": "3.53V", "l": 0}, {"n": "sensecap_s2120_049e", "i": "0049e", "t": "s2120", "h": 0.3, "q": 0, "b": "90%", "l": 0}], "z": [{"d": "dragino_se0x_33c8", "t": "Λείπει μέτρηση από το όργανο", "w": "2 από 4 συγκεντρωτικές ερωτήσεις απέτυχαν", "c": "Παρακολούθηση — αν επαναληφθεί, έλεγχος συσκευής", "y": "se0x", "k": 0}], "g": ["πλήθος φυτών"], "a": []}, {"f": "Τσαγκαράκης Ροδάμανθος", "i": "07883", "s": 2, "y": 35.1955, "x": 25.1601, "d": [{"n": "dragino_se02_lb_7883", "i": "07883", "t": "se02_lb", "h": 0.6, "q": 0, "b": "3.44V", "l": 0}], "z": [{"d": "dragino_se02_lb_7883", "t": "Ακίνητη ένδειξη υγρασίας", "w": "soil_moisture1/2 = 0", "c": "Έλεγχος τοποθέτησης στην επόμενη διαδρομή", "y": "se02_lb", "k": 0}], "g": ["πλήθος φυτών", "γεωμετρία στάγδην"], "a": []}, {"f": "Γουμένισσα - Καστανερή", "i": "0058b", "s": 2, "y": 40.9612, "x": 22.4488, "d": [{"n": "sensecap_s2120_058B", "i": "0058b", "t": "s2120", "h": 0.4, "q": 0, "b": "79%", "l": 0}, {"n": "dragino_lse01_58b2", "i": "058b2", "t": "lse01", "h": 0.8, "q": 0, "b": "3.19V", "l": 1}], "z": [], "g": ["πλήθος φυτών"], "a": []}, {"f": "ΜΕΛΙΒΟΙΑ-1", "i": "0052a", "s": 2, "y": 39.6488, "x": 22.8571, "d": [{"n": "sensecap_s2120_052A", "i": "0052a", "t": "s2120", "h": 0.5, "q": 0, "b": "82%", "l": 0}], "z": [{"d": "sensecap_s2120_052A", "t": "Τιμή εκτός ορίων", "w": "barometric_pressure 504,5 hPa (όριο 850–1085)", "c": "Απορρίφθηκε αυτόματα — έλεγχος βαθμονόμησης", "y": "s2120", "k": 0}], "g": ["πλήθος φυτών", "γεωμετρία στάγδην"], "a": []}, {"f": "ΜΕΛΙΒΟΙΑ-2 (ΟΣΤΡΟΒΟΣ)", "i": "00401", "s": 2, "y": 39.6521, "x": 22.8602, "d": [{"n": "sensecap_s2120_0401", "i": "00401", "t": "s2120", "h": 0.4, "q": 0, "b": "85%", "l": 0}], "z": [{"d": "sensecap_s2120_0401", "t": "Τιμή εκτός ορίων", "w": "barometric_pressure 521,9 hPa (όριο 850–1085)", "c": "Απορρίφθηκε αυτόματα — έλεγχος βαθμονόμησης", "y": "s2120", "k": 0}], "g": ["πλήθος φυτών", "γεωμετρία στάγδην"], "a": []}, {"f": "Ανατολικός Δρόμος", "i": "9221d", "s": 1, "y": 35.3305, "x": 25.1028, "d": [{"n": "sensecap_s2120_221d", "i": "9221d", "t": "s2120", "h": 0.4, "q": 0, "b": "8d%", "l": 0}, {"n": "dragino_se0x_221d", "i": "0221d", "t": "se0x", "h": 0.6, "q": 0, "b": "3.5dV", "l": 0}], "z": [], "g": ["έκταση 1 m²;", "πλήθος φυτών", "γεωμετρία στάγδην"], "a": []}, {"f": "KEK - Αγρός", "i": "0f0a1", "s": 1, "y": 35.3288, "x": 25.1055, "d": [{"n": "sensecap_s2120_f0a1", "i": "0f0a1", "t": "s2120", "h": 0.4, "q": 0, "b": "81%", "l": 0}, {"n": "dragino_se0x_f0a1", "i": "0f0a1", "t": "se0x", "h": 0.6, "q": 0, "b": "3.51V", "l": 0}], "z": [], "g": ["πλήθος φυτών", "γεωμετρία στάγδην"], "a": []}, {"f": "Β2 - Κοτσύφης", "i": "04a41", "s": 1, "y": 35.2099, "x": 25.0401, "d": [{"n": "sensecap_s2120_4a41", "i": "04a41", "t": "s2120", "h": 0.4, "q": 0, "b": "81%", "l": 0}, {"n": "dragino_se0x_4a41", "i": "04a41", "t": "se0x", "h": 0.6, "q": 0, "b": "3.51V", "l": 0}], "z": [], "g": ["πλήθος φυτών", "γεωμετρία στάγδην"], "a": []}, {"f": "Β3 - Ουρανός", "i": "04a42", "s": 1, "y": 35.2081, "x": 25.0433, "d": [{"n": "sensecap_s2120_4a42", "i": "04a42", "t": "s2120", "h": 0.4, "q": 0, "b": "82%", "l": 0}, {"n": "dragino_se0x_4a42", "i": "04a42", "t": "se0x", "h": 0.6, "q": 0, "b": "3.52V", "l": 0}], "z": [], "g": ["πλήθος φυτών", "γεωμετρία στάγδην"], "a": []}, {"f": "Βρία 2", "i": "006e9", "s": 1, "y": 40.1502, "x": 22.5555, "d": [{"n": "sensecap_s2120_06e9", "i": "006e9", "t": "s2120", "h": 0.4, "q": 0, "b": "89%", "l": 0}, {"n": "dragino_se0x_06e9", "i": "006e9", "t": "se0x", "h": 0.6, "q": 0, "b": "3.59V", "l": 0}], "z": [], "g": ["πλήθος φυτών", "γεωμετρία στάγδην"], "a": []}, {"f": "Γκαζόν V2", "i": "00d81", "s": 1, "y": null, "x": null, "d": [{"n": "sensecap_s2120_0d81", "i": "00d81", "t": "s2120", "h": 0.4, "q": 0, "b": "81%", "l": 0}, {"n": "dragino_se0x_0d81", "i": "00d81", "t": "se0x", "h": 0.6, "q": 0, "b": "3.51V", "l": 0}], "z": [], "g": ["πλήθος φυτών", "γεωμετρία στάγδην"], "a": []}, {"f": "Γουμένισσα - Γρίβα", "i": "00509", "s": 1, "y": 40.9701, "x": 22.4302, "d": [{"n": "sensecap_s2120_0509", "i": "00509", "t": "s2120", "h": 0.4, "q": 0, "b": "89%", "l": 0}, {"n": "dragino_se0x_0509", "i": "00509", "t": "se0x", "h": 0.6, "q": 0, "b": "3.59V", "l": 0}], "z": [], "g": ["πλήθος φυτών", "γεωμετρία στάγδην"], "a": []}, {"f": "Όρμα", "i": "00445", "s": 1, "y": 40.9812, "x": 22.0511, "d": [{"n": "sensecap_s2120_0445", "i": "00445", "t": "s2120", "h": 0.4, "q": 0, "b": "85%", "l": 0}, {"n": "dragino_se0x_0445", "i": "00445", "t": "se0x", "h": 0.6, "q": 0, "b": "3.55V", "l": 0}], "z": [], "g": ["πλήθος φυτών", "γεωμετρία στάγδην"], "a": []}, {"f": "Ρηγάκης Αντώνης", "i": "01903", "s": 1, "y": 35.0455, "x": 24.8055, "d": [{"n": "sensecap_s2120_1903", "i": "01903", "t": "s2120", "h": 0.4, "q": 0, "b": "83%", "l": 0}, {"n": "dragino_se0x_1903", "i": "01903", "t": "se0x", "h": 0.6, "q": 0, "b": "3.53V", "l": 0}], "z": [], "g": ["πλήθος φυτών", "γεωμετρία στάγδην"], "a": []}, {"f": "Σκοτίνα Κάτω", "i": "00514", "s": 1, "y": 40.1488, "x": 22.5601, "d": [{"n": "sensecap_s2120_0514", "i": "00514", "t": "s2120", "h": 0.4, "q": 0, "b": "84%", "l": 0}, {"n": "dragino_se0x_0514", "i": "00514", "t": "se0x", "h": 0.6, "q": 0, "b": "3.54V", "l": 0}], "z": [], "g": ["πλήθος φυτών", "γεωμετρία στάγδην"], "a": []}, {"f": "Σκοτίνα Πάνω", "i": "004c5", "s": 1, "y": 40.1622, "x": 22.5388, "d": [{"n": "sensecap_s2120_04c5", "i": "004c5", "t": "s2120", "h": 0.4, "q": 0, "b": "85%", "l": 0}, {"n": "dragino_se0x_04c5", "i": "004c5", "t": "se0x", "h": 0.6, "q": 0, "b": "3.55V", "l": 0}], "z": [], "g": ["πλήθος φυτών", "γεωμετρία στάγδην"], "a": []}, {"f": "ΜΕΛΙΒΟΙΑ-3 (ΜΑΛΑΤΗ)", "i": "0054f", "s": 1, "y": 39.6455, "x": 22.8489, "d": [{"n": "sensecap_s2120_054f", "i": "0054f", "t": "s2120", "h": 0.4, "q": 0, "b": "8f%", "l": 0}, {"n": "dragino_se0x_054f", "i": "0054f", "t": "se0x", "h": 0.6, "q": 0, "b": "3.5fV", "l": 0}], "z": [], "g": ["πλήθος φυτών", "γεωμετρία στάγδην"], "a": []}, {"f": "Β5 - Στριλιγκα", "i": "00c51", "s": 0, "y": 35.2092, "x": 25.0388, "d": [{"n": "sensecap_s2120_0c51", "i": "00c51", "t": "s2120", "h": 0.3, "q": 0, "b": "91%", "l": 0}, {"n": "dragino_se0x_0c51", "i": "00c51", "t": "se0x", "h": 0.4, "q": 0, "b": "3.61V", "l": 0}], "z": [], "g": [], "a": []}, {"f": "Βενζινάδικο", "i": "00c52", "s": 0, "y": 35.3294, "x": 25.1044, "d": [{"n": "sensecap_s2120_0c52", "i": "00c52", "t": "s2120", "h": 0.3, "q": 0, "b": "92%", "l": 0}, {"n": "dragino_se0x_0c52", "i": "00c52", "t": "se0x", "h": 0.4, "q": 0, "b": "3.62V", "l": 0}], "z": [], "g": [], "a": []}, {"f": "Κουκιά", "i": "00c53", "s": 0, "y": 35.3308, "x": 25.1062, "d": [{"n": "sensecap_s2120_0c53", "i": "00c53", "t": "s2120", "h": 0.3, "q": 0, "b": "93%", "l": 0}, {"n": "dragino_se0x_0c53", "i": "00c53", "t": "se0x", "h": 0.4, "q": 0, "b": "3.63V", "l": 0}], "z": [], "g": [], "a": []}, {"f": "Μεγάλη Ντάμα", "i": "3ab31", "s": 0, "y": 35.1901, "x": 25.1577, "d": [{"n": "sensecap_s2120_ab31", "i": "3ab31", "t": "s2120", "h": 0.3, "q": 0, "b": "91%", "l": 0}, {"n": "dragino_se0x_ab31", "i": "0ab31", "t": "se0x", "h": 0.4, "q": 0, "b": "3.61V", "l": 0}], "z": [], "g": [], "a": []}, {"f": "ΚΥΔΩΝ", "i": "033cc", "s": 0, "y": 35.5138, "x": 24.018, "d": [{"n": "sensecap_s2120_33cc", "i": "033cc", "t": "s2120", "h": 0.3, "q": 0, "b": "9c%", "l": 0}, {"n": "dragino_se0x_33cc", "i": "033cc", "t": "se0x", "h": 0.4, "q": 0, "b": "3.6cV", "l": 0}], "z": [], "g": [], "a": []}, {"f": "Καμπιτάκης BIO Olive Oil", "i": "05eb5", "s": 0, "y": 35.1888, "x": 25.161, "d": [{"n": "sensecap_s2120_5eb5", "i": "05eb5", "t": "s2120", "h": 0.3, "q": 0, "b": "95%", "l": 0}, {"n": "dragino_se0x_5eb5", "i": "05eb5", "t": "se0x", "h": 0.4, "q": 0, "b": "3.65V", "l": 0}], "z": [], "g": [], "a": []}, {"f": "Μανιδάκης Μιαμού Λέντα", "i": "00c54", "s": 0, "y": null, "x": null, "d": [{"n": "sensecap_s2120_0c54", "i": "00c54", "t": "s2120", "h": 0.3, "q": 0, "b": "94%", "l": 0}, {"n": "dragino_se0x_0c54", "i": "00c54", "t": "se0x", "h": 0.4, "q": 0, "b": "3.64V", "l": 0}], "z": [], "g": [], "a": []}];
+</script>
+<script>
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ΔΙΑΔΡΟΜΗ — ομαδοποίηση κατά ΠΡΑΓΜΑΤΙΚΗ ΕΓΓΥΤΗΤΑ, όχι κατά πεδίο κειμένου.
+   Οι συντεταγμένες υπάρχουν ήδη από τον χάρτη της φόρμας· δεν χρειάστηκε
+   κανένα νέο πεδίο που θα έμενε κενό όπως έμεινε η γεωμετρία.
+   ══════════════════════════════════════════════════════════════════════════ */
+var ROUTE = { on: false, km: 5, start: null };
+
+/* Απόσταση σε km (haversine). Σε νησιωτική κλίμακα η ακρίβεια είναι υπεραρκετή. */
+function distKm(a, b) {
+  if (!a || !b || a.y == null || b.y == null || a.x == null || b.x == null) return Infinity;
+  var R = 6371, t = Math.PI / 180;
+  var dLa = (b.y - a.y) * t, dLo = (b.x - a.x) * t;
+  var s = Math.sin(dLa / 2) * Math.sin(dLa / 2)
+    + Math.cos(a.y * t) * Math.cos(b.y * t) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(s)));
+}
+function hasPos(r) { return Number.isFinite(r.y) && Number.isFinite(r.x); }
+
+/* ΟΜΑΔΟΠΟΙΗΣΗ: ενιαίες συνιστώσες σε γράφο «απόσταση ≤ κατώφλι».
+   ΓΙΑΤΙ ΟΧΙ k-means: δεν ξέρουμε πόσες περιοχές υπάρχουν, και δεν θέλουμε να
+   το μαντέψουμε. Το κριτήριο «αν είναι κοντά, είναι ίδια διαδρομή» είναι αυτό
+   που ισχύει στον δρόμο — και ο χειριστής ρυθμίζει το «κοντά» με ένα κλικ. */
+function cluster(rows, km) {
+  var pos = rows.filter(hasPos), none = rows.filter(function (r) { return !hasPos(r); });
+  var par = pos.map(function (_, i) { return i; });
+  function find(i) { while (par[i] !== i) { par[i] = par[par[i]]; i = par[i]; } return i; }
+  function join(i, j) { var a = find(i), b = find(j); if (a !== b) par[a] = b; }
+  for (var i = 0; i < pos.length; i++)
+    for (var j = i + 1; j < pos.length; j++)
+      if (distKm(pos[i], pos[j]) <= km) join(i, j);
+  var by = {};
+  pos.forEach(function (r, k) { var g = find(k); (by[g] = by[g] || []).push(r); });
+  var groups = Object.keys(by).map(function (g) {
+    var m = by[g];
+    /* Το όνομα της περιοχής είναι ο ΣΟΒΑΡΟΤΕΡΟΣ αγρός της — ό,τι θα έλεγε και
+       ο τεχνικός στο τηλέφωνο: «πάω μεριά ΠΑΝΕΤΕΚ». Κανένα εφευρημένο τοπωνύμιο. */
+    var lead = m.slice().sort(function (a, b) { return (b.s - a.s) || a.f.localeCompare(b.f, 'el'); })[0];
+    return {
+      name: m.length === 1 ? lead.f : (lead.f + ' + ' + (m.length - 1)),
+      rows: m,
+      visit: m.filter(function (r) { return r.s === 3; }).length,
+      worst: Math.max.apply(null, m.map(function (r) { return r.s; })),
+      span: span(m)
+    };
+  });
+  if (none.length) groups.push({ name: 'Χωρίς θέση στον χάρτη', rows: none,
+    visit: none.filter(function (r) { return r.s === 3; }).length,
+    worst: Math.max.apply(null, none.map(function (r) { return r.s; })), span: null, nopos: true });
+  /* Πρώτα οι περιοχές με τις περισσότερες επισκέψεις: εκεί αποδίδει η βενζίνη. */
+  groups.sort(function (a, b) {
+    if (a.nopos !== b.nopos) return a.nopos ? 1 : -1;
+    return (b.visit - a.visit) || (b.worst - a.worst) || (b.rows.length - a.rows.length);
+  });
+  return groups;
+}
+/* Μέγιστη απόσταση μέσα στην ομάδα — «πόσο απλώνεται» η περιοχή. */
+function span(m) {
+  var mx = 0;
+  for (var i = 0; i < m.length; i++) for (var j = i + 1; j < m.length; j++) {
+    var d = distKm(m[i], m[j]); if (isFinite(d) && d > mx) mx = d;
+  }
+  return mx;
+}
+/* ΣΕΙΡΑ ΕΠΙΣΚΕΨΗΣ: πλησιέστερος-επόμενος από την αφετηρία. Απλός κανόνας,
+   κατανοητός — και ο χειριστής βλέπει τα χιλιόμετρα, ώστε να τον παρακάμψει
+   όποτε ξέρει καλύτερα τον δρόμο. ΔΕΝ υπόσχεται βέλτιστη λύση. */
+function order(rows, start) {
+  var left = rows.filter(hasPos), out = [], cur = start;
+  while (left.length) {
+    var bi = 0;
+    if (cur) { var bd = Infinity;
+      left.forEach(function (r, i) { var d = distKm(cur, r); if (d < bd) { bd = d; bi = i; } }); }
+    var nx = left.splice(bi, 1)[0];
+    nx._leg = cur ? distKm(cur, nx) : 0;
+    out.push(nx); cur = nx;
+  }
+  return out.concat(rows.filter(function (r) { return !hasPos(r); }));
+}
+function kmTxt(d) {
+  if (!isFinite(d)) return '—';
+  return d < 1 ? Math.round(d * 1000) + ' m' : d.toFixed(1).replace('.', ',') + ' km';
+}
+</script>
+<script src="https://admin.tago.io/dist/custom-widget.min.js"></script>
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   SAG · ΕΠΟΠΤΕΙΑ ΣΤΟΛΟΥ — custom widget TagoIO
+   Διαβάζει fleet_field / fleet_summary από ΜΙΑ συσκευή («Εποπτεία»), που
+   γράφει ο πυρήνας σε κάθε παλμό (T-FLEET-BOARD-01, v50.90).
+   ΚΑΜΙΑ αποθήκευση στον browser: η κατάσταση ζει μόνο στη μνήμη.
+   ══════════════════════════════════════════════════════════════════════════ */
+'use strict';
+var STATE = { rows: [], sum: null, at: null, filter: -1, sort: 'sev', q: '', open: {}, live: false };
+var RANK = ['ΕΝΤΑΞΕΙ', 'ΓΡΑΦΕΙΟ', 'ΕΛΕΓΧΟΣ', 'ΕΠΙΣΚΕΨΗ'];
+/* Ε5 (v50.96) · ΣΟΒΑΡΟΤΗΤΑ ΕΚΤΟΣ 0-3. Το ingest περνούσε 4, −1 και NaN χωρίς
+   έλεγχο: η γραμμή έβγαινε με ετικέτα «undefined» (RANK[4]) και ΕΞΑΦΑΝΙΖΟΤΑΝ
+   από τους μετρητές — 7 αγροί, τα πλακίδια έδειχναν 4. Άγνωστη σοβαρότητα
+   ΔΕΝ σημαίνει «εντάξει»: την ανεβάζουμε σε ΕΛΕΓΧΟ, ώστε να τη δει άνθρωπος. */
+function sev(v) {
+  // ΔΕΧΟΜΑΣΤΕ ΜΟΝΟ ΑΡΙΘΜΟ Ή ΑΡΙΘΜΗΤΙΚΗ ΣΥΜΒΟΛΟΣΕΙΡΑ. Το Number() δίνει ΜΗΔΕΝ
+  // — δηλαδή «ΕΝΤΑΞΕΙ» — για null, '', false ΚΑΙ για [] . Έξι διαφορετικοί
+  // τρόποι να πει «όλα καλά» ένας αγρός για τον οποίο δεν ξέρουμε τίποτα.
+  var n;
+  if (typeof v === 'number') n = v;
+  else if (typeof v === 'string' && v.trim() !== '') n = Number(v);
+  else return 2;
+  if (!Number.isFinite(n)) return 2;
+  n = Math.round(n);
+  return (n < 0 || n > 3) ? 2 : n;
+}
+var ICON = ['✓', '✎', '⚠', '⬤'];
+var esc = function (s) { return String(s == null ? '' : s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+
+/* Ώρες σιωπής -> ανθρώπινο. Πάνω από 48 ώρες ο αριθμός σε ώρες δεν λέει τίποτα. */
+function age(h) {
+  /* Ε4 (v50.96) · ΤΟ isFinite ΔΕΧΕΤΑΙ ΣΥΜΒΟΛΟΣΕΙΡΕΣ: isFinite('5') === true.
+     Μετά το '5'.toFixed(1) πετούσε TypeError. Η age() καλείται για ΚΑΘΕ γραμμή
+     από τη why(), άρα ΜΙΑ κακή τιμή σκότωνε ολόκληρο το render() — και επειδή
+     το el.innerHTML δεν προλάβαινε να ανατεθεί, ο πίνακας ΠΑΓΩΝΕ σιωπηλά στην
+     προηγούμενη απεικόνιση. Πίνακας εποπτείας που δείχνει παλιά δεδομένα χωρίς
+     να το λέει είναι χειρότερος από πίνακα που δεν φορτώνει. */
+  if (typeof h !== 'number' || !Number.isFinite(h) || h < 0) return '—';
+  if (h < 1) return Math.round(h * 60) + '΄';
+  if (h < 48) return h.toFixed(1).replace('.', ',') + ' ώ';
+  return (h / 24).toFixed(1).replace('.', ',') + ' ημ';
+}
+function nf(n) { return Number(n).toLocaleString('el-GR'); }
+/* Δ2 (v50.95) · Η ΩΡΑ, ΟΧΙ ΜΟΝΟ Η ΗΛΙΚΙΑ.
+   «2,4 ώ» δεν λέει αν το όργανο σιώπησε χθες βράδυ ή σήμερα το πρωί — και ο
+   τεχνικός που ετοιμάζει επίσκεψη θέλει ΩΡΑ. Υπολογίζεται από τον παλμό μείον
+   την ηλικία· ΔΕΝ χρειάζεται νέο πεδίο στο bundle, ούτε ένα byte.
+   ΑΚΡΙΒΕΙΑ: η ηλικία μετρήθηκε τη στιγμή του παλμού, άρα το σφάλμα είναι όσο
+   και η καθυστέρηση του παλμού — λεπτά, όχι ώρες. Αρκεί για επίσκεψη. */
+function stamp(h) {
+  // ΑΡΝΗΤΙΚΗ ΗΛΙΚΙΑ: το ρολόι της συσκευής είναι ΜΠΡΟΣΤΑ από τον πυρήνα. Η
+  // ώρα θα έβγαινε στο ΜΕΛΛΟΝ, δίπλα σε ένα «—» της age(). Καλύτερα κενό.
+  if (typeof h !== 'number' || !Number.isFinite(h) || h < 0 || !STATE.at) return '';
+  var t = new Date(new Date(STATE.at).getTime() - h * 3600000);
+  if (!isFinite(t.getTime())) return '';
+  /* Ε3 (v50.96): συγκρίνουμε με τον ΠΑΛΜΟ, όχι με το ρολόι του browser. Με
+     παλμό τριών ημερών και ηλικία 0,3 ώρες το κελί έγραφε «18΄» και από κάτω
+     ημερομηνία τριών ημερών πριν — δύο ρολόγια στο ίδιο κελί. */
+  var ref = new Date(STATE.at);
+  var sameDay = t.toDateString() === ref.toDateString();
+  /* Ε2 (v50.96) · ΤΟ ΕΤΟΣ. Χωρίς αυτό, σήμα 276 ημερών (30/11/2025) τυπωνόταν
+     «30/11» και διαβαζόταν ως 30 Νοεμβρίου 2026 — τρεις μήνες στο ΜΕΛΛΟΝ. Και
+     σήμα ΑΚΡΙΒΩΣ ενός έτους τύπωνε την ΙΔΙΑ ώρα με τον παλμό. */
+  var sameYear = t.getFullYear() === ref.getFullYear();
+  // hour12:false — ΥΠΟΧΡΕΩΤΙΚΟ. Το el-GR δίνει «10:00 π.μ.» από μόνο του και
+  // σε πίνακα επίσκεψης το π.μ./μ.μ. διαβάζεται λάθος με μια ματιά.
+  return t.toLocaleString('el-GR', sameDay
+    ? { hour: '2-digit', minute: '2-digit', hour12: false }
+    : (sameYear
+      ? { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }
+      : { year: 'numeric', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }));
+}
+
+/* ── ΤΟ «ΓΙΑΤΙ» ΣΕ ΜΙΑ ΓΡΑΜΜΗ ───────────────────────────────────────────
+   Ο διαχειριστής σαρώνει 45 γραμμές. Αν πρέπει να ανοίξει καθεμιά για να
+   καταλάβει, ο πίνακας απέτυχε. Εδώ μπαίνει ΤΟ ΠΙΟ ΣΟΒΑΡΟ, όχι μια λίστα. */
+function why(r) {
+  var kills = (r.z || []).filter(function (z) { return z.k; });
+  var warns = (r.z || []).filter(function (z) { return !z.k; });
+  /* Μια συσκευή που ΚΑΙ σιωπά ΚΑΙ έχει καταγεγραμμένη βλάβη δεν αναφέρεται δύο
+     φορές: «X σιωπά 33 ημ · X — Το όργανο σιωπά» είναι θόρυβος, όχι πληροφορία. */
+  var named = {};
+  (r.z || []).forEach(function (z) { named[z.d] = 1; });
+  var dead = (r.d || []).filter(function (d) {
+    return (d.q || (isFinite(d.h) && d.h > 48)) && !named[d.n]; });
+  var low = (r.d || []).filter(function (d) { return d.l; });
+  var out = [];
+  if (kills.length) out.push(kills[0].d + ' — ' + kills[0].t
+    + (kills.length > 1 ? ' (+' + (kills.length - 1) + ')' : ''));
+  if (dead.length) out.push(dead.length === 1
+    ? dead[0].n + ' σιωπά ' + age(dead[0].h)
+    : dead.length + ' όργανα σιωπούν (έως ' + age(Math.max.apply(null,
+        dead.map(function (d) { return d.h || 0; }))) + ')');
+  if (!kills.length && warns.length) out.push(warns[0].d + ' — ' + warns[0].t
+    + (warns.length > 1 ? ' (+' + (warns.length - 1) + ')' : ''));
+  if (low.length) out.push(low.length + ' με χαμηλή μπαταρία');
+  if (!out.length && (r.g || []).length) out.push('Λείπει: ' + r.g.join(', '));
+  if (!out.length && (r.a || []).length) out.push('Παλιές μετρήσεις: ' + r.a[0].g);
+  return out.length ? out.join(' · ') : 'Όλα τα όργανα λειτουργούν';
+}
+
+/* Έτοιμο κείμενο για τον παραγωγό — αυτό στέλνει ο διαχειριστής. */
+function producerText(r) {
+  var L = ['Αγρός: ' + r.f];
+  /* ΙΔΙΑ ΑΠΟΔΙΠΛΑΣΙΩΣΗ ΜΕ ΤΗ ΣΥΝΟΨΗ: αν η συσκευή έχει ήδη καταγεγραμμένη
+     βλάβη, δεν επαναλαμβάνεται ως «σιωπά». Ο παραγωγός διαβάζει μία γραμμή. */
+  var named = {};
+  (r.z || []).forEach(function (z) { named[z.d] = 1; });
+  var dead = (r.d || []).filter(function (d) {
+    return (d.q || (isFinite(d.h) && d.h > 48)) && !named[d.n]; });
+  (r.z || []).forEach(function (z) {
+    L.push('• ' + z.d + (z.y ? ' (' + z.y + ')' : '') + ' — ' + z.t
+      + (z.w ? ': ' + z.w : '') + (z.c ? ' → ' + z.c : ''));
+  });
+  dead.forEach(function (d) {
+    L.push('• ' + d.n + ' (' + (d.t || 'άγνωστος τύπος') + ', id …' + d.i
+      + ') δεν στέλνει δεδομένα εδώ και ' + age(d.h) + '. Ελέγξτε τροφοδοσία και κεραία.');
+  });
+  (r.d || []).filter(function (d) { return d.l; }).forEach(function (d) {
+    L.push('• ' + d.n + ': χαμηλή μπαταρία (' + d.b + ') — χρειάζεται αντικατάσταση.');
+  });
+  if ((r.g || []).length) L.push('• Λείπουν από τη φόρμα: ' + r.g.join(', ') + '.');
+  if (L.length === 1) L.push('• Δεν εντοπίστηκε πρόβλημα.');
+  return L.join('\n');
+}
+
+/* ── ΑΠΟΔΟΣΗ ───────────────────────────────────────────────────────────── */
+function renderHero() {
+  var t = [0, 0, 0, 0];
+  STATE.rows.forEach(function (r) { t[r.s] = (t[r.s] || 0) + 1; });
+  var defs = [
+    { s: 3, k: 'visit', l: 'ΕΠΙΣΚΕΨΗ', h: 'Όργανο νεκρό ή εκτός λειτουργίας — χρειάζεται μετακίνηση.' },
+    { s: 2, k: 'check', l: 'ΕΛΕΓΧΟΣ', h: 'Βλάβη χωρίς απώλεια συμβουλής. Μπορεί να μπει στην επόμενη διαδρομή.' },
+    { s: 1, k: 'office', l: 'ΓΡΑΦΕΙΟ', h: 'Λείπει ρύθμιση. Διορθώνεται από τη φόρμα, χωρίς επίσκεψη.' },
+    { s: 0, k: 'ok', l: 'ΕΝΤΑΞΕΙ', h: 'Καμία ενέργεια.' }
+  ];
+  document.getElementById('hero').innerHTML = defs.map(function (d) {
+    return '<button class="tile t-' + d.k + '" data-sev="' + d.s + '" aria-pressed="'
+      + (STATE.filter === d.s) + '">'
+      + '<div class="n">' + t[d.s] + '</div>'
+      + '<div class="l"><span aria-hidden="true">' + ICON[d.s] + '</span>' + d.l + '</div>'
+      + '<div class="h">' + d.h + '</div></button>';
+  }).join('');
+  Array.prototype.forEach.call(document.querySelectorAll('.tile'), function (b) {
+    b.onclick = function () {
+      var s = Number(b.dataset.sev);
+      STATE.filter = (STATE.filter === s) ? -1 : s;
+      render();
+    };
+  });
+}
+
+function matches(r) {
+  if (STATE.filter >= 0 && r.s !== STATE.filter) return false;
+  if (!STATE.q) return true;
+  var hay = [r.f, r.i].concat(
+    (r.d || []).map(function (d) { return [d.n, d.i, d.t].join(' '); }),
+    (r.z || []).map(function (z) { return [z.d, z.t, z.w, z.c].join(' '); }),
+    (r.g || [])).join(' ').toLowerCase();
+  return hay.indexOf(STATE.q) >= 0;
+}
+
+function deviceTable(r) {
+  if (!(r.d || []).length) return '<div class="dim">Καμία συσκευή δεν καταγράφηκε σε αυτόν τον αγρό.</div>';
+  var fz = {};
+  (r.z || []).forEach(function (z) { (fz[z.d] = fz[z.d] || []).push(z); });
+  return '<table><thead><tr><th>Όργανο</th><th>Ταυτότητα</th><th>Τύπος</th>'
+    + '<th>Τελευταία</th><th>Μπαταρία</th><th>Κατάσταση</th></tr></thead><tbody>'
+    + r.d.map(function (d) {
+      var f = fz[d.n] || [];
+      var dead = d.q || (isFinite(d.h) && d.h > 48);
+      var st = f.length
+        ? f.map(function (z) {
+            return '<span class="tagx ' + (z.k ? 'x-kill' : 'x-warn') + '">' + esc(z.t) + '</span>'
+              + (z.w ? '<div class="dim">' + esc(z.w) + '</div>' : '')
+              + (z.c ? '<div>→ ' + esc(z.c) + '</div>' : '');
+          }).join('')
+        : (dead ? '<span class="tagx x-kill">Σιωπά</span>'
+                : '<span class="tagx x-ok">Λειτουργεί</span>');
+      // Κ1 (v50.93): το data-l ΔΕΝ είναι διακοσμητικό. Σε κινητό ο πίνακας
+      // γίνεται κάρτα (βλ. @media 700px) και η ετικέτα της στήλης είναι το
+      // μόνο που εξηγεί τι σημαίνει η τιμή δίπλα της.
+      return '<tr><td class="nolabel"><b>' + esc(d.n) + '</b></td>'
+        + '<td class="mono dim" data-l="Ταυτότητα">…' + esc(d.i) + '</td>'
+        + '<td class="dim" data-l="Τύπος">' + esc(d.t || '—') + '</td>'
+        + '<td data-l="Τελευταία"' + (dead ? ' style="color:var(--visit);font-weight:650"' : '') + '>'
+        + age(d.h) + (stamp(d.h) ? '<div class="dim" style="font-size:.72rem">' + stamp(d.h) + '</div>' : '') + '</td>'
+        + '<td data-l="Μπαταρία">' + (d.b ? (d.l ? '<span class="tagx x-low">' + esc(d.b) + '</span>' : esc(d.b)) : '<span class="dim">—</span>') + '</td>'
+        + '<td class="stat" data-l="Κατάσταση">' + st + '</td></tr>';
+    }).join('') + '</tbody></table>';
+}
+
+function fieldRow(r, extra) {
+  var k = r.f + '|' + r.i, open = !!STATE.open[k];
+  return '<section class="row sev' + r.s + (open ? ' open' : '') + '">'
+    + '<button class="head" data-k="' + esc(k) + '" aria-expanded="' + open + '">'
+    + '<span class="pill p' + r.s + '"><span aria-hidden="true">' + ICON[r.s] + '</span>'
+    + RANK[r.s] + '</span>'
+    + (extra || '')
+    + '<span class="nm">' + esc(r.f) + '</span>'
+    + '<span class="why">' + esc(why(r)) + '</span>'
+    + '<span class="cnt">' + (r.d || []).length + ' όργ.</span>'
+    + '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+    + ' stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>'
+    + '</button><div class="body">'
+    + '<div class="sect"><h3>Όργανα του αγρού</h3>' + deviceTable(r) + '</div>'
+    + ((r.g || []).length ? '<div class="sect"><h3>Κενά ρύθμισης — διορθώνονται από τη φόρμα</h3>'
+        + '<div class="gaps">' + r.g.map(function (g) { return '<span class="gap">' + esc(g) + '</span>'; }).join('')
+        + '</div></div>' : '')
+    + ((r.a || []).length ? '<div class="sect"><h3>Παλιές μετρήσεις</h3><div class="dim">'
+        + r.a.map(function (x) { return esc(x.g) + ' — ' + age(x.h); }).join(' · ') + '</div></div>' : '')
+    + '<div class="acts">'
+    + '<button class="btn" data-copyk="' + esc(k) + '">Αντιγραφή οδηγιών προς τον παραγωγό</button>'
+    + (hasPos(r) ? '<a class="btn" target="_blank" rel="noopener"'
+        + ' href="https://www.google.com/maps/search/?api=1&query=' + r.y + ',' + r.x + '">Άνοιγμα στον χάρτη</a>' : '')
+    + '<span class="dim mono" style="align-self:center">αγρός …' + esc(r.i)
+    + (hasPos(r) ? ' · ' + r.y.toFixed(5) + ', ' + r.x.toFixed(5) : ' · χωρίς θέση') + '</span>'
+    + '</div></div></section>';
+}
+
+/* Δ1 (v50.95) · ΠΟΙΑ ΟΜΑΔΑ ΠΑΙΡΝΕΙ ΤΗΝ ΑΦΕΤΗΡΙΑ.
+   ΗΤΑΝ: πάντα η gi===0 — δηλαδή η ομάδα με τις ΠΕΡΙΣΣΟΤΕΡΕΣ ΕΠΙΣΚΕΨΕΙΣ, που
+   δεν έχει καμία σχέση με το πού βρίσκεται ο τεχνικός. Με αφετηρία «Όρμα»
+   (Μακεδονία) και ομάδα 0 στο Ηράκλειο, το πρώτο σκέλος έβγαινε 693 km και το
+   σύνολο της διαδρομής 694 km. Αυτή είναι η «διαδρομή στην Ελλάδα».
+   ΤΩΡΑ: την παίρνει η ομάδα που ΠΕΡΙΕΧΕΙ την αφετηρία· αν η αφετηρία δεν
+   ανήκει σε καμία (π.χ. σβήστηκε από το φίλτρο), η ΠΛΗΣΙΕΣΤΕΡΗ. Όλες οι
+   άλλες ξεκινούν από τον δικό τους αγρό — καμία δεν κουβαλά ξένο σκέλος. */
+function startGroup(groups, start) {
+  if (!start || !hasPos(start)) return -1;
+  var key = start.f + '|' + start.i;
+  for (var i = 0; i < groups.length; i++) {
+    var g = groups[i];
+    if (g.nopos) continue;
+    for (var j = 0; j < g.rows.length; j++)
+      if (g.rows[j].f + '|' + g.rows[j].i === key) return i;   // την ΠΕΡΙΕΧΕΙ
+  }
+  /* Ε1 (v50.96) · ΚΑΜΙΑ «ΠΛΗΣΙΕΣΤΕΡΗ» ΟΜΑΔΑ.
+     ΗΤΑΝ: αν η αφετηρία δεν ανήκε σε καμία ομάδα — π.χ. την είχε κόψει το
+     φίλτρο σοβαρότητας ή η αναζήτηση — έπεφτε στην πλησιέστερη. Εκείνη η ομάδα
+     έπαιρνε τότε ΞΕΝΟ πρώτο σκέλος: το σύνολο έγραφε 682,8 km ενώ τα ορατά
+     σκέλη άθροιζαν 283 m, γιατί το σκέλος i===0 ΔΕΝ εμφανίζεται. Σε σάρωση
+     3.663 ομάδων, 243 έδειχναν χιλιόμετρα που δεν εξηγούνταν από πουθενά.
+     ΤΩΡΑ: αν η αφετηρία δεν είναι ΜΕΣΑ στη λίστα, δεν χρησιμοποιείται καθόλου.
+     Κάθε ομάδα ξεκινά από δικό της αγρό και το σύνολο είναι πάντα το άθροισμα
+     των ΟΡΑΤΩΝ σκελών. */
+  return -1;
+}
+
+function renderRoute(list) {
+  var groups = cluster(list, ROUTE.km);
+  var gStart = startGroup(groups, ROUTE.start);
+  var el = document.getElementById('board');
+  el.innerHTML = groups.map(function (g, gi) {
+    var seq = g.nopos ? g.rows : order(g.rows, gi === gStart ? ROUTE.start : null);
+    var tot = seq.reduce(function (s, r) { return s + (r._leg || 0); }, 0);
+    var pts = seq.filter(hasPos);
+    var maps = pts.length > 1
+      ? 'https://www.google.com/maps/dir/' + pts.map(function (r) { return r.y + ',' + r.x; }).join('/')
+      : (pts.length ? 'https://www.google.com/maps/search/?api=1&query=' + pts[0].y + ',' + pts[0].x : null);
+    return '<div class="grp">'
+      + '<div class="grpTop">'
+      + '<div><div class="grpName">' + esc(g.name) + '</div>'
+      + '<div class="grpMeta">' + g.rows.length + (g.rows.length === 1 ? ' αγρός' : ' αγροί')
+      + (g.visit ? ' · <b style="color:var(--visit)">' + g.visit
+          + (g.visit === 1 ? ' επίσκεψη' : ' επισκέψεις') + '</b>' : '')
+      + (g.span != null && g.span > 0 ? ' · εύρος ' + kmTxt(g.span) : '')
+      + (tot > 0 ? ' · διαδρομή ' + kmTxt(tot) : '') + '</div></div>'
+      + (maps ? '<a class="btn" target="_blank" rel="noopener" href="' + maps + '">'
+          + (pts.length > 1 ? 'Πλοήγηση σε ' + pts.length + ' στάσεις' : 'Πλοήγηση') + '</a>' : '')
+      + '</div>'
+      + seq.map(function (r, i) {
+          return fieldRow(r, '<span class="stop">' + (hasPos(r) ? (i + 1) : '–') + '</span>'
+            + '<span class="leg">' + (i > 0 && isFinite(r._leg) ? '+' + kmTxt(r._leg) : '') + '</span>');
+        }).join('')
+      + '</div>';
+  }).join('');
+  wireRows(el, list);
+}
+
+function wireRows(el, list) {
+  Array.prototype.forEach.call(el.querySelectorAll('.head'), function (b) {
+    b.onclick = function () { var k = b.dataset.k; STATE.open[k] = !STATE.open[k]; render(); };
+  });
+  Array.prototype.forEach.call(el.querySelectorAll('[data-copyk]'), function (b) {
+    b.onclick = function (ev) {
+      ev.stopPropagation();
+      var r = list.filter(function (x) { return (x.f + '|' + x.i) === b.dataset.copyk; })[0];
+      if (!r) return;
+      var txt = producerText(r), done = function () {
+        var o = b.textContent; b.textContent = '✓ Αντιγράφηκε'; b.classList.add('ok');
+        setTimeout(function () { b.textContent = o; b.classList.remove('ok'); }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(done, function () { window.prompt('Αντιγραφή:', txt); });
+      } else { window.prompt('Αντιγραφή:', txt); }
+    };
+  });
+}
+
+function fillStart() {
+  var sel = document.getElementById('startSel');
+  var cur = sel.value;
+  var opts = STATE.rows.filter(hasPos).slice()
+    .sort(function (a, b) { return a.f.localeCompare(b.f, 'el'); });
+  sel.innerHTML = '<option value="">Αφετηρία: ο σοβαρότερος</option>'
+    + opts.map(function (r) { return '<option value="' + esc(r.f + '|' + r.i) + '">'
+        + esc(r.f) + '</option>'; }).join('');
+  if (cur) sel.value = cur;
+}
+
+function render() {
+  renderHero();
+  var list = STATE.rows.filter(matches);
+  list.sort(STATE.sort === 'sev'
+    ? function (a, b) { return (b.s - a.s) || a.f.localeCompare(b.f, 'el'); }
+    : function (a, b) { return a.f.localeCompare(b.f, 'el'); });
+  var el = document.getElementById('board');
+  if (ROUTE.on && list.length) { renderRoute(list); return; }
+  if (!list.length) {
+    el.innerHTML = '<div class="empty"><div class="big">'
+      + (STATE.rows.length ? '🔍' : '⏳') + '</div>'
+      + (STATE.rows.length ? 'Κανένας αγρός δεν ταιριάζει στο φίλτρο.'
+                           : 'Αναμονή δεδομένων από τον πυρήνα…') + '</div>';
+    return;
+  }
+  el.innerHTML = list.map(function (r) { return fieldRow(r, ''); }).join('');
+  wireRows(el, list);
+}
+
+/* ── ΠΑΡΑΛΑΒΗ ΔΕΔΟΜΕΝΩΝ ────────────────────────────────────────────────── */
+function ingest(points) {
+  var rows = [], sum = null, at = null;
+  points.forEach(function (p) {
+    if (!p) return;
+    /* T-FLEETSUM-NEWEST-01 (v50.107): ΚΑΜΙΑ ΥΠΟΘΕΣΗ ΣΕΙΡΑΣ — ούτε εδώ.
+       Η σύνοψη κρατιέται ΜΟΝΟ αν είναι ΝΕΟΤΕΡΗ από όση ήδη έχουμε, με ρητή
+       σύγκριση χρόνου· ακριβώς ο κανόνας που ίσχυε ήδη για τα fleet_field.
+       Σύνοψη ΧΩΡΙΣ χρόνο γίνεται δεκτή μόνο αν δεν έχουμε καμία άλλη. */
+    if (p.variable === 'fleet_summary') {
+      var _st = p.time ? Date.parse(p.time) : NaN;
+      if (!isFinite(_st)) { if (!sum) sum = p; return; }
+      var _cur = (sum && sum.time) ? Date.parse(sum.time) : NaN;
+      if (!sum || !isFinite(_cur) || _st > _cur) sum = p;
+      /* Ο παλμός παίρνει ΠΑΝΤΑ τον ΜΕΓΙΣΤΟ χρόνο που είδαμε — ποτέ τον
+         τελευταίο που έτυχε να συναντήσουμε. */
+      if (!at || _st > Date.parse(at)) at = p.time;
+      return;
+    }
+    if (p.variable !== 'fleet_field') return;
+    var m = p.metadata || {};
+    var rec = null;
+    try { rec = JSON.parse(m.text || '{}'); } catch (e) { rec = null; }
+    if (!rec || !rec.f) return;
+    rec.s = sev(rec.s || m.severity || 0);   // Ε5: 0-3 πάντα, ποτέ undefined
+    rec._t = p.time ? Date.parse(p.time) : 0;
+    if (!isFinite(rec._t)) rec._t = 0;
+    rows.push(rec);
+    if (p.time && (!at || p.time > at)) at = p.time;
+  });
+  if (!rows.length) return false;
+  /* Κρατάμε ΜΟΝΟ την ΠΙΟ ΠΡΟΣΦΑΤΗ εγγραφή ανά αγρό.
+     ΠΡΟΣΟΧΗ — ΕΔΩ ΗΤΑΝ ΣΦΑΛΜΑ: κρατούσα την ΠΡΩΤΗ που συναντούσα, υποθέτοντας
+     σιωπηλά ότι το TagoIO επιστρέφει τα νεότερα πρώτα. Σε συσκευή Immutable, που
+     ΣΥΣΣΩΡΕΥΕΙ ιστορικό, αν η σειρά ήταν αντίστροφη ο πίνακας θα έδειχνε ΠΑΛΙΑ
+     δεδομένα σαν τρέχοντα — ακριβώς το χειρότερο που μπορεί να κάνει ένας
+     πίνακας εποπτείας. Τώρα συγκρίνεται ΡΗΤΑ ο χρόνος: καμία υπόθεση σειράς. */
+  var best = Object.create(null), uniq = [];
+  rows.forEach(function (r) {
+    var k = r.f + '|' + r.i;
+    if (!best[k] || r._t > best[k]._t) best[k] = r;
+  });
+  Object.keys(best).forEach(function (k) { uniq.push(best[k]); });
+  STATE.rows = uniq; STATE.sum = sum; STATE.at = at; STATE.live = true;
+  paintPulse();
+  fillStart();
+  render();
+  return true;
+}
+
+function paintPulse() {
+  var t = STATE.at ? new Date(STATE.at) : null;
+  var mins = t ? (Date.now() - t.getTime()) / 60000 : null;
+  document.getElementById('pulseTime').textContent = t
+    ? t.toLocaleString('el-GR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
+    : '—';
+  var dev = STATE.rows.reduce(function (s, r) { return s + ((r.d || []).length); }, 0);
+  var meta = nf(STATE.rows.length) + ' αγροί · ' + nf(dev) + ' όργανα';
+  /* Ε6 (v50.96) · ΤΟ ΜΗΝΥΜΑ ΕΛΕΓΕ ΨΕΜΑΤΑ ΓΙΑ ΝΑ ΠΡΟΣΤΑΤΕΨΕΙ.
+     Έγραφε ότι τα δεδομένα είναι εφευρημένα. ΔΕΝ είναι: κρατά ΠΡΑΓΜΑΤΙΚΑ ονόματα
+     παραγωγών και ΠΡΑΓΜΑΤΙΚΕΣ συντεταγμένες από το log της 2/9/2026 — ο ίδιος
+     ο κώδικας το λέει λίγες γραμμές πιο πάνω. Τεχνικός που αναγνωρίζει τα
+     ονόματα σταματά να πιστεύει την προειδοποίηση, και τότε η προειδοποίηση
+     είναι χειρότερη από καμία. Το πραγματικό πρόβλημα δεν είναι η προέλευση
+     αλλά η ΗΛΙΚΙΑ: είναι ΠΑΓΩΜΕΝΟ στιγμιότυπο, όχι η σημερινή κατάσταση. */
+  if (!STATE.live) meta = '<span class="demo">ΠΑΓΩΜΕΝΟ ΔΕΙΓΜΑ</span>'
+    + 'Ο πίνακας ΔΕΝ συνδέθηκε στο TagoIO και δείχνει στιγμιότυπο της 2/9/2026. '
+    + 'Οι αγροί είναι αληθινοί, η ΚΑΤΑΣΤΑΣΗ τους ΟΧΙ — μην σχεδιάσεις διαδρομή '
+    + 'πάνω του. · ' + meta;
+  /* Παλιός παλμός = ο πίνακας λέει ψέματα. Πρέπει να φαίνεται. */
+  else if (mins != null && mins > 180) meta = '<span class="stale">⚠ Ο παλμός έχει '
+    + Math.round(mins / 60) + ' ώρες — ο πυρήνας μπορεί να μην τρέχει</span> · ' + meta;
+  document.getElementById('pulseMeta').innerHTML = meta;
+}
+
+/* ── ΣΥΝΔΕΣΗ TagoIO ────────────────────────────────────────────────────── */
+(function () {
+  var got = false;
+  function feed(data) {
+    if (!data) return;
+    var pts = [];
+    (Array.isArray(data) ? data : [data]).forEach(function (g) {
+      if (g && Array.isArray(g.result)) pts = pts.concat(g.result);
+      else if (g && g.variable) pts.push(g);
+    });
+    if (pts.length && ingest(pts)) got = true;
+  }
+  if (window.TagoIO && window.TagoIO.onStart) {
+    try {
+      window.TagoIO.onStart(function (w) { if (w && w.data) feed(w.data); });
+      window.TagoIO.onRealtime(function (d) { feed(d); });
+      window.TagoIO.ready();
+    } catch (e) { /* πέφτουμε στο δείγμα */ }
+  }
+  /* Αν σε 2,5 s δεν ήρθε τίποτα, δείχνουμε ΔΕΙΓΜΑ — ώστε το αρχείο να είναι
+     χρήσιμο και εκτός TagoIO, με ρητή σήμανση ότι ΔΕΝ είναι ζωντανό. */
+  setTimeout(function () { if (!got && window.SAG_DEMO) { STATE.rows = window.SAG_DEMO;
+    STATE.at = new Date().toISOString(); STATE.live = false; paintPulse(); fillStart(); render(); } }, 2500);
+})();
+
+document.getElementById('q').oninput = function (e) {
+  STATE.q = String(e.target.value || '').trim().toLowerCase(); render();
+};
+document.getElementById('sortSev').onclick = function () { STATE.sort = 'sev'; syncSort(); render(); };
+document.getElementById('sortName').onclick = function () { STATE.sort = 'name'; syncSort(); render(); };
+function syncSort() {
+  document.getElementById('sortSev').setAttribute('aria-pressed', String(STATE.sort === 'sev'));
+  document.getElementById('sortName').setAttribute('aria-pressed', String(STATE.sort === 'name'));
+}
+document.getElementById('expandAll').onclick = function () {
+  var vis = STATE.rows.filter(matches);
+  var anyClosed = vis.some(function (r) { return !STATE.open[r.f + '|' + r.i]; });
+  vis.forEach(function (r) { STATE.open[r.f + '|' + r.i] = anyClosed; });
+  this.textContent = anyClosed ? 'Κλείσιμο όλων' : 'Άνοιγμα όλων';
+  render();
+};
+document.getElementById('printBtn').onclick = function () { window.print(); };
+
+/* ── ΟΨΗ ΔΙΑΔΡΟΜΗΣ ─────────────────────────────────────────────────────── */
+document.getElementById('routeBtn').onclick = function () {
+  ROUTE.on = !ROUTE.on;
+  this.setAttribute('aria-pressed', String(ROUTE.on));
+  this.textContent = ROUTE.on ? '← Λίστα' : 'Διαδρομή';
+  document.getElementById('routeOpts').style.display = ROUTE.on ? '' : 'none';
+  render();
+};
+document.getElementById('kmSel').onchange = function () {
+  ROUTE.km = Number(this.value); render();
+};
+document.getElementById('startSel').onchange = function () {
+  var v = this.value;
+  ROUTE.start = v ? STATE.rows.filter(function (r) { return (r.f + '|' + r.i) === v; })[0] : null;
+  render();
+};
+render();
+</script>
+</body>
+</html>
