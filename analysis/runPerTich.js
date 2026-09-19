@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.146 · 2026-09-19';
+const SAG_KERNEL_VERSION = 'v50.147 · 2026-09-19';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -13800,9 +13800,30 @@ function packCalculatedIndicators({
     // (399 επανασυμπιέσεις). Δουλεύουμε σε ΠΑΡΤΙΔΕΣ που μεγαλώνουν: <20 συμπιέσεις.
     let _batch = 8;
     // (α) κείμενα — παλαιότερα πρώτα
+    /* ══ T-ECSHIELD-TEXT-02 (v50.147 · 19/9/2026) · Η ΑΣΠΙΔΑ ΤΗΣ v50.144 ΔΕΝ ΔΟΥΛΕΥΕ ══
+       ΜΕΤΡΗΜΕΝΟ 19/9 16:28 UTC (bundles του παλμού 16:20, ο ΠΡΩΤΟΣ με v50.145): τα
+       κομμένα κείμενα πήγαν 185 -> 180, και **και οι 8 αγροί χάνουν ΑΚΟΜΗ την
+       ετυμηγορία αλατότητας** (ΚΕΚ, Ρηγάκης, Κουκιά, Βενζινάδικο, Μεγάλη Ντάμα,
+       Καμπιτάκης, ΚΑΜΠΑΝΗΣ, ΚΥΔΩΝ). Η ασπίδα της v50.144 ΔΕΝ έπιασε.
+
+       Η ΑΙΤΙΑ: η v50.144 έβαλε την ασπίδα στην **ταξινόμηση** των θυμάτων — αλλά ο
+       βρόχος σβήνει σε **παρτίδες** των 8 (μετά 16, 32, 64, 128) και ΜΕΤΑ ξανασυμπιέζει.
+       Η ταξινόμηση είναι άχρηστη αν η πρώτη κιόλας παρτίδα καταπίνει ΟΛΗ τη λίστα.
+       ΚΑΜΠΑΝΗΣ (μετρημένο): 7 παλιά θύματα συνολικά, μία παρτίδα των 8 τα σβήνει ΟΛΑ
+       μαζί — μαζί και το προστατευμένο `salinity_stress` — πριν καν μετρηθεί αν
+       χρειαζόταν.
+
+       Η φάση (β) είχε ΗΔΗ τον σωστό φρουρό συνόρου· η (α) δεν τον πήρε ποτέ. ΕΔΩ
+       μπαίνει ο ίδιος: η παρτίδα ΣΤΑΜΑΤΑ στο σύνορο της ασπίδας, και μέσα στην ασπίδα
+       πάμε ΕΝΑ-ΕΝΑ με επανασυμπίεση, ώστε να σβήσει ακριβώς όσα χρειάζονται και ούτε
+       ένα παραπάνω. Το κόστος (~5 ms ανά επανασυμπίεση) πληρώνεται ΜΟΝΟ όταν έχουμε
+       ήδη μπει στην ασπίδα, δηλαδή σπάνια. */
     let _i = 0;
     while (_i < _victims.length && compressedData.length > _SAG_BUNDLE_MAX_B64) {
-      const _end = Math.min(_victims.length, _i + _batch);
+      if (_sagShielded(_victims[_i].k)) _batch = 1;   // στην ασπίδα: ένα-ένα, όχι παρτίδες
+      let _end = Math.min(_victims.length, _i + _batch);
+      // η παρτίδα ΔΕΝ περνά το σύνορο της ασπίδας: ξαναμετράμε πριν αγγίξουμε προστατευμένο
+      if (!_sagShielded(_victims[_i].k)) { let _q = _i; while (_q < _end && !_sagShielded(_victims[_q].k)) _q++; _end = _q; }
       for (; _i < _end; _i++) {
         const e = _victims[_i].box[_victims[_i].k];
         if (e && e.metadata && typeof e.metadata.text === 'string' && e.metadata.text.length > 0) {
@@ -13812,7 +13833,7 @@ function packCalculatedIndicators({
         }
       }
       compressedData = compressFieldBundle({ shared: sharedPacked, crops: cropsPackedArr });
-      _batch = Math.min(128, _batch * 2);
+      if (_batch > 1) _batch = Math.min(128, _batch * 2);   // T-ECSHIELD-TEXT-02: στην ασπίδα μένει 1
     }
     // (β) ολόκληροι δείκτες — μόνο αν δεν έφτασε το (α)
     // ── T-BUNDLE-ORDER-01 + T-BUNDLE-SHIELD-01 (v50.127 · 9/9/2026) · παγίδα #42 ──────
