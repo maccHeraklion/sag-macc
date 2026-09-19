@@ -16249,12 +16249,20 @@ async function _sagFleetFiles(env) {
   const _list = (_raw && String(_raw).trim())
     ? String(_raw).split(',').map(x => x.trim()).filter(Boolean).slice(0, 20)
     : _SAG_FLEET_FILES;
-  const _cap = new Promise(res => setTimeout(() => res(null), 8000));
-  const out = await Promise.all(_list.map(async (p) => {
-    const r = await Promise.race([_sagHeadFile(_SAG_FLEET_FILES_BASE + p, 5000), _cap]);
-    return { p, h: r ? r.h : 0, t: r ? r.t : 'timeout', c: _sagFileOk(p, r) };
-  }));
-  return out;
+  // Το χρονόμετρο ΣΒΗΝΕΙ: αλλιώς κρατά το container ζωντανό έως 8 s μετά την
+  // απάντηση του τελευταίου HEAD — χρεωμένος χρόνος σε ΚΑΘΕ ωριαίο παλμό για
+  // αναμονή που έχει ήδη τελειώσει.
+  let _capT = null;
+  const _cap = new Promise(res => { _capT = setTimeout(() => res(null), 8000); });
+  try {
+    const out = await Promise.all(_list.map(async (p) => {
+      const r = await Promise.race([_sagHeadFile(_SAG_FLEET_FILES_BASE + p, 5000), _cap]);
+      return { p, h: r ? r.h : 0, t: r ? r.t : 'timeout', c: _sagFileOk(p, r) };
+    }));
+    return out;
+  } finally {
+    if (_capT) clearTimeout(_capT);
+  }
 }
 async function _sagFleetAnalyses(account, env) {
   const _raw = ((env || []).find(e => e.key === 'FLEET_ANALYSES') || {}).value;
