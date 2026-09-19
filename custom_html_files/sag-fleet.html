@@ -80,6 +80,35 @@ h1 { margin: 2px 0 0; font-size: 1.5rem; font-weight: 720; letter-spacing: -.02e
 .tile .h, .tile .n { color: inherit; }
 .t-visit .h, .t-check .h, .t-office .h, .t-ok .h { color: var(--tx3); }
 
+/* ── ΥΓΕΙΑ ΣΥΣΤΗΜΑΤΟΣ (W-FLEETHEALTH-01) ───────────────────────────────
+   ΤΟ ΕΥΡΗΜΑ (19/9/2026): αυτό ΑΚΡΙΒΩΣ το αρχείο έλειπε από τον διακομιστή
+   από τις 16/9 — ο πίνακας ήταν άδειος επί τρεις ημέρες και ΚΑΝΕΙΣ δεν το
+   πήρε είδηση. Ο πίνακας εποπτεύει τα ΟΡΓΑΝΑ· κανείς δεν εποπτεύει το
+   ΣΥΣΤΗΜΑ. Εδώ μπαίνει ό,τι ξέρει ήδη ο πυρήνας σε κάθε παλμό: ποιοι αγροί
+   ΔΕΝ υπολογίστηκαν, ποια αρχεία του widget δεν απαντούν, πόσο παλιές είναι
+   οι analyses. Αν λείψει ξανά αρχείο, θα φαίνεται ΕΔΩ — κόκκινο, με όνομα. */
+.sys { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.sysHead { width: 100%; font-size: .72rem; font-weight: 750; letter-spacing: .07em;
+           text-transform: uppercase; color: var(--tx3); }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px;
+        border-radius: 8px; border: 1px solid var(--line); background: var(--s2);
+        font-size: .78rem; color: var(--tx3); }
+.chip b { color: var(--tx2); font-weight: 680; }
+.chip.good { border-color: var(--ok); background: var(--ok-bg); color: var(--ok); }
+.chip.warn { border-color: var(--office); background: var(--office-bg); color: var(--office); }
+.chip.bad  { border-color: var(--visit); background: var(--visit-bg); color: var(--visit); }
+.chip.good b, .chip.warn b, .chip.bad b { color: inherit; }
+/* Η γραμμή υγείας ΑΝΑ ΑΓΡΟ: γιατί ο αγρός δεν έχει φρέσκια κάρτα. */
+.hx { display: flex; flex-wrap: wrap; gap: 6px; }
+.hx span { padding: 3px 9px; border-radius: 7px; background: var(--s3);
+           color: var(--tx2); font-size: .78rem; }
+.hx span.warn { background: var(--office-bg); color: var(--office); font-weight: 650; }
+.hx span.bad { background: var(--visit-bg); color: var(--visit); font-weight: 700; }
+@media (max-width: 560px) {
+  .sys { gap: 4px; }
+  .chip { padding: 4px 7px; font-size: .72rem; }
+}
+
 /* ── ΓΡΑΜΜΗ ΕΛΕΓΧΩΝ ───────────────────────────────────────────────────── */
 .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
 .srch { flex: 1 1 220px; min-width: 180px; position: relative; }
@@ -269,6 +298,8 @@ td.mono, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, mon
 
   <div class="hero" id="hero"></div>
 
+  <div class="sys" id="sys"></div>
+
   <div class="bar">
     <div class="srch">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
@@ -307,7 +338,10 @@ td.mono, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, mon
       <span><i class="dot" style="background:var(--office)"></i> <b>ΓΡΑΦΕΙΟ</b> — λείπει ρύθμιση, λύνεται από τη φόρμα</span>
       <span><i class="dot" style="background:var(--ok)"></i> <b>ΕΝΤΑΞΕΙ</b></span>
     </div>
-    <div id="footNote">Ο πίνακας ενημερώνεται σε κάθε παλμό του πυρήνα.</div>
+    <div id="footNote">Ο πίνακας ενημερώνεται σε κάθε παλμό του πυρήνα.
+      Η <b>Υγεία συστήματος</b> πάνω-πάνω δείχνει τον ίδιο τον μηχανισμό: αγροί που
+      δεν υπολογίστηκαν, αρχεία της οθόνης που δεν απαντούν, analyses που έχουν
+      σταματήσει. Αν εκεί υπάρχει κόκκινο, ο πίνακας από κάτω μπορεί να είναι ελλιπής.</div>
   </div>
 </div>
 <script>
@@ -480,6 +514,11 @@ function stamp(h) {
    Ο διαχειριστής σαρώνει 45 γραμμές. Αν πρέπει να ανοίξει καθεμιά για να
    καταλάβει, ο πίνακας απέτυχε. Εδώ μπαίνει ΤΟ ΠΙΟ ΣΟΒΑΡΟ, όχι μια λίστα. */
 function why(r) {
+  /* W-FLEETHEALTH-01: αν ο αγρός ΔΕΝ υπολογίστηκε, αυτό είναι το σημαντικότερο
+     που έχει να πει η γραμμή — πιο πάνω ΚΑΙ από τη χαλασμένη μπαταρία. Ο
+     παραγωγός βλέπει παλιά κάρτα και νομίζει ότι είναι σημερινή. */
+  if (r.e) return 'Ο υπολογισμός απέτυχε: ' + r.e;
+  if (r.nc) return 'Δεν έχει ρύθμιση στη φόρμα — δεν υπολογίζεται τίποτα γι\' αυτόν τον αγρό';
   var kills = (r.z || []).filter(function (z) { return z.k; });
   var warns = (r.z || []).filter(function (z) { return !z.k; });
   /* Μια συσκευή που ΚΑΙ σιωπά ΚΑΙ έχει καταγεγραμμένη βλάβη δεν αναφέρεται δύο
@@ -487,7 +526,7 @@ function why(r) {
   var named = {};
   (r.z || []).forEach(function (z) { named[z.d] = 1; });
   var dead = (r.d || []).filter(function (d) {
-    return (d.q || (isFinite(d.h) && d.h > 48)) && !named[d.n]; });
+    return (d.q || (Number.isFinite(d.h) && d.h > 48)) && !named[d.n]; });
   var low = (r.d || []).filter(function (d) { return d.l; });
   var out = [];
   if (kills.length) out.push(kills[0].d + ' — ' + kills[0].t
@@ -501,6 +540,9 @@ function why(r) {
   if (low.length) out.push(low.length + ' με χαμηλή μπαταρία');
   if (!out.length && (r.g || []).length) out.push('Λείπει: ' + r.g.join(', '));
   if (!out.length && (r.a || []).length) out.push('Παλιές μετρήσεις: ' + r.a[0].g);
+  /* Το `ok === 0` το στέλνει ΜΟΝΟ πυρήνας v50.143+· σε παλιότερο είναι undefined
+     και δεν λέμε τίποτα — καλύτερα σιωπή παρά ψεύτικος συναγερμός. */
+  if (r.ok === 0 && !out.length) out.push('Δεν γράφτηκε κάρτα σε αυτόν τον παλμό');
   return out.length ? out.join(' · ') : 'Όλα τα όργανα λειτουργούν';
 }
 
@@ -512,7 +554,7 @@ function producerText(r) {
   var named = {};
   (r.z || []).forEach(function (z) { named[z.d] = 1; });
   var dead = (r.d || []).filter(function (d) {
-    return (d.q || (isFinite(d.h) && d.h > 48)) && !named[d.n]; });
+    return (d.q || (Number.isFinite(d.h) && d.h > 48)) && !named[d.n]; });
   (r.z || []).forEach(function (z) {
     L.push('• ' + z.d + (z.y ? ' (' + z.y + ')' : '') + ' — ' + z.t
       + (z.w ? ': ' + z.w : '') + (z.c ? ' → ' + z.c : ''));
@@ -527,6 +569,91 @@ function producerText(r) {
   if ((r.g || []).length) L.push('• Λείπουν από τη φόρμα: ' + r.g.join(', ') + '.');
   if (L.length === 1) L.push('• Δεν εντοπίστηκε πρόβλημα.');
   return L.join('\n');
+}
+
+/* ── ΥΓΕΙΑ (W-FLEETHEALTH-01) ──────────────────────────────────────────
+   Διαβάζει ΜΟΝΟ ό,τι γράφει ο πυρήνας v50.143+. Με παλιότερο πυρήνα τα πεδία
+   λείπουν και το πλαίσιο ΔΕΝ εμφανίζεται καθόλου — κανένα ψεύτικο «όλα καλά». */
+function hNum(v) { var n = Number(v); return Number.isFinite(n) ? n : null; }
+function hAge(h) {
+  if (h == null || !Number.isFinite(h)) return '—';
+  if (h < 1) return Math.round(h * 60) + '΄';
+  return h < 48 ? h.toFixed(1).replace('.', ',') + ' ώ'
+                : (h / 24).toFixed(1).replace('.', ',') + ' ημ';
+}
+function hB(n) { return n == null ? '—' : nf(Math.round(n)) + ' B'; }
+
+/* Η γραμμή υγείας ενός αγρού. Κενή όταν δεν υπάρχει τίποτα να πει. */
+function healthRow(r) {
+  var h = [];
+  if (r.e) h.push('<span class="bad">Σφάλμα κύκλου: ' + esc(r.e) + '</span>');
+  if (r.nc) h.push('<span class="bad">Χωρίς ρύθμιση στη φόρμα</span>');
+  if (r.ok === 0 && !r.e && !r.nc) h.push('<span class="bad">Δεν γράφτηκε κάρτα</span>');
+  if (r.ok === 1) h.push('<span>Κάρτα γράφτηκε' + (r.bb != null ? ' · ' + hB(r.bb) : '') + '</span>');
+  if (r.bt) h.push('<span class="warn">Η κάρτα γέμισε — κόπηκαν παλιοί δείκτες</span>');
+  if (r._cut) h.push('<span class="warn">Η εγγραφή του πίνακα συμπυκνώθηκε</span>');
+  if (r.fc === null && 'fc' in r) h.push('<span class="warn">Χωρίς πρόγνωση</span>');
+  else if (Number.isFinite(r.fc)) h.push('<span' + (r.fc > 26 ? ' class="warn"' : '') + '>Πρόγνωση ' + hAge(r.fc) + '</span>');
+  if (hNum(r.rj) > 0) h.push('<span class="warn">' + nf(r.rj) + ' μετρήσεις απορρίφθηκαν</span>');
+  if (!h.length) return '';
+  return '<div class="sect"><h3>Υγεία υπολογισμού</h3><div class="hx">' + h.join('') + '</div></div>';
+}
+
+/* Το πλαίσιο του ΣΥΣΤΗΜΑΤΟΣ. Τέσσερις ερωτήσεις: τρέχει ο πυρήνας; υπολογίστηκαν
+   όλοι οι αγροί; απαντούν τα αρχεία της οθόνης; τρέχουν οι βοηθητικές analyses; */
+function renderSys() {
+  var el = document.getElementById('sys');
+  if (!el) return;
+  var m = (STATE.sum && STATE.sum.metadata) || null;
+  if (!m || !STATE.live) { el.innerHTML = ''; return; }
+  var c = [];
+  var chip = function (k, l, v) { c.push('<span class="chip ' + k + '">' + l + ' <b>' + v + '</b></span>'); };
+  if (m.kernel) chip('', 'Πυρήνας', esc(m.kernel));
+  var tk = m.tick || null;
+  if (tk) {
+    var th = hNum(tk.th), gap = hNum(tk.gap);
+    chip(gap > 0 ? 'warn' : '', 'Παλμός',
+      (tk.d ? 'ημερήσιος' : (tk.h ? 'ωριαίος' : 'ενδιάμεσος'))
+      + (th != null ? ' · ' + th.toFixed(2).replace('.', ',') + ' ώ' : '')
+      + (gap > 0 ? ' · κενό ' + gap.toFixed(1).replace('.', ',') + ' ώ' : ''));
+  }
+  var ms = hNum(m.ms);
+  if (ms != null) chip(ms > 240000 ? 'warn' : '', 'Διάρκεια', (ms / 1000).toFixed(0) + ' s');
+  var total = hNum(m.total), comp = hNum(m.computed);
+  if (total != null) {
+    var miss = (comp != null) ? (total - comp) : null;
+    chip(miss ? 'bad' : 'good', 'Αγροί',
+      (comp != null ? nf(comp) + '/' + nf(total) + ' υπολογίστηκαν' : nf(total)));
+  }
+  var errs = Array.isArray(m.errors) ? m.errors : [];
+  if (errs.length) chip('bad', 'Σφάλμα κύκλου',
+    esc(errs.slice(0, 3).join(', ')) + (errs.length > 3 ? ' +' + (errs.length - 3) : ''));
+  if (hNum(m.nocfg) > 0) chip('warn', 'Χωρίς ρύθμιση', nf(m.nocfg) + ' αγροί');
+  if (hNum(m.nopos) > 0) chip('warn', 'Χωρίς θέση στον χάρτη', nf(m.nopos) + ' αγροί');
+  var rd = m.reads || null;
+  if (rd && hNum(rd.real) != null) {
+    var tot = hNum(rd.real) + (hNum(rd.cached) || 0);
+    chip('', 'Αναγνώσεις', nf(rd.real)
+      + (tot > 0 ? ' · ' + Math.round((hNum(rd.cached) || 0) / tot * 100) + ' % από μνήμη' : ''));
+  }
+  /* ΤΑ ΑΡΧΕΙΑ ΤΗΣ ΟΘΟΝΗΣ. Αυτό ΑΚΡΙΒΩΣ έλειπε στις 16/9 (παγίδα #225): αν το
+     sag-fleet.html ξαναφύγει, εδώ θα γράφει το όνομά του με κόκκινο. */
+  var files = Array.isArray(m.files) ? m.files : null;
+  if (files && files.length) {
+    var bad = files.filter(function (x) { return !x.c; });
+    if (bad.length) {
+      chip('bad', 'Αρχεία οθόνης', bad.map(function (x) {
+        return (String(x.p).split('/').pop()) + ' (' + (x.h || '—') + ')'; }).join(', '));
+    } else {
+      chip('good', 'Αρχεία οθόνης', files.length + '/' + files.length + ' απαντούν');
+    }
+  }
+  (Array.isArray(m.an) ? m.an : []).forEach(function (a) {
+    var h = hNum(a.h);
+    var k = (a.a === 0 || a.e) ? 'bad' : (h == null ? 'warn' : (h > 48 ? 'bad' : (h > 26 ? 'warn' : '')));
+    chip(k, esc(a.n), a.e ? 'δεν διαβάστηκε' : (a.a === 0 ? 'ΑΝΕΝΕΡΓΗ' : hAge(h)));
+  });
+  el.innerHTML = c.length ? '<div class="sysHead">Υγεία συστήματος</div>' + c.join('') : '';
 }
 
 /* ── ΑΠΟΔΟΣΗ ───────────────────────────────────────────────────────────── */
@@ -573,7 +700,9 @@ function deviceTable(r) {
     + '<th>Τελευταία</th><th>Μπαταρία</th><th>Κατάσταση</th></tr></thead><tbody>'
     + r.d.map(function (d) {
       var f = fz[d.n] || [];
-      var dead = d.q || (isFinite(d.h) && d.h > 48);
+      /* Number.isFinite, ΟΧΙ isFinite: το isFinite('5') είναι true και μια
+         συμβολοσειρά περνούσε για ώρες σιωπής — βλ. Ε4 στην age(). */
+      var dead = d.q || (Number.isFinite(d.h) && d.h > 48);
       var st = f.length
         ? f.map(function (z) {
             return '<span class="tagx ' + (z.k ? 'x-kill' : 'x-warn') + '">' + esc(z.t) + '</span>'
@@ -608,6 +737,7 @@ function fieldRow(r, extra) {
     + '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
     + ' stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>'
     + '</button><div class="body">'
+    + healthRow(r)
     + '<div class="sect"><h3>Όργανα του αγρού</h3>' + deviceTable(r) + '</div>'
     + ((r.g || []).length ? '<div class="sect"><h3>Κενά ρύθμισης — διορθώνονται από τη φόρμα</h3>'
         + '<div class="gaps">' + r.g.map(function (g) { return '<span class="gap">' + esc(g) + '</span>'; }).join('')
@@ -716,7 +846,9 @@ function fillStart() {
 
 function render() {
   renderHero();
+  renderSys();
   var list = STATE.rows.filter(matches);
+  syncExpand();
   list.sort(STATE.sort === 'sev'
     ? function (a, b) { return (b.s - a.s) || a.f.localeCompare(b.f, 'el'); }
     : function (a, b) { return a.f.localeCompare(b.f, 'el'); });
@@ -763,7 +895,12 @@ function ingest(points) {
     rows.push(rec);
     if (p.time && (!at || p.time > at)) at = p.time;
   });
-  if (!rows.length) return false;
+  /* ΔΙΟΡΘΩΣΗ (W-FLEETHEALTH-01): σύνοψη ΧΩΡΙΣ γραμμές αγρών επέστρεφε false, το
+     `got` έμενε false και στα 2,5 s ο πίνακας γέμιζε με το ΠΑΓΩΜΕΝΟ ΔΕΙΓΜΑ της
+     2/9 — δηλαδή έδειχνε αληθινά ονόματα παραγωγών με ψεύτικη κατάσταση, ενώ
+     ΗΤΑΝ συνδεδεμένος. Αν ήρθε σύνοψη, είμαστε ζωντανοί: άδειος πίνακας και το
+     λέμε, ποτέ μπαγιάτικο στιγμιότυπο. */
+  if (!rows.length && !sum) return false;
   /* Κρατάμε ΜΟΝΟ την ΠΙΟ ΠΡΟΣΦΑΤΗ εγγραφή ανά αγρό.
      ΠΡΟΣΟΧΗ — ΕΔΩ ΗΤΑΝ ΣΦΑΛΜΑ: κρατούσα την ΠΡΩΤΗ που συναντούσα, υποθέτοντας
      σιωπηλά ότι το TagoIO επιστρέφει τα νεότερα πρώτα. Σε συσκευή Immutable, που
@@ -829,7 +966,10 @@ function paintPulse() {
   }
   /* Αν σε 2,5 s δεν ήρθε τίποτα, δείχνουμε ΔΕΙΓΜΑ — ώστε το αρχείο να είναι
      χρήσιμο και εκτός TagoIO, με ρητή σήμανση ότι ΔΕΝ είναι ζωντανό. */
-  setTimeout(function () { if (!got && window.SAG_DEMO) { STATE.rows = window.SAG_DEMO;
+  /* Η sev() (Ε5) καθάριζε ΜΟΝΟ τα ζωντανά δεδομένα. Το δείγμα έμπαινε ωμό στο
+     STATE και μια σοβαρότητα εκτός 0-3 θα έσπαγε πάλι τους μετρητές. */
+  setTimeout(function () { if (!got && window.SAG_DEMO) {
+    STATE.rows = window.SAG_DEMO.map(function (r) { r.s = sev(r.s); return r; });
     STATE.at = new Date().toISOString(); STATE.live = false; paintPulse(); fillStart(); render(); } }, 2500);
 })();
 
@@ -842,11 +982,20 @@ function syncSort() {
   document.getElementById('sortSev').setAttribute('aria-pressed', String(STATE.sort === 'sev'));
   document.getElementById('sortName').setAttribute('aria-pressed', String(STATE.sort === 'name'));
 }
+/* Η ετικέτα δεν ξαναϋπολογιζόταν όταν άλλαζε το φίλτρο ή άνοιγε μια γραμμή με
+   κλικ: έγραφε «Κλείσιμο όλων» ενώ όλες ήταν κλειστές. Τώρα τη γράφει το
+   render(), δηλαδή ΠΑΝΤΑ η πραγματική κατάσταση των ΟΡΑΤΩΝ γραμμών. */
+function syncExpand() {
+  var b = document.getElementById('expandAll');
+  if (!b) return;
+  var vis = STATE.rows.filter(matches);
+  var anyClosed = vis.some(function (r) { return !STATE.open[r.f + '|' + r.i]; });
+  b.textContent = (vis.length && !anyClosed) ? 'Κλείσιμο όλων' : 'Άνοιγμα όλων';
+}
 document.getElementById('expandAll').onclick = function () {
   var vis = STATE.rows.filter(matches);
   var anyClosed = vis.some(function (r) { return !STATE.open[r.f + '|' + r.i]; });
   vis.forEach(function (r) { STATE.open[r.f + '|' + r.i] = anyClosed; });
-  this.textContent = anyClosed ? 'Κλείσιμο όλων' : 'Άνοιγμα όλων';
   render();
 };
 document.getElementById('printBtn').onclick = function () { window.print(); };
