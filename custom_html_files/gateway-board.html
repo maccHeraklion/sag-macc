@@ -81,6 +81,7 @@ h1{font-size:20px; margin:0 0 4px}
     <div class="tile"><div class="n" id="cGrey" style="color:var(--grey)">0</div><div class="l">άγνωστα</div></div>
     <div class="tile"><div class="n" id="cNoLoc" style="color:var(--muted)">0</div><div class="l">χωρίς θέση</div></div>
     <div class="tile"><div class="n" id="cUndec" style="color:var(--blue)">0</div><div class="l">αδήλωτα</div></div>
+    <div class="tile"><div class="n" id="cNet">0</div><div class="l">από το δίκτυο</div></div>
   </div>
 
   <div class="split">
@@ -131,7 +132,13 @@ var $ = function (id) { return document.getElementById(id); };
 
 var ALIVE_GREEN_H = 1;
 var ALIVE_YELLOW_H = 6;
-var NOT_LIFE_SIGNS = ['location', 'gateway_config'];
+var NOT_LIFE_SIGNS = ['location', 'gateway_config', 'gateway_row',
+  'gateway_summary', 'gateway_scan_state'];
+
+/* T-GWBOARD-ACTILITY-01 · Το χρώμα της ανάλυσης gatewayLiveness σε χρώμα της
+   σελίδας. Η ανάλυση λέει «orange», η σελίδα ξέρει «yellow» — ίδιο πράγμα. */
+var ROW_CLS = { green: 'green', orange: 'yellow', yellow: 'yellow', red: 'red' };
+var ACTILITY_SRC = 'δίκτυο Actility (πεδίο LRR)';
 
 var COLOR = { green: '#2ecc71', yellow: '#f1c40f', red: '#e74c3c', grey: '#95a5a6' };
 
@@ -169,6 +176,10 @@ function telHref(p) {
 /* ═══ Η ΚΑΤΑΣΤΑΣΗ — ΙΔΙΟΣ ΚΑΝΟΝΑΣ ΜΕ ΤΗ ΦΟΡΜΑ ════════════════════════════ */
 
 function statusOf(entry) {
+  /* T-GWBOARD-ACTILITY-01: όταν η ετυμηγορία έρχεται έτοιμη από την ανάλυση
+     (gateway_row), ΔΕΝ την ξαναϋπολογίζουμε από χρονοσφραγίδες μεταβλητών —
+     το gateway δεν στέλνει δικές του μεταβλητές, ποτέ. */
+  if (entry && entry.verdict) return entry.verdict;
   var best = null, bestVar = null;
   var vars = entry.vars || {};
   for (var k in vars) {
@@ -243,6 +254,47 @@ function ingest(rows) {
 
     var prev = e.vars[r.variable];
     if (!prev || Date.parse(r.time) >= Date.parse(prev)) e.vars[r.variable] = r.time;
+
+    /* ── T-GWBOARD-ACTILITY-01 · Η ΚΑΡΤΑ ΤΟΥ ΔΙΚΤΥΟΥ ───────────────────
+       Οι 33 συσκευές-gateway της TagoIO δεν έστειλαν ΠΟΤΕ δική τους μέτρηση,
+       οπότε «άγνωστο» ήταν το μόνο δυνατό αποτέλεσμα. Η ζωντάνια έρχεται από
+       τους ΑΙΣΘΗΤΗΡΕΣ: κάθε uplink της Actility λέει ΠΟΙΟ gateway τον
+       παρέλαβε. Η ανάλυση gatewayLiveness τα συγκεντρώνει και γράφει ΜΙΑ
+       γραμμή ανά gateway — όλες στην ΙΔΙΑ συσκευή εποπτείας. Γι' αυτό εδώ
+       κλειδί ΔΕΝ είναι η συσκευή αλλά ο κωδικός του gateway (r.value):
+       αλλιώς και τα δέκα θα έπεφταν σε ένα κουτί, με μία καρφίτσα. */
+    if (r.variable === 'gateway_row' || r.variable === 'gateway_summary'
+        || r.variable === 'gateway_scan_state') {
+      /* Η συσκευή που μεταφέρει τις γραμμές ΔΕΝ είναι gateway. Αν δεν το
+         σημαδέψουμε, θα εμφανιζόταν ως ένα επιπλέον «άγνωστο» κουτί. */
+      e.container = true;
+    }
+
+    if (r.variable === 'gateway_row' && r.value) {
+      var gid = 'lrr:' + String(r.value);
+      var prevRow = state.gw[gid];
+      if (prevRow && prevRow.rowTime && Date.parse(r.time) < Date.parse(prevRow.rowTime)) continue;
+      var md = r.metadata || {};
+      var ent = prevRow || { id: gid, phone: '', lat: null, lng: null, vars: {} };
+      ent.rowTime = r.time;
+      ent.fromNetwork = true;
+      ent.code = String(r.value);
+      if (!ent.name) ent.name = 'Gateway ' + ent.code;
+      ent.sensors = md.sensors;
+      ent.rssi = md.rssi;
+      ent.rowText = md.text || '';
+      ent.verdict = {
+        cls: ROW_CLS[md.color] || 'grey',
+        label: md.state || 'άγνωστη',
+        h: (typeof md.age_h === 'number' && isFinite(md.age_h)) ? md.age_h : null,
+        src: ACTILITY_SRC
+      };
+      if (md.location && isFinite(Number(md.location.lat)) && isFinite(Number(md.location.lng))) {
+        ent.lat = Number(md.location.lat); ent.lng = Number(md.location.lng);
+      }
+      state.gw[gid] = ent;
+      continue;
+    }
 
     if (r.variable === 'gateway_config') {
       try {
@@ -360,7 +412,10 @@ function focusGateway(id) {
 function sortedList() {
   var out = [];
   for (var k in state.gw) {
-    if (Object.prototype.hasOwnProperty.call(state.gw, k)) out.push(state.gw[k]);
+    if (!Object.prototype.hasOwnProperty.call(state.gw, k)) continue;
+    /* T-GWBOARD-ACTILITY-01: η συσκευή-δοχείο μένει εκτός. */
+    if (state.gw[k].container) continue;
+    out.push(state.gw[k]);
   }
   /* Σειρά ΧΡΗΣΙΜΟΤΗΤΑΣ, όχι αλφαβητική: πρώτα ό,τι θέλει δουλειά. */
   var rank = { red: 0, grey: 1, yellow: 2, green: 3 };
@@ -374,12 +429,13 @@ function sortedList() {
 
 function render() {
   var list = sortedList();
-  var c = { green: 0, yellow: 0, red: 0, grey: 0 }, noLoc = 0, undec = 0;
+  var c = { green: 0, yellow: 0, red: 0, grey: 0 }, noLoc = 0, undec = 0, net = 0;
   for (var i = 0; i < list.length; i++) {
     /* T-GWROSTER-01: τα αδήλωτα ΔΕΝ μπαίνουν στα «άγνωστα». «Άγνωστο» σημαίνει
        «μίλησε, αλλά δεν ξέρω αν ζει». «Αδήλωτο» σημαίνει «δεν μίλησε ποτέ».
        Δύο διαφορετικές δουλειές — δύο διαφορετικοί αριθμοί. */
     if (isUndeclared(list[i])) { undec++; continue; }
+    if (list[i].fromNetwork) net++;
     c[statusOf(list[i]).cls]++;
     if (list[i].lat == null) noLoc++;
   }
@@ -395,6 +451,7 @@ function render() {
   set('cGreen', c.green); set('cYellow', c.yellow);
   set('cRed', c.red); set('cGrey', c.grey); set('cNoLoc', noLoc);
   set('cUndec', undec);
+  set('cNet', net);
 
   var ul = $('gwlist'), emptyEl = $('empty');
   if (!ul) return;
@@ -402,7 +459,8 @@ function render() {
   if (list.length === 0) {
     if (emptyEl) {
       emptyEl.textContent = 'Δεν φτάνει κανένα gateway σε αυτό το widget. '
-        + 'Πρόσθεσε τις συσκευές gateway στις πηγές δεδομένων του widget. '
+        + 'Πρόσθεσε τη συσκευή «SAG Εποπτεία» με μεταβλητή gateway_row στις '
+        + 'πηγές δεδομένων του widget — εκεί γράφει η ανάλυση gatewayLiveness. '
         + 'Για να φαίνονται ΚΑΙ όσα δεν έχουν δηλωθεί ποτέ, δώσε στο widget '
         + 'παράμετρο «fleet_roster» με τον κατάλογο του στόλου.';
     }
@@ -429,6 +487,12 @@ function render() {
       + '<div class="gwmeta">'
       + esc(s.label) + (s.h != null ? ' · πριν ' + esc(humanAge(s.h)) : '')
       + (s.src ? ' · πηγή: ' + esc(s.src) : '')
+      + (g.sensors != null
+          ? '<br>' + esc(String(g.sensors))
+            + (g.sensors === 1 ? ' αισθητήρας πέρασε' : ' αισθητήρες πέρασαν')
+            + ' από αυτό'
+            + (g.rssi != null ? ' · λήψη ' + esc(String(Math.round(Number(g.rssi)))) + ' dBm' : '')
+          : '')
       + '<br>' + pos
       + (g.phone
           ? '<br>τηλ: ' + (tel
@@ -446,10 +510,28 @@ function render() {
 
   var f = $('foot');
   if (f) {
-    f.textContent = c.grey > 0
-      ? 'Τα «άγνωστα» δεν στέλνουν καμία μεταβλητή δική τους σε αυτό το widget — '
-        + 'μόνο όσες γράφει η φόρμα δήλωσης. Το πράσινο σημαίνει ότι μίλησε το ίδιο το gateway.'
+    /* T-GWBOARD-ACTILITY-01: το πράσινο ΑΛΛΑΞΕ ΝΟΗΜΑ και αυτό ΠΡΕΠΕΙ να
+       γράφεται. Παλιά σήμαινε «μίλησε το ίδιο το gateway» — που δεν συνέβη
+       ποτέ. Τώρα σημαίνει «πέρασε πακέτο από αυτό», που είναι ισχυρότερη
+       απόδειξη λειτουργίας, αλλά ΔΙΑΦΟΡΕΤΙΚΗ. Και δεν κρύβουμε ότι ο ίδιος
+       σταθμός μπορεί να μετριέται δύο φορές όσο λείπει η αντιστοίχιση. */
+    var t = net > 0
+      ? 'Πράσινο = πέρασε πακέτο αισθητήρα από αυτό το gateway μέσα στην '
+        + 'τελευταία ώρα. Η πληροφορία έρχεται από το δίκτυο Actility (πεδίο '
+        + 'LRR των uplink), ΟΧΙ από το ίδιο το gateway — οι συσκευές-gateway '
+        + 'της TagoIO δεν στέλνουν δικές τους μετρήσεις.'
       : 'Το πράσινο σημαίνει ότι μίλησε το ίδιο το gateway — όχι ότι του γράψαμε εμείς κάτι.';
+    if (net > 0 && list.length > net) {
+      t += ' ΠΡΟΣΟΧΗ: οι ' + net + ' εγγραφές του δικτύου ΔΕΝ έχουν ακόμη '
+        + 'αντιστοιχιστεί με τις δηλωμένες συσκευές, οπότε ο ίδιος σταθμός '
+        + 'μπορεί να εμφανίζεται δύο φορές — μία με τον κωδικό του και μία '
+        + 'με το όνομά του.';
+    }
+    if (c.grey > 0) {
+      t += ' Τα «άγνωστα» δεν στέλνουν καμία μεταβλητή δική τους σε αυτό το '
+        + 'widget και δεν τα βλέπει το δίκτυο.';
+    }
+    f.textContent = t;
   }
 }
 
