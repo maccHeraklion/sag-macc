@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.144 · 2026-09-19';
+const SAG_KERNEL_VERSION = 'v50.145 · 2026-09-19';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -11615,21 +11615,31 @@ function buildSoilMoistureLimitIndicators(limits) {
         : `Όρια υγρασίας για έδαφος «${_soilEl}» και τις ανάγκες της καλλιέργειας.`,
   };
 
+  /* T-TEXTDIET-01 (v50.145): το ΑΝΩ όριο έστελνε ΤΟ ΙΔΙΟ ΑΚΡΙΒΩΣ κείμενο με το κάτω
+     (3.810 B στον στόλο, 79 B ανά αγρό, κάθε ώρα). Τα δύο όρια εμφανίζονται ΔΙΠΛΑ-ΔΙΠΛΑ:
+     η εξήγηση διαβάζεται μία φορά. Μένει στο ΚΑΤΩ όριο, που είναι και αυτό που ενεργοποιεί
+     το πότισμα. */
+  const _metaNoText = Object.assign({}, metaBase);
+  delete _metaNoText.text;
+
   return [
     ..._soilWarn,
     // T-U1: γράφεται και στην επιτυχία, ώστε να σβήνει το «Μη διαθέσιμο» της χθεσινής αποτυχίας.
+    /* T-TEXTDIET-01 (v50.145): στην ΕΠΙΤΥΧΙΑ η τιμή «Εντάξει» τα λέει όλα — το σταθερό
+       κείμενο των 72 B ήταν ταυτολογία και το πλήρωναν 48 αγροί ΚΑΘΕ ΩΡΑ (3.456 B στον
+       στόλο). Στην ΑΠΟΤΥΧΙΑ το κείμενο ΜΕΝΕΙ ακέραιο: εκεί λέει στον αγρότη τι να κάνει. */
     { variable: "soil_moisture_limits_status",
       value: _fellBack ? "Χωρίς τύπο εδάφους" : "Εντάξει",
-      metadata: { color: _fellBack ? "orange" : "green",
-        text: _fellBack
-          ? `Τα όρια υγρασίας βγήκαν από γενικές τιμές της καλλιέργειας. Δηλώστε τύπο εδάφους στη φόρμα για ακριβέστερη άρδευση.`
-          : `Τα όρια υγρασίας υπολογίστηκαν από τον τύπο εδάφους και την καλλιέργεια.` } },
+      metadata: _fellBack
+        ? { color: "orange",
+            text: `Τα όρια υγρασίας βγήκαν από γενικές τιμές της καλλιέργειας. Δηλώστε τύπο εδάφους στη φόρμα για ακριβέστερη άρδευση.` }
+        : { color: "green" } },
     { variable: "soil_moisture_lower_limit", value: Number(limits.real_lower_limit.toFixed(2)),
       metadata: Object.assign({}, metaBase, /^stage:/.test(String(limits.band_source || ''))
         ? { text: metaBase.text + ' Τα όρια είναι προσαρμοσμένα στο τρέχον στάδιο «'
             + String(limits.band_source).slice(6) + '» — αλλάζουν καθώς προχωρά η καλλιέργεια.' }
         : {}) },
-    { variable: "soil_moisture_upper_limit", value: Number(limits.real_upper_limit.toFixed(2)), metadata: metaBase },
+    { variable: "soil_moisture_upper_limit", value: Number(limits.real_upper_limit.toFixed(2)), metadata: _metaNoText },
 
     // Optional diagnostics
     // { variable: "soil_wp", value: Number(limits.M_wilt.toFixed(2)), metadata: metaBase },
@@ -15370,15 +15380,20 @@ function _sagFaultIndicators(data) {
           text: 'Δεν υπολογίζεται δόση άρδευσης: ' + H.lostIrr
             + '. Δείτε την κάρτα βλαβών για το όργανο και την ενέργεια.' } });
     }
+    /* ══ T-TEXTDIET-01 (v50.145) · ΤΟ ΕΜΠΟΡΙΚΟ ΚΕΙΜΕΝΟ ΦΕΥΓΕΙ ΑΠΟ ΤΗΝ ΗΜΕΡΗΣΙΑ ΚΑΡΤΑ ══
+       ΜΕΤΡΗΜΕΝΟ 19/9 σε 42 αγρούς: 12.669 B, μέσος όρος 302 B — το ΔΕΥΤΕΡΟ ΑΚΡΙΒΟΤΕΡΟ
+       κλειδί ΟΛΟΥ του συστήματος, αμέσως μετά το crop_stage. Και δεν λέει στον αγρότη τι
+       να κάνει ΣΗΜΕΡΑ στο χωράφι: είναι πρόταση αναβάθμισης εξοπλισμού.
+       ΑΠΟΦΑΣΗ ΜΙΧΑΛΗ 19/9: «να πάει σε αναφορά». Εδώ ΜΟΝΟ φυλάσσεται στο `data`·
+       γράφεται ΜΙΑ φορά την ημέρα ως ξεχωριστή μεταβλητή `upgrade_report`, ΕΚΤΟΣ bundle —
+       μηδέν bytes στο όριο των 10 kB, και η πληροφορία δεν χάνεται. */
     if (H.offers && H.offers.length) {
-      out.push({ variable: 'upgrade_opportunities',
-        value: H.offers.length + (H.offers.length === 1 ? ' δυνατότητα' : ' δυνατότητες'),
-        metadata: { color: 'blue',
-          text: 'Το σύστημα λειτουργεί κανονικά με ό,τι έχετε. Τα παρακάτω θα βελτίωναν '
-            + 'συγκεκριμένες αποφάσεις: ' + H.offers.join('  ') } });
+      data._sagUpgradeReport = 'Το σύστημα λειτουργεί κανονικά με ό,τι έχετε. Τα παρακάτω θα '
+        + 'βελτίωναν συγκεκριμένες αποφάσεις: ' + H.offers.join('  ');
+      data._sagUpgradeCount = H.offers.length;
     } else if (H.scored > 0) {
-      out.push({ variable: 'upgrade_opportunities', value: 'Πλήρης εξοπλισμός',
-        metadata: { color: 'green' } });
+      data._sagUpgradeReport = 'Πλήρης εξοπλισμός — καμία εκκρεμότητα αναβάθμισης.';
+      data._sagUpgradeCount = 0;
     }
   } catch (_e) { /* η ορατότητα δεν επιτρέπεται να ρίξει τον αγρό */ }
   return out;
@@ -19366,6 +19381,22 @@ module.exports = new Analysis(async (context) => {
         // T-FLEET-HEALTH-01: το bundle ΓΡΑΦΤΗΚΕ — σημειώνεται στη γραμμή του αγρού (ok/bytes/περικοπή).
         try { _sagFleetMark(fieldName, { ok: 1, bb: _SAG_LAST_BUNDLE ? _SAG_LAST_BUNDLE.b : null,
           bt: _SAG_LAST_BUNDLE ? _SAG_LAST_BUNDLE.t : 0 }); } catch (_eMk) {}
+        /* T-TEXTDIET-01 (v50.145): η πρόταση αναβάθμισης ΜΙΑ φορά την ημέρα και ΕΚΤΟΣ bundle.
+           Κόστος: 1 εγγραφή ανά αγρό ανά ημέρα (~42/ημέρα) αντί για 302 B σε ΚΑΘΕ ωριαίο
+           bundle. Η αποτυχία εγγραφής ΔΕΝ ρίχνει τον αγρό — είναι αναφορά, όχι σύσταση. */
+        if (dailyTich) {
+          try {
+            const _upTxt = ((measurements || {}).data || {})._sagUpgradeReport;
+            if (_upTxt) {
+              await dev_to_send_meas.sendData([{ variable: 'upgrade_report',
+                value: Number(((measurements || {}).data || {})._sagUpgradeCount) || 0,
+                metadata: { color: 'blue', text: String(_upTxt).slice(0, 900) } }]);
+            }
+          } catch (_eUp) {
+            try { console.log('[T-TEXTDIET-01] ' + fieldName + ': η αναφορά αναβάθμισης δεν '
+              + 'γράφτηκε (' + ((_eUp && _eUp.message) || _eUp) + ')'); } catch (_e2) {}
+          }
+        }
 // if (fieldConfig !== undefined) { // Fail Safe //
         //   fields[i].tags = fields[i].tags.filter(item => (item.key !== 'configuration'));
         //   fields[i].tags.push({
