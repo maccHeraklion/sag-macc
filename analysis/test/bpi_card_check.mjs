@@ -37,7 +37,8 @@ function soilTrapFromCore(core) {
 const ctx = (over = {}) => ({ efficiency_pct: 50, limiting_factor: "warm", performance_pct: 40, status: { code: "WARM_SUBOPTIMAL" }, light_source: "sensor", ...over });
 
 const CHECKS = [
-  ["core: έκδοση v50.139", f => /const SAG_KERNEL_VERSION = 'v50\.139 · 2026-09-19';/.test(f.core)],
+  ["core: έκδοση ≥ v50.139 (η κάρτα BPI μπήκε στη v50.139· νεότερες εκδόσεις την περιέχουν)",
+    f => { const m = f.core.match(/const SAG_KERNEL_VERSION = 'v50\.(\d+) · /); return !!m && Number(m[1]) >= 139; }],
   ["core: soilBaseTemp ΔΕΝ υπάρχει πια· _soilTrap μία φορά· _soilHot από _soilTrap.opt", f => !f.core.includes("soilBaseTemp")
     && (f.core.match(/const _soilTrap = /g) || []).length === 1 && f.core.includes("const _soilHot = soilTemp_avg > _soilTrap.opt;")],
   ["Κ2: καμπύλη εδάφους = min / peak − 3 / max + 5 (εγκεκριμένα 18/9)", f => { const t = soilTrapFromCore(f.core); return !!t && t.dOpt === 3 && t.dMax === 5; }],
@@ -103,7 +104,7 @@ const MUTATIONS = [
   ["η νύχτα ξαναγίνεται συναγερμός", c => c.replace("if (bpiContext.status && bpiContext.status.code === 'NIGHT') {", "if (false) {")],
   ["η νύχτα εκπέμπει και season message", c => c.replace("light_source: (bpiContext.light_source) || 'sensor' } }];", "light_source: (bpiContext.light_source) || 'sensor' } }, { variable: 'bpi_season_message', value: 'x' }];")],
   ["η νύχτα βγαίνει κόκκινη", c => c.replace('metadata: { color: "grey", severity: "info", code: "NIGHT",', 'metadata: { color: "red", severity: "alert", code: "NIGHT",')],
-  ["έκδοση πίσω στη v50.138", c => c.replace("'v50.139 · 2026-09-19'", "'v50.138 · 2026-09-18'")],
+  ["έκδοση πίσω πριν τη v50.139", c => c.replace(/const SAG_KERNEL_VERSION = 'v50\.\d+ · [^']+';/, "const SAG_KERNEL_VERSION = 'v50.138 · 2026-09-18';")],
 ];
 
 function load(coreText) { return { core: lf(coreText), coreRaw: coreText }; }

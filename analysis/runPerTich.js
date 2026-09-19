@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.139 · 2026-09-19';
+const SAG_KERNEL_VERSION = 'v50.140 · 2026-09-19';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -362,7 +362,7 @@ const CROP_PROFILE = {
       M_field_capacity: 42,
       wilting_point: 10,
       root_depth_curve: { initial: 300, vegetative: 800, full_canopy: 1500 },
-      max_tolerance_ECe: 4.7,
+      max_tolerance_ECe: 2.7,   // T-ECE-OLIVE-01 (v50.140 · έλεγχος Κ14): ήταν 4,7 (+74 % πάνω από Maas–Hoffman/FAO-29 = 2,7)
       kc_curve: { vegetative: 0.55, flowering: 0.60, fruit_dev: 0.65, ripening: 0.60 },
       harvest_index: 0.18,
       stage_gdd_thresholds: { vegetative: 0, flowering: 50, fruit_dev: 480, ripening: 1865 }
@@ -411,7 +411,7 @@ const CROP_PROFILE = {
       M_field_capacity: 65,
       wilting_point: 18,
       root_depth_curve: { initial: 200, vegetative: 500, full_canopy: 800 },
-      max_tolerance_ECe: 2.0,
+      max_tolerance_ECe: 1.5,   // T-ECE-OLIVE-01 (v50.140 · έλεγχος Κ14): επιτραπέζια σταφύλια — ήταν 2,0 (FAO-29 = 1,5)
       kc_curve: { transplant: 0.30, vegetative: 0.65, flowering: 0.75, fruiting: 0.55 },
       harvest_index: 0.65,  // D4: FAO-66
       stage_gdd_thresholds: { transplant: 0, vegetative: 200, flowering: 1200, fruiting: 1800 }
@@ -7656,7 +7656,14 @@ let _rsQuality = 'πλήρης';
 const _covET0 = [];
 if (_SAG_COVERED_ACTIVE) {
   const _wIn = 0.5;
-  if (Number.isFinite(u2_irr) && u2_irr > _wIn) {
+  if (!Number.isFinite(u2_irr)) {
+    // T-COVERED-WIND-01 (v50.140 · έλεγχος Κ7): χωρίς ανεμόμετρο το PM γύριζε null
+    // και η ET0 έπεφτε σε Hargreaves ΧΩΡΙΣ καμία διόρθωση καλύμματος (+74 %, μετρημένο
+    // από τον ίδιο τον πυρήνα). Μέσα στο κάλυμμα ο αέρας είναι ούτως ή άλλως
+    // ακίνητος: 0,5 m/s κατά FAO-56, οπότε το PM τρέχει με τη διαπερατότητα.
+    _covET0.push('άνεμος: χωρίς ανεμόμετρο -> ' + _wIn.toFixed(1) + ' m/s (ακίνητος αέρας)');
+    u2_irr = _wIn;
+  } else if (u2_irr > _wIn) {
     _covET0.push('άνεμος ' + u2_irr.toFixed(1) + '->' + _wIn.toFixed(1) + ' m/s');
     u2_irr = _wIn;
   }
@@ -7856,7 +7863,24 @@ const effectiveRainfall_mm = rainfall_24h_irr < 75
   ? rainfall_24h_irr * 0.8
   : rainfall_24h_irr * 0.6;
 
-if (effectiveRainfall_mm >= 5) {
+// ── T-RAIN-INHIBIT-02 (v50.140 · έλεγχος Κ9) ──────────────────────────────
+// Το έλλειμμα μετριέται ΗΔΗ από τον αισθητήρα — η βροχή του 24ώρου που έχει
+// διηθήσει είναι μέσα στη μέτρηση. Η αναστολή «ωφέλιμη βροχή ≥ 5 mm» μπλόκαρε
+// άρδευση ενώ το έδαφος ήταν ξανά στο κατώφλι (διπλή μέτρηση, όπως η ETc που
+// αφαίρεσε η T-FAO56-IRR-01). Τώρα αναστέλλει ΜΟΝΟ όσο η βροχή δεν έχει φτάσει
+// στον αισθητήρα: βρέχει τώρα (≥ 1 mm την τελευταία ώρα) ή το ριζόστρωμα ανεβαίνει
+// ακόμη (τρέχουσα υγρασία > 24ωρος μέσος + 0,5 μονάδα). Χωρίς 24ωρο μέσο ισχύει
+// η παλιά αναστολή (ασφαλής πλευρά).
+const _rain1hIrr = Number(getVal(measurements, 'rain_height_hourly', NaN));
+const _rzAvgIrr = _sagRootZone24h(measurements, parameters);
+const _rainStillArriving = (Number.isFinite(_rain1hIrr) && _rain1hIrr >= 1)
+  || (_rzAvgIrr === null)
+  || (Number.isFinite(_mSoilNow) && Number.isFinite(_rzAvgIrr) && _mSoilNow > _rzAvgIrr + 0.5);
+if (effectiveRainfall_mm >= 5 && !_rainStillArriving) {
+  console.log('[' + (parameters?.name || '—') + '] T-RAIN-INHIBIT-02: βροχή ' + rainfall_24h_irr.toFixed(1)
+    + ' mm στο 24ωρο είναι ήδη στη μέτρηση του αισθητήρα — η δόση κρίνεται από το έλλειμμα, όχι αναστολή');
+}
+if (effectiveRainfall_mm >= 5 && _rainStillArriving) {
   return emitIrrigationState([
     { variable: 'grossIrrigationLiters', value: 0 },
     { variable: 'irrigationDurationHours', value: 0 },
@@ -11487,8 +11511,11 @@ function calculate_IPSI(hourlyTich, measurements, vpd, parameters, vpdError = ""
   // Temperatures (air, leaf, soil)
   // -----------------------------
   let airTempSeries;
-  if (measurements?.data?.air_temperature) airTempSeries = measurements.data.air_temperature; // s2120
-  else if (measurements?.data?.temperature) airTempSeries = measurements.data.temperature; // em300
+  // T-IPSI-HASSERIES-01 (v50.140 · έλεγχος Κ12): ίδια πύλη με το VPD (SAGFIX_50) —
+  // το `[]` που αφήνει η πύλη ευλογοφάνειας είναι truthy και έκρυβε το έγκυρο em3x0
+  // («η θερμοκρασία αέρα δεν είναι έγκυρη» ενώ το VPD είχε ήδη περάσει).
+  if (_sagHasSeries(measurements?.data?.air_temperature)) airTempSeries = measurements.data.air_temperature; // s2120
+  else if (_sagHasSeries(measurements?.data?.temperature)) airTempSeries = measurements.data.temperature; // em300
   else { return { ipsi: undefined, ipsiError: "δεν φτάνει θερμοκρασία αέρα — ελέγξτε τον μετεωρολογικό σταθμό ή τον αισθητήρα κόμης" }; }
 
   const airTempValue = Number(airTempSeries?.[0]?.value);
@@ -11779,8 +11806,24 @@ function calculate_IPSI(hourlyTich, measurements, vpd, parameters, vpdError = ""
   // If soil is cold and still reasonably wet (above ~60% FC), uptake can be limited
   // T-SOILT-NOFALLBACK-01: ΜΟΝΟ με ΜΕΤΡΗΜΕΝΗ θερμοκρασία εδάφους. Χωρίς αυτήν δεν
   // ξέρουμε αν η ρίζα απορροφά — και δεν το μαντεύουμε από τη θερμοκρασία αέρα.
-  if (_soilTempMeasured && T_soil < 10 && Number.isFinite(M_field_capacity) && M_soil > M_field_capacity * 0.6) {
-    cold_stress_multiplier = 1.0 + (10 - T_soil) / 10; // 5°C => 1.5, 0°C => 2.0
+  // ── T-COLDSOIL-RAMP-01 (v50.140 · έλεγχος Κ11) ─────────────────────────────
+  // Το σταθερό κατώφλι 10 °C έδινε βήμα (10,1 °C → IPSI 0 · 9,9 °C → IPSI ≥ 5,5 + βέτο
+  // δόσης) και ήταν ίδιο για ελιά και ντομάτα → χειμερινό «αναβόσβημα». Κατώφλι
+  // από την καλλιέργεια: min του optimal_temp_range, φραγμένο [8, 12] °C (ελιά 8,
+  // ντομάτα 10, εσπεριδοειδή 12). Ζώνη ±2 °C: πάνω από _coldT + 2 τίποτα· μέσα στη
+  // ζώνη ήπιος πολλαπλασιαστής (έως 1,5) ΧΩΡΙΣ βέτο· από _coldT − 2 και κάτω ο
+  // πλήρης κλάδος «κρύο έδαφος» με βέτο δόσης, συνεχής στο σημείο ένωσης (1,5).
+  const _coldMinRaw = Number(crop?.optimal_temp_range?.min);
+  const _coldT = Math.min(12, Math.max(8, Number.isFinite(_coldMinRaw) ? _coldMinRaw : 10));
+  const _coldFrac = (_soilTempMeasured && Number.isFinite(T_soil))
+    ? Math.max(0, Math.min(1, ((_coldT + 2) - T_soil) / 4)) : 0;
+  const _coldWet = Number.isFinite(M_field_capacity) && M_soil > M_field_capacity * 0.6;
+  if (_coldFrac > 0 && _coldFrac < 1 && _coldWet) {
+    cold_stress_multiplier = 1.0 + 0.5 * _coldFrac;   // ήπια ζώνη, χωρίς βέτο
+  }
+  if (_coldFrac >= 1 && _coldWet) {
+    cold_stress_multiplier = 1.5 + Math.max(0, (_coldT - 2) - T_soil) / 10; // στο κατώφλι 1,5 · 0 °C ≈ 2,3
+    // ── End T-COLDSOIL-RAMP-01 (ο κλάδος συνεχίζει όπως πριν) ──
 
     // T-IPSI-NOLEAF-01: ίδια περίπτωση με τον υπερκορεσμό — η θερμοκρασία εδάφους και
     // η υγρασία είναι μετρημένες· η πύλη T_diff > 0,5 έκανε τον κλάδο απροσπέλαστο σε
@@ -12752,6 +12795,12 @@ function getIrrigationAndPlantStressMessages(ipsi, irrigationVolumeParams, ipsiE
   // T-SALT-KS-01: το χθεσινό Ks ταξιδεύει στο bundle (salinity_ks)· χωρίς
   // αισθητήρα EC είναι NaN και ΤΙΠΟΤΑ δεν αλλάζει στα μηνύματα.
   const _ksNow = measurements ? Number(getVal(measurements, 'salinity_ks', NaN)) : NaN;
+  // T-STRESS-DUE-01 (v50.140 · έλεγχος Κ4): «Ιδανικό» πράσινο δίπλα σε «Απαιτείται
+  // άρδευση Χ λίτρα» (ΜΕΛΙΒΟΙΑ-1, Κουκιά, Β3, ΚΟΥΤΣΑΚΗΣ 18/9). Η άρδευση ξεκινά στο
+  // κατώφλι FAO-56 ΠΡΙΝ πιεστεί το φυτό — σωστό — αλλά η κάρτα καταπόνησης πρέπει
+  // να το λέει. Ο δείκτης IPSI ΔΕΝ αλλάζει (τροφοδοτεί BPI/FIR)· μόνο η ετικέτα.
+  const _irrDueNow = Array.isArray(irrigationVolumeParams)
+    && Number((irrigationVolumeParams.find(x => x && x.variable === 'grossIrrigationLiters') || {}).value) > 0;
 
   let messages = [];
   // SAG-LEAF-QA-01: το `ipsi` μετατρέπεται σε αριθμό πιο κάτω· κρατάμε τον πίνακα.
@@ -12796,6 +12845,9 @@ function getIrrigationAndPlantStressMessages(ipsi, irrigationVolumeParams, ipsiE
   if (ipsi !== undefined) {
     if (ipsi < 0) {
       messages =  [...messages, {variable: 'plant_stress', value: 'Μην ποτίζετε', metadata: { color: 'blue', text: (() => { const r = _ipsiArr && _ipsiArr.find(x => x && x.variable === 'ipsi_weather_condition'); return 'Το φυτό έχει άφθονο νερό' + (r && String(r.value) === 'RAIN' ? ' μετά τη βροχή' : '') + ' και αναπτύσσεται άριστα. Δεν χρειάζεται πότισμα.'; })()}}]
+    } else if (ipsi < 3 && _irrDueNow) {
+      messages =  [...messages, {variable: 'plant_stress', value: 'Στο όριο άρδευσης', metadata: { color: 'yellow',
+        text: 'Το φυτό δεν πιέζεται ακόμη (δείκτης ' + ipsi.toFixed(1) + '/10), αλλά η υγρασία του ριζοστρώματος έφτασε στο σημείο έναρξης άρδευσης — δείτε τη σύσταση λίτρων. Ποτίστε πριν αρχίσει η καταπόνηση.' }}]   // T-STRESS-DUE-01
     } else if (ipsi < 3) {
       messages =  [...messages, {variable: 'plant_stress', value: 'Ιδανικό', metadata: { color: Number.isFinite(_ksNow) && _ksNow < 0.75 ? 'yellow' : 'green', text: 'Το φυτό έχει όσο νερό χρειάζεται.' + (Number.isFinite(_ksNow) && _ksNow < 0.75 ? ' Προσοχή: οσμωτική καταπόνηση από άλατα (−' + Math.round((1 - _ksNow) * 100) + '%) — δείτε «Αλατότητα εδάφους» στην Υγεία εγκατάστασης.' : ' Καμία ενέργεια.')}}]
     } else if (ipsi < 6) {
@@ -18526,8 +18578,14 @@ module.exports = new Analysis(async (context) => {
               { variable: "ipsi_running_count", value: newCount }
             );
 
-            // Inject for immediate use inside BPI on this tick
-            measurementsForCrop.data.ipsi_daily_avg = [{ value: newAvg }];
+            // T-BPI-IPSIAVG-01 (v50.140 · έλεγχος Κ3): στο ημερήσιο tick το BPI κρίνει
+            // ΤΗ ΧΘΕΣΙΝΗ ημέρα → παίρνει τον μέσο των ~23 ωρών που μόλις μηδενίστηκε
+            // (prevIpsiAvg), όχι τη μονόωρη τιμή των 03:20 (νύχτα, χαμηλό VPD). Τις
+            // άλλες ώρες παίρνει τον τρέχοντα σωρευτικό. Με < 6 ώρες συσσώρευσης
+            // (πρώτη μέρα, κενό) πέφτει στον τρέχοντα.
+            const _prevAvgN = Number(prevIpsiAvg), _prevCntN = Number(prevIpsiCount || 0);
+            const _bpiAvg = (dailyTich && Number.isFinite(_prevAvgN) && _prevCntN >= 6) ? _prevAvgN : newAvg;
+            measurementsForCrop.data.ipsi_daily_avg = [{ value: _bpiAvg }];
           }
           indicatorsForCrop = [...(indicatorsForCrop ?? []), ...(ipsi ?? [])];
 
