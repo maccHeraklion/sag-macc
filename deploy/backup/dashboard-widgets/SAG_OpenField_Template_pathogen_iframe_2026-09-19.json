@@ -1,0 +1,54 @@
+{
+  "_note": "ΑΝΤΙΓΡΑΦΟ ΑΣΦΑΛΕΙΑΣ ΠΡΙΝ ΤΗ ΔΙΑΓΡΑΦΗ — 19/9/2026, εντολή Μιχάλη «μόνο στο πρότυπο, τίποτα άλλο».",
+  "_why": "Το widget φόρτωνε ως iframe το html_files/pathogen.html, που δίνει HTTP 403 και ΔΕΝ ΥΠΑΡΧΕΙ πουθενά (ούτε σε backup, ούτε στο repo, ούτε στο ιστορικό git). Επειδή ζούσε μέσα στο SAG_OpenField_Template, ΚΑΘΕ νέος αγρός που δημιουργούσε ο createField γεννιόταν με σπασμένη καρτέλα «Παθογόνα». Η διαγραφή σταματά την αναπαραγωγή. Τα υπάρχοντα dashboards πελατών ΔΕΝ πειράχτηκαν (απόφαση Μιχάλη).",
+  "_restore": "Αν χρειαστεί επαναφορά: create_widget στο dashboard 68f92649f8b680000ab970ae με ΑΚΡΙΒΩΣ τα παρακάτω, και μετά προσθήκη γραμμής στο arrangement με tab e7Z8F5mLs6bacwGDxPc-o, x 0, y 0, width 4, height 31.5 και το ΝΕΟ widget id. Προσοχή: το αρχείο pathogen.html εξακολουθεί να ΜΗΝ υπάρχει — η επαναφορά θα ξαναφέρει σπασμένο iframe, εκτός αν πρώτα ξαναχτιστεί η σελίδα.",
+  "_scan": "Σάρωση 19/9: 62+ dashboards φορτώνουν το ίδιο αρχείο (ΔΙΑΜΟΝΗ ΣΤΟ VOLTA 13, Ινστιτούτο Δασικών Ερευνών 10, Natura Cretica 10, Βασσάλος 7, ΜΑΡΑΓΚΑΚΗΣ 4, ΚΕΚ 3, μεμονωμένοι 11, πρότυπα/δοκιμαστικά 4). ΚΑΝΕΝΑ από αυτά δεν αγγίχτηκε.",
+
+  "dashboard_id": "68f92649f8b680000ab970ae",
+  "dashboard_label": "SAG_OpenField_Template",
+  "widget_id": "68f92649f8b680000ab970c3",
+  "arrangement_slot": { "x": 0, "y": 0, "tab": "e7Z8F5mLs6bacwGDxPc-o", "width": 4, "height": 31.5 },
+  "tab": { "key": "e7Z8F5mLs6bacwGDxPc-o", "value": "Παθογόνα", "type": "hidden", "hidden": true },
+
+  "widget": {
+    "id": "68f92649f8b680000ab970c3",
+    "label": "",
+    "type": "iframe",
+    "dashboard": "68f92649f8b680000ab970ae",
+    "realtime": true,
+    "data": [
+      {
+        "qty": 500,
+        "bucket": "68769148c134c9000ab65bd1",
+        "origin": "686c0f54172d7e000b7191f3",
+        "variables": [
+          "fir_message_plasmopara_viticola",
+          "fir_message_erysiphe_necator",
+          "fir_message_phytophthora_infestans",
+          "fir_message_botrytis_cinerea",
+          "fir_message_venturia_inaequalis",
+          "fir_message_taphrina_deformans",
+          "fir_message_bactrocera_oleae",
+          "fir_message_prays_oleae",
+          "fir_message_palpita_unionalis",
+          "fir_message_tuta_absoluta",
+          "fir_message_myzus_persicae",
+          "fir_message_ceratitis_capitata",
+          "fir_message_bemisia_tabaci",
+          "fir_message_tetranychus_urticae"
+        ]
+      }
+    ],
+    "display": {
+      "header_buttons": [],
+      "help": "",
+      "parameters": [{ "key": "dashboard_id", "value": "68f92649f8b680000ab970ae" }],
+      "theme": { "color": { "background": null } },
+      "url": "https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/pathogen.html"
+    },
+    "data_names": {
+      "buckets": [],
+      "origins": [{ "id": "686c0f54172d7e000b7191f3", "name": "Field_Template" }]
+    }
+  }
+}
