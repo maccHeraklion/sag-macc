@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.141 · 2026-09-19';
+const SAG_KERNEL_VERSION = 'v50.142 · 2026-09-19';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -11126,6 +11126,91 @@ function _sagEcRefIndicators(measurements, prevShared, dailyTich, nowIso) {
   return out;
 }
 // ── End T-ECREF-01 ────────────────────────────────────────────────────────────
+// ── T-ECRATIO-01 + T-ECVERDICT-01 (v50.142 · 19/9/2026) · Φάση Α, βήματα Α4 + Α5(β) ──
+// Η ημερήσια κρίση αλατότητας βγαίνει από την ΠΡΟ-ΑΡΔΕΥΤΙΚΗ αναφορά (soil_ec_ref, Α3),
+// όχι από τη στιγμιαία bulk EC που αλλάζει με κάθε πότισμα (έλεγχος 18/9, Κ15).
+// R = ref / EC λιπάσματος (συσσώρευση ως προς αυτό που μπαίνει), CF = ref / EC νερού.
+// Φρουρός: ref έξω από [0,7·min, 2·max] των δηλώσεων → «Ελέγξτε τις δηλώσεις EC».
+// Ζώνες R ΠΡΟΣΩΡΙΝΕΣ (σχέδιο Φάσης Α §Α4, ΟΚ Μιχάλη 19/9 «συνέχισε», αναθεώρηση στην
+// αποδοχή 14 ημερών): < 0,7 ξεπλένονται θρεπτικά · 0,7–1,5 στόχος · 1,5–2 παρακολούθηση ·
+// ≥ 2 συσσώρευση. Τάση: δακτύλιος ec_ref_hist (μία τιμή/ημέρα, 8 ημέρες), μέσος 3 τελευταίων
+// έναντι 3 προηγούμενων. Νεκρό όργανο (T-ECDEAD-01) → ούτε κρίση ούτε Ks (έλεγχος 18/9, Κ5).
+const _SAG_ECR_ZONES = [[0.7, 'ξεπλένονται θρεπτικά'], [1.5, 'στόχος'], [2.0, 'παρακολούθηση']];
+function _sagEcZoneR(r) {
+  for (const [lim, name] of _SAG_ECR_ZONES) if (r < lim) return name;
+  return 'συσσώρευση';
+}
+function _sagEcDailyVerdict(a) {
+  const out = [];
+  const f = (v, d) => Number(v).toLocaleString('el-GR', { maximumFractionDigits: d });
+  if (a.dead) {
+    out.push({ variable: 'soil_ec_status', value: 'Το όργανο δεν μετράει',
+      metadata: { color: 'grey', text: 'Η αγωγιμότητα δίνει σχεδόν μηδέν σε υγρό χώμα — το όργανο δεν μετράει. Η αλατότητα ΔΕΝ κρίνεται σήμερα. Ελέγξτε τον αισθητήρα στο χωράφι.' } });
+    out.push({ variable: 'salinity_stress', value: 'Μη διαθέσιμο',
+      metadata: { color: 'grey', text: 'Χωρίς έγκυρη μέτρηση αγωγιμότητας δεν εκτιμάται οσμωτική καταπόνηση.' } });
+    return out;
+  }
+  const refs = [a.ref1, a.ref2].filter(v => Number.isFinite(v));
+  const hasRef = refs.length > 0;
+  const refF = hasRef ? Math.max(...refs) : NaN;   // χειρότερο βάθος
+  // δακτύλιος αναφοράς + τάση
+  let hist = Array.isArray(a.refHist) ? a.refHist.filter(x => x && x.d) : [];
+  if (hasRef) { hist = hist.filter(x => x.d !== a.today).slice(-7); hist.push({ d: a.today, r: Number(refF.toFixed(2)) }); }
+  if (hist.length) out.push({ variable: 'ec_ref_hist', value: JSON.stringify(hist.slice(-8)), metadata: { internal: true } });
+  const xs = hist.map(x => Number(x.r)).filter(Number.isFinite);
+  let trend = null;
+  if (xs.length >= 6) {
+    const n = xs.length, b = (xs[n - 1] + xs[n - 2] + xs[n - 3]) / 3, p = (xs[n - 4] + xs[n - 5] + xs[n - 6]) / 3;
+    trend = p > 0 ? ((b - p) / p) * 100 : null;
+  }
+  const trendTxt = trend === null ? '' : ' Τάση 7ημ ' + (trend >= 0 ? '+' : '') + trend.toFixed(0) + ' %.';
+  const uncal = ' ⚠ Μη βαθμονομημένο όργανο.';
+  // Α4
+  const lo = Math.min(Number.isFinite(a.fert) ? a.fert : Infinity, Number.isFinite(a.ecw) ? a.ecw : Infinity);
+  // Άνω φρουρός ΜΟΝΟ με δηλωμένο λίπασμα: χωρίς αυτό το νερό των πόρων μπορεί
+  // νόμιμα να είναι πολλαπλάσιο του νερού άρδευσης (άγνωστη λίπανση).
+  const hi = Number.isFinite(a.fert) ? Math.max(a.fert, Number.isFinite(a.ecw) ? a.ecw : -Infinity) : Infinity;
+  const guard = hasRef && ((Number.isFinite(lo) && refF < 0.7 * lo) || (Number.isFinite(hi) && refF > 2.0 * hi));
+  if (guard) {
+    out.push({ variable: 'soil_ec_ratio', value: null,
+      metadata: { color: 'orange', text: 'Ελέγξτε τις δηλώσεις EC νερού/λιπάσματος: το νερό των πόρων (' + f(refF, 2)
+        + ' dS/m) είναι έξω από το φυσικά δυνατό εύρος (0,7× έως 2× των δηλώσεων).' } });
+  } else if (hasRef) {
+    if (Number.isFinite(a.fert)) out.push({ variable: 'soil_ec_ratio', value: Number((refF / a.fert).toFixed(2)),
+      metadata: { unit: '—', color: 'grey', zone: _sagEcZoneR(refF / a.fert) } });
+    if (Number.isFinite(a.ecw)) out.push({ variable: 'soil_ec_conc', value: Number((refF / a.ecw).toFixed(2)),
+      metadata: { unit: '—', color: 'grey' } });
+  }
+  // Α5(β)
+  let st;
+  if (!hasRef) {
+    st = { v: 'Αναμονή αναφοράς', c: 'grey',
+      t: 'Η ημερήσια κρίση χρειάζεται την προ-αρδευτική αναφορά νερού πόρων (ξηρότερο δείγμα 24ώρου) — βγαίνει από το επόμενο ημερήσιο tick. ' + (a.valTxt || '') + '.' };
+  } else if (guard) {
+    st = { v: 'Ελέγξτε τις δηλώσεις EC', c: 'orange',
+      t: 'Νερό ρίζας ' + f(refF, 2) + ' dS/m (προ-αρδευτικά) — ασύμβατο με τις δηλώσεις νερού ' + (Number.isFinite(a.ecw) ? f(a.ecw, 2) : '—')
+        + ' / λιπάσματος ' + (Number.isFinite(a.fert) ? f(a.fert, 2) : '—') + ' dS/m. Διορθώστε τις δηλώσεις στη φόρμα.' };
+  } else if (!Number.isFinite(a.fert)) {
+    st = { v: 'Χωρίς δήλωση λίπανσης', c: 'grey',
+      t: 'Νερό ρίζας ' + f(refF, 2) + ' dS/m (προ-αρδευτικά). Δηλώστε την EC του μείγματος λίπανσης για να κριθεί η συσσώρευση.' + trendTxt };
+  } else {
+    const R = refF / a.fert;
+    const rt = 'Νερό ρίζας ' + f(refF, 2) + ' dS/m (προ-αρδευτικά), λίπασμα ' + f(a.fert, 2) + ' dS/m → λόγος ' + f(R, 2) + '.';
+    if (R < 0.7) st = { v: 'Χωρίς συσσώρευση', c: 'green', t: rt + ' Κάτω από 0,7× το λίπασμα — τα θρεπτικά ξεπλένονται· μειώστε την έκπλυση.' + trendTxt };
+    else if (R < 1.5) st = { v: 'Χωρίς συσσώρευση', c: 'green', t: rt + ' Κοντά στο λίπασμα — δεν χρειάζεται επιπλέον έκπλυση για τα άλατα.' + trendTxt };
+    else if (R < 2) st = { v: 'Παρακολούθηση', c: 'orange', t: rt + ' Πάνω από το λίπασμα· αν η τάση συνεχίσει, αυξήστε τα ποτίσματα με σκέτο νερό.' + trendTxt };
+    else st = { v: 'Συσσώρευση αλάτων', c: 'red', t: rt + ' Διπλάσιο από το λίπασμα → πότισμα έκπλυσης με σκέτο νερό.' + trendTxt };
+  }
+  // Το όριο της καλλιέργειας (Maas–Hoffman, FAO-29) υπερισχύει.
+  if (Number.isFinite(a.eceMax) && Number.isFinite(a.eceEst) && a.eceEst > a.eceMax) {
+    st = { v: 'Πάνω από το όριο της καλλιέργειας', c: 'red',
+      t: (a.valTxt || '') + ' · ECe ~' + a.eceEst.toFixed(1) + (a.eceHow || '') + ' > όριο ' + a.eceMax
+        + ' dS/m (FAO-29). → Έκπλυση με νερό καλής ποιότητας· εργαστηριακή επιβεβαίωση.' };
+  }
+  out.push({ variable: 'soil_ec_status', value: st.v, metadata: { color: st.c, text: st.t + uncal } });
+  return out;
+}
+// ── End T-ECRATIO-01 / T-ECVERDICT-01 ──────────────────────────────────────────
 // ── T-ECFIELD-01 (v50.128 · 11/9/2026) · παγίδα #67 ──────────────────
 // Το όριο ανοχής της ΠΙΟ ΕΥΑΙΣΘΗΤΗΣ καλλιέργειας του αγρού. ΙΔΙΟΣ
 // ακριβώς υπολογισμός με την T-ECUNIFY-01 (γρ. ~17408) — ώστε η κάρτα
@@ -11216,7 +11301,7 @@ function _sagEcIndicators(measurements, parameters, tolOverride) {
       const _bad = Number.isFinite(tol) && r.ece > tol;
       const _warn = Number.isFinite(tol) && !_bad && r.ece > tol * 0.8;
       out.push({ variable: 'soil_ece' + c.n, value: parseFloat(r.ece.toFixed(2)),
-        metadata: { color: _bad ? 'red' : (_warn ? 'orange' : 'green'), unit: 'dS/m',
+        metadata: { color: 'grey', unit: 'dS/m',   // T-ECVERDICT-01 (v50.142): στιγμιαίο — χωρίς χρώμα κρίσης
           // T-ECTOL-01 (v50.133): ΤΟ ΟΡΙΟ ΩΣ ΑΡΙΘΜΟΣ. Μέχρι τώρα ζούσε ΜΟΝΟ
           // μέσα στο κείμενο («όριο 2,5»), οπότε το διάγραμμα δεν μπορούσε να
           // το σχεδιάσει χωρίς να ΔΙΑΒΑΣΕΙ ΕΛΛΗΝΙΚΑ — ακριβώς η παγίδα #85.
@@ -11228,11 +11313,8 @@ function _sagEcIndicators(measurements, parameters, tolOverride) {
           text: _head
             + 'Νερό ρίζας ' + _fmt(r.pore, 2) + '. Σε εκχύλισμα κορεσμού '
             + _fmt(r.ece, 2) + ' dS/m'
-            + (Number.isFinite(tol)
-                ? (', όριο ' + _fmt(tol, 1)
-                   + (_bad ? ' — ΠΑΝΩ ΑΠΟ ΤΟ ΟΡΙΟ, χρειάζεται έκπλυση.'
-                           : (_warn ? ' — κοντά στο όριο.' : ' — εντάξει.')))
-                : ' (χωρίς δημοσιευμένο όριο για την καλλιέργεια).') } });
+            + (Number.isFinite(tol) ? (', όριο ' + _fmt(tol, 1)) : '')
+            + ' (στιγμιαίο — η κρίση γίνεται μία φορά την ημέρα στην «Κατάσταση αλατότητας»).' } });
     }
     // T-ECDEAD-01: το χαλασμένο όργανο ΝΙΚΑΕΙ την κάρτα κατάστασης. Ένα
     // «Φυσιολογική» δίπλα σε όργανο που δεν μετράει είναι χειρότερο από καμία
@@ -11245,11 +11327,9 @@ function _sagEcIndicators(measurements, parameters, tolOverride) {
             + 'Χρειάζεται έλεγχος του αισθητήρα στο χωράφι.' } });
     } else if (worst) {
       out.push({ variable: 'soil_salinity_status',
-        value: (Number.isFinite(tol) && worst.ece > tol) ? 'Υψηλή αλατότητα'
-             : ((Number.isFinite(tol) && worst.ece > tol * 0.8) ? 'Οριακή' : 'Φυσιολογική'),
-        metadata: { color: (Number.isFinite(tol) && worst.ece > tol) ? 'red'
-                         : ((Number.isFinite(tol) && worst.ece > tol * 0.8) ? 'orange' : 'green'),
-          text: worst.el + ' ' + _fmt(worst.ece, 2) + ' dS/m (εκχύλισμα κορεσμού)'
+        value: 'Στιγμιαία ένδειξη',   // T-ECVERDICT-01 (v50.142): η κρίση γίνεται ΜΙΑ φορά/ημέρα (soil_ec_status)
+        metadata: { color: 'grey',
+          text: worst.el + ' ' + _fmt(worst.ece, 2) + ' dS/m (εκχύλισμα κορεσμού, στιγμιαίο — αλλάζει με κάθε πότισμα· η ημερήσια κρίση είναι στην «Κατάσταση αλατότητας»)'
             + (Number.isFinite(tol) ? (', όριο ' + _fmt(tol, 1) + ' — Maas & Hoffman 1977.') : '.')
             // T-ECRAW-01: ΕΔΩ, μία φορά, ο οδηγός βαθμονόμησης. Χωρίς αυτόν ο
             // τεχνικός συγκρίνει ανόμοιες ποσότητες και «διορθώνει» σωστό όργανο.
@@ -13224,6 +13304,9 @@ const _SAG_TTL_PATTERNS = [
   // με το γενικό ωριαίο TTL του _status$ θα έληγαν κάθε απόγευμα.
   [/^soil_(ec|ph)_status$/, _SAG_TTL_DAILY_H],
   [/^salinity_/,        _SAG_TTL_DAILY_H],
+  [/^soil_ec_ref/,      _SAG_TTL_DAILY_H],   // T-ECREF-01/T-ECRATIO-01 (v50.142): ημερήσιοι δείκτες
+  [/^soil_ec_ratio$/,   _SAG_TTL_DAILY_H],
+  [/^soil_ec_conc$/,    _SAG_TTL_DAILY_H],
   // T-SOILMODELS-01: οι νηματώδεις υπολογίζονται ΜΟΝΟ σε dailyTich — με το
   // γενικό ωριαίο /^fir_/ η κάρτα τους θα έληγε κάθε απόγευμα.
   [/^fir_(message_)?meloidogyne_incognita$/, _SAG_TTL_DAILY_H],
@@ -13282,7 +13365,7 @@ const _SAG_STATE_PATTERNS = [
   /^pesticide_washoff_mm$/, /^pesticide_spray_ref$/,
   // T-ECPH-01 (v50.15 review): μνήμη τάσεων EC/pH 8 ημερών — αθάνατη.
   /^ec_hist$/,
-  /^ec_ref_state$/,              // T-ECREF-01 (v50.141): παράθυρο ελάχιστης θ — κατάσταση, αθάνατη
+  /^ec_ref_state$/, /^ec_ref_hist$/,              // T-ECREF-01 (v50.141): παράθυρο ελάχιστης θ — κατάσταση, αθάνατη
   // T-SOILMODELS-02 (τελικός έλεγχος): ΣΥΣΣΩΡΕΥΤΗΣ βαθμοωρών Maryblyt. Με το
   // προεπιλεγμένο TTL των 50 ωρών, μια διακοπή δύο ημερών ΜΕΣΑ στην άνθηση θα
   // τον μηδένιζε σιωπηλά και το μοντέλο της βακτηριακής καύσης θα ξεκινούσε από
@@ -13916,7 +13999,7 @@ function packCalculatedIndicators({
   // δεν μπορεί να διορθώσει (γρ. 10943/10975). Το null ΔΕΝ γράφεται — μια
   // χρονοσειρά με μηδενικά θα ήταν ΨΕΥΤΙΚΗ μέτρηση, όχι κενό.
   // T-ECPORE-SERIES-01 (v50.135): το ECπόρων (συγκρίσιμο μεταξύ βαθών) γίνεται σειρά — #207.
-  const _SAG_SERIES_KEYS = ['soil_ece1', 'soil_ece2', 'soil_ec_pore1', 'soil_ec_pore2', 'soil_ec_ref1', 'soil_ec_ref2'];   // T-ECREF-01
+  const _SAG_SERIES_KEYS = ['soil_ece1', 'soil_ece2', 'soil_ec_pore1', 'soil_ec_pore2', 'soil_ec_ref1', 'soil_ec_ref2', 'soil_ec_ratio', 'soil_ec_conc'];   // T-ECREF-01 / T-ECRATIO-01
   const _seriesRows = [];
   for (const _sk of _SAG_SERIES_KEYS) {
     const _sv = sharedPacked[_sk];
@@ -17867,32 +17950,32 @@ module.exports = new Analysis(async (context) => {
                     + ' τιμές, οπότε ο μέσος όρος δεν κρίνει την αλατότητα του αγρού.'
                     + ' Δείτε τη «Διαφωνία οργάνων» και ελέγξτε τους αισθητήρες.' } });
             } else if (e1 !== null || e2 !== null) {
-              const t1 = _trendPct(x => Number(x.e1));
-              const t2 = _trendPct(x => Number(x.e2));
+              // T-ECVERDICT-01 (v50.142): η κρίση από την προ-αρδευτική αναφορά (Α3), όχι
+              // από τη στιγμιαία bulk EC. Οι παλιές τάσεις t1/t2 της ωμής αγωγιμότητας
+              // (ec_hist) ΔΕΝ κρίνουν πια — «ένα πότισμα = ψευδής συσσώρευση» (Κ15).
               const _valTxt = 'ρηχό ' + (e1 !== null ? Math.round(e1) : '—')
                 + (e2 !== null ? ' · βαθύ ' + Math.round(e2) : '') + ' µS/cm';
-              let _st = { v: 'Σταθερή αλατότητα', c: 'green',
-                t: _valTxt + (t1 !== null ? ' · 7ημ ' + (t1 >= 0 ? '+' : '') + t1.toFixed(0) + '%' : '') + '.' };
-              if (e2 !== null && t2 !== null && t2 > 25 && (t1 === null || t1 <= 5)) {
-                _st = { v: 'Ένδειξη έκπλυσης προς τα βαθιά', c: 'orange',
-                  t: _valTxt + ' · βαθύ +' + t2.toFixed(0) + '% σε 7ημ, ρηχό σταθερό — άλατα/θρεπτικά περνούν κάτω από το ριζόστρωμα. → Πιθανή υπεράρδευση: μικρότερη δόση ανά πότισμα, μεγαλύτερη συχνότητα.' };
-              }
-              if (t1 !== null && t1 > 25 && e1 !== null && e1 >= 800) {
-                _st = { v: 'Συσσώρευση αλάτων', c: 'orange',
-                  t: _valTxt + ' · ρηχό +' + t1.toFixed(0) + '% σε 7ημ. → Έλεγχος ποιότητας νερού· αύξηση κλάσματος έκπλυσης.' };
-              }
-              if (Number.isFinite(_eceMax) && e1 !== null && _eceEst(e1) > _eceMax) {
-                _st = { v: 'Πάνω από το όριο της καλλιέργειας', c: 'red',
-                  t: _valTxt + ' · ECe ~' + _eceEst(e1).toFixed(1) + _eceHow + ' > όριο '
-                    + _eceMax + ' dS/m (FAO-29). → Έκπλυση με νερό καλής ποιότητας· εργαστηριακή επιβεβαίωση.' };
-              }
-              _ecphIndicators.push({ variable: 'soil_ec_status', value: _st.v,
-                metadata: { color: _st.c, text: _st.t } });
+              const _numInE = (v, lo, hi) => { const n = Number(v); return (Number.isFinite(n) && n >= lo && n <= hi) ? n : null; };
+              const _refOfE = (n) => {
+                const it = (_ecRefIndicators || []).find(x => x && x.variable === 'soil_ec_ref' + n);
+                const v = it ? Number(it.value) : Number(_unpackE(_prevSharedE['soil_ec_ref' + n]));
+                return Number.isFinite(v) ? v : null;
+              };
+              let _refHistE = [];
+              try { const h = JSON.parse(String(_unpackE(_prevSharedE.ec_ref_hist) || '[]')); if (Array.isArray(h)) _refHistE = h; } catch (_e2) {}
+              // Κ5: η πύλη νεκρού οργάνου (T-ECDEAD-01) ισχύει ΚΑΙ στο ημερήσιο.
+              const _deadDaily = [['conduct_soil1', 'soil_moisture1'], ['conduct_soil2', 'soil_moisture2'], ['conduct_soil', 'soil_moisture']]
+                .some(([ek, mk]) => { const r = _nE(ek), th = _nE(mk); return r !== null && th !== null && th > _SAG_EC_MIN_VWC * 100 && r < _SAG_EC_DEAD_US; });
+              _ecphIndicators.push(..._sagEcDailyVerdict({
+                e1, e2, ref1: _refOfE('1'), ref2: _refOfE('2'),
+                fert: _numInE(fieldConfig?.fert_ecw_dsm, 0.05, 15), ecw: _numInE(fieldConfig?.water_ecw_dsm, 0.05, 15),
+                eceMax: _eceMax, eceEst: (e1 !== null ? _eceEst(e1) : NaN), eceHow: _eceHow,
+                dead: _deadDaily, refHist: _refHistE, today: _todayE, valTxt: _valTxt }));
 
               // T-SALT-KS-01: Maas-Hoffman / FAO-56 εξ.83 — μόνο με μέτρηση EC
               // και γνωστό όριο καλλιέργειας. Κλίση b: αντιπροσωπευτική τιμή
               // της κατηγορίας ανοχής FAO-29.
-              if (Number.isFinite(_eceMax) && e1 !== null) {
+              if (Number.isFinite(_eceMax) && e1 !== null && !_deadDaily) {   // T-ECVERDICT-01 (Κ5): χωρίς Ks από νεκρό όργανο
                 const _bSlope = _eceMax < 1.5 ? 14 : _eceMax < 3 ? 10 : _eceMax < 6 ? 7 : 4;
                 const _eceNow = _eceEst(e1);
                 let _ks = _eceNow > _eceMax ? 1 - (_bSlope * (_eceNow - _eceMax)) / 100 : 1;

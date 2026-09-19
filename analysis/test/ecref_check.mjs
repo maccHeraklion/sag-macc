@@ -37,7 +37,7 @@ const CHECKS = [
     (f.core.match(/function _sagEcRefIndicators\(/g) || []).length === 1
     && f.core.indexOf("const _ecRefIndicators = _sagEcRefIndicators(measurements, _prevBundleForWash?.shared, dailyTich,") < f.core.indexOf("let _ecphIndicators = [];")
     && f.core.includes("...(_ecRefIndicators ?? []),")],
-  ["core: ec_ref_state είναι ΚΑΤΑΣΤΑΣΗ (αθάνατη) και soil_ec_ref1/2 στις σειρές", f => /\/\^ec_ref_state\$\/,/.test(f.core) && /_SAG_SERIES_KEYS = \[[^\]]*'soil_ec_ref1', 'soil_ec_ref2'\]/.test(f.core)],
+  ["core: ec_ref_state είναι ΚΑΤΑΣΤΑΣΗ (αθάνατη) και soil_ec_ref1/2 στις σειρές", f => /\/\^ec_ref_state\$\/,/.test(f.core) && /_SAG_SERIES_KEYS = \[[^\]]*'soil_ec_ref1', 'soil_ec_ref2'[^\]]*\]/.test(f.core)],
   ["core: το _SAG_BUNDLE_DROP δεν πετά τα νέα κλειδιά", f => { const d = slice(f.core, "_SAG_BUNDLE_DROP", "];"); return !!d && !/ec_ref/.test(d); }],
   ["core: καθαρό CRLF, χωρίς BOM", f => !f.coreRaw.startsWith("﻿") && (f.coreRaw.match(/\n/g) || []).length === (f.coreRaw.match(/\r\n/g) || []).length],
   ["ωριαίο, χωρίς προηγούμενη κατάσταση: το δείγμα (θ 30, 500 µS, 20 °C) γίνεται κατάσταση, ΚΑΜΙΑ εκπομπή soil_ec_ref", f => {
@@ -103,7 +103,7 @@ const MUTATIONS = [
   ["εκπομπή και στο πρώτο παράθυρο", c => c.replace("        if (p && best) {", "        if (best) {")],
   ["χωρίς πύλη νεκρού οργάνου", c => c.replace("      if (!dead && Number.isFinite(raw) && Number.isFinite(th)) {", "      if (Number.isFinite(raw) && Number.isFinite(th)) {")],
   ["η κατάσταση παύει να είναι αθάνατη", c => c.replace("  /^ec_ref_state$/,", "")],
-  ["οι σειρές χάνουν το soil_ec_ref", c => c.replace(", 'soil_ec_ref1', 'soil_ec_ref2']", "]")],
+  ["οι σειρές χάνουν το soil_ec_ref", c => c.replace(", 'soil_ec_ref1', 'soil_ec_ref2'", "")],
   ["η κλήση μετακινείται ΜΕΤΑ το ημερήσιο μπλοκ", c => { const line = "        const _ecRefIndicators = _sagEcRefIndicators(measurements, _prevBundleForWash?.shared, dailyTich, new Date().toISOString());\n"; return c.replace(line, "").replace("        let _ecphIndicators = [];\n", "        let _ecphIndicators = [];\n" + line); }],
   ["έκδοση πίσω", c => c.replace(/const SAG_KERNEL_VERSION = 'v50\.\d+ · [^']+';/, "const SAG_KERNEL_VERSION = 'v50.140 · 2026-09-19';")],
 ];
