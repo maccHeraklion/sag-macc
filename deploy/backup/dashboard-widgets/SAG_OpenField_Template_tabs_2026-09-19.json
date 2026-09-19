@@ -1,0 +1,42 @@
+{
+  "_note": "ΑΝΤΙΓΡΑΦΟ ΑΣΦΑΛΕΙΑΣ ΠΡΙΝ ΤΗΝ ΑΦΑΙΡΕΣΗ ΤΗΣ ΚΕΝΗΣ ΚΑΡΤΕΛΑΣ «Παθογόνα» — 19/9/2026, εντολή Μιχάλη «2. αφαίρεσέ την».",
+  "_why": "Στις 15:01 UTC αφαιρέθηκε από το πρότυπο το σπασμένο iframe προς το html_files/pathogen.html (HTTP 403, το αρχείο δεν υπάρχει πουθενά). Η καρτέλα έμεινε ΚΕΝΗ. Κάθε νέος αγρός του createField γεννιόταν με μια καρτέλα που δεν δείχνει τίποτα. Εδώ φεύγει και η καρτέλα.",
+
+  "_safety_check": {
+    "arrangement": "ΚΑΝΕΝΑ widget δεν είναι τοποθετημένο στο tab e7Z8F5mLs6bacwGDxPc-o — και τα 5 widgets του arrangement δείχνουν στα άλλα 5 κλειδιά. Επαληθεύτηκε με get_dashboard πριν την αλλαγή.",
+    "createField_TAB_VARS": "Το TAB_VARS (δείκτες 0-3) ΔΕΝ δεικτοδοτεί τις καρτέλες του dashboard. Χρησιμοποιείται ΜΟΝΟ από το computeSelectedVariables για το ΚΟΣΤΟΣ ΣΥΝΔΡΟΜΗΣ, και επειδή το TAB_VARS[3] είναι κενός πίνακας (φίλτρο null) η συνάρτηση επιστρέφει ΟΛΕΣ τις διαθέσιμες μεταβλητές ούτως ή άλλως. Η αφαίρεση καρτέλας δεν το αγγίζει.",
+    "createField_assignDevicesToTabs": "Γράφει σειρές συσκευών ΜΟΝΟ στο tab με ΚΑΡΦΩΜΕΝΟ ΚΛΕΙΔΙ '8NMj9hO5Rvi1FPYVd3dgs' (Αρχική) — όχι με δείκτη θέσης. Άρα η μετατόπιση θέσεων δεν έχει καμία επίπτωση.",
+    "remaining_references": "Δύο console.log στον createField (γρ. 727) τυπώνουν widgetsByTab.get('e7Z8F5mLs6bacwGDxPc-o'). Τυπώνουν ΗΔΗ undefined από τις 15:01, αφού το widget είχε φύγει. Αβλαβή."
+  },
+
+  "dashboard_id": "68f92649f8b680000ab970ae",
+  "dashboard_label": "SAG_OpenField_Template",
+
+  "tabs_BEFORE": [
+    { "key": "8NMj9hO5Rvi1FPYVd3dgs", "link": "", "type": "hidden", "value": "Αρχική", "hidden": true },
+    { "key": "e7Z8F5mLs6bacwGDxPc-o", "link": "", "type": "hidden", "value": "Παθογόνα", "hidden": true },
+    { "key": "oou7iKKLVdNb3No6BlERp", "link": "", "type": "hidden", "value": "Μετρήσεις", "hidden": true },
+    { "key": "XpOV787fvpT8I0gKHfM3H", "link": "", "type": "hidden", "value": "Παραμετροποίηση", "hidden": true },
+    { "key": "zpQzGb2h_PUwgEOzWb79Q", "link": "", "type": "hidden", "value": "Άρδευση", "hidden": true },
+    { "key": "jQgMIP9y06LEsrmqJQOiM", "link": "", "type": "hidden", "value": "Προγραμματισμός", "hidden": true }
+  ],
+
+  "tabs_AFTER": [
+    { "key": "8NMj9hO5Rvi1FPYVd3dgs", "value": "Αρχική", "hidden": true },
+    { "key": "oou7iKKLVdNb3No6BlERp", "value": "Μετρήσεις", "hidden": true },
+    { "key": "XpOV787fvpT8I0gKHfM3H", "value": "Παραμετροποίηση", "hidden": true },
+    { "key": "zpQzGb2h_PUwgEOzWb79Q", "value": "Άρδευση", "hidden": true },
+    { "key": "jQgMIP9y06LEsrmqJQOiM", "value": "Προγραμματισμός", "hidden": true }
+  ],
+
+  "arrangement_UNTOUCHED": [
+    { "x": 0, "y": 0, "tab": "8NMj9hO5Rvi1FPYVd3dgs", "width": 4, "height": 11.5, "widget_id": "68f92649f8b680000ab970c4" },
+    { "x": 0, "y": 0, "tab": "oou7iKKLVdNb3No6BlERp", "width": 4, "height": 10, "widget_id": "68f9275c6b8a0b000b593145" },
+    { "x": 0, "y": 0, "tab": "zpQzGb2h_PUwgEOzWb79Q", "width": 3.6666666666666665, "height": 10, "widget_id": "68f9451942496b000a9db6ad" },
+    { "x": 0, "y": 0, "tab": "XpOV787fvpT8I0gKHfM3H", "width": 4, "height": 22, "widget_id": "68f9f523cd6522000b4afbb4" },
+    { "x": 0, "y": 0, "tab": "jQgMIP9y06LEsrmqJQOiM", "width": 3.6666666666666665, "height": 34, "widget_id": "68f9df3434f800000959bcc6" }
+  ],
+
+  "_restore": "update_dashboard με dashboard_id 68f92649f8b680000ab970ae και tabs = tabs_BEFORE (ΟΛΟΚΛΗΡΟ τον πίνακα — το πεδίο tabs αντικαθιστά, δεν συγχωνεύει). Το widget του iframe χρειάζεται ξεχωριστή επαναφορά, βλ. SAG_OpenField_Template_pathogen_iframe_2026-09-19.json.",
+  "_scope": "ΜΟΝΟ το πρότυπο. ΚΑΝΕΝΑ dashboard πελάτη δεν πειράχτηκε — 62+ έχουν ακόμη και την καρτέλα και το σπασμένο iframe (απόφαση Μιχάλη 19/9: «μόνο στο πρότυπο, τίποτα άλλο»)."
+}

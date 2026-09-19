@@ -156,8 +156,9 @@ const MUTATIONS = [
   ["ο φρουρός αντιστρέφεται: κόβει στα ΑΠΡΟΣΤΑΤΕΥΤΑ αντί στα προστατευμένα", c => c.replace(
     "if (!_sagShielded(_victims[_i].k)) { let _q = _i; while (_q < _end && !_sagShielded(_victims[_q].k)) _q++; _end = _q; }",
     "if (_sagShielded(_victims[_i].k)) { let _q = _i; while (_q < _end && _sagShielded(_victims[_q].k)) _q++; _end = _q; }")],
-  ["η έκδοση δεν ανέβηκε", c => c.replace("const SAG_KERNEL_VERSION = 'v50.147 · 2026-09-19';",
-    "const SAG_KERNEL_VERSION = 'v50.146 · 2026-09-19';")],
+  // Η μετάλλαξη ΔΕΝ καρφώνει έκδοση: κάθε νέα έκδοση θα την ξεκόλλαγε σιωπηλά.
+  ["η έκδοση δεν ανέβηκε", c => c.replace(/const SAG_KERNEL_VERSION = 'v50\.\d+ · /,
+    "const SAG_KERNEL_VERSION = 'v50.146 · ")],
   ["η φάση (β) χάνει τον δικό της φρουρό (παλινδρόμηση v50.127)", c => c.replace(
     "        if (_sagShielded(_order[_ki].k)) _kb = 1;   // στην ασπίδα: ένα-ένα, όχι παρτίδες\n", "")],
 ];

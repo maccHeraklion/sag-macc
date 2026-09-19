@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.147 · 2026-09-19';
+const SAG_KERNEL_VERSION = 'v50.148 · 2026-09-19';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -13701,6 +13701,19 @@ function packCalculatedIndicators({
     'bpi_comparability',         // γιατί το BPI δεν συγκρίνεται μεταξύ αγρών
     'dli_comparable',            // αν η φωτοπερίοδος ήταν πλήρης
   ];
+  /* ══ T-STAGEPREAMBLE-01 (v50.148 · 19/9/2026) · ΤΟ ΠΡΟΟΙΜΙΟ ΤΟΥ crop_stage ══
+     ΑΠΟΦΑΣΗ ΜΙΧΑΛΗ 19/9: «βάλε το στην κάρτα μεθόδου.»
+     ΜΕΤΡΗΜΕΝΟ: το `crop_stage` είναι το ΑΚΡΙΒΟΤΕΡΟ κλειδί του συστήματος (19.315 B στον
+     στόλο, 402 B μέσο όρο, κομμένο 6 φορές). Η πρώτη του πρόταση είναι ΣΤΑΘΕΡΗ — ίδια σε
+     κάθε αγρό, κάθε ώρα, κάθε καλλιέργεια. Είναι μέθοδος, όχι κατάσταση.
+     ΔΕΝ διαγράφεται: είναι η τεκμηριωμένη διόρθωση της v50.116 («υδατικό στάδιο ≠
+     φαινολογία»). Μετακομίζει στην ημερήσια κάρτα, όπου ζουν ήδη οι άλλες εννιά.
+     ΠΡΟΣΟΧΗ — ΔΕΝ είναι το ίδιο με τη σάρωση παρακάτω: εκείνη σβήνει ΟΛΟ το κείμενο ενός
+     κλειδιού. Εδώ φεύγει ΜΟΝΟ το προοίμιο· το υπόλοιπο (στάδιο, θερμική πρόοδος, επόμενο
+     στάδιο) ΑΛΛΑΖΕΙ και μένει στην ωριαία κάρτα. Γι' αυτό η σημαία είναι `_mp`, όχι `_m`. */
+  const _SAG_STAGE_PREAMBLE =
+    'ΥΔΑΤΙΚΟ στάδιο (FAO-56) — καθορίζει τη δόση άρδευσης, ΔΕΝ είναι φαινολογία. ';
+
   _SAG_METHOD_CARD = null;
   {
     const _parts = [];
@@ -13720,6 +13733,22 @@ function packCalculatedIndicators({
     for (const crop of cropsPackedArr) {
       _sweep(crop.indicators, String(crop.cultivation_type || crop.id || '?') + '/');
     }
+
+    /* T-STAGEPREAMBLE-01: το σταθερό προοίμιο φεύγει από ΚΑΘΕ καλλιέργεια, αλλά μπαίνει
+       ΜΙΑ φορά στην κάρτα — είναι το ίδιο κείμενο, δεν χρειάζεται να γραφτεί τέσσερις
+       φορές σε αγρό με τέσσερις καλλιέργειες. */
+    let _stageTrim = 0;
+    for (const crop of cropsPackedArr) {
+      const v = (crop.indicators || {}).crop_stage;
+      if (!v || typeof v !== 'object' || !v.metadata) continue;
+      const t = v.metadata.text;
+      if (typeof t !== 'string' || t.indexOf(_SAG_STAGE_PREAMBLE) !== 0) continue;
+      v.metadata.text = t.slice(_SAG_STAGE_PREAMBLE.length);
+      v.metadata._mp = 1;   // «το προοίμιο ζει στην ταυτότητα του αγρού»
+      _stageTrim++;
+    }
+    if (_stageTrim) _parts.push('crop_stage: ' + _SAG_STAGE_PREAMBLE.trim());
+
     if (_parts.length) _SAG_METHOD_CARD = { n: _parts.length, t: _parts.join('\n') };
   }
 
