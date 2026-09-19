@@ -199,9 +199,17 @@ async function loadState() {
     console.log(`G|${id}|αισθητήρες=${g.n}|${ageTxt(ageH)}`
       + `|θέση=${g.lat != null ? g.lat + "," + g.lon : "—"}|rssi=${g.rssi}`);
   }
-  console.log(`ΣΥΝΟΨΗ|gateways=${total}|λειτουργούν=${alive}|ύποπτα=${suspect}|νεκρά=${dead}`
-    + `|αισθητήρες με lrrid=${stillKnown.length}|αναγνώσεις=${reads}|εγγραφές=${out.length}`
-    + `|ms=${Date.now() - t0}`);
+  /* T-GWHONEST-01: και η κονσόλα. Όποιος τη διαβάζει για να καταλάβει τι
+     συμβαίνει διάβαζε την ίδια αναλήθεια που βγάλαμε από τον πίνακα.
+     Μπαίνει ΚΑΙ η κάλυψη, ώστε το «gateways=N» να μην διαβάζεται ξεκομμένο. */
+  console.log(`ΣΥΝΟΨΗ|gateways ορατά=${total}`
+    + `|με απόδειξη ζωής=${alive}|αραιός μάρτυρας=${suspect}`
+    + `|χωρίς πρόσφατο μάρτυρα=${dead}`
+    + `|ΚΑΛΥΨΗ=${stillKnown.length}/${sensorsTotal} αισθητήρες με lrrid`
+    + `|αναγνώσεις=${reads}|εγγραφές=${out.length}|ms=${Date.now() - t0}`);
+  console.log(`ΣΗΜΑΣΙΑ|το «${total} ορατά» ΔΕΝ είναι ο στόλος. Είναι όσα gateways`
+    + ` κατονομάζει έστω ένας αισθητήρας. Τα υπόλοιπα εξυπηρετούν`
+    + ` ${sensorsTotal - stillKnown.length} αισθητήρες που ΔΕΝ λένε ποιο — ΑΟΡΑΤΑ, ΟΧΙ νεκρά.`);
   console.log("══ gatewayLiveness · ΤΕΛΟΣ ══");
 })().catch((e) => {
   // Η αποτυχία ΔΕΝ πρέπει να είναι σιωπηλή: ο πίνακας θα έδειχνε παλιά δεδομένα χωρίς λόγο.
