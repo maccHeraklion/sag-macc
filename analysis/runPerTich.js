@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.143 · 2026-09-19';
+const SAG_KERNEL_VERSION = 'v50.144 · 2026-09-19';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -13718,7 +13718,21 @@ function packCalculatedIndicators({
       const _ageH = Math.max(0, (_fnowMin - (Number(x.t) || 0)) / 60);
       return _ageH / _ttl;
     };
-    _victims.sort((a, b) => (_spent(b) - _spent(a)) || (b.len - a.len));
+    // ── T-ECSHIELD-TEXT-01 (v50.144 · 19/9/2026) · Η ΑΣΠΙΔΑ ΚΑΛΥΠΤΕΙ ΚΑΙ ΤΑ ΚΕΙΜΕΝΑ ──
+    // ΜΕΤΡΗΜΕΝΟ 19/9 14:05 UTC σε 64 αγρούς: 8 χάνουν κείμενα ΚΑΘΕ ΜΕΡΑ (ΚΕΚ 113 από
+    // 412 δείκτες) και στους 6 από τους 8 τα χαμένα είναι `soil_ec_status` και
+    // `salinity_stress`. Η ασπίδα υπήρχε ΗΔΗ — αλλά ΜΟΝΟ στη φάση (β), που σβήνει
+    // ΟΛΟΚΛΗΡΟΥΣ δείκτες. Οι φάσεις (α) και (γ) σβήνουν ΚΕΙΜΕΝΑ και δεν την κοίταζαν
+    // καθόλου. Αποτέλεσμα: η ΤΙΜΗ επιβίωνε (ασπίδα ✔) και η ΕΞΗΓΗΣΗ χανόταν — ο
+    // παραγωγός έβλεπε ετικέτα «Συσσώρευση αλάτων» χωρίς ούτε μία λέξη για το τι
+    // σημαίνει και τι να κάνει. Εδώ η ασπίδα μπαίνει ΚΑΙ στη σειρά θυσίας κειμένων:
+    // ό,τι κατευθύνει ενέργεια φεύγει ΤΕΛΕΥΤΑΙΟ, όχι ποτέ (αν δεν χωρέσει αλλιώς
+    // χάνεται ΟΛΟ το bundle, που είναι χειρότερο).
+    const _SAG_BUNDLE_SHIELD = [/^fir_message_/, /^fir_/, /^soil_ec_status$/, /^salinity_/,
+                                /^crop_stage$/, /^harvest_index$/];
+    const _sagShielded = (k) => _SAG_BUNDLE_SHIELD.some((re) => re.test(String(k)));
+    _victims.sort((a, b) => ((_sagShielded(a.k) ? 1 : 0) - (_sagShielded(b.k) ? 1 : 0))
+      || (_spent(b) - _spent(a)) || (b.len - a.len));
     let _textsDropped = 0, _keysDropped = 0;
     const _droppedNames = [];
     // Η επανασυμπίεση μετά από ΚΑΘΕ αφαίρεση κόστιζε 1.886 ms σε ακραίο σενάριο
@@ -13752,9 +13766,8 @@ function packCalculatedIndicators({
     // στάδιο, δείκτης συγκομιδής) θυσιάζονται ΤΕΛΕΥΤΑΙΑ — όχι ποτέ: αν δεν χωρέσει
     // αλλιώς, χάνεται ΟΛΟ το bundle (TagoIO > 10 kB). Μέσα σε κάθε ομάδα η σειρά
     // «ποσοστό ζωής που καταναλώθηκε» (T-BUNDLEFAIR-01) μένει — η ταξινόμηση είναι σταθερή.
-    const _SAG_BUNDLE_SHIELD = [/^fir_message_/, /^fir_/, /^soil_ec_status$/, /^salinity_/,
-                                /^crop_stage$/, /^harvest_index$/];
-    const _sagShielded = (k) => _SAG_BUNDLE_SHIELD.some((re) => re.test(String(k)));
+    // T-ECSHIELD-TEXT-01 (v50.144): τα _SAG_BUNDLE_SHIELD / _sagShielded ορίζονται
+    // πλέον ΠΙΟ ΠΑΝΩ, πριν από τη φάση (α), ώστε να ισχύουν ΚΑΙ για τα κείμενα.
     const _sagDropOldKeys = () => {
       const _order = _victims.slice().sort((a, b) => (_sagShielded(a.k) ? 1 : 0) - (_sagShielded(b.k) ? 1 : 0));
       let _kb = 8, _ki = 0;
@@ -13784,8 +13797,14 @@ function packCalculatedIndicators({
     if (compressedData.length > _SAG_BUNDLE_MAX_B64) {
       // T-IRRFAULT-WIRE-01: η εξήγηση «γιατί δεν υπάρχει δόση» είναι ΔΡΑΣΗΣ,
       // όχι πληροφορία — δεν μπαίνει στη λίστα θυσίας.
+      // T-ECSHIELD-TEXT-01 (v50.144): τα `soil_ec_status` και `salinity_stress`
+      // ΕΦΥΓΑΝ από εδώ. Ήταν σωστά χαμηλής προτεραιότητας όσο ήταν πληροφοριακές
+      // ενδείξεις. Από τη Φάση Α (v50.141-142) κουβαλούν την ΗΜΕΡΗΣΙΑ ΕΤΥΜΗΓΟΡΙΑ
+      // αλατότητας — «Συσσώρευση αλάτων», «Ξεπλένονται θρεπτικά», «Ελέγξτε τις
+      // δηλώσεις EC» — που είναι ΟΛΗ κείμενο: χωρίς αυτό η κάρτα δεν λέει τίποτα.
+      // Το `soil_ph_status` ΜΕΝΕΙ χαμηλά: είναι όντως πληροφοριακό.
       const _LOW_PRIORITY = ['forecast_status',
-        'soil_ec_status', 'soil_ph_status', 'salinity_stress',
+        'soil_ph_status',
         'upgrade_opportunities', 'sensor_redundancy', 'measurement_age',
         'met_reference_source', 'dli_comparable', 'light_coverage_pct', 'soil_depth_divergence',
         'stale_measurement_groups', 'sensor_quality', 'sensor_divergence', 'soil_temp_source', 'root_zone_basis',
@@ -13808,7 +13827,10 @@ function packCalculatedIndicators({
       const _ACTION_LAST = ['weather_alert_frost', 'weather_alert_heat',
         'hidden_advice', 'irrigation_message', 'irrigation_sensor_fault',
         'plant_stress', 'bpi_message', 'leaf_sensor_placement', 'soil_profile_status',
-        'irrigation_config_error', 'soil_moisture_limits_status'];
+        'irrigation_config_error', 'soil_moisture_limits_status',
+        // T-ECSHIELD-TEXT-01 (v50.144): η ετυμηγορία αλατότητας ΚΑΤΕΥΘΥΝΕΙ ΕΝΕΡΓΕΙΑ
+        // (έκπλυση, αλλαγή λίπανσης, έλεγχος οργάνου) — ανήκει εδώ, όχι στα πληροφοριακά.
+        'soil_ec_status', 'salinity_stress'];
       // Η ΚΑΡΤΑ ΒΛΑΒΩΝ ΕΙΝΑΙ ΤΟ ΜΟΝΟ ΚΕΙΜΕΝΟ ΜΕ ΟΔΗΓΙΕΣ ΕΠΙΣΚΕΥΗΣ — και το
       // hidden_advice ΠΑΡΑΠΕΜΠΕΙ σε αυτήν. Δική της βαθμίδα, ΤΕΛΕΥΤΑΙΑ απ' όλα:
       // αν χαθεί αυτή, πρέπει να έχει ήδη χαθεί και ο δείκτης προς αυτήν.
