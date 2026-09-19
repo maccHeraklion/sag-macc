@@ -1,0 +1,37 @@
+{
+  "_comment": "ΑΝΤΙΓΡΑΦΟ ΠΡΙΝ το T-GWCOORD-01, 2026-09-19 18:12 UTC. Συσκευή-gateway «Αγχίαλος - Σκοπευτήριο». Είχε ΔΥΟ ετικέτες `coordinates` με ΔΙΑΦΟΡΕΤΙΚΗ τιμή και δύο `deployedGateway` με ίδια. Για επαναφορά: update_device με ΑΚΡΙΒΩΣ το tags_BEFORE.",
+  "device_id": "687789da3d1fc8000aa1fd71",
+  "name": "milesight_sg50_fce3b8",
+  "network": "5bbd0d144051a50034cd19fb",
+  "connector": "5f5a8f3351d4db99c40dece5",
+  "last_input": "2026-09-06T20:59:28.856Z",
+
+  "ΤΟ_ΠΡΟΒΛΗΜΑ": "Η TagoIO δέχεται διπλά κλειδιά στις ετικέτες. Όποιος τις διαβάζει σε αντικείμενο (tags[k]=v) παίρνει την ΤΕΛΕΥΤΑΙΑ — εδώ τη ΛΑΘΟΣ. Έτσι ξεγελάστηκε και το δικό μου probe και ανέφερε «τυπογραφικό», ενώ ήταν διπλοεγγραφή.",
+  "ΠΟΙΑ_ΕΙΝΑΙ_Η_ΣΩΣΤΗ": "22.780609295432967. Η Νέα Αγχίαλος είναι 39,28 Β / 22,78 Α. Το 20,78 πέφτει στο Ιόνιο, 172,1 km δυτικά. Επιπλέον η μεταβλητή `location` της ίδιας συσκευής λέει 22.780609295432967 — ταυτόσημη ως το τελευταίο ψηφίο.",
+
+  "tags_BEFORE": [
+    { "key": "is_gateway", "value": "yes" },
+    { "key": "eui", "value": "24e124fffefce3b8" },
+    { "key": "manufacturer", "value": "milesight" },
+    { "key": "type", "value": "sg50" },
+    { "key": "coordinates", "value": "39.280097476768766, 22.780609295432967" },
+    { "key": "deployedGateway", "value": "yes" },
+    { "key": "comment", "value": "Αγχίαλος - Σκοπευτήριο" },
+    { "key": "coordinates", "value": "39.280097476768766, 20.780609295432967" },
+    { "key": "deployedGateway", "value": "yes" }
+  ],
+
+  "tags_AFTER": [
+    { "key": "is_gateway", "value": "yes" },
+    { "key": "eui", "value": "24e124fffefce3b8" },
+    { "key": "manufacturer", "value": "milesight" },
+    { "key": "type", "value": "sg50" },
+    { "key": "coordinates", "value": "39.280097476768766, 22.780609295432967" },
+    { "key": "deployedGateway", "value": "yes" },
+    { "key": "comment", "value": "Αγχίαλος - Σκοπευτήριο" }
+  ],
+
+  "ΔΕΝ_ΠΕΙΡΑΧΤΗΚΕ": {
+    "dragino_outdoor_dlos8n_21c158": "«Σπίτι Παρισάκη» — έχει `coordinates` ×5 και `deployedGateway` ×5, ΟΛΕΣ με την ΙΔΙΑ τιμή. Δεν υπάρχει σύγκρουση, άρα δεν αλλάζει τίποτα λειτουργικά. Καθαρίζεται όποτε ζητηθεί."
+  }
+}
