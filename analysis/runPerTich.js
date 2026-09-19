@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.140 · 2026-09-19';
+const SAG_KERNEL_VERSION = 'v50.141 · 2026-09-19';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -11068,6 +11068,64 @@ const _SAG_EC_CHANNELS = [
   { n: '1', ec: 'conduct_soil1', m: 'soil_moisture1', t: 'soil_temperature1', el: 'ρηχό' },
   { n: '2', ec: 'conduct_soil2', m: 'soil_moisture2', t: 'soil_temperature2', el: 'βαθύ' },
 ];
+// ── T-ECREF-01 (v50.141 · 19/9/2026) · ΠΡΟ-ΑΡΔΕΥΤΙΚΗ ΑΝΑΦΟΡΑ ΑΝΑ ΒΑΘΟΣ (Φάση Α, Α3) ──
+// Το νερό των πόρων (σ_w, Hilhorst) στο ΞΗΡΟΤΕΡΟ δείγμα του παραθύρου ημερήσιο→ημερήσιο
+// tick (00:20→00:20 UTC, #219): θ, σ_w και T ΤΟΥ ΙΔΙΟΥ δείγματος (#211, #213) — όχι
+// μέσοι όροι που ανακατεύουν βρεγμένη και στεγνή φάση. Ωριαία: η κατάσταση `ec_ref_state`
+// κρατά ανά κανάλι το δείγμα με την ελάχιστη θ. Ημερήσια: εκπέμπεται `soil_ec_ref1/2`
+// (σειρά, μία φορά/ημέρα) = ελάχιστο(κατάσταση ∪ τρέχον) και το παράθυρο ξεκινά ξανά
+// από το τρέχον δείγμα. Κανόνες: null δείγμα → η κατάσταση δεν αλλάζει· νεκρό όργανο
+// (T-ECDEAD-01) → κανένα δείγμα· πρώτο παράθυρο χωρίς προηγούμενη κατάσταση → καμία
+// εκπομπή· το `sat` ΔΕΝ χρειάζεται (το σ_w δεν εξαρτάται από κορεσμό). Λίτρα: 0.
+function _sagEcRefIndicators(measurements, prevShared, dailyTich, nowIso) {
+  const out = [];
+  try {
+    const _unp = (o) => (o && typeof o === 'object' && 'value' in o) ? o.value : o;
+    let prev = {};
+    try {
+      const p = JSON.parse(String(_unp(prevShared && prevShared.ec_ref_state) || '{}'));
+      if (p && typeof p === 'object' && !Array.isArray(p)) prev = p;
+    } catch (e) {}
+    const _numbered = _SAG_EC_CHANNELS.some(c => Number.isFinite(Number(getVal(measurements, c.ec, NaN))));
+    const chans = _numbered ? _SAG_EC_CHANNELS
+      : [{ n: '1', ec: 'conduct_soil', m: 'soil_moisture', t: 'temp_soil', el: 'έδαφος' }];
+    const next = {};
+    for (const c of chans) {
+      const raw = Number(getVal(measurements, c.ec, NaN));
+      const th = Number(getVal(measurements, c.m, NaN));
+      const tt = Number(getVal(measurements, c.t, NaN));
+      const dead = Number.isFinite(th) && th > _SAG_EC_MIN_VWC * 100 && Number.isFinite(raw) && raw < _SAG_EC_DEAD_US;
+      let cur = null;
+      if (!dead && Number.isFinite(raw) && Number.isFinite(th)) {
+        const r = _sagEcChain(raw, th, tt, NaN);
+        if (Number.isFinite(r.pore)) {
+          cur = { th: Number(th.toFixed(2)), sw: Number(r.pore.toFixed(3)),
+                  t: Number.isFinite(tt) ? Number(tt.toFixed(1)) : null, ts: nowIso };
+        }
+      }
+      const pRaw = prev[c.n];
+      const p = (pRaw && Number.isFinite(Number(pRaw.th)) && Number.isFinite(Number(pRaw.sw))) ? pRaw : null;
+      const best = (cur && (!p || cur.th < Number(p.th))) ? cur : p;
+      if (dailyTich) {
+        if (p && best) {
+          out.push({ variable: 'soil_ec_ref' + c.n, value: Number(Number(best.sw).toFixed(2)),
+            metadata: { unit: 'dS/m', color: 'grey', theta: best.th, temp: best.t, at: best.ts,
+              text: 'Νερό πόρων (' + c.el + ') στο ξηρότερο δείγμα του 24ώρου: '
+                + Number(best.sw).toLocaleString('el-GR', { maximumFractionDigits: 2 }) + ' dS/m σε υγρασία '
+                + Number(best.th).toLocaleString('el-GR', { maximumFractionDigits: 1 }) + ' %.' } });
+        }
+        next[c.n] = cur;   // νέο παράθυρο από το τρέχον δείγμα
+      } else {
+        next[c.n] = best;
+      }
+    }
+    if (Object.keys(next).some(k => next[k])) {
+      out.push({ variable: 'ec_ref_state', value: JSON.stringify(next), metadata: { internal: true } });
+    }
+  } catch (e) { console.log('T-ECREF-01: ' + (e && e.message)); }
+  return out;
+}
+// ── End T-ECREF-01 ────────────────────────────────────────────────────────────
 // ── T-ECFIELD-01 (v50.128 · 11/9/2026) · παγίδα #67 ──────────────────
 // Το όριο ανοχής της ΠΙΟ ΕΥΑΙΣΘΗΤΗΣ καλλιέργειας του αγρού. ΙΔΙΟΣ
 // ακριβώς υπολογισμός με την T-ECUNIFY-01 (γρ. ~17408) — ώστε η κάρτα
@@ -13224,6 +13282,7 @@ const _SAG_STATE_PATTERNS = [
   /^pesticide_washoff_mm$/, /^pesticide_spray_ref$/,
   // T-ECPH-01 (v50.15 review): μνήμη τάσεων EC/pH 8 ημερών — αθάνατη.
   /^ec_hist$/,
+  /^ec_ref_state$/,              // T-ECREF-01 (v50.141): παράθυρο ελάχιστης θ — κατάσταση, αθάνατη
   // T-SOILMODELS-02 (τελικός έλεγχος): ΣΥΣΣΩΡΕΥΤΗΣ βαθμοωρών Maryblyt. Με το
   // προεπιλεγμένο TTL των 50 ωρών, μια διακοπή δύο ημερών ΜΕΣΑ στην άνθηση θα
   // τον μηδένιζε σιωπηλά και το μοντέλο της βακτηριακής καύσης θα ξεκινούσε από
@@ -13857,7 +13916,7 @@ function packCalculatedIndicators({
   // δεν μπορεί να διορθώσει (γρ. 10943/10975). Το null ΔΕΝ γράφεται — μια
   // χρονοσειρά με μηδενικά θα ήταν ΨΕΥΤΙΚΗ μέτρηση, όχι κενό.
   // T-ECPORE-SERIES-01 (v50.135): το ECπόρων (συγκρίσιμο μεταξύ βαθών) γίνεται σειρά — #207.
-  const _SAG_SERIES_KEYS = ['soil_ece1', 'soil_ece2', 'soil_ec_pore1', 'soil_ec_pore2'];
+  const _SAG_SERIES_KEYS = ['soil_ece1', 'soil_ece2', 'soil_ec_pore1', 'soil_ec_pore2', 'soil_ec_ref1', 'soil_ec_ref2'];   // T-ECREF-01
   const _seriesRows = [];
   for (const _sk of _SAG_SERIES_KEYS) {
     const _sv = sharedPacked[_sk];
@@ -17727,6 +17786,9 @@ module.exports = new Analysis(async (context) => {
           }
         }
 
+        // T-ECREF-01 (v50.141): ωριαία κατάσταση + ημερήσια εκπομπή soil_ec_ref1/2 —
+        // ΠΡΙΝ το T-ECPH-01, ώστε η ημερήσια κρίση (Α4/Α5) να βλέπει τη σημερινή αναφορά.
+        const _ecRefIndicators = _sagEcRefIndicators(measurements, _prevBundleForWash?.shared, dailyTich, new Date().toISOString());
         // ── T-ECPH-01 (v50.12) · Αλατότητα & pH εδάφους από ΜΕΤΡΗΣΕΙΣ ─────
         let _ecphIndicators = [];
         if (dailyTich) {
@@ -18976,6 +19038,7 @@ module.exports = new Analysis(async (context) => {
             ...(vpd ?? []),
             ...(_washIndicators ?? []),
             ...(_ecphIndicators ?? []),
+            ...(_ecRefIndicators ?? []),   // T-ECREF-01
             ...(_soilcalIndicators ?? []),         // T-SOILCAL-01
             ...(_techIndicators ?? []),            // T-TECH-REPORT-01
             ...(_declIndicators ?? []),

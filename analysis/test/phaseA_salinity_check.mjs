@@ -35,7 +35,7 @@ const CHECKS = [
     f => { const m = f.core.match(/const SAG_KERNEL_VERSION = 'v50\.(\d+) · /); return !!m && Number(m[1]) >= 135; }],
   ["core: _SAG_SERIES_KEYS περιέχει soil_ec_pore1 ΚΑΙ soil_ec_pore2 (μία δήλωση)",
     f => (f.core.match(/const _SAG_SERIES_KEYS = \[[^\]]*\]/g) || []).length === 1
-      && /const _SAG_SERIES_KEYS = \['soil_ece1', 'soil_ece2', 'soil_ec_pore1', 'soil_ec_pore2'\]/.test(f.core)],
+      && /const _SAG_SERIES_KEYS = \['soil_ece1', 'soil_ece2', 'soil_ec_pore1', 'soil_ec_pore2'(, '[a-z0-9_]+')*\]/.test(f.core)],   // v50.141+: επιτρέπονται επιπλέον σειρές μετά τις pore
   ["core: T-ECPORE-SERIES-01 σχόλιο παρόν", f => f.core.includes("T-ECPORE-SERIES-01 (v50.135)")],
   ["core: ο βρόχος σειρών κρατά τον έλεγχο null (καμία μηδενική σειρά)",
     f => /if \(_rv === null \|\| _rv === undefined \|\| _rv === ''\) continue;/.test(f.core)],

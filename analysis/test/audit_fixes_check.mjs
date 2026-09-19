@@ -47,7 +47,8 @@ function eceOf(core, key) {
 }
 
 const CHECKS = [
-  ["core: έκδοση v50.140", f => /const SAG_KERNEL_VERSION = 'v50\.140 · 2026-09-19';/.test(f.core)],
+  ["core: έκδοση ≥ v50.140 (οι διορθώσεις μπήκαν στη v50.140· νεότερες εκδόσεις τις περιέχουν)",
+    f => { const m = f.core.match(/const SAG_KERNEL_VERSION = 'v50\.(\d+) · /); return !!m && Number(m[1]) >= 140; }],
   ["core: καθαρό CRLF, χωρίς BOM", f => !f.coreRaw.startsWith("﻿") && (f.coreRaw.match(/\n/g) || []).length === (f.coreRaw.match(/\r\n/g) || []).length],
   ["Κ3: στο ημερήσιο tick με 20 ώρες συσσώρευσης το BPI παίρνει τον χθεσινό μέσο (4,2), όχι τον τρέχοντα (0,3)", f => runIpsiAvg(f.core, { dailyTich: true, prevIpsiAvg: 4.2, prevIpsiCount: 20, newAvg: 0.3 }) === 4.2],
   ["Κ3: ωριαίο tick → τρέχων σωρευτικός· ημερήσιο με < 6 ώρες → τρέχων", f => runIpsiAvg(f.core, { dailyTich: false, prevIpsiAvg: 4.2, prevIpsiCount: 20, newAvg: 2.1 }) === 2.1
@@ -87,7 +88,7 @@ const MUTATIONS = [
   ["Κ11: η ήπια ζώνη δίνει βέτο", c => c.replace("if (_coldFrac >= 1 && _coldWet) {", "if (_coldFrac > 0 && _coldWet) {")],
   ["Κ4: η ετικέτα δεν κοιτά τα λίτρα", c => c.replace("} else if (ipsi < 3 && _irrDueNow) {", "} else if (false) {")],
   ["Κ14: ελιά πίσω στο 4,7", c => c.replace("max_tolerance_ECe: 2.7,   // T-ECE-OLIVE-01", "max_tolerance_ECe: 4.7,   // T-ECE-OLIVE-01")],
-  ["έκδοση πίσω", c => c.replace("'v50.140 · 2026-09-19'", "'v50.139 · 2026-09-19'")],
+  ["έκδοση πίσω πριν τη v50.140", c => c.replace(/const SAG_KERNEL_VERSION = 'v50\.\d+ · [^']+';/, "const SAG_KERNEL_VERSION = 'v50.139 · 2026-09-19';")],
 ];
 
 function load(t) { return { core: lf(t), coreRaw: t }; }
