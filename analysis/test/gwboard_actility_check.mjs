@@ -185,6 +185,27 @@ ok(/Actility/.test(R.foot), "Γ·4 το υποσέλιδο λέει την πρ�
     g ? c3.statusOf(g).cls + "/" + g.sensors : "καμία");
 }
 
+/* Ζ · Ο κατάλογος του στόλου ΔΕΝ θάβει όσα λειτουργούν. */
+function comboFirstIsNetwork(ctx) {
+  ctx.applyRoster([
+    { id: "d1", name: "σιωπηλό 1" },
+    { id: "d2", name: "σιωπηλό 2" },
+    { id: "d3", name: "σιωπηλό 3" },
+  ]);
+  ctx.ingest([row("ZZZ", "green", "Λ", 0.1, 4, 35, 25)]);
+  const l = ctx.sortedList();
+  return { first: l[0], last: l[l.length - 1], n: l.length };
+}
+{
+  const cz = boot(RAW);
+  const z = comboFirstIsNetwork(cz);
+  ok(z.n === 4 && z.first && z.first.code === "ZZZ",
+    "Ζ·1 το gateway που λειτουργεί είναι ΠΡΩΤΟ, όχι θαμμένο",
+    z.first ? String(z.first.id) : "καμία");
+  ok(z.last && cz.isUndeclared(z.last),
+    "Ζ·2 το αδήλωτο είναι ΤΕΛΕΥΤΑΙΟ");
+}
+
 /* ── ΜΕΤΑΛΛΑΞΕΙΣ ─────────────────────────────────────────────────────────── */
 console.log("\n══ ΜΕΤΑΛΛΑΞΕΙΣ (όλες πρέπει να σκοτωθούν) ══");
 
@@ -206,6 +227,9 @@ const MUT = [
     "      ent.fromNetwork = true;", "      ent.fromNetwork = false;"],
   ["το υποσέλιδο κρύβει την πηγή",
     "    var t = net > 0", "    var t = false"],
+  ["τα αδήλωτα ξαναθάβουν όσα λειτουργούν",
+    "var rankOf = function (g) { return isUndeclared(g) ? 4 : rank[statusOf(g).cls]; };",
+    "var rankOf = function (g) { return rank[statusOf(g).cls]; };"],
 ];
 
 let killed = 0;
@@ -236,6 +260,13 @@ for (const [name, from, to] of MUT) {
       c3.ingest([row("AAA", "red", "Ν", 99, 1, 36, 26, T_OLD)]);
       const g = c3.sortedList()[0];
       survived = !!(g && c3.statusOf(g).cls === "green" && g.sensors === 9);
+    }
+    if (survived) {
+      /* Η ταξινόμηση δεν φαίνεται στα παραπάνω — ξεχωριστή κρίση. */
+      const cz = boot(mutated);
+      const z = comboFirstIsNetwork(cz);
+      survived = !!(z.n === 4 && z.first && z.first.code === "ZZZ"
+        && z.last && cz.isUndeclared(z.last));
     }
   } catch (e) {
     survived = false;

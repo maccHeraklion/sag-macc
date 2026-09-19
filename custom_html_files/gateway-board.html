@@ -419,8 +419,13 @@ function sortedList() {
   }
   /* Σειρά ΧΡΗΣΙΜΟΤΗΤΑΣ, όχι αλφαβητική: πρώτα ό,τι θέλει δουλειά. */
   var rank = { red: 0, grey: 1, yellow: 2, green: 3 };
+  /* T-GWBOARD-ACTILITY-01: το αδήλωτο πάει ΤΕΛΕΥΤΑΙΟ. Κρινόταν ως «άγνωστο»
+     (τάξη 1) και έτσι οι 33 σιωπηλές συσκευές κάθονταν ΠΑΝΩ από τα gateways
+     που ΟΝΤΩΣ λειτουργούν. «Δεν μίλησε ποτέ» ΔΕΝ είναι επείγον·
+     «μίλησε και σταμάτησε» είναι. */
+  var rankOf = function (g) { return isUndeclared(g) ? 4 : rank[statusOf(g).cls]; };
   out.sort(function (a, b) {
-    var ra = rank[statusOf(a).cls], rb = rank[statusOf(b).cls];
+    var ra = rankOf(a), rb = rankOf(b);
     if (ra !== rb) return ra - rb;
     return String(a.name || a.id).localeCompare(String(b.name || b.id), 'el');
   });
