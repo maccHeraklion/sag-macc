@@ -47,7 +47,7 @@ const CHECKS = [
   ["core: node --check", f => nodeCheck(f.core, ".js")],
   // ── ΒΗΜΑ 3 · widget ──
   ["widget: η λίστα Ra περιέχει τις νέες σειρές",
-    f => f.widget.includes('"history_data","soil_ece1","soil_ece2","soil_ec_pore1","soil_ec_pore2"]')],
+    f => /"history_data","soil_ece1","soil_ece2","soil_ec_pore1","soil_ec_pore2"(,"[a-z0-9_]+")*\]/.test(f.widget)],   // W-ECREF-01+: επιτρέπονται επιπλέον σειρές μετά τις pore
   ["widget: ετικέτες πόρων υπάρχουν (💧 Αγωγιμότητα νερού πόρων Ρηχό/Βαθύ)",
     f => f.widget.includes('soil_ec_pore1:{label:"💧 Αγωγιμότητα νερού πόρων Ρηχό"')
       && f.widget.includes('soil_ec_pore2:{label:"💧 Αγωγιμότητα νερού πόρων Βαθύ"')],
@@ -110,7 +110,7 @@ const MUT = [
   ["core: ένα γυμνό LF", f => ({ ...f, core: f.core.replace("\r\n", "\n") })],
   ["core: αφαίρεση του ελέγχου null στον βρόχο", f => ({ ...f, core: f.core.replace("if (_rv === null || _rv === undefined || _rv === '') continue;", "") })],
   ["core: συντακτικό σφάλμα", f => ({ ...f, core: f.core.replace("const _seriesRows = [];", "const _seriesRows = [;") })],
-  ["widget: Ra χωρίς τις νέες σειρές", f => ({ ...f, widget: f.widget.replace(',"soil_ec_pore1","soil_ec_pore2"]', "]") })],
+  ["widget: Ra χωρίς τις νέες σειρές", f => ({ ...f, widget: f.widget.replace('"soil_ece1","soil_ece2","soil_ec_pore1","soil_ec_pore2"', '"soil_ece1","soil_ece2"') })],
   ["form: fert_ecw_dsm δεν αποθηκεύεται", f => ({ ...f, form: f.form.replace("fert_ecw_dsm:       numOrNull($('fert_ecw_dsm').value),", "") })],
   ["form: fert_ecw_dsm δεν φορτώνεται", f => ({ ...f, form: f.form.replace("if (conf.fert_ecw_dsm!=null) $('fert_ecw_dsm').value = conf.fert_ecw_dsm;", "") })],
   ["form: λείπει το input fert_ecw_measured_on", f => ({ ...f, form: f.form.replace('<input id="fert_ecw_measured_on" type="date" />', "") })],

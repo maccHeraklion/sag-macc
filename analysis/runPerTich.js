@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.142 · 2026-09-19';
+const SAG_KERNEL_VERSION = 'v50.143 · 2026-09-19';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -8713,6 +8713,7 @@ function _sagRunReset() {
   _SAG_RUN_CACHE.miss = 0;
   _SAG_RUN_CACHE.recSaved = 0;
   _SAG_FLEET.length = 0;   // T-FLEET-REPORT-01
+  _SAG_LAST_BUNDLE = null;  // T-FLEET-HEALTH-01
   _SAG_SEASON_WARNED.clear();   // T-CROPSEASON-01: διαγνωστικό ΑΝΑ ΕΚΤΕΛΕΣΗ
   _SAG_TICK_GAP_H = 0;          // T-TICKGAP-01
   _SAG_TICK_GAP_LOGGED = false;
@@ -13671,6 +13672,7 @@ function packCalculatedIndicators({
   // Η ΚΑΤΑΣΤΑΣΗ και οι ΣΥΣΣΩΡΕΥΤΕΣ (ttl = Infinity) ΔΕΝ αγγίζονται ΠΟΤΕ.
   const _SAG_BUNDLE_MAX_B64 = 9200;   // ασφαλές περιθώριο κάτω από τα 10.240
   let compressedData = compressFieldBundle({ shared: sharedPacked, crops: cropsPackedArr });
+  const _fitBefore = compressedData.length;   // T-FLEET-HEALTH-01
   if (compressedData.length > _SAG_BUNDLE_MAX_B64) {
     const _victims = [];
     for (const crop of cropsPackedArr) {
@@ -14019,6 +14021,8 @@ function packCalculatedIndicators({
     });
   }
 
+  // T-FLEET-HEALTH-01: το μέγεθος του bundle και αν χρειάστηκε περικοπή, για τον πίνακα.
+  _SAG_LAST_BUNDLE = { b: compressedData.length, t: _fitBefore > _SAG_BUNDLE_MAX_B64 ? 1 : 0 };
   return [
     {
       variable,
@@ -16181,6 +16185,124 @@ const _sagTechImpact = (t) => _SAG_TECH_IMPACT[t] || '';
 // σε module scope χωρίς μηδενισμό ανά τρέξιμο).
 const _SAG_FLEET = [];
 
+// ── T-FLEET-HEALTH-01 (v50.143 · 19/9/2026) · ΥΓΕΙΑ ΣΥΣΤΗΜΑΤΟΣ ΣΤΟΝ ΠΙΝΑΚΑ ──
+// ΤΟ ΕΥΡΗΜΑ (19/9): το sag-fleet.html είχε μετακινηθεί σε backup στις 16/9 και ο
+// πίνακας ήταν άδειος επί 3 ημέρες — και ΚΑΝΕΝΑΣ δεν το είδε, γιατί ο πίνακας
+// εποπτείας εποπτεύει τα ΟΡΓΑΝΑ, όχι το ίδιο το ΣΥΣΤΗΜΑ. Εδώ προστίθεται ό,τι
+// ΗΔΗ ξέρει ο πυρήνας ανά παλμό και δεν έλεγε σε κανέναν:
+//   • αγροί που έριξαν σφάλμα κύκλου (πριν: ΕΞΑΦΑΝΙΖΟΝΤΑΝ από τον πίνακα)
+//   • αγροί χωρίς ρύθμιση (πριν: `continue` — αόρατοι)
+//   • ανά αγρό: ηλικία πρόγνωσης, απορρίψεις μετρήσεων, μέγεθος/περικοπή bundle,
+//     ΑΝ ΓΡΑΦΤΗΚΕ το bundle
+//   • ζωντανά αρχεία του widget (HEAD, με content-type — παγίδες #223/#225)
+//   • last_run των analyses πρόγνωσης/φόρμας, διάρκεια παλμού, αναγνώσεις
+// ΚΟΣΤΟΣ: ~10 HEAD (παράλληλα, <1 s) + 2 analysis.info ανά ωριαίο παλμό. Καμία
+// νέα ανάγνωση δεδομένων.
+let _SAG_LAST_BUNDLE = null;   // { b: bytes, t: 1 αν χρειάστηκε περικοπή } — μηδενίζεται ανά αγρό
+const _SAG_FLEET_FILES_BASE = 'https://api.us-e1.tago.io/file/67934c48e8e573000ae5964b/';
+// Τα ζωντανά αρχεία της ρίζας (παγίδα #225). Παράκαμψη: env FLEET_FILES (λίστα με κόμμα).
+const _SAG_FLEET_FILES = [
+  'storage/sagMain/index.html', 'storage/sagMain/index-7cbd9a4e.js', 'storage/sagMain/index-2ae36874.css',
+  'storage/sagMain/vendor-cc23ee3c.js', 'storage/sagMain/vendor-08a390a6.css', 'storage/sagMain/echarts-a72af00a.js',
+  'storage/sagMain/uc511-feedback-overlay.js', 'storage/sagMain/sag-fleet.html', 'html_files/configuration.html',
+];
+// Ποιες analyses παρακολουθούνται (id:ετικέτα). Παράκαμψη: env FLEET_ANALYSES.
+const _SAG_FLEET_ANALYSES = '6982277e9b69cb000946d225:πρόγνωση,68fe925b3607df0010ef833c:φόρμα→ρύθμιση';
+// HEAD με ακολούθηση ανακατευθύνσεων: το api.tago.io απαντά 302 προς files.us-e1
+// για ΚΑΘΕ διαδρομή — και για ανύπαρκτη. Χωρίς ακολούθηση, το «302» θα περνούσε
+// για «υπάρχει» (μετρήθηκε 19/9: does-not-exist.html -> 302 -> 403).
+function _sagHeadFile(url, ms, hops) {
+  hops = hops || 0;
+  return new Promise((res) => {
+    let done = false;
+    const fin = (o) => { if (!done) { done = true; res(o); } };
+    try {
+      const _https = require('https');
+      const req = _https.request(url, { method: 'HEAD' }, (r) => {
+        const loc = r.headers && r.headers.location;
+        try { r.resume(); } catch (_e0) {}
+        if (r.statusCode >= 300 && r.statusCode < 400 && loc && hops < 3) {
+          let next = loc;
+          try { next = new URL(loc, url).href; } catch (_e1) {}
+          fin(_sagHeadFile(next, ms, hops + 1)); return;
+        }
+        fin({ h: r.statusCode, t: String((r.headers && r.headers['content-type']) || '').split(';')[0].trim() });
+      });
+      req.setTimeout(ms || 5000, () => { try { req.destroy(new Error('timeout')); } catch (_e2) {} });
+      req.on('error', (e) => fin({ h: 0, t: 'ERR ' + String((e && e.message) || e).slice(0, 40) }));
+      req.end();
+    } catch (e) { fin({ h: 0, t: 'ERR ' + String((e && e.message) || e).slice(0, 40) }); }
+  });
+}
+// Το content-type είναι ΜΕΡΟΣ του ελέγχου (παγίδα #223: base64 upload = λάθος τύπος
+// = το iframe δείχνει κείμενο αντί για σελίδα, με HTTP 200).
+function _sagFileOk(path, r) {
+  if (!r || r.h !== 200) return 0;
+  const p = String(path).toLowerCase(), t = String(r.t || '').toLowerCase();
+  if (/\.html?$/.test(p)) return t === 'text/html' ? 1 : 0;
+  if (/\.js$/.test(p)) return /^(text|application)\/(x-)?javascript$/.test(t) ? 1 : 0;
+  if (/\.css$/.test(p)) return t === 'text/css' ? 1 : 0;
+  return 1;
+}
+async function _sagFleetFiles(env) {
+  const _raw = ((env || []).find(e => e.key === 'FLEET_FILES') || {}).value;
+  const _list = (_raw && String(_raw).trim())
+    ? String(_raw).split(',').map(x => x.trim()).filter(Boolean).slice(0, 20)
+    : _SAG_FLEET_FILES;
+  const _cap = new Promise(res => setTimeout(() => res(null), 8000));
+  const out = await Promise.all(_list.map(async (p) => {
+    const r = await Promise.race([_sagHeadFile(_SAG_FLEET_FILES_BASE + p, 5000), _cap]);
+    return { p, h: r ? r.h : 0, t: r ? r.t : 'timeout', c: _sagFileOk(p, r) };
+  }));
+  return out;
+}
+async function _sagFleetAnalyses(account, env) {
+  const _raw = ((env || []).find(e => e.key === 'FLEET_ANALYSES') || {}).value;
+  const _spec = (_raw && String(_raw).trim()) ? String(_raw) : _SAG_FLEET_ANALYSES;
+  const out = [];
+  for (const _it of _spec.split(',').map(x => x.trim()).filter(Boolean).slice(0, 8)) {
+    const [_id, _lbl] = _it.split(':');
+    if (!/^[0-9a-f]{24}$/i.test(_id || '')) continue;
+    try {
+      const _inf = await account.analysis.info(_id);
+      const _lr = Date.parse(String((_inf && _inf.last_run) || ''));
+      out.push({ n: String(_lbl || (_inf && _inf.name) || _id).slice(0, 24), id: _id.slice(-6),
+        h: Number.isFinite(_lr) ? Math.round((Date.now() - _lr) / 36000) / 100 : null,
+        a: (_inf && _inf.active) ? 1 : 0 });
+    } catch (e) {
+      out.push({ n: String(_lbl || _id).slice(0, 24), id: _id.slice(-6), h: null, a: null,
+        e: String((e && e.message) || e).slice(0, 60) });
+    }
+  }
+  return out;
+}
+// Σημείωση στη γραμμή του αγρού ΑΦΟΥ γράφτηκε (ή έπεσε). Επιστρέφει αν βρέθηκε.
+function _sagFleetMark(fieldName, patch) {
+  for (let _k = _SAG_FLEET.length - 1; _k >= 0; _k--) {
+    if (_SAG_FLEET[_k] && _SAG_FLEET[_k].f === fieldName) { Object.assign(_SAG_FLEET[_k], patch || {}); return true; }
+  }
+  return false;
+}
+// Η εγγραφή fleet_field πρέπει να είναι ΕΓΚΥΡΟ JSON ≤ 8000 χαρ. Πριν: .slice(0, 8000)
+// — ένας αγρός με πολλά όργανα/βλάβες θα έδινε κομμένο JSON και ο πίνακας θα τον
+// ΑΓΝΟΟΥΣΕ σιωπηλά (μετρημένο μέγιστο 19/9: 2.546 χαρ. — ασφαλές ΣΗΜΕΡΑ, όχι αύριο).
+function _sagFleetPack(o) {
+  const LIM = 8000;
+  let sj = JSON.stringify(o);
+  if (sj.length <= LIM) return sj;
+  const c = JSON.parse(sj);
+  const _cut = (x, n) => (typeof x === 'string' && x.length > n) ? x.slice(0, n - 1) + '…' : x;
+  for (const z of (c.z || [])) { z.w = _cut(z.w, 60); z.c = _cut(z.c, 60); }
+  c._cut = 1;
+  sj = JSON.stringify(c); if (sj.length <= LIM) return sj;
+  c.z = (c.z || []).slice().sort((a, b) => (b.k || 0) - (a.k || 0)).slice(0, 12);
+  sj = JSON.stringify(c); if (sj.length <= LIM) return sj;
+  c.a = (c.a || []).slice(0, 4); c.d = (c.d || []).slice(0, 24); c.g = (c.g || []).slice(0, 6);
+  sj = JSON.stringify(c); if (sj.length <= LIM) return sj;
+  return JSON.stringify({ f: c.f, i: c.i, s: c.s, y: c.y, x: c.x, d: [], z: [], g: [], a: [], _cut: 1,
+    e: 'Η εγγραφή του αγρού δεν χωρά στον πίνακα (' + sj.length + ' χαρ.)' });
+}
+
 // ── T-FLEET-BOARD-01 (v50.90) · ΤΡΙΑΖ ───────────────────────────────────
 // ΤΡΕΙΣ καταστάσεις, γιατί αντιστοιχούν σε ΤΡΕΙΣ ΔΙΑΦΟΡΕΤΙΚΕΣ ΔΟΥΛΕΙΕΣ:
 //   3 ΕΠΙΣΚΕΨΗ — κάποιος πρέπει να πάει στο χωράφι (όργανο νεκρό/εκτός εδάφους)
@@ -16194,7 +16316,9 @@ function _sagFleetSeverity(r) {
   const _kill = (r.k || []).length > 0;
   const _silent = (r.d || []).some(d => d && (d.q || (Number.isFinite(d.h) && d.h > 48)));
   if (_kill || _silent) return 3;
-  if ((r.z || []).length > 0 || (r.d || []).some(d => d && d.l)) return 2;
+  // T-FLEET-HEALTH-01: σφάλμα κύκλου (r.e) ή bundle που ΔΕΝ γράφτηκε = ΕΛΕΓΧΟΣ.
+  // Δεν είναι επίσκεψη (δεν φταίει όργανο) αλλά ο παραγωγός βλέπει παλιά κάρτα.
+  if (r.e || (r.z || []).length > 0 || (r.d || []).some(d => d && d.l)) return 2;
   if ((r.g || []).length > 0) return 1;
   return 0;
 }
@@ -17757,6 +17881,12 @@ module.exports = new Analysis(async (context) => {
         }
         if (fieldConfig === undefined) {
           // console.log(fields[i], ' : has no field config')
+          // T-FLEET-HEALTH-01: αγρός δηλωμένος (isField) χωρίς ρύθμιση από τη φόρμα —
+          // ΔΕΝ υπολογίζεται τίποτα. Πριν ήταν ΑΟΡΑΤΟΣ στον πίνακα εποπτείας.
+          try {
+            _SAG_FLEET.push({ f: fieldName, i: String(fields[i]?.id || '').slice(-6), y: null, x: null,
+              d: [], k: [], v: [], a: [], z: [], g: ['ρύθμιση αγρού από τη φόρμα (καμία)'], nc: 1 });
+          } catch (_eNc) {}
           continue;
         }
         // FIX-18: ΠΡΙΝ δεν υπήρχε continue -> το undefined πήγαινε στο Object.entries()
@@ -17819,6 +17949,7 @@ module.exports = new Analysis(async (context) => {
           const _fcRows = await dev_to_send_meas.getData({ variables: ['forecast'], qty: 1 });
           const _fcRow = _fcRows && _fcRows[0];
           if (_fcRow && _fcRow.metadata) measurements.data._sagForecast = _fcRow.metadata;
+          if (_fcRow && _fcRow.time) measurements.data._sagForecastAt = _fcRow.time;   // T-FLEET-HEALTH-01
         } catch (_eFc) {
           console.log('[' + fieldName + '] T-FORECAST-01: η πρόγνωση δεν διαβάστηκε ('
             + (_eFc && _eFc.message) + ') — καμία προειδοποίηση παγετού/καύσωνα σε αυτόν τον παλμό.');
@@ -19014,8 +19145,14 @@ module.exports = new Analysis(async (context) => {
             //  widget έπαιρνε σκουπίδια στη θέση της θέσης.
             a: _ageF,     // ομάδες μετρήσεων εκτός ορίου ηλικίας
             z: _allF,     // T-FLEET-BOARD-01: ΟΛΕΣ οι βλάβες με ενέργεια
-            g: _gapF      // T-FLEET-BOARD-01: κενά ρύθμισης (δουλειά γραφείου)
+            g: _gapF,     // T-FLEET-BOARD-01: κενά ρύθμισης (δουλειά γραφείου)
+            // T-FLEET-HEALTH-01: ηλικία πρόγνωσης (ώρες) — υγεία της analysis «forecast»
+            // ανά αγρό· null = δεν διαβάστηκε πρόγνωση. Απορρίψεις μετρήσεων του παλμού.
+            fc: (() => { const _t = Date.parse(String(((measurements || {}).data || {})._sagForecastAt || ''));
+              return Number.isFinite(_t) ? Math.round((_nowMsF - _t) / 36000) / 100 : null; })(),
+            rj: Number(((measurements || {}).data || {})._sagRejectedCount) || 0
           });
+          _SAG_LAST_BUNDLE = null;   // T-FLEET-HEALTH-01: θα γεμίσει από το packCalculatedIndicators αυτού του αγρού
         } catch (_eFl) {}
         // ── End συλλέκτη T-FLEET-REPORT-01 ─────────────────────────────────
 
@@ -19196,6 +19333,9 @@ module.exports = new Analysis(async (context) => {
         });
 
         await dev_to_send_meas.sendData(packedIndicators);
+        // T-FLEET-HEALTH-01: το bundle ΓΡΑΦΤΗΚΕ — σημειώνεται στη γραμμή του αγρού (ok/bytes/περικοπή).
+        try { _sagFleetMark(fieldName, { ok: 1, bb: _SAG_LAST_BUNDLE ? _SAG_LAST_BUNDLE.b : null,
+          bt: _SAG_LAST_BUNDLE ? _SAG_LAST_BUNDLE.t : 0 }); } catch (_eMk) {}
 // if (fieldConfig !== undefined) { // Fail Safe //
         //   fields[i].tags = fields[i].tags.filter(item => (item.key !== 'configuration'));
         //   fields[i].tags.push({
@@ -19207,6 +19347,16 @@ module.exports = new Analysis(async (context) => {
       } catch (e) {
         console.log(`Field [${fieldName}] raised error: `, e);
         fieldsWithErrors.push(fieldName);
+        // T-FLEET-HEALTH-01: ο αγρός που έπεσε ΔΕΝ εξαφανίζεται από τον πίνακα εποπτείας.
+        // Αν είχε ήδη γραμμή (έπεσε ΜΕΤΑ τη συλλογή, π.χ. στο sendData) σημειώνεται το
+        // σφάλμα σε αυτήν· αλλιώς μπαίνει ελάχιστη γραμμή με το μήνυμα.
+        try {
+          const _eTxt = String((e && e.message) || e).slice(0, 160);
+          if (!_sagFleetMark(fieldName, { e: _eTxt })) {
+            _SAG_FLEET.push({ f: fieldName, i: String(fields[i]?.id || '').slice(-6), y: null, x: null,
+              d: [], k: [], v: [], a: [], z: [], g: [], e: _eTxt });
+          }
+        } catch (_eFm) {}
       }
     }
   console.log('Parsed all fields')
@@ -19242,6 +19392,14 @@ module.exports = new Analysis(async (context) => {
       if (!_fbId) throw new Error('FLEET_DEVICE: δεν προσδιορίστηκε συσκευή');
       const _fbTok = await _sagTokenByName(account, _fbId);
       const _fbDev = new import_sdk.Device({ token: _fbTok });
+      // T-FLEET-HEALTH-01: αρχεία widget + analyses — παράλληλα, ποτέ δεν ρίχνουν τον πίνακα.
+      let _fbFiles = [], _fbAn = [];
+      try {
+        [_fbFiles, _fbAn] = await Promise.all([
+          _sagFleetFiles(context.environment).catch(() => []),
+          _sagFleetAnalyses(account, context.environment).catch(() => []),
+        ]);
+      } catch (_eHl) { _fbFiles = []; _fbAn = []; }
       const _rank = ['ΕΝΤΑΞΕΙ', 'ΓΡΑΦΕΙΟ', 'ΕΛΕΓΧΟΣ', 'ΕΠΙΣΚΕΨΗ'];
       const _col = ['green', 'blue', 'orange', 'red'];
       const _rows = [];
@@ -19253,8 +19411,11 @@ module.exports = new Analysis(async (context) => {
         // ολόκληρο, χωρίς να εξαρτάται από τη σειρά ή το πλήθος των κλειδιών.
         _rows.push({ variable: 'fleet_field', value: String(_r.f || '—').slice(0, 100),
           metadata: { color: _col[_s], severity: _s, state: _rank[_s],
-            text: JSON.stringify({ f: _r.f, i: _r.i, s: _s, y: _r.y, x: _r.x,
-              d: _r.d || [], z: _r.z || [], g: _r.g || [], a: _r.a || [] }).slice(0, 8000) } });
+            // T-FLEET-HEALTH-01: _sagFleetPack (έγκυρο JSON ≤ 8000) αντί για slice· + e/nc/fc/rj/ok/bb/bt
+            text: _sagFleetPack({ f: _r.f, i: _r.i, s: _s, y: _r.y, x: _r.x,
+              d: _r.d || [], z: _r.z || [], g: _r.g || [], a: _r.a || [],
+              e: _r.e || null, nc: _r.nc ? 1 : 0, fc: (_r.fc === undefined ? null : _r.fc),
+              rj: _r.rj || 0, ok: _r.ok ? 1 : 0, bb: (_r.bb === undefined ? null : _r.bb), bt: _r.bt ? 1 : 0 }) } });
       }
       // Η κεφαλίδα: ΜΙΑ γραμμή απόφασης, όχι μετρητές για επίδειξη.
       _rows.push({ variable: 'fleet_summary',
@@ -19265,8 +19426,24 @@ module.exports = new Analysis(async (context) => {
           fields: _SAG_FLEET.length,
           devices: _SAG_FLEET.reduce((s, x) => s + ((x.d || []).length), 0),
           kernel: SAG_KERNEL_VERSION,
+          // T-FLEET-HEALTH-01 · υγεία συστήματος (ό,τι ήδη ξέρει ο πυρήνας + αρχεία + analyses)
+          total: Array.isArray(fields) ? fields.length : null,
+          computed: _SAG_FLEET.filter(r => r && r.ok).length,
+          nocfg: _SAG_FLEET.filter(r => r && r.nc).length,
+          errors: fieldsWithErrors.slice(0, 40),
+          nopos: _SAG_FLEET.filter(r => r && !r.nc && !r.e && !(Number.isFinite(r.y) && Number.isFinite(r.x))).length,
+          locvar: _SAG_LOCVAR_USED,
+          tick: { h: hourTich ? 1 : 0, d: dailyTich ? 1 : 0, th: _SAG_TICK_H, gap: _SAG_TICK_GAP_H },
+          ms: Number.isFinite(Date.parse(String(_SAG_RUN_NOW || ''))) ? (Date.now() - Date.parse(_SAG_RUN_NOW)) : null,
+          reads: { real: _SAG_RUN_CACHE.miss, cached: _SAG_RUN_CACHE.hit },
+          files: _fbFiles, files_bad: _fbFiles.filter(x => !x.c).length,
+          an: _fbAn,
           text: 'Παλμός ' + new Date().toISOString() } });
       await _fbDev.sendData(_rows);
+      if (_fbFiles.some(x => !x.c)) {
+        console.log('[T-FLEET-HEALTH-01] ΑΡΧΕΙΑ WIDGET ΜΕ ΠΡΟΒΛΗΜΑ: ' + _fbFiles.filter(x => !x.c)
+          .map(x => x.p + ' (http ' + x.h + ', ' + x.t + ')').join(' · ') + ' — παγίδα #225/#223.');
+      }
       const _noPos = _SAG_FLEET.filter(r => !(Number.isFinite(r.y) && Number.isFinite(r.x)));
       const _half = _noPos.filter(r => Number.isFinite(r.y) || Number.isFinite(r.x));
       if (_noPos.length) {
