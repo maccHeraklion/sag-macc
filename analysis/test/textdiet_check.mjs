@@ -52,12 +52,16 @@ const CHECKS = [
   ["ΕΜΠΟΡΙΚΟ: το κείμενο φυλάσσεται στο data και μετριέται", f =>
     f.core.includes("data._sagUpgradeReport = 'Το σύστημα λειτουργεί κανονικά")
     && f.core.includes("data._sagUpgradeCount = H.offers.length;")],
+  /* v50.146: η ημερήσια εγγραφή χτίζει πλέον λίστα `_daily` (αναφορά αναβάθμισης + ταυτότητα
+     αγρού) και στέλνει ΜΙΑ φορά. Ο έλεγχος αγκιστρώνει στον ΣΥΓΚΕΚΡΙΜΕΝΟ κλάδο, όχι στον
+     πρώτο `if (dailyTich)` του αρχείου — ο πυρήνας έχει πέντε. */
   ["ΕΜΠΟΡΙΚΟ: γράφεται ως ξεχωριστή μεταβλητή upgrade_report ΜΟΝΟ στο ημερήσιο tick", f => {
-    const i = f.core.indexOf("if (dailyTich) {\n          try {\n            const _upTxt");
-    const j = f.core.indexOf("variable: 'upgrade_report'");
-    return i > 0 && j > i && j - i < 400; }],
+    const d = f.core.indexOf("const _daily = [];");
+    const i = f.core.lastIndexOf("if (dailyTich) {", d);
+    const j = f.core.indexOf("variable: 'upgrade_report'", d);
+    return d > 0 && i > 0 && j > i && j - i < 500; }],
   ["ΕΜΠΟΡΙΚΟ: η αποτυχία εγγραφής ΔΕΝ ρίχνει τον αγρό (catch με μήνυμα)", f =>
-    /variable: 'upgrade_report'[\s\S]{0,400}catch \(_eUp\)[\s\S]{0,200}T-TEXTDIET-01/.test(f.core)],
+    /variable: 'upgrade_report'[\s\S]{0,900}catch \(_eUp\)[\s\S]{0,200}T-TEXTDIET-01/.test(f.core)],
   ["ΕΜΠΟΡΙΚΟ: η αναφορά κόβεται στα 900 χαρακτήρες (δεν γίνεται νέο βάρος)", f =>
     f.core.includes("String(_upTxt).slice(0, 900)")],
 
@@ -113,7 +117,8 @@ const MUTATIONS = [
     "      data._sagUpgradeReport = 'Το σύστημα λειτουργεί κανονικά με ό,τι έχετε. Τα παρακάτω θα '",
     "      out.push({ variable: 'upgrade_opportunities', value: 1, metadata: {} });\n      data._sagUpgradeReport = 'Το σύστημα λειτουργεί κανονικά με ό,τι έχετε. Τα παρακάτω θα '")],
   ["η αναφορά γράφεται σε ΚΑΘΕ παλμό, όχι ημερήσια", c => c.replace(
-    "        if (dailyTich) {\n          try {\n            const _upTxt", "        if (true) {\n          try {\n            const _upTxt")],
+    "        if (dailyTich) {\n          try {\n            const _daily = [];",
+    "        if (true) {\n          try {\n            const _daily = [];")],
   ["η αναφορά δεν κόβεται πια στα 900", c => c.replace("String(_upTxt).slice(0, 900)", "String(_upTxt)")],
   ["το άνω όριο ξανακουβαλά το κείμενο", c => c.replace(
     'value: Number(limits.real_upper_limit.toFixed(2)), metadata: _metaNoText },',

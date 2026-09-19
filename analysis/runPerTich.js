@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.145 · 2026-09-19';
+const SAG_KERNEL_VERSION = 'v50.146 · 2026-09-19';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -8714,6 +8714,7 @@ function _sagRunReset() {
   _SAG_RUN_CACHE.recSaved = 0;
   _SAG_FLEET.length = 0;   // T-FLEET-REPORT-01
   _SAG_LAST_BUNDLE = null;  // T-FLEET-HEALTH-01
+  _SAG_METHOD_CARD = null;  // T-METHODCARD-01
   _SAG_SEASON_WARNED.clear();   // T-CROPSEASON-01: διαγνωστικό ΑΝΑ ΕΚΤΕΛΕΣΗ
   _SAG_TICK_GAP_H = 0;          // T-TICKGAP-01
   _SAG_TICK_GAP_LOGGED = false;
@@ -13672,6 +13673,56 @@ function packCalculatedIndicators({
       + (_fstats.unstamped ? ' · χωρίς σφραγίδα (αναβάθμιση): ' + _fstats.unstamped : ''));
   }
 
+  /* ══ T-METHODCARD-01 (v50.146 · 19/9/2026) · Η ΜΕΘΟΔΟΣ ΦΕΥΓΕΙ ΑΠΟ ΤΗΝ ΩΡΙΑΙΑ ΚΑΡΤΑ ══
+     ΜΕΤΡΗΜΕΝΟ (απογραφή 19/9, 42 αγροί): το **20 %** όλου του κειμένου — 39.601 B — είναι
+     εξηγήσεις ΜΕΘΟΔΟΥ: από ποιον αισθητήρα ήρθε η τιμή, με ποια στάθμιση, με ποιο έδαφος.
+     Αλλάζουν ΜΟΝΟ όταν αλλάξει η ρύθμιση ή ο εξοπλισμός του αγρού — και όμως στέλνονταν
+     ΑΝΑΛΛΟΙΩΤΕΣ 24 φορές την ημέρα, ανταγωνιζόμενες τη σύσταση άρδευσης για τα ίδια 10 kB.
+     Ο κανόνας που προκύπτει από την απογραφή: **το bundle κουβαλά ό,τι ΑΛΛΑΖΕΙ.**
+
+     Εδώ μαζεύονται σε μία κάρτα «ταυτότητα του αγρού» που γράφεται ΜΙΑ φορά την ημέρα,
+     ΕΚΤΟΣ bundle. Στο bundle μένει η ΤΙΜΗ κάθε δείκτη με σημαία `_m: 1`, ώστε το widget να
+     ξέρει ότι το κείμενο δεν χάθηκε — μετακόμισε.
+
+     ΕΝΑ ΣΗΜΕΙΟ ΕΠΕΜΒΑΣΗΣ, όχι έντεκα: εδώ που συναρμολογείται το bundle. Κάθε νέος δείκτης
+     μεθόδου μπαίνει στη λίστα και τακτοποιείται μόνος του.
+
+     ΣΚΟΠΙΜΑ ΕΚΤΟΣ ΛΙΣΤΑΣ: `irrigation_dose_basis` και `irrigation_area_basis`. Παρότι
+     ονομάζονται «basis», κουβαλούν ΠΡΟΕΙΔΟΠΟΙΗΣΕΙΣ δεδομένων («Η ΜΕΤΡΗΣΗ ΣΑΣ 3220 dS/m
+     ΑΓΝΟΗΘΗΚΕ») — αυτό είναι ΔΡΑΣΗ, όχι μέθοδος, και μένει στην ημερήσια κάρτα. */
+  const _SAG_METHOD_KEYS = [
+    'met_reference_source',      // από ποιον αισθητήρα έρχονται οι θερμοκρασίες
+    'leaf_wetness_source',       // πώς προκύπτει η διαβροχή φύλλου
+    'et0_inputs_basis',          // ποιες είσοδοι FAO-56 χρησιμοποιήθηκαν
+    'pathogen_hs_basis',         // πώς βγήκε η ευπάθεια φυτού
+    'pathogen_analysis_status',  // τι λείπει από το μοντέλο παθογόνων
+    'soil_depth_basis',          // ένα ή δύο βάθη
+    'soil_moisture_rootzone',    // η στάθμιση FAO-56 των βαθών
+    'bpi_comparability',         // γιατί το BPI δεν συγκρίνεται μεταξύ αγρών
+    'dli_comparable',            // αν η φωτοπερίοδος ήταν πλήρης
+  ];
+  _SAG_METHOD_CARD = null;
+  {
+    const _parts = [];
+    const _sweep = (box, pre) => {
+      if (!box) return;
+      for (const k of _SAG_METHOD_KEYS) {
+        const v = box[k];
+        if (!v || typeof v !== 'object' || !v.metadata) continue;
+        const t = v.metadata.text;
+        if (typeof t !== 'string' || !t.length) continue;
+        _parts.push(pre + k + ': ' + t);
+        delete v.metadata.text;
+        v.metadata._m = 1;   // «το κείμενο ζει στην ταυτότητα του αγρού»
+      }
+    };
+    _sweep(sharedPacked, '');
+    for (const crop of cropsPackedArr) {
+      _sweep(crop.indicators, String(crop.cultivation_type || crop.id || '?') + '/');
+    }
+    if (_parts.length) _SAG_METHOD_CARD = { n: _parts.length, t: _parts.join('\n') };
+  }
+
   // ── SAG-BUNDLE-FIT-01 · ΣΚΛΗΡΟΣ ΦΡΟΥΡΟΣ ΜΕΓΕΘΟΥΣ ────────────────────────
   // Το TagoIO απορρίπτει metadata > 10 kB. Όταν συμβεί, ο αγρός χάνει ΟΛΟΚΛΗΡΟ
   // το bundle — μαζί και τους ΣΥΣΣΩΡΕΥΤΕΣ του. Αυτό είναι το χειρότερο δυνατό
@@ -16236,6 +16287,9 @@ const _SAG_FLEET = [];
 // ΚΟΣΤΟΣ: ~10 HEAD (παράλληλα, <1 s) + 2 analysis.info ανά ωριαίο παλμό. Καμία
 // νέα ανάγνωση δεδομένων.
 let _SAG_LAST_BUNDLE = null;   // { b: bytes, t: 1 αν χρειάστηκε περικοπή } — μηδενίζεται ανά αγρό
+// T-METHODCARD-01 (v50.146): η «ταυτότητα του αγρού» — τα κείμενα μεθόδου που μαζεύτηκαν
+// σε αυτόν τον παλμό. Γράφεται ΜΙΑ φορά την ημέρα, εκτός bundle. Μηδενίζεται ανά αγρό.
+let _SAG_METHOD_CARD = null;
 const _SAG_FLEET_FILES_BASE = 'https://api.us-e1.tago.io/file/67934c48e8e573000ae5964b/';
 // Τα ζωντανά αρχεία της ρίζας (παγίδα #225). Παράκαμψη: env FLEET_FILES (λίστα με κόμμα).
 const _SAG_FLEET_FILES = [
@@ -19386,14 +19440,23 @@ module.exports = new Analysis(async (context) => {
            bundle. Η αποτυχία εγγραφής ΔΕΝ ρίχνει τον αγρό — είναι αναφορά, όχι σύσταση. */
         if (dailyTich) {
           try {
+            const _daily = [];
             const _upTxt = ((measurements || {}).data || {})._sagUpgradeReport;
             if (_upTxt) {
-              await dev_to_send_meas.sendData([{ variable: 'upgrade_report',
+              _daily.push({ variable: 'upgrade_report',
                 value: Number(((measurements || {}).data || {})._sagUpgradeCount) || 0,
-                metadata: { color: 'blue', text: String(_upTxt).slice(0, 900) } }]);
+                metadata: { color: 'blue', text: String(_upTxt).slice(0, 900) } });
             }
+            /* T-METHODCARD-01 (v50.146): η «ταυτότητα του αγρού» — όλα τα κείμενα μεθόδου
+               μαζί, μία φορά την ημέρα. ΜΙΑ εγγραφή αντί για ~600 B σε κάθε ωριαίο bundle. */
+            if (_SAG_METHOD_CARD && _SAG_METHOD_CARD.t) {
+              _daily.push({ variable: 'field_method_card',
+                value: _SAG_METHOD_CARD.n,
+                metadata: { color: 'grey', text: String(_SAG_METHOD_CARD.t).slice(0, 2000) } });
+            }
+            if (_daily.length) await dev_to_send_meas.sendData(_daily);
           } catch (_eUp) {
-            try { console.log('[T-TEXTDIET-01] ' + fieldName + ': η αναφορά αναβάθμισης δεν '
+            try { console.log('[T-TEXTDIET-01] ' + fieldName + ': η ημερήσια αναφορά δεν '
               + 'γράφτηκε (' + ((_eUp && _eUp.message) || _eUp) + ')'); } catch (_e2) {}
           }
         }
