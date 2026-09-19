@@ -140,6 +140,23 @@ var NOT_LIFE_SIGNS = ['location', 'gateway_config', 'gateway_row',
 var ROW_CLS = { green: 'green', orange: 'yellow', yellow: 'yellow', red: 'red' };
 var ACTILITY_SRC = 'δίκτυο Actility (πεδίο LRR)';
 
+/* ── T-GWNAMES-01 · ΤΑ ΟΝΟΜΑΤΑ ──────────────────────────────────
+   Το δίκτυο δίνει κωδικό (`lrrid`), όχι όνομα. Το όνομα ζει στην ετικέτα
+   `comment` της συσκευής-gateway. Η γέφυρα ανάμεσά τους είναι η ΘΕΣΗ:
+   το lrrlat/lrrlon λέει ΠΟΥ είναι το gateway. Δεν κλείνει όμως κάθε
+   περίπτωση: στο ίδιο σημείο κάθονται περισσότερα από ένα. Γι' αυτό
+   κάθε όνομα έχει σημαία `q`: όταν υπάρχει, το όνομα είναι ΠΙΘΑΝΟ
+   και γράφεται ως πιθανό. Ένα πιθανό όνομα που γράφεται σκέτο διαβάζεται
+   ως γεγονός — και τότε κάποιος πάει λάθος χωριό. */
+var GW_NAMES = {};
+
+function gwLabel(code) {
+  var e = GW_NAMES[code];
+  if (!e || !e.n) return { name: 'Gateway ' + code, sure: null };
+  if (e.q) return { name: 'Gateway ' + code, sure: false, guess: e.n };
+  return { name: e.n, sure: true };
+}
+
 var COLOR = { green: '#2ecc71', yellow: '#f1c40f', red: '#e74c3c', grey: '#95a5a6' };
 
 var state = { map: null, layer: null, gw: {}, markers: {} };
@@ -279,7 +296,10 @@ function ingest(rows) {
       ent.rowTime = r.time;
       ent.fromNetwork = true;
       ent.code = String(r.value);
-      if (!ent.name) ent.name = 'Gateway ' + ent.code;
+      var lab = gwLabel(ent.code);
+      ent.name = lab.name;
+      ent.nameSure = lab.sure;
+      ent.nameGuess = lab.guess || '';
       ent.sensors = md.sensors;
       ent.rssi = md.rssi;
       ent.rowText = md.text || '';
@@ -492,6 +512,13 @@ function render() {
       + '<div class="gwmeta">'
       + esc(s.label) + (s.h != null ? ' · πριν ' + esc(humanAge(s.h)) : '')
       + (s.src ? ' · πηγή: ' + esc(s.src) : '')
+      + (g.code
+          ? '<br><span class="mono">κωδικός ' + esc(g.code) + '</span>'
+            + (g.nameGuess
+                ? ' · <span style="color:var(--yellow)">πιθανόν: ' + esc(g.nameGuess)
+                  + ' (ανεπιβεβαίωτο)</span>'
+                : '')
+          : '')
       + (g.sensors != null
           ? '<br>' + esc(String(g.sensors))
             + (g.sensors === 1 ? ' αισθητήρας πέρασε' : ' αισθητήρες πέρασαν')
@@ -552,8 +579,16 @@ if (window.TagoIO && window.TagoIO.ready) {
     try {
       var ps = (w && w.display && w.display.parameters) || [];
       for (var pi = 0; pi < ps.length; pi++) {
-        if (ps[pi] && ps[pi].key === 'fleet_roster') {
-          applyRoster(JSON.parse(String(ps[pi].value || '[]')));
+        if (!ps[pi]) continue;
+        /* T-GWNAMES-01: τα ονόματα ΠΡΩΤΑ — αλλιώς η πρώτη παρτίδα
+           δεδομένων θα έφτιαχνε κάρτες με σκέτους κωδικούς. */
+        if (ps[pi].key === 'gateway_names') {
+          try { GW_NAMES = JSON.parse(String(ps[pi].value || '{}')) || {}; } catch (_eN) { GW_NAMES = {}; }
+        }
+      }
+      for (var pj = 0; pj < ps.length; pj++) {
+        if (ps[pj] && ps[pj].key === 'fleet_roster') {
+          applyRoster(JSON.parse(String(ps[pj].value || '[]')));
           break;
         }
       }
