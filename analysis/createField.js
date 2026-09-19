@@ -809,6 +809,7 @@ async function createFieldDevice(
   clientName,
   clientId,
   field_type,
+  field_purpose,
   devices,
   subscriptionCurrentCost,
   subscriptionCost,
@@ -837,6 +838,11 @@ async function createFieldDevice(
     info.tags.push({ key: "name", value: String(name) });
     info.tags.push({ key: "subscriptionActive", value: "yes" });
     info.tags.push({ key: "field_type", value: String(field_type ?? "agnostic") });
+    /* T-PROFILE-01: μόνο όταν ο χρήστης το δήλωσε. Χωρίς τιμή, κανένα tag:
+       η μηχανή τότε συμπεριφέρεται όπως πάντα (πλήρης αγρονομικός). */
+    if (field_purpose) {
+      info.tags.push({ key: "field_purpose", value: String(field_purpose) });
+    }
     info.tags.push({ key: "subscriptionCurrentCost", value: String(subscriptionCurrentCost ?? "") });
     info.tags.push({ key: "subscriptionCost", value: String(subscriptionCost ?? "") });
     info.tags.push({ key: "subscriptionEnd", value: String(subscriptionEnd ?? "") });
@@ -981,6 +987,29 @@ async function createFieldAgnostic(scope, template_dashboard_id, accesses, subGr
     new Date().toISOString();
   const coordinates = scope.find((i) => i.variable === "coordinates")?.value || "35.0, 25.0";
 
+  /* ── T-PROFILE-01 · Ο ΣΚΟΠΟΣ ΤΟΥ ΑΓΡΟΥ ────────────────────────────
+     Μέχρι τώρα ο σκοπός ΔΕΝ ρωτιόταν πουθενά: παρακάτω περνούσε καρφωτά
+     το "agnostic". Έτσι κάθε αγρός — ξενοδοχείο, μετεωρολογικός, καθαρή
+     άρδευση — κρινόταν ως πλήρης αγρονομικός και έβγαζε ψεύτικες
+     ελλείψεις για θρέψη και φυτοπροστασία που ποτέ δεν ζητήθηκαν.
+
+     Το `field_type` ΔΕΝ το πειράζουμε: κρατά ήδη σημασία «σετ
+     αισθητήρων» (s2120_soil_ide, soil_leaf_tree). Ο σκοπός παίρνει ΔΙΚΟ του
+     κλειδί, αλλιώς οι δύο σημασίες θα συγκρούονταν.
+
+     ΑΝ Η ΦΟΡΜΑ ΔΕΝ ΣΤΕΛΝΕΙ ΤΙΠΟΤΑ, ΔΕΝ ΓΡΑΦΕΤΑΙ tag και ο αγρός
+     βγαίνει byte-for-byte όπως σήμερα. Καμία σιωπηλή αλλαγή. */
+  const FIELD_PURPOSES = ["agronomy", "weather", "automation"];
+  const _purposeRaw = String(
+    scope.find((i) => i.variable === "field_purpose")?.value ?? ""
+  ).trim().toLowerCase();
+  const field_purpose = FIELD_PURPOSES.indexOf(_purposeRaw) >= 0 ? _purposeRaw : "";
+  /* Άγνωστη τιμή ΔΕΝ μαντεύεται — καλύτερα κανένα tag παρά λάθος tag. */
+  if (_purposeRaw && !field_purpose) {
+    console.log(`[field_purpose] ΑΓΝΩΣΤΗ ΤΙΜΗ "${_purposeRaw}" — ΔΕΝ γράφτηκε tag.`
+      + ` Δεκτές: ${FIELD_PURPOSES.join(", ")}`);
+  }
+
   const match = subscriptionEnd.match(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z/);
   if (match) {
     const utcDate = new Date(match[0]);
@@ -1042,7 +1071,8 @@ async function createFieldAgnostic(scope, template_dashboard_id, accesses, subGr
     accesses,
     clientName,
     clientId,
-    "agnostic",
+    "agnostic",       // field_type: το «σετ αισθητήρων», αμετάβλητο
+    field_purpose,    // T-PROFILE-01: ο ΣΚΟΠΟΣ, από τη φόρμα (κενό = όπως σήμερα)
     devicesTagObj,
     subscriptionCurrentCost,
     subscriptionCost,
