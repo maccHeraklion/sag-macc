@@ -41,6 +41,7 @@
     "note": "Custom HTML widgets (TagoIO Files, html_files/). Uploaded by hand via TagoIO Files UI. Keep LF, no BOM. configuration.html = field parameter form v18 (verified live md5 75da935a9e4df51529232e8af45b845c, 2026-09-18).",
     "files": [
       { "file": "custom_html_files/configuration.html", "target": "html_files/configuration.html" },
+      { "file": "custom_html_files/gateway-board.html", "target": "html_files/gateway-board.html", "note": "Στόλος Gateways (iframe widget 6a9d33718592a5000b70ee30 στο dashboard 6877622f4090c0000ad94a01). Ζούσε ΜΟΝΟ ζωντανά μέχρι τις 19/9 — μπήκε στο git αυτούσιο πριν αλλαχθεί." },
       { "file": "custom_html_files/sag-fleet.html", "target": "storage/sagMain/sag-fleet.html", "note": "Εποπτεία Στόλου (iframe widget 6a9887242f585a000bd83e68 στο dashboard 6a988679239762000cdc97b9). Διαβάζει fleet_field/fleet_summary από τη συσκευή SAG Εποπτεία 6a98855ca06e41000bfae024. Μετακινήθηκε στο backup16-09/ στις 16/9 — επαναφέρθηκε 19/9 μέσω deploy probe." }
     ]
   },

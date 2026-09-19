@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Στόλος Gateways</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+:root{
+  --bg:#f7f9fc; --ink:#1a2b3c; --muted:#6c7a89; --line:#e8eef3; --card:#fff;
+  --green:#2ecc71; --yellow:#f1c40f; --red:#e74c3c; --grey:#95a5a6; --blue:#2f6feb;
+  --radius:14px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; padding:16px; background:var(--bg); color:var(--ink);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  font-size:15px; min-height:100vh; overflow-y:auto;
+}
+.wrap{width:100%; max-width:1300px; margin:0 auto}
+h1{font-size:20px; margin:0 0 4px}
+.sub{color:var(--muted); font-size:13px; margin:0 0 14px}
+.tiles{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px}
+.tile{
+  background:var(--card); border:1px solid var(--line); border-radius:12px;
+  padding:10px 16px; min-width:120px;
+}
+.tile .n{font-size:24px; font-weight:700; line-height:1.1}
+.tile .l{font-size:12px; color:var(--muted); margin-top:2px}
+.split{display:flex; gap:14px; flex-wrap:wrap}
+.left{flex:1 1 560px; min-width:320px}
+.right{flex:1 1 380px; min-width:300px}
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px}
+#map{height:min(52vh,520px); border-radius:11px; border:1px solid var(--line)}
+/* Ο χάρτης ζει μέσα σε πλαίσιο ώστε το πέπλο ενεργοποίησης να ακουμπά πάνω του. */
+.mapwrap{position:relative}
+#mapveil{position:absolute; inset:0; z-index:400; border-radius:11px;
+  display:flex; align-items:flex-end; justify-content:center; padding-bottom:14px;
+  background:transparent; cursor:pointer; -webkit-tap-highlight-color:transparent}
+#mapveil span{background:rgba(17,24,39,.82); color:#fff; font-size:12.5px;
+  padding:7px 13px; border-radius:999px; box-shadow:0 2px 10px rgba(0,0,0,.25)}
+.dot{display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:7px; vertical-align:-1px; flex:0 0 auto}
+.dot.green{background:var(--green)} .dot.yellow{background:var(--yellow)}
+.dot.red{background:var(--red)} .dot.grey{background:var(--grey)}
+.gwlist{list-style:none; margin:0; padding:0; max-height:520px; overflow-y:auto}
+.gwlist li{
+  border-bottom:1px solid var(--line); padding:10px 8px; cursor:pointer; border-radius:8px;
+}
+.gwlist li:hover{background:#f2f6fb}
+.gwlist li:last-child{border-bottom:none}
+.gwname{font-weight:600; display:flex; align-items:center}
+.gwmeta{font-size:12px; color:var(--muted); margin-top:3px; margin-left:18px; line-height:1.6}
+.gwmeta a{color:var(--blue); text-decoration:none}
+.gwmeta a:hover{text-decoration:underline}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.empty{color:var(--muted); font-size:13px; padding:18px 8px; line-height:1.6}
+.legend{font-size:12px; color:var(--muted); margin-top:12px}
+.legend span{margin-right:14px; white-space:nowrap}
+.foot{font-size:12px; color:var(--muted); margin-top:12px; line-height:1.6}
+.leaflet-container{font:inherit}
+.pin{
+  width:18px; height:18px; border-radius:50%; border:3px solid #fff;
+  box-shadow:0 1px 4px rgba(0,0,0,.4);
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Στόλος Gateways</h1>
+  <p class="sub">Θέση, υπεύθυνος και κατάσταση λειτουργίας. Πάτησε ένα gateway στη λίστα για να το βρεις στον χάρτη.</p>
+
+  <div class="tiles">
+    <div class="tile"><div class="n" id="cTotal">0</div><div class="l" id="lTotal">με δεδομένα</div></div>
+    <div class="tile"><div class="n" id="cGreen" style="color:var(--green)">0</div><div class="l">λειτουργούν</div></div>
+    <div class="tile"><div class="n" id="cYellow" style="color:var(--yellow)">0</div><div class="l">καθυστερούν</div></div>
+    <div class="tile"><div class="n" id="cRed" style="color:var(--red)">0</div><div class="l">δεν αποκρίνονται</div></div>
+    <div class="tile"><div class="n" id="cGrey" style="color:var(--grey)">0</div><div class="l">άγνωστα</div></div>
+    <div class="tile"><div class="n" id="cNoLoc" style="color:var(--muted)">0</div><div class="l">χωρίς θέση</div></div>
+    <div class="tile"><div class="n" id="cUndec" style="color:var(--blue)">0</div><div class="l">αδήλωτα</div></div>
+  </div>
+
+  <div class="split">
+    <div class="left">
+      <div class="card"><div class="mapwrap"><div id="map"></div>
+        <div id="mapveil" hidden><span>Πατήστε για να μετακινήσετε τον χάρτη</span></div>
+      </div></div>
+    </div>
+    <div class="right">
+      <div class="card">
+        <ul id="gwlist" class="gwlist"></ul>
+        <div id="empty" class="empty"></div>
+        <div class="legend">
+          <span><span class="dot green"></span>&lt; 1 ώρα</span>
+          <span><span class="dot yellow"></span>1 – 6 ώρες</span>
+          <span><span class="dot red"></span>&gt; 6 ώρες</span>
+          <span><span class="dot grey"></span>χωρίς ένδειξη</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot" id="foot"></div>
+
+</div>
+
+<script src="https://admin.tago.io/dist/custom-widget.min.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   ΣΤΟΛΟΣ GATEWAYS — έκδοση 1 · 4 Σεπτεμβρίου 2026
+
+   ΓΙΑΤΙ ΞΕΧΩΡΙΣΤΗ ΣΕΛΙΔΑ: ο χάρτης gateways του TagoIO τροφοδοτούνταν από την
+   ανάλυση «fieldLocationUpdate», που είναι νεκρή από τις 20/4/2026 — έσκαγε σε
+   κάθε νέο gateway. Αυτή η σελίδα ΔΕΝ εξαρτάται από καμία ανάλυση: διαβάζει
+   κατευθείαν ό,τι στέλνουν οι ίδιες οι συσκευές.
+
+   ΤΙ ΔΙΑΒΑΖΕΙ ΑΝΑ ΣΥΣΚΕΥΗ
+     location        θέση, γραμμένη από τη φόρμα δήλωσης
+     gateway_config  όνομα και τηλέφωνο, από την ίδια φόρμα
+     ΟΤΙΔΗΠΟΤΕ ΑΛΛΟ  μετράει ως ΣΗΜΕΙΟ ΖΩΗΣ
+
+   Ο ΙΔΙΟΣ ΚΑΝΟΝΑΣ ΜΕ ΤΗ ΦΟΡΜΑ: οι δικές μας εγγραφές ΔΕΝ βάφουν πράσινο.
+   Ένα gateway είναι ζωντανό όταν μιλάει ΤΟ ΙΔΙΟ — όχι όταν του γράφουμε εμείς.
+   ═══════════════════════════════════════════════════════════════════════════ */
+'use strict';
+
+var $ = function (id) { return document.getElementById(id); };
+
+var ALIVE_GREEN_H = 1;
+var ALIVE_YELLOW_H = 6;
+var NOT_LIFE_SIGNS = ['location', 'gateway_config'];
+
+var COLOR = { green: '#2ecc71', yellow: '#f1c40f', red: '#e74c3c', grey: '#95a5a6' };
+
+var state = { map: null, layer: null, gw: {}, markers: {} };
+
+/* ═══ ΒΟΗΘΗΤΙΚΑ ═══════════════════════════════════════════════════════════ */
+
+function hoursSince(iso) {
+  var t = Date.parse(iso);
+  if (!isFinite(t)) return null;
+  var h = (Date.now() - t) / 3600000;
+  return h >= 0 ? h : 0;
+}
+
+function humanAge(h) {
+  if (h == null) return '—';
+  if (h < 1) return Math.round(h * 60) + ' λεπτά';
+  if (h < 48) return h.toFixed(1).replace('.', ',') + ' ώρες';
+  return Math.round(h / 24) + ' ημέρες';
+}
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/* Καθαρίζει το τηλέφωνο ΜΟΝΟ για το tel: — η εμφάνιση μένει όπως τη δήλωσε
+   ο χρήστης, γιατί εκεί μπορεί να έχει βάλει εσωτερικό ή σημείωση. */
+function telHref(p) {
+  var s = String(p == null ? '' : p).replace(/[^\d+]/g, '');
+  return s.length >= 8 ? s : '';
+}
+
+/* ═══ Η ΚΑΤΑΣΤΑΣΗ — ΙΔΙΟΣ ΚΑΝΟΝΑΣ ΜΕ ΤΗ ΦΟΡΜΑ ════════════════════════════ */
+
+function statusOf(entry) {
+  var best = null, bestVar = null;
+  var vars = entry.vars || {};
+  for (var k in vars) {
+    if (!Object.prototype.hasOwnProperty.call(vars, k)) continue;
+    if (NOT_LIFE_SIGNS.indexOf(k) >= 0) continue;
+    var h = hoursSince(vars[k]);
+    if (h == null) continue;
+    if (best === null || h < best) { best = h; bestVar = k; }
+  }
+  if (best === null) return { cls: 'grey', label: 'άγνωστη', h: null, src: null };
+  var cls = best < ALIVE_GREEN_H ? 'green' : (best < ALIVE_YELLOW_H ? 'yellow' : 'red');
+  var label = cls === 'green' ? 'λειτουργεί'
+    : (cls === 'yellow' ? 'καθυστερεί' : 'δεν αποκρίνεται');
+  return { cls: cls, label: label, h: best, src: bestVar };
+}
+
+/* ═══ ΣΥΛΛΟΓΗ ΔΕΔΟΜΕΝΩΝ ══════════════════════════════════════════════════ */
+
+/* Κάθε γραμμή φέρει την προέλευσή της. Δοκιμάζουμε ΟΛΑ τα ονόματα που έχει
+   χρησιμοποιήσει το SDK, γιατί αλλιώς όλα τα gateways θα έπεφταν σε ένα
+   κουτί και ο χάρτης θα έδειχνε ΜΙΑ καρφίτσα. */
+function originOf(row) {
+  if (!row) return '';
+  return String(row.origin || row.device || row.bucket || '');
+}
+
+/* ── T-GWROSTER-01 · Ο ΚΑΤΑΛΟΓΟΣ ΤΟΥ ΣΤΟΛΟΥ ────────────────────────────────
+   Δέχεται παράμετρο widget «fleet_roster»: JSON πίνακας
+   [{ "id": "<24 δεκαεξαδικά>", "name": "…", "storage": true|false }, …]
+   Κάθε εγγραφή που ΔΕΝ έστειλε ποτέ δεδομένα εμφανίζεται ως ΑΔΗΛΩΤΗ αντί να
+   εξαφανίζεται. Συσκευή που στέλνει αλλά ΔΕΝ είναι στον κατάλογο εμφανίζεται
+   κανονικά — ο κατάλογος προσθέτει, δεν φιλτράρει. */
+function applyRoster(list) {
+  if (!Array.isArray(list)) return 0;
+  var n = 0;
+  for (var i = 0; i < list.length; i++) {
+    var r = list[i];
+    if (!r || !r.id) continue;
+    var id = String(r.id);
+    if (!state.gw[id]) {
+      state.gw[id] = { id: id, name: r.name ? String(r.name) : '', phone: '',
+        lat: null, lng: null, vars: {}, roster: true, storage: !!r.storage };
+    } else {
+      state.gw[id].roster = true;
+      state.gw[id].storage = !!r.storage;
+      if (!state.gw[id].name && r.name) state.gw[id].name = String(r.name);
+    }
+    n++;
+  }
+  state.rosterSize = n;
+  return n;
+}
+
+/* Αδήλωτο = είναι στον κατάλογο και ΔΕΝ έχει στείλει ΚΑΜΙΑ μεταβλητή.
+   ΔΕΝ το κρίνουμε από τη θέση: μπορεί να δηλώθηκε όνομα χωρίς θέση. */
+function isUndeclared(g) {
+  if (!g || !g.roster) return false;
+  var v = g.vars || {};
+  for (var k in v) { if (Object.prototype.hasOwnProperty.call(v, k)) return false; }
+  return true;
+}
+
+function ingest(rows) {
+  if (!Array.isArray(rows)) return;
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    if (!r || !r.variable) continue;
+    var id = originOf(r);
+    if (!id) continue;
+    if (!state.gw[id]) state.gw[id] = { id: id, name: '', phone: '', lat: null, lng: null, vars: {} };
+    var e = state.gw[id];
+
+    var prev = e.vars[r.variable];
+    if (!prev || Date.parse(r.time) >= Date.parse(prev)) e.vars[r.variable] = r.time;
+
+    if (r.variable === 'gateway_config') {
+      try {
+        var c = JSON.parse(r.value);
+        if (c && typeof c === 'object') {
+          if (c.name) e.name = String(c.name);
+          if (c.phone) e.phone = String(c.phone);
+        }
+      } catch (_e) {}
+    }
+
+    if (r.variable === 'location' && r.location) {
+      /* Δύο μορφές κυκλοφορούν: {lat,lng} από τη φόρμα, και GeoJSON
+         coordinates [ΜΗΚΟΣ, ΠΛΑΤΟΣ] από την πλατφόρμα. Δεχόμαστε και τις δύο. */
+      var lat = null, lng = null;
+      if (isFinite(Number(r.location.lat)) && isFinite(Number(r.location.lng))) {
+        lat = Number(r.location.lat); lng = Number(r.location.lng);
+      } else if (Array.isArray(r.location.coordinates) && r.location.coordinates.length === 2) {
+        lng = Number(r.location.coordinates[0]);
+        lat = Number(r.location.coordinates[1]);
+      }
+      if (isFinite(lat) && isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        e.lat = lat; e.lng = lng;
+      }
+      if (!e.name && typeof r.value === 'string' && r.value && r.value !== 'coords') {
+        e.name = r.value;
+      }
+    }
+  }
+}
+
+/* ═══ ΧΑΡΤΗΣ ═══════════════════════════════════════════════════════════════ */
+
+function initMap() {
+  if (state.map || typeof L === 'undefined') return;
+  var el = $('map');
+  if (!el) return;
+  /* T-MAPSCROLL-01: σε συσκευή αφής ο χάρτης ΔΕΝ πιάνει το σύρσιμο ενός
+     δαχτύλου μέχρι ο χρήστης να το ζητήσει ρητά. Έτσι η σελίδα κυλάει
+     κανονικά. Ο τροχός του ποντικιού δεν κάνει ζουμ ποτέ από μόνος του:
+     σε υπολογιστή το σκρολ ανήκει στη σελίδα. */
+  var _isTouch = false;
+  try {
+    _isTouch = ('ontouchstart' in window)
+      || (navigator && navigator.maxTouchPoints > 0);
+  } catch (_e) { _isTouch = false; }
+  state.map = L.map(el, {
+    scrollWheelZoom: false,
+    dragging: !_isTouch
+  }).setView([37.9, 23.7], 6);
+  if (_isTouch) {
+    var _veil = $('mapveil');
+    if (_veil) {
+      _veil.hidden = false;
+      _veil.addEventListener('click', function () {
+        try { state.map.dragging.enable(); } catch (_e2) {}
+        _veil.hidden = true;
+      });
+    }
+  }
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, attribution: '© OpenStreetMap'
+  }).addTo(state.map);
+  state.layer = L.layerGroup().addTo(state.map);
+  setTimeout(function () { try { state.map.invalidateSize(); } catch (_e) {} }, 250);
+}
+
+function pinIcon(cls) {
+  return L.divIcon({
+    className: '',
+    html: '<div class="pin" style="background:' + (COLOR[cls] || COLOR.grey) + '"></div>',
+    iconSize: [18, 18],
+    iconAnchor: [9, 9]
+  });
+}
+
+function drawMap(list) {
+  if (!state.map || !state.layer) return;
+  try { state.layer.clearLayers(); } catch (_e) {}
+  state.markers = {};
+  var pts = [];
+  for (var i = 0; i < list.length; i++) {
+    var g = list[i];
+    if (g.lat == null || g.lng == null) continue;
+    var s = statusOf(g);
+    var m = L.marker([g.lat, g.lng], { icon: pinIcon(s.cls) });
+    var tel = telHref(g.phone);
+    m.bindPopup(
+      '<b>' + esc(g.name || '(χωρίς όνομα)') + '</b><br>'
+      + 'κατάσταση: ' + esc(s.label)
+      + (s.h != null ? ' · πριν ' + esc(humanAge(s.h)) : '')
+      + (g.phone ? '<br>τηλ: ' + (tel ? '<a href="tel:' + esc(tel) + '">' + esc(g.phone) + '</a>' : esc(g.phone)) : '')
+    );
+    m.addTo(state.layer);
+    state.markers[g.id] = m;
+    pts.push([g.lat, g.lng]);
+  }
+  if (pts.length > 0) {
+    try { state.map.fitBounds(pts, { padding: [40, 40], maxZoom: 13 }); } catch (_e) {}
+  }
+}
+
+function focusGateway(id) {
+  var g = state.gw[id];
+  if (!g || g.lat == null || !state.map) return;
+  try {
+    state.map.setView([g.lat, g.lng], 14);
+    var m = state.markers[id];
+    if (m) m.openPopup();
+  } catch (_e) {}
+}
+
+/* ═══ ΑΠΟΔΟΣΗ ══════════════════════════════════════════════════════════════ */
+
+function sortedList() {
+  var out = [];
+  for (var k in state.gw) {
+    if (Object.prototype.hasOwnProperty.call(state.gw, k)) out.push(state.gw[k]);
+  }
+  /* Σειρά ΧΡΗΣΙΜΟΤΗΤΑΣ, όχι αλφαβητική: πρώτα ό,τι θέλει δουλειά. */
+  var rank = { red: 0, grey: 1, yellow: 2, green: 3 };
+  out.sort(function (a, b) {
+    var ra = rank[statusOf(a).cls], rb = rank[statusOf(b).cls];
+    if (ra !== rb) return ra - rb;
+    return String(a.name || a.id).localeCompare(String(b.name || b.id), 'el');
+  });
+  return out;
+}
+
+function render() {
+  var list = sortedList();
+  var c = { green: 0, yellow: 0, red: 0, grey: 0 }, noLoc = 0, undec = 0;
+  for (var i = 0; i < list.length; i++) {
+    /* T-GWROSTER-01: τα αδήλωτα ΔΕΝ μπαίνουν στα «άγνωστα». «Άγνωστο» σημαίνει
+       «μίλησε, αλλά δεν ξέρω αν ζει». «Αδήλωτο» σημαίνει «δεν μίλησε ποτέ».
+       Δύο διαφορετικές δουλειές — δύο διαφορετικοί αριθμοί. */
+    if (isUndeclared(list[i])) { undec++; continue; }
+    c[statusOf(list[i]).cls]++;
+    if (list[i].lat == null) noLoc++;
+  }
+  var set = function (id, v) { var el = $(id); if (el) el.textContent = String(v); };
+  /* Ο ΑΡΙΘΜΟΣ είναι ΠΑΝΤΑ όσα βλέπει ο πίνακας. Ο κατάλογος έχει ήδη σπείρει
+     τις εγγραφές του, ΚΑΙ συσκευή ΕΚΤΟΣ καταλόγου που στέλνει πρέπει να
+     μετριέται κι αυτή — αλλιώς ο πίνακας θα έλεγε «33» ενώ θα εμφάνιζε 34.
+     Ο κατάλογος αλλάζει ΜΟΝΟ την ΕΤΙΚΕΤΑ, δηλαδή τι ΣΗΜΑΙΝΕΙ ο αριθμός:
+     με κατάλογο είναι ο στόλος· χωρίς, μόνο όσα έστειλαν δεδομένα. */
+  var lbl = $('lTotal');
+  set('cTotal', list.length);
+  if (lbl) lbl.textContent = (state.rosterSize > 0) ? 'στόλος' : 'με δεδομένα';
+  set('cGreen', c.green); set('cYellow', c.yellow);
+  set('cRed', c.red); set('cGrey', c.grey); set('cNoLoc', noLoc);
+  set('cUndec', undec);
+
+  var ul = $('gwlist'), emptyEl = $('empty');
+  if (!ul) return;
+  ul.innerHTML = '';
+  if (list.length === 0) {
+    if (emptyEl) {
+      emptyEl.textContent = 'Δεν φτάνει κανένα gateway σε αυτό το widget. '
+        + 'Πρόσθεσε τις συσκευές gateway στις πηγές δεδομένων του widget. '
+        + 'Για να φαίνονται ΚΑΙ όσα δεν έχουν δηλωθεί ποτέ, δώσε στο widget '
+        + 'παράμετρο «fleet_roster» με τον κατάλογο του στόλου.';
+    }
+    drawMap(list);
+    return;
+  }
+  if (emptyEl) emptyEl.textContent = '';
+
+  for (var j = 0; j < list.length; j++) {
+    var g = list[j];
+    var s = statusOf(g);
+    var li = document.createElement('li');
+    li.setAttribute('data-id', g.id);
+    var tel = telHref(g.phone);
+    var pos = isUndeclared(g)
+      ? '<span style="color:var(--blue)">ΑΔΗΛΩΤΟ — δεν έχει στείλει ποτέ δεδομένα'
+        + (g.storage ? ' (αποθήκη)' : '') + '</span>'
+      : (g.lat == null)
+      ? '<span style="color:var(--red)">χωρίς θέση — δεν εμφανίζεται στον χάρτη</span>'
+      : '<span class="mono">' + g.lat.toFixed(5) + ', ' + g.lng.toFixed(5) + '</span>';
+    li.innerHTML =
+      '<div class="gwname"><span class="dot ' + s.cls + '"></span>'
+      + esc(g.name || '(χωρίς όνομα)') + '</div>'
+      + '<div class="gwmeta">'
+      + esc(s.label) + (s.h != null ? ' · πριν ' + esc(humanAge(s.h)) : '')
+      + (s.src ? ' · πηγή: ' + esc(s.src) : '')
+      + '<br>' + pos
+      + (g.phone
+          ? '<br>τηλ: ' + (tel
+              ? '<a href="tel:' + esc(tel) + '">' + esc(g.phone) + '</a>'
+              : esc(g.phone))
+          : '<br><span style="color:var(--muted)">χωρίς τηλέφωνο</span>')
+      + '</div>';
+    li.addEventListener('click', (function (id) {
+      return function () { focusGateway(id); };
+    })(g.id));
+    ul.appendChild(li);
+  }
+
+  drawMap(list);
+
+  var f = $('foot');
+  if (f) {
+    f.textContent = c.grey > 0
+      ? 'Τα «άγνωστα» δεν στέλνουν καμία μεταβλητή δική τους σε αυτό το widget — '
+        + 'μόνο όσες γράφει η φόρμα δήλωσης. Το πράσινο σημαίνει ότι μίλησε το ίδιο το gateway.'
+      : 'Το πράσινο σημαίνει ότι μίλησε το ίδιο το gateway — όχι ότι του γράψαμε εμείς κάτι.';
+  }
+}
+
+/* ═══ ΕΚΚΙΝΗΣΗ ═════════════════════════════════════════════════════════════ */
+
+initMap();
+render();
+
+if (window.TagoIO && window.TagoIO.ready) {
+  window.TagoIO.onStart(function (w) {
+    /* T-GWROSTER-01: ο κατάλογος ΠΡΩΤΑ, ώστε τα αδήλωτα να υπάρχουν ακόμη κι
+       αν δεν έρθει ούτε μία γραμμή δεδομένων. */
+    try {
+      var ps = (w && w.display && w.display.parameters) || [];
+      for (var pi = 0; pi < ps.length; pi++) {
+        if (ps[pi] && ps[pi].key === 'fleet_roster') {
+          applyRoster(JSON.parse(String(ps[pi].value || '[]')));
+          break;
+        }
+      }
+    } catch (_eR) {}
+    try { if (w && Array.isArray(w.data)) ingest(w.data); } catch (_e) {}
+    render();
+    setTimeout(function () { try { if (state.map) state.map.invalidateSize(); } catch (_e2) {} }, 200);
+  });
+  window.TagoIO.onRealtime(function (d) {
+    try {
+      var rows = [];
+      if (Array.isArray(d)) {
+        for (var i = 0; i < d.length; i++) {
+          if (d[i] && Array.isArray(d[i].result)) rows = rows.concat(d[i].result);
+          else if (d[i] && d[i].variable) rows.push(d[i]);
+        }
+      }
+      ingest(rows);
+      render();
+    } catch (_e) {}
+  });
+  window.TagoIO.ready();
+} else {
+  var e0 = $('empty');
+  if (e0) e0.textContent = 'Η σελίδα δεν τρέχει μέσα στο TagoIO — ο χάρτης λειτουργεί, τα δεδομένα όχι.';
+}
+</script>
+</body>
+</html>
