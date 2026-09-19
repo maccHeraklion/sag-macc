@@ -8,6 +8,11 @@
 > Παράθυρο ανεβασμάτων: hh:25–hh:15 UTC, ποτέ 00:10–00:30 UTC. Κατά τη διάρκεια ενός ανεβάσματος
 > κανείς άλλος δεν ανεβάζει πυρήνα, widget ή φόρμα.
 
+## 2026-09-19 ~05:00 UTC — widget **W-ECREF-01** και sync **v13 ΧΤΙΣΤΗΚΑΝ, ΔΕΝ ΑΝΕΒΗΚΑΝ** (Michalis)
+
+- Widget `_dist-sagMain/index-7cbd9a4e.js`: λίστα `Ra` + `soil_ec_ref1`, `soil_ec_ref2`, `soil_ec_ratio`, `soil_ec_conc` (οι σειρές του v50.141/142). md5 LF `90b0418e50c814fc03749747d57b402a`, 213.992 B, καθαρό LF. Ανεβαίνει ΜΟΝΟ μαζί ή μετά τον πυρήνα ≥ v50.142.
+- Sync `analysis/setFieldParametersFromDeviceData.js` **v13** (T-CROPKEYS-03, Κ13): η ανά καλλιέργεια προβολή σηκώνει plants/area_m2/irrig_emitter_spacing_m/irrig_row_spacing_m/irrig_emitter_lph/cultivation_variety όταν είναι δηλωμένα· σε υπέρβαση ορίου κόβονται ΠΡΩΤΑ (σημείωση στον παραγωγό). sha256 LF (index) `60a8dc21…` (git blob), ελεγκτής `sync_cropkeys_check.mjs` 9/9 + 5/5. Ανέβασμα με το deploy probe (analysis `68fe925b…`, eol lf), ανεξάρτητο από τον πυρήνα.
+
 ## 2026-09-19 ~04:45 UTC — πυρήνας **v50.142 ΧΤΙΣΤΗΚΕ, ΔΕΝ ΑΝΕΒΗΚΕ** (Michalis) — Φάση Α βήματα Α4 + Α5
 
 T-ECRATIO-01 (R = ref/λίπασμα, CF = ref/νερό, φρουρός δηλώσεων, τάση 7ημ από δακτύλιο `ec_ref_hist`) + T-ECVERDICT-01 (ωριαίες κάρτες `soil_ece*`/`soil_salinity_status` γκρι «Στιγμιαία ένδειξη»· ΜΙΑ ημερήσια ετυμηγορία `soil_ec_status` από την προ-αρδευτική αναφορά· πύλη νεκρού οργάνου και στο ημερήσιο, χωρίς Ks από νεκρό όργανο = Κ5· τάση από ref αντί bulk = Κ15). sha256 CRLF `2e1c23a46f8fc48c…`, 1.295.410 B. Έλεγχοι ecverdict 18/18 + 10/10, ecref 14/14 + 8/8, phaseA 22/22, audit_fixes 18/18, bpi_card 15/15, rootdepth 20/20, bpi_lightest 23/23, failsafe 108/108, σενάρια 7/7. Ζωντανός: **v50.139**. Η κάρτα «Κατάσταση αλατότητας» του widget δείχνει τις νέες τιμές/χρώματα από τα metadata (ΥΠΟ ΕΛΕΓΧΟ)· οι νέες σειρές θέλουν W-ECREF στο widget.

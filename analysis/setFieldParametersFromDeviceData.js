@@ -40,6 +40,15 @@
  **    καλλιέργεια, ο πυρήνας (FIR/PEI, γρ. 4635, 9729) τα διαβάζει ΜΟΝΟ
  **    από τη ρίζα. Μισές/μελλοντικές δηλώσεις αποκλείονται με προειδοποίηση.
  **
+ ** v13 · 19/9/2026 — T-CROPKEYS-03 (έλεγχος 18/9, Κ13): η ανά καλλιέργεια
+ ** προβολή σηκώνει ΕΠΙΤΕΛΟΥΣ plants, area_m2, irrig_emitter_spacing_m,
+ ** irrig_row_spacing_m, irrig_emitter_lph, cultivation_variety — τα κλειδιά που η
+ ** φόρμα έγραφε και ο πυρήνας περίμενε (T-CROPAREA-01, T-PERCROP-PLANTS-01,
+ ** T-CROPKEYS-01) αλλά η προβολή έκοβε. Μόνο δηλωμένα & έγκυρα (θετικοί αριθμοί,
+ ** ποικιλία ≤ 40 χαρ.) — άρα ο αγρός που δεν τα συμπληρώνει πληρώνει ΜΗΔΕΝ.
+ ** Υπέρβαση ορίου tag: ΠΡΩΤΑ κόβονται αυτά (σημείωση στον παραγωγό), ΜΕΤΑ οι
+ ** ημερομηνίες σταδίων (υπάρχον μήνυμα) — καμία αποθήκευση δεν μπλοκάρεται
+ ** που δεν μπλοκαριζόταν και στη v12.
  ** v12 · 18/9/2026 — T-WHITELIST-Φ1: +water_ecw_measured_on, fert_ecw_dsm,
  ** fert_ecw_measured_on (Φάση Α αλατότητας, βήμα 1 — η φόρμα v19 τα γράφει· ο
  ** πυρήνας θα διαβάζει fert_ecw_dsm από το Α4/v50.137). ~+85 χαρ. στο tag, εντός
@@ -291,6 +300,19 @@ function validatePeriodsForCrop(crop) {
   return problems;
 }
 
+/* T-CROPKEYS-03 (v13): τα ανά καλλιέργεια πρόσθετα που διαβάζει ο πυρήνας
+   (cropParams γρ. ~18196–18227, _sagCropExtraKeys). Σε υπέρβαση ορίου κόβονται
+   ΠΡΩΤΑ, γι' αυτό είναι σε δική τους λίστα. */
+const _CROP_EXTRA_NUM = ["plants", "area_m2", "irrig_emitter_spacing_m", "irrig_row_spacing_m", "irrig_emitter_lph"];
+const _CROP_EXTRA_KEYS = [..._CROP_EXTRA_NUM, "cultivation_variety"];
+function stripCropExtras(crops) {
+  return (Array.isArray(crops) ? crops : []).map((c) => {
+    const d = Object.assign({}, c);
+    for (const k of _CROP_EXTRA_KEYS) delete d[k];
+    return d;
+  });
+}
+
 /** Προβολή μίας καλλιέργειας: μόνο ό,τι σηκώνει το cropParams του πυρήνα. */
 function projectCrop(c, idx) {
   /* Γύρος 5: μη-αντικείμενο periods (string/πίνακας από χαλασμένη πηγή)
@@ -313,6 +335,17 @@ function projectCrop(c, idx) {
   if (Object.keys(_per).length) out.periods = _per;
   if (c.plantation_year !== undefined && c.plantation_year !== null && c.plantation_year !== "") {
     out.plantation_year = c.plantation_year;
+  }
+  /* T-CROPKEYS-03 (v13): μόνο δηλωμένα & έγκυρα — κενά/μη αριθμοί/≤ 0 δεν περνούν. */
+  for (const k of _CROP_EXTRA_NUM) {
+    if (isBlank(c[k])) continue;
+    const n = Number(String(c[k]).replace(",", "."));
+    if (!Number.isFinite(n) || n <= 0) continue;
+    out[k] = k === "plants" ? Math.round(n) : Math.round(n * 100) / 100;
+  }
+  if (!isBlank(c.cultivation_variety)) {
+    const v = String(c.cultivation_variety).trim().slice(0, 40);
+    if (v && v !== String(c.cultivation_type || "")) out.cultivation_variety = v;
   }
   return out;
 }
@@ -679,7 +712,19 @@ async function runSync(context, scope, shared) {
   }
 
   /* ── T-CFGSYNC-09: backstop μεγέθους ── */
-  const serialized = JSON.stringify(tag);
+  let serialized = JSON.stringify(tag);
+  /* T-CROPKEYS-03 (v13): σε υπέρβαση, ΠΡΩΤΑ φεύγουν τα ανά καλλιέργεια πρόσθετα.
+     Η αποθήκευση δεν μπλοκάρεται από κάτι που στη v12 δεν αποθηκευόταν καν. */
+  if (serialized.length > TAG_SAFE_LIMIT) {
+    const _stripped = stripCropExtras(tag.crops);
+    const _s2 = JSON.stringify(Object.assign({}, tag, { crops: _stripped }));
+    if (_s2.length <= TAG_SAFE_LIMIT && _s2.length < serialized.length) {
+      context.log(`T-CROPKEYS-03: ${serialized.length} > ${TAG_SAFE_LIMIT} — τα ανά καλλιέργεια πρόσθετα (φυτά/έκταση/γεωμετρία/ποικιλία) κόπηκαν από την προβολή (${_s2.length} χαρ.)`);
+      warnings.push("τα ανά καλλιέργεια στοιχεία (φυτά, έκταση, γεωμετρία σταλακτών, ποικιλία) δεν χώρεσαν στο όριο αποθήκευσης και ΔΕΝ μεταφέρθηκαν — ο υπολογισμός χρησιμοποιεί τα στοιχεία του αγρού. Σβήστε προαιρετικές ημερομηνίες σταδίων για να χωρέσουν.");
+      tag.crops = _stripped;
+      serialized = _s2;
+    }
+  }
   if (serialized.length > TAG_SAFE_LIMIT) {
     context.log(`ΥΠΕΡΒΑΣΗ ΜΕΓΕΘΟΥΣ TAG: ${serialized.length} > ${TAG_SAFE_LIMIT}`
       + ` (πλεόνασμα ${serialized.length - TAG_SAFE_LIMIT} χαρακτήρες). Δεν γράφτηκε τίποτα.`);
