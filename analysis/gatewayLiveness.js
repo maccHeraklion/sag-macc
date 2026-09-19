@@ -144,13 +144,22 @@ async function loadState() {
   const rows = Array.from(gw.entries()).sort((a, b) => b[1].n - a[1].n);
   for (const [id, g] of rows) {
     const ageH = g.last ? (now - new Date(g.last).getTime()) / 36e5 : Infinity;
-    let color = "red", state = "ΔΕΝ ΑΠΑΝΤΑ";
+    /* T-GWHONEST-01: η λέξη πρέπει να λέει τι ξέρουμε, όχι περισσότερα.
+       Έχουμε μαρτυρία μόνο από τους αισθητήρες που στέλνουν lrrid. Αν ο
+       μοναδικός μάρτυρας ενός gateway σταματήσει, το gateway φαίνεται νεκρό
+       ενώ μπορεί να δουλεύει μια χαρά. «ΔΕΝ ΑΠΑΝΤΑ» ήταν λάθος λέξη. */
+    let color = "red", state = "ΧΩΡΙΣ ΠΡΟΣΦΑΤΟ ΜΑΡΤΥΡΑ";
     if (ageH < ALIVE_H) { color = "green"; state = "ΛΕΙΤΟΥΡΓΕΙ"; alive++; }
-    else if (ageH < STALE_H) { color = "orange"; state = "ΥΠΟΠΤΟ"; suspect++; }
+    else if (ageH < STALE_H) { color = "orange"; state = "ΑΡΑΙΟΣ ΜΑΡΤΥΡΑΣ"; suspect++; }
     else dead++;
     // Το κείμενο λέει ΤΙ ΞΕΡΟΥΜΕ και ΠΩΣ το ξέρουμε — ποτέ σκέτο νούμερο.
     const text = `${state}. Το ξέρουμε επειδή ${g.n} αισθητήρ${g.n === 1 ? "ας πέρασε" : "ες πέρασαν"}`
       + ` από αυτό το gateway, τελευταία φορά ${ageTxt(ageH)}.`
+      + (color === "red"
+          ? ` ΠΡΟΣΟΧΗ: αυτό ΔΕΝ σημαίνει ότι το gateway είναι χαλασμένο.`
+            + ` Σημαίνει ότι οι αισθητήρες που το κατονομάζουν σταμάτησαν να`
+            + ` στέλνουν. Το ίδιο το gateway μπορεί να δουλεύει κανονικά.`
+          : "")
       + (g.rssi != null ? ` Ισχύς λήψης ${Math.round(Number(g.rssi))} dBm.` : "")
       + (g.lat != null ? ` Θέση ${Number(g.lat).toFixed(5)}, ${Number(g.lon).toFixed(5)}.` : " Θέση άγνωστη.")
       + ` Αισθητήρες: ${g.devs.join(", ")}${g.n > g.devs.length ? " …" : ""}.`
@@ -163,12 +172,19 @@ async function loadState() {
   }
 
   const total = rows.length;
-  out.push({ variable: "gateway_summary", value: `${alive} λειτουργούν από ${total}`,
+  /* T-GWHONEST-01: η σύνοψη μεταφέρει την ΚΑΛΥΨΗ. Χωρίς αυτήν, το «8»
+     διαβάζεται ως «8 από όλα μας» αντί για «8 από όσα μπορούμε να δούμε». */
+  const sensorsTotal = live.length;
+  out.push({ variable: "gateway_summary",
+    value: `${alive} με απόδειξη ζωής από ${total} ορατά`,
     metadata: { color: dead > 0 ? "orange" : "green", total, alive, suspect, dead,
-      sensors_seen: stillKnown.length, reads, ms: Date.now() - t0,
-      text: `${alive} gateways λειτουργούν, ${suspect} ύποπτα, ${dead} δεν απαντούν.`
-        + ` Η εικόνα χτίζεται από ${stillKnown.length} αισθητήρες που αναφέρουν ποιο gateway`
-        + ` τους παρέλαβε. Οι συσκευές-gateway της TagoIO ΔΕΝ στέλνουν δικά τους δεδομένα.` } });
+      sensors_seen: stillKnown.length, sensors_total: sensorsTotal, reads, ms: Date.now() - t0,
+      text: `${alive} gateways έχουν απόδειξη ζωής, ${suspect} με αραιό μάρτυρα,`
+        + ` ${dead} χωρίς πρόσφατο μάρτυρα.`
+        + ` Η εικόνα χτίζεται από ${stillKnown.length} αισθητήρες από ${sensorsTotal}:`
+        + ` μόνο αυτοί αναφέρουν ποιο gateway τους παρέλαβε. Όσα gatewayς`
+        + ` εξυπηρετούν τους υπόλοιπους ΕΙΝΑΙ ΑΟΡΑΤΑ εδώ — ΤΕΧΝΙΚΑ ΑΓΝΩΣΤΑ,`
+        + ` ΟΧΙ χαλασμένα. Οι συσκευές-gateway της TagoIO ΔΕΝ στέλνουν δικά τους δεδομένα.` } });
 
   // 5 · Η μνήμη για την επόμενη φορά.
   out.push({ variable: "gateway_scan_state", value: stillKnown.length,

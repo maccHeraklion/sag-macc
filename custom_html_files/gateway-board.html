@@ -71,13 +71,13 @@ h1{font-size:20px; margin:0 0 4px}
 <div class="wrap">
 
   <h1>Στόλος Gateways</h1>
-  <p class="sub">Θέση, υπεύθυνος και κατάσταση λειτουργίας. Πάτησε ένα gateway στη λίστα για να το βρεις στον χάρτη.</p>
+  <p class="sub">Θέση και απόδειξη ζωής — μόνο για όσα gateways έχουν μάρτυρα. Πάτησε ένα gateway στη λίστα για να το βρεις στον χάρτη.</p>
 
   <div class="tiles">
     <div class="tile"><div class="n" id="cTotal">0</div><div class="l" id="lTotal">με δεδομένα</div></div>
-    <div class="tile"><div class="n" id="cGreen" style="color:var(--green)">0</div><div class="l">λειτουργούν</div></div>
-    <div class="tile"><div class="n" id="cYellow" style="color:var(--yellow)">0</div><div class="l">καθυστερούν</div></div>
-    <div class="tile"><div class="n" id="cRed" style="color:var(--red)">0</div><div class="l">δεν αποκρίνονται</div></div>
+    <div class="tile"><div class="n" id="cGreen" style="color:var(--green)">0</div><div class="l">με απόδειξη ζωής</div></div>
+    <div class="tile"><div class="n" id="cYellow" style="color:var(--yellow)">0</div><div class="l">αραιός μάρτυρας</div></div>
+    <div class="tile"><div class="n" id="cRed" style="color:var(--red)">0</div><div class="l">χωρίς πρόσφατο μάρτυρα</div></div>
     <div class="tile"><div class="n" id="cGrey" style="color:var(--grey)">0</div><div class="l">άγνωστα</div></div>
     <div class="tile"><div class="n" id="cNoLoc" style="color:var(--muted)">0</div><div class="l">χωρίς θέση</div></div>
     <div class="tile"><div class="n" id="cUndec" style="color:var(--blue)">0</div><div class="l">αδήλωτα</div></div>
@@ -280,6 +280,17 @@ function ingest(rows) {
        γραμμή ανά gateway — όλες στην ΙΔΙΑ συσκευή εποπτείας. Γι' αυτό εδώ
        κλειδί ΔΕΝ είναι η συσκευή αλλά ο κωδικός του gateway (r.value):
        αλλιώς και τα δέκα θα έπεφταν σε ένα κουτί, με μία καρφίτσα. */
+    /* T-GWHONEST-01: η σύνοψη φέρνει την ΚΑΛΥΨΗ — πόσους αισθητήρες
+       βλέπουμε από πόσους. Χωρίς αυτό ο αριθμός των πράσινων λέει ψέματα. */
+    if (r.variable === 'gateway_summary' && r.metadata) {
+      var sm = r.metadata;
+      if (!state.summaryTime || Date.parse(r.time) >= Date.parse(state.summaryTime)) {
+        state.summaryTime = r.time;
+        state.seen = Number(sm.sensors_seen);
+        state.totalSensors = Number(sm.sensors_total);
+      }
+    }
+
     if (r.variable === 'gateway_row' || r.variable === 'gateway_summary'
         || r.variable === 'gateway_scan_state') {
       /* Η συσκευή που μεταφέρει τις γραμμές ΔΕΝ είναι gateway. Αν δεν το
@@ -553,6 +564,18 @@ function render() {
         + 'LRR των uplink), ΟΧΙ από το ίδιο το gateway — οι συσκευές-gateway '
         + 'της TagoIO δεν στέλνουν δικές τους μετρήσεις.'
       : 'Το πράσινο σημαίνει ότι μίλησε το ίδιο το gateway — όχι ότι του γράψαμε εμείς κάτι.';
+    /* T-GWHONEST-01: το πρώτο πράγμα που πρέπει να διαβάσει κάποιος. */
+    if (net > 0 && isFinite(state.seen) && isFinite(state.totalSensors)
+        && state.totalSensors > 0) {
+      t += ' ΚΑΛΥΨΗ: η εικόνα χτίζεται από ' + state.seen + ' αισθητήρες από '
+        + state.totalSensors + '. Μόνο αυτοί αναφέρουν ποιο gateway τους παρέλαβε. '
+        + 'Όσα gateways εξυπηρετούν τους υπόλοιπους ΔΕΝ κρίνονται εδώ: είναι '
+        + 'ΑΟΡΑΤΑ, ΟΧΙ χαλασμένα.';
+    }
+    if (c.red > 0) {
+      t += ' Το «χωρίς πρόσφατο μάρτυρα» ΔΕΝ σημαίνει χαλασμένο gateway — '
+        + 'σημαίνει ότι οι αισθητήρες που το κατονομάζουν σταμάτησαν να στέλνουν.';
+    }
     if (net > 0 && list.length > net) {
       t += ' ΠΡΟΣΟΧΗ: οι ' + net + ' εγγραφές του δικτύου ΔΕΝ έχουν ακόμη '
         + 'αντιστοιχιστεί με τις δηλωμένες συσκευές, οπότε ο ίδιος σταθμός '
