@@ -366,11 +366,23 @@ function initMap() {
   /* T-MAPSCROLL-01: σε συσκευή αφής ο χάρτης ΔΕΝ πιάνει το σύρσιμο ενός
      δαχτύλου μέχρι ο χρήστης να το ζητήσει ρητά. Έτσι η σελίδα κυλάει
      κανονικά. Ο τροχός του ποντικιού δεν κάνει ζουμ ποτέ από μόνος του:
-     σε υπολογιστή το σκρολ ανήκει στη σελίδα. */
+     σε υπολογιστή το σκρολ ανήκει στη σελίδα.
+
+     T-MAPDRAG-01 — ΔΙΟΡΘΩΣΗ ΔΙΚΟΥ ΜΟΥ ΛΑΘΟΥΣ. Πριν, έδειχνα αφή με
+     `ontouchstart in window || maxTouchPoints > 0`. Αυτό είναι ΑΛΗΘΕΣ και σε
+     laptop Windows με οθόνη αφής — όπου όμως ο χρήστης έχει ΠΟΝΤΙΚΙ.
+     Έτσι ο χάρτης πάγωνε σε κανονικούς υπολογιστές.
+     Το `(pointer: coarse)` ρωτάει το σωστό: ποια είναι η ΚΥΡΙΑ συσκευή
+     κατάδειξης, όχι αν υπάρχει κάπου οθόνη αφής. */
   var _isTouch = false;
   try {
-    _isTouch = ('ontouchstart' in window)
-      || (navigator && navigator.maxTouchPoints > 0);
+    if (window.matchMedia) {
+      _isTouch = window.matchMedia('(pointer: coarse)').matches === true;
+    } else {
+      /* Πολύ παλιός φυλλομετρητής: πέφτω στην παλιά ένδειξη. */
+      _isTouch = ('ontouchstart' in window)
+        || (navigator && navigator.maxTouchPoints > 0);
+    }
   } catch (_e) { _isTouch = false; }
   state.map = L.map(el, {
     scrollWheelZoom: false,
