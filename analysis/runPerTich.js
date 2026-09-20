@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.148 · 2026-09-19';
+const SAG_KERNEL_VERSION = 'v50.149 · 2026-09-20';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -16323,6 +16323,30 @@ const _sagTechImpact = (t) => _SAG_TECH_IMPACT[t] || '';
 // σε module scope χωρίς μηδενισμό ανά τρέξιμο).
 const _SAG_FLEET = [];
 
+/* ══ T-PROFILE-01 (3/3) · Ο ΣΚΟΠΟΣ ΤΗΣ ΕΓΚΑΤΑΣΤΑΣΗΣ ══════════════════════
+   ΤΟ ΕΥΡΗΜΑ (19/9): η μηχανή δεν είχε καθόλου έννοια σκοπού. Κάθε συσκευή
+   με isField κρινόταν ως πλήρης αγρονομικός αγρός — και ο μετεωρολογικός
+   σταθμός ή ο κήπος ξενοδοχείου έβγαιναν «ελλιπείς» για πράγματα που
+   ΠΟΤΕ δεν ζητήθηκαν.
+
+   ΤΟ tag `field_type` ΔΕΝ ΚΑΝΕΙ ΑΥΤΗ ΤΗ ΔΟΥΛΕΙΑ: γράφεται μεν από τον
+   createField, αλλά οι τιμές του περιγράφουν ΣΕΤ ΑΙΣΘΗΤΗΡΩΝ (agnostic,
+   s2120_soil_ide…), όχι σκοπό. Και 43 στους 65 είναι «agnostic».
+
+   Ο σκοπός ΔΕΝ ΣΥΝΑΓΕΤΑΙ ΑΠΟ ΤΑ ΔΕΔΟΜΕΝΑ. Μετρημένο: τα χωράφια του
+   ξενοδοχείου έχουν lse01 + s2120 + uc511 — ΑΚΡΙΒΩΣ ό,τι κι ένας
+   ποτιζόμενος ελαιώνας. Γι' αυτό ΠΡΕΠΕΙ να δηλωθεί ρητά, από τη φόρμα.
+
+   ΠΡΟΕΠΙΛΟΓΗ «agronomy»: όποιος ΔΕΝ έχει ετικέτα κρίνεται ΑΚΡΙΒΩΣ όπως
+   σήμερα. Καμία σιωπηλή αλλαγή σε 65 ζωντανούς αγρούς — μόνο ρητή δήλωση
+   αλλάζει συμπεριφορά. */
+const SAG_FIELD_PURPOSES = ['agronomy', 'weather', 'automation'];
+function _sagFieldPurpose(field) {
+  const v = String(field?.tags?.find?.(t => t && t.key === 'field_purpose')?.value ?? '')
+    .trim().toLowerCase();
+  return SAG_FIELD_PURPOSES.indexOf(v) >= 0 ? v : 'agronomy';
+}
+
 // ── T-FLEET-HEALTH-01 (v50.143 · 19/9/2026) · ΥΓΕΙΑ ΣΥΣΤΗΜΑΤΟΣ ΣΤΟΝ ΠΙΝΑΚΑ ──
 // ΤΟ ΕΥΡΗΜΑ (19/9): το sag-fleet.html είχε μετακινηθεί σε backup στις 16/9 και ο
 // πίνακας ήταν άδειος επί 3 ημέρες — και ΚΑΝΕΝΑΣ δεν το είδε, γιατί ο πίνακας
@@ -18033,8 +18057,17 @@ module.exports = new Analysis(async (context) => {
           // T-FLEET-HEALTH-01: αγρός δηλωμένος (isField) χωρίς ρύθμιση από τη φόρμα —
           // ΔΕΝ υπολογίζεται τίποτα. Πριν ήταν ΑΟΡΑΤΟΣ στον πίνακα εποπτείας.
           try {
+            /* T-PROFILE-01: «καμία ρύθμιση» είναι ΕΛΛΕΙΨΗ μόνο για αγρό.
+               Ο μετεωρολογικός σταθμός δεν έχει καλλιέργεια να ρυθμίσεις, και ο
+               έλεγχος αυτοματισμού (π.χ. κήπος ξενοδοχείου) ποτίζει με πρόγραμμα,
+               όχι με αγρονομικό δείκτη. Τους κρατάμε ΟΡΑΤΟΥΣ στον πίνακα (nc:1,
+               φαίνονται τα όργανά τους) αλλά ΔΕΝ τους χρεώνουμε δουλειά γραφείου
+               για κάτι που δεν ζητήθηκε ποτέ. */
+            const _ncPurpose = _sagFieldPurpose(fields[i]);
             _SAG_FLEET.push({ f: fieldName, i: String(fields[i]?.id || '').slice(-6), y: null, x: null,
-              d: [], k: [], v: [], a: [], z: [], g: ['ρύθμιση αγρού από τη φόρμα (καμία)'], nc: 1 });
+              d: [], k: [], v: [], a: [], z: [],
+              g: _ncPurpose === 'agronomy' ? ['ρύθμιση αγρού από τη φόρμα (καμία)'] : [],
+              p: _ncPurpose, nc: 1 });
           } catch (_eNc) {}
           continue;
         }
@@ -19213,7 +19246,18 @@ module.exports = new Analysis(async (context) => {
           // ΚΕΝΑ ΡΥΘΜΙΣΗΣ: διορθώνονται ΑΠΟ ΤΟ ΓΡΑΦΕΙΟ, χωρίς επίσκεψη.
           // Γι' αυτό χωρίζονται από τις βλάβες — είναι άλλη δουλειά, άλλη μέρα.
           const _gapF = [];
-          {
+          /* T-PROFILE-01 · Η ΠΥΛΗ ΤΟΥ ΣΚΟΠΟΥ.
+             agronomy  → ΟΛΑ τα κενά, ΑΚΡΙΒΩΣ όπως πριν (καμία αλλαγή).
+             weather   → ΚΑΝΕΝΑ. Ο σταθμός μετράει αέρα· δεν έχει έκταση,
+                         φυτά, έδαφος ή στάγδην να του λείπουν.
+             automation→ ΜΟΝΟ τα αρδευτικά. Αυτή ΕΙΝΑΙ η δουλειά του· αλλά
+                         καλλιέργεια δεν περιμένουμε, άρα «καμία καλλιέργεια»
+                         και «τύπος εδάφους» ΔΕΝ είναι ελλείψεις.
+             ΚΡΙΣΗ ΔΙΚΗ ΜΟΥ, ΠΡΟΣ ΕΠΙΒΕΒΑΙΩΣΗ: το τι χρειάζεται ο «έλεγχος
+             αυτοματισμού» είναι απόφαση γεωπόνου, όχι μηχανικού. Διάλεξα το
+             στενότερο σύνολο που παραμένει χρήσιμο. */
+          const _purposeF = _sagFieldPurpose(fields[i]);
+          if (_purposeF !== 'weather') {
             const _ar = Number(fieldConfig?.area);
             if (!Number.isFinite(_ar) || _ar <= 0) _gapF.push('έκταση');
             else if (_ar < 20) _gapF.push('έκταση ' + _ar + ' m²;');
@@ -19256,8 +19300,10 @@ module.exports = new Analysis(async (context) => {
               if (!_geomCovered) _gapF.push('γεωμετρία στάγδην');
             }
             if (!fieldConfig?.irrigation_system) _gapF.push('σύστημα άρδευσης');
-            if (!fieldConfig?.soil_type && !fieldConfig?.soil_texture_class) _gapF.push('τύπος εδάφους');
-            if (!crops.length) _gapF.push('καμία καλλιέργεια');
+            if (_purposeF === 'agronomy') {
+              if (!fieldConfig?.soil_type && !fieldConfig?.soil_texture_class) _gapF.push('τύπος εδάφους');
+              if (!crops.length) _gapF.push('καμία καλλιέργεια');
+            }
           }
           _SAG_FLEET.push({
             f: fieldName,
@@ -19295,6 +19341,7 @@ module.exports = new Analysis(async (context) => {
             a: _ageF,     // ομάδες μετρήσεων εκτός ορίου ηλικίας
             z: _allF,     // T-FLEET-BOARD-01: ΟΛΕΣ οι βλάβες με ενέργεια
             g: _gapF,     // T-FLEET-BOARD-01: κενά ρύθμισης (δουλειά γραφείου)
+            p: _purposeF, // T-PROFILE-01: ο δηλωμένος σκοπός — ο πίνακας να λέει ΓΙΑΤΙ δεν χρεώνεται
             // T-FLEET-HEALTH-01: ηλικία πρόγνωσης (ώρες) — υγεία της analysis «forecast»
             // ανά αγρό· null = δεν διαβάστηκε πρόγνωση. Απορρίψεις μετρήσεων του παλμού.
             fc: (() => { const _t = Date.parse(String(((measurements || {}).data || {})._sagForecastAt || ''));
@@ -19588,7 +19635,7 @@ module.exports = new Analysis(async (context) => {
             // T-FLEET-HEALTH-01: _sagFleetPack (έγκυρο JSON ≤ 8000) αντί για slice· + e/nc/fc/rj/ok/bb/bt
             text: _sagFleetPack({ f: _r.f, i: _r.i, s: _s, y: _r.y, x: _r.x,
               d: _r.d || [], z: _r.z || [], g: _r.g || [], a: _r.a || [],
-              e: _r.e || null, nc: _r.nc ? 1 : 0, fc: (_r.fc === undefined ? null : _r.fc),
+              e: _r.e || null, nc: _r.nc ? 1 : 0, p: _r.p || 'agronomy', fc: (_r.fc === undefined ? null : _r.fc),
               rj: _r.rj || 0, ok: _r.ok ? 1 : 0, bb: (_r.bb === undefined ? null : _r.bb), bt: _r.bt ? 1 : 0 }) } });
       }
       // Η κεφαλίδα: ΜΙΑ γραμμή απόφασης, όχι μετρητές για επίδειξη.
