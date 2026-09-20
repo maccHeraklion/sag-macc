@@ -30,9 +30,14 @@ const REAL = extract("initMap");
 
 /* ── ένα στήσιμο περιβάλλοντος, ένα για όλους ───────────────────────────── */
 function run(code, o) {
+  /* ΤΟ ΠΕΠΛΟ ΚΑΤΑΓΡΑΦΕΙ *ΚΑΘΕ* ΑΚΡΟΑΤΗ, ΟΧΙ ΜΟΝΟ ΤΟ click.
+     Η παλιά εκδοχή κρατούσε μόνο το click — γι' αυτό ο έλεγχος ΔΕΝ είδε ποτέ
+     ότι ένα πάτημα με δάχτυλο δεν παραδίδει click. Ένα ψεύτικο που δέχεται
+     μόνο ό,τι περιμένει, επιβεβαιώνει τον εαυτό του. */
   const veil = {
-    id: "mapveil", hidden: true, _click: null,
-    addEventListener(ev, fn) { if (ev === "click") this._click = fn; },
+    id: "mapveil", hidden: true, _on: {},
+    addEventListener(ev, fn) { (this._on[ev] = this._on[ev] || []).push(fn); },
+    fire(ev) { for (const fn of this._on[ev] || []) fn({ type: ev }); return (this._on[ev] || []).length; },
   };
   const cap = { opts: null, enabled: false };
   const L = {
@@ -86,9 +91,24 @@ function scenarios(code) {
   r = run(code, { pointer: "coarse", touch: true, maxTouchPoints: 5 });
   want("κινητό → κλειδωμένος αρχικά", r.cap.opts.dragging, false);
   want("κινητό → πέπλο ορατό", r.veil.hidden, false);
-  if (r.veil._click) r.veil._click();
-  want("κινητό → το πάτημα ξεκλειδώνει", r.cap.enabled, true);
-  want("κινητό → το πέπλο φεύγει", r.veil.hidden, true);
+  /* T-MAPVEIL-01 — ΤΟ ΣΦΑΛΜΑ ΤΗΣ ΑΝΑΦΟΡΑΣ: «Το πατάω και δεν ξεκλειδώνει».
+     ΜΕΤΡΗΜΕΝΟ σε εξομοίωση κινητού πάνω στον ΖΩΝΤΑΝΟ πίνακα: ένα πάτημα με
+     δάχτυλο παρέδωσε στο πέπλο touchstart=1, touchend=1, click=0, pointerup=0.
+     Άρα ΚΑΘΕ μονοπάτι πρέπει να ξεκλειδώνει ΜΟΝΟ ΤΟΥ — δεν αρκεί να περνάει
+     το σενάριο όταν τα ρίξω όλα μαζί. */
+  for (const ev of ["click", "touchend", "pointerup"]) {
+    const t = run(code, { pointer: "coarse", touch: true, maxTouchPoints: 5 });
+    const delivered = t.veil.fire(ev);
+    want(`κινητό → υπάρχει ακροατής «${ev}»`, delivered > 0, true);
+    want(`κινητό → ΜΟΝΟ «${ev}» ξεκλειδώνει τον χάρτη`, t.cap.enabled, true);
+    want(`κινητό → ΜΟΝΟ «${ev}» κρύβει το πέπλο`, t.veil.hidden, true);
+  }
+
+  /* Δύο γεγονότα στη σειρά (touchend και μετά το συνθετικό click): δεν πρέπει
+     να σκάσει τίποτα — η συνάρτηση είναι ιδεμποτεντική. */
+  r = run(code, { pointer: "coarse", touch: true, maxTouchPoints: 5 });
+  r.veil.fire("touchend"); r.veil.fire("click");
+  want("κινητό → διπλό γεγονός δεν χαλάει τίποτα", r.cap.enabled && r.veil.hidden, true);
 
   r = run(code, { noMatchMedia: true, touch: true, maxTouchPoints: 5 });
   want("χωρίς matchMedia + ontouchstart → κλειδωμένος (εφεδρεία)", r.cap.opts.dragging, false);
@@ -132,6 +152,14 @@ const MUTATIONS = [
   ["πάντα κλειδωμένος", /dragging: !_isTouch/, "dragging: false"],
   ["πάντα ξεκλείδωτος", /dragging: !_isTouch/, "dragging: true"],
   ["το πέπλο δεν ξεκλειδώνει", /state\.map\.dragging\.enable\(\);/, ""],
+  /* Οι τρεις παρακάτω είναι ΑΚΡΙΒΩΣ το σφάλμα που διορθώθηκε: αν λείπει ο
+     ακροατής της αφής, ο χρήστης κινητού πατάει και δεν ξεκλειδώνει ποτέ. */
+  ["λείπει ο ακροατής touchend (ΤΟ ΑΡΧΙΚΟ ΣΦΑΛΜΑ)",
+    /_veil\.addEventListener\('touchend', _unlock\);/, ""],
+  ["λείπει ο ακροατής pointerup",
+    /_veil\.addEventListener\('pointerup', _unlock\);/, ""],
+  ["λείπει ο ακροατής click",
+    /_veil\.addEventListener\('click', _unlock\);/, ""],
   ["το πέπλο δεν κρύβεται", /_veil\.hidden = true;/, ""],
   ["ο τροχός ζουμάρει μόνος", /scrollWheelZoom: false/, "scrollWheelZoom: true"],
   ["η εφεδρεία αγνοεί την αφή", /\|\| \(navigator && navigator\.maxTouchPoints > 0\)/, "|| false"],

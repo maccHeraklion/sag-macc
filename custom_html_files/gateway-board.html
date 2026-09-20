@@ -410,10 +410,21 @@ function initMap() {
     var _veil = $('mapveil');
     if (_veil) {
       _veil.hidden = false;
-      _veil.addEventListener('click', function () {
+      /* T-MAPVEIL-01 — ΤΟ «click» ΜΟΝΟ ΤΟΥ ΔΕΝ ΦΤΑΝΕΙ ΣΕ ΚΙΝΗΤΟ.
+         ΜΕΤΡΗΜΕΝΟ σε εξομοίωση κινητού (375×812, pointer:coarse): ένα πάτημα με
+         δάχτυλο παραδίδει στο πέπλο touchstart=1 και touchend=1, αλλά click=0.
+         Αρκεί η παραμικρή ακούσια μετακίνηση του δαχτύλου για να ακυρώσει ο
+         φυλλομετρητής το click. Ο χρήστης πατούσε και ΔΕΝ ξεκλείδωνε ΠΟΤΕ.
+         Ακούμε πλέον ό,τι φτάνει ΠΡΑΓΜΑΤΙΚΑ και ξεκλειδώνουμε στο πρώτο που
+         έρθει. Η συνάρτηση είναι ιδεμποτεντική, οπότε δεν πειράζει αν έρθουν
+         δύο. */
+      var _unlock = function () {
         try { state.map.dragging.enable(); } catch (_e2) {}
         _veil.hidden = true;
-      });
+      };
+      _veil.addEventListener('click', _unlock);
+      _veil.addEventListener('touchend', _unlock);
+      _veil.addEventListener('pointerup', _unlock);
     }
   }
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
