@@ -236,13 +236,31 @@ function applyRoster(list) {
     var r = list[i];
     if (!r || !r.id) continue;
     var id = String(r.id);
+    /* T-GWROSTER-POS-01: ο κατάλογος φέρνει πλέον ΚΑΙ θέση, από την
+       ετικέτα «coordinates» της συσκευής. Πριν, η θέση ερχόταν ΜΟΝΟ από το
+       δίκτυο (lrrlat/lrrlon) — άρα μόνο για όσα gateway κατονόμασε κάποιος
+       αισθητήρας. Με 38 στους 220 αισθητήρες να στέλνουν lrrid, ο χάρτης
+       έδειχνε 5 από 21. */
+    var rLat = Number(r.lat), rLng = Number(r.lng);
+    /* ΠΡΟΣΟΧΗ: Number(null) === 0 — χωρίς αυτόν τον έλεγχο, ρητό lat:null
+       θα περνούσε ως έγκυρη θέση και θα έβαζε πινέζα στον Κόλπο της
+       Γουινέας. Το έπιασε ο έλεγχος πριν φτάσει στην παραγωγή. */
+    var rHas = r.lat != null && r.lng != null
+      && isFinite(rLat) && isFinite(rLng)
+      && rLat >= -90 && rLat <= 90 && rLng >= -180 && rLng <= 180;
     if (!state.gw[id]) {
       state.gw[id] = { id: id, name: r.name ? String(r.name) : '', phone: '',
-        lat: null, lng: null, vars: {}, roster: true, storage: !!r.storage };
+        lat: rHas ? rLat : null, lng: rHas ? rLng : null,
+        vars: {}, roster: true, storage: !!r.storage, fromRoster: rHas };
     } else {
       state.gw[id].roster = true;
       state.gw[id].storage = !!r.storage;
       if (!state.gw[id].name && r.name) state.gw[id].name = String(r.name);
+      /* Η θέση του δικτύου ΥΠΕΡΙΣΧΥΕΙ: στην Αγχίαλο η ετικέτα είχε λάθος
+         μήκος (20,78 αντί 22,78) και το δίκτυο το διέψευσε. */
+      if (rHas && state.gw[id].lat == null) {
+        state.gw[id].lat = rLat; state.gw[id].lng = rLng; state.gw[id].fromRoster = true;
+      }
     }
     n++;
   }
@@ -414,14 +432,36 @@ function pinIcon(cls) {
   });
 }
 
+/* T-GWROSTER-POS-01: ένα gateway μπορεί να υπάρχει ΔΥΟ φορές: ως γραμμή δικτύου
+   (κλειδί = lrrid) και ως εγγραφή καταλόγου (κλειδί = deviceId). Δεν μπορούμε
+   να τα ταυτίσουμε με βέβαιότητα — αλλά δύο πινέζες στο ίδιο σημείο είναι
+   σχεδόν σίγουρα το ίδιο μηχάνημα. Προτεραιότητα στη γραμμή δικτύου,
+   που έχει και μαρτυρία ζωής. */
+function _tooClose(a, b) {
+  var dLat = (a.lat - b.lat) * 111320;
+  var dLng = (a.lng - b.lng) * 111320 * Math.cos(a.lat * Math.PI / 180);
+  return Math.sqrt(dLat * dLat + dLng * dLng) < 150;   /* μέτρα */
+}
+
 function drawMap(list) {
   if (!state.map || !state.layer) return;
   try { state.layer.clearLayers(); } catch (_e) {}
   state.markers = {};
+  var _plotted = [];
   var pts = [];
   for (var i = 0; i < list.length; i++) {
     var g = list[i];
     if (g.lat == null || g.lng == null) continue;
+    /* Αν αυτό έρχεται μόνο από τον κατάλογο και υπάρχει ήδη πινέζα δίπλα,
+       είναι το ίδιο μηχάνημα — μην το δείξεις δύο φορές. */
+    if (g.fromRoster) {
+      var dup = false;
+      for (var _p = 0; _p < _plotted.length; _p++) {
+        if (_tooClose(g, _plotted[_p])) { dup = true; break; }
+      }
+      if (dup) continue;
+    }
+    _plotted.push({ lat: g.lat, lng: g.lng });
     var s = statusOf(g);
     var m = L.marker([g.lat, g.lng], { icon: pinIcon(s.cls) });
     var tel = telHref(g.phone);
