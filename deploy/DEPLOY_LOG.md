@@ -1,6 +1,7 @@
 # DEPLOY LOG — τι ανέβηκε στο TagoIO, πότε, από ποιον (νεότερο πρώτα)
 
-> ## 🟢 ΚΑΤΑΣΤΑΣΗ ΤΩΡΑ: ΕΛΕΥΘΕΡΟ — τελευταία αλλαγή: **ρυθμίσεις εδάφους 5 αγρών καστανιάς** (Michalis, 23/9 15:55 UTC) — καμία αλλαγή κώδικα, μόνο ετικέτες `configuration`, επαληθευμένες με ανεξάρτητη ανάγνωση, προσωρινή πολιτική διαγραμμένη.
+> ## 🟢 ΚΑΤΑΣΤΑΣΗ ΤΩΡΑ: ΕΛΕΥΘΕΡΟ — τελευταία αλλαγή: **διαγράφηκαν 2 αγροί + 4 εξαρτήματα** (Michalis, 23/9 17:09 UTC) — ΟΡΙΣΤΙΚΟ, εφεδρεία ετικετών στο log· κανένας αισθητήρας δεν έμεινε ορφανός, 382→380 συσκευές.
+> Νωρίτερα σήμερα: ρυθμίσεις εδάφους 5 αγρών καστανιάς (15:55 UTC) — καμία αλλαγή κώδικα, μόνο ετικέτες `configuration`, επαληθευμένες με ανεξάρτητη ανάγνωση, προσωρινή πολιτική διαγραμμένη.
 > Προηγούμενο ανέβασμα: **ΠΥΡΗΝΑΣ v50.149** (Michalis, 20/9 07:10 UTC) — sha256 `33beb931…`, 1.327.852 bytes CRLF, φρουρός πριν ταίριαξε (`3dc482df…`), και τα 8 σημεία ελέγχου ανέπαφα, **η άρδευση μέσα**. **ΕΤΡΕΞΕ ΟΛΟΚΛΗΡΟΣ στον παλμό 07:21** (64 αγροί / 42 υπολογισμοί — ίδια με v50.148). Πολιτική deploy ΑΝΕΝΕΡΓΗ.
 > Σήμερα επίσης: χάρτης gateways ξεκλειδώνει με το δάχτυλο (07:03) · `createField` v2 διαβάζει τον σκοπό (06:37) · χάρτης gateways 5→21 σημεία (06:34) · φόρμα +πεδίο σκοπού (06:27).
 > **Η ΑΛΥΣΙΔΑ ΤΟΥ ΣΚΟΠΟΥ ΕΙΝΑΙ ΠΛΗΡΗΣ:** φόρμα ρωτά → `createField` γράφει tag `field_purpose` → **πυρήνας τον διαβάζει**.
@@ -11,6 +12,94 @@
 > Κάθε ανέβασμα γράφεται ΕΔΩ πριν και μετά, ώστε να το βλέπει όλη η ομάδα (Κώστας / Michalis).
 > Παράθυρο ανεβασμάτων: hh:25–hh:15 UTC, ποτέ 00:10–00:30 UTC. Κατά τη διάρκεια ενός ανεβάσματος
 > κανείς άλλος δεν ανεβάζει πυρήνα, widget ή φόρμα.
+
+## 2026-09-23 17:09 UTC — **ΔΙΑΓΡΑΦΗΚΑΝ 2 ΑΓΡΟΙ ΚΑΙ ΟΣΑ ΚΡΕΜΟΝΤΑΝ ΑΠΟ ΑΥΤΟΥΣ** (εντολή Μιχάλη)
+
+**ΟΡΙΣΤΙΚΟ. ΔΕΝ ΕΠΑΝΑΦΕΡΕΤΑΙ.** Οι πλήρεις ετικέτες και των δύο είναι πιο κάτω — είναι
+ό,τι έχει απομείνει από αυτούς.
+
+| # | τι | id | τι ήταν |
+|---|---|---|---|
+| 1 | ενέργεια | `6a74ae6f10848b000b9d45cc` | «TEST Field — Publish Pathogen Compatibility», trigger καρφωμένο στο id του TEST |
+| 2 | analysis | `6a74ae4e10848b000b9d3e03` | «TEST Field Pathogen Compatibility», tag `field_id` = το TEST |
+| 3 | πολιτική | `6a749e258acfb8000ce439a7` | «decodeTestFieldBundle — Read TEST Field», ΕΝΑΣ κανόνας, μόνο αυτό το id |
+| 4 | ταμπλό | `6a437149061cbc000c08e929` | «KEK - Αγρός - TEST - SAG Main Staging» |
+| 5 | συσκευή | `69f1f5f73f364f0009dfc615` | «KEK - Αγρός - TEST» |
+| 6 | συσκευή | `6a2bcaaaad3db0000c5b9ef1` | «Καμπάνης» |
+
+### ΓΙΑΤΙ ΗΤΑΝ ΑΣΦΑΛΕΣ — ΜΕΤΡΗΜΕΝΟ ΠΡΙΝ
+
+**Κανένας αισθητήρας δεν έμεινε ορφανός.** Και οι 4 της «KEK - Αγρός - TEST» ήταν ήδη
+μοιρασμένοι με άλλους αγρούς, ανάμεσά τους μια **βάνα uc511** που δουλεύει και για τον
+**Ρηγάκη Αντώνη** — πραγματικό πελάτη. Η διαγραφή της εγγραφής δεν την άγγιξε.
+
+**Ούτε ο πυρήνας ούτε το forecast διάβαζαν την TEST:** και τα δύο φιλτράρουν
+`isField === 'yes'` (`runPerTich.js:16117` και `:17595`, `forecast.js:110`), ενώ εκείνη είχε
+`isField = 'yesTEST'`. Η «Καμπάνης» είχε `isField=yes` και ήταν μέσα στον βρόχο — αλλά η
+επιλογή γίνεται **με ετικέτα**, οπότε απλώς δεν εμφανίζεται πια στη λίστα, χωρίς σφάλμα.
+
+Η ετικέτα `testRunPerTich` που κουβαλούσε η TEST **δεν χρησιμοποιείται πουθενά** στο repo.
+Η ενέργεια `ΚΕΚ_πλημμυρα` πυροδοτείται από ετικέτα (`kek_flood_sensor`), όχι από τη συσκευή — άσχετη.
+
+### ΤΙ ΔΕΝ ΗΞΕΡΑ ΚΑΙ ΤΟ ΛΕΩ
+
+Δεν μπόρεσα να μετρήσω **πόσα ιστορικά δεδομένα** κρατούσε η καθεμιά — η κλήση `/data/{id}`
+γύρισε «Route Not Found» με token λογαριασμού. Η TEST είχε `chunk_retention` 12 μήνες, η
+Καμπάνης 36. Ό,τι υπήρχε, χάθηκε. Και οι δύο δέχονταν ακόμη εγγραφές
+(`last_input` 22/9 21:04 και 23/9 16:21 αντίστοιχα).
+
+### ΕΠΑΛΗΘΕΥΣΗ ΜΕΤΑ (17:10 UTC, μόνο ανάγνωση)
+
+```
+ΘΘΘ   KEK - Αγρός - TEST → ΕΦΥΓΕ ✔        ΘΘΘ   Καμπάνης → ΕΦΥΓΕ ✔
+ΘΘΘ   lms01_ls φύλλου → ΖΕΙ ✔ | KEK - Αγρός, Χωράφι CyRIC, Τσικαλας
+ΘΘΘ   lse02 εδάφους  → ΖΕΙ ✔ | KEK - Αγρός, Χωράφι CyRIC, Καμπιτάκης ×2, Τσικαλας
+ΘΘΘ   uc511 ΒΑΝΑ     → ΖΕΙ ✔ | KEK - Αγρός, Ρηγάκης Αντώνης, Τσικαλας
+ΘΘΘ   s2120          → ΖΕΙ ✔ | KEK - Αγρός, Χωράφι CyRIC, Τσικαλας
+ΘΘΘ   KEK - Αγρός → ΖΕΙ ✔ (6 αισθ., ρύθμιση ΥΠΑΡΧΕΙ) · Ρηγάκης Αντώνης → ΖΕΙ ✔ (4, ΥΠΑΡΧΕΙ)
+ΘΘΘ   Χωράφι CyRIC → ΖΕΙ ✔ (5) · Τσικαλας → ΖΕΙ ✔ (6) · Καμπιτάκης → ΖΕΙ ✔ (3)
+ΘΘΘ ΣΥΝΟΛΟ συσκευών=380 | με ετικέτα isField=63
+```
+
+Ήταν 382 συσκευές και 65 με `isField` — τώρα 380 και 63. Ακριβώς −2.
+
+### ΕΦΕΔΡΕΙΑ — ΟΛΕΣ ΟΙ ΕΤΙΚΕΤΕΣ ΠΡΙΝ ΤΗ ΔΙΑΓΡΑΦΗ
+
+**«KEK - Αγρός - TEST»** `69f1f5f73f364f0009dfc615` · bucket `Field_KEK - Αγρός_TEST` ·
+connector `5f5a8f3351d4db99c40dece5` · network `5bbd0d144051a50034cd19fb` ·
+created `2026-04-29T12:13:43.869Z` · last_input `2026-09-22T21:04:28.728Z` · immutable, chunk month/12
+
+```
+access = kek
+devices = {"lms01_ls":"684c2c4ddf4dd2000a10106a","lse02":"68d668ba47d533000a48f00e","uc511":"684c42522cbc3d000a4faae9","sensecap_s2120_03F1":"680e8a1c40a654000ac660de"}
+clientName = ΚΕΚ            clientId_field = 692777a5e87d89000ad1578c
+name = KEK - Αγρός - TEST   field_type = agnostic      isField = yesTEST
+subscriptionActive = yes    subscriptionCost = 90      subscriptionCurrentCost = 0
+subscriptionEnd = 2030-03-25T00:00:00.000+02:00
+coordinates = 35.33979066593529,25.163416397356087
+fieldId = 6a437149061cbc000c08e929   accuweather_LocationKey = 2282907   testRunPerTich = yes
+configuration = {"version":3,"crops":[{"id":"vegetablecrops:tomato:1","cultivation_type_general":"vegetableCrops","cultivation_type":"tomato","periods":{"transplantation":{"start":"2026-04-01","end":"2026-04-10"},"vegetative_growth":{"start":"2026-04-11","end":"2026-04-30"},"flowering":{"start":"2026-05-01","end":"2026-05-29"},"harvest":{"start":"2026-05-30","end":"2026-07-31"}},"plantation_year":null},{"id":"vegetablecrops:melon:2","cultivation_type_general":"vegetableCrops","cultivation_type":"melon","periods":{"transplantation":{"start":"2026-04-01","end":"2026-04-02"},"vegetative_growth":{"start":"2026-04-29","end":"2026-05-29"},"flowering":{"start":"2026-05-30","end":"2026-06-15"},"harvest":{"start":"2026-06-16","end":"2026-07-31"}},"plantation_year":null},{"id":"vegetablecrops:cucumber:3","cultivation_type_general":"vegetableCrops","cultivation_type":"cucumber","periods":{"transplantation":{"start":"2026-04-01","end":"2026-04-11"},"vegetative_growth":{"start":"2026-04-12","end":"2026-05-12"},"flowering":{"start":"2026-05-13","end":"2026-05-20"},"harvest":{"start":"2026-06-30","end":"2026-08-30"}},"plantation_year":null},{"id":"vegetablecrops:zucchini:4","cultivation_type_general":"vegetableCrops","cultivation_type":"zucchini","periods":{"transplantation":{"start":"2026-04-01","end":"2026-04-02"},"vegetative_growth":{"start":"2026-04-15","end":"2026-04-29"},"flowering":{"start":"2026-05-30","end":"2026-06-30"},"harvest":{"start":"2026-07-01","end":"2026-08-31"}},"plantation_year":null}],"soil_type":"loamy","sensor_deep_depth_cm":30,"sensorShallow_depth_cm":null}
+```
+
+**«Καμπάνης»** `6a2bcaaaad3db0000c5b9ef1` · bucket `Field_Καμπάνης` ·
+connector `62333bd36977fc001a2990c8` · network `62336c32ab6e0d0012e06c04` ·
+created `2026-06-12T09:00:26.064Z` · last_input `2026-09-23T16:21:28.737Z` · immutable, chunk month/36
+
+```
+isField = yesDEA            isField = yes              isFieldBP = yesBP
+role = field               name = Καμπάνης
+clientId_field = kampanis  clientName = Χρήστος Καμπάνης
+field_type = agnostic      coordinates = 35.5137828,24.0203104
+devices = {}               configuration = {"version":3,"crops":[]}
+subscriptionActive = yes   subscriptionCost = 0       subscriptionCurrentCost = 0
+address = Chania, Greece   fieldId = 6a2bcaaaad3db0000c5b9ef1   (έδειχνε στον ΕΑΥΤΟ του — δεν υπήρξε ποτέ ταμπλό)
+```
+
+### ΕΚΚΡΕΜΕΙ
+
+Η analysis **`6a749e1f8acfb8000ce4376b` («decodeTestFieldBundle»)** ζει ακόμη. Ήταν ο
+αποδέκτης της πολιτικής που διέγραψα, άρα τώρα δεν έχει πρόσβαση σε τίποτα. **Δεν τη
+διέγραψα** γιατί δεν ήταν στη λίστα που συμφωνήσαμε. Απόφαση Μιχάλη.
 
 ## 2026-09-23 15:55 UTC — **ΔΙΟΡΘΩΣΗ ΕΔΑΦΟΥΣ ΣΕ 5 ΑΓΡΟΥΣ ΚΑΣΤΑΝΙΑΣ** (εργαστηριακές αναλύσεις)
 
