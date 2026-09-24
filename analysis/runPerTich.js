@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.152 · 2026-09-24';
+const SAG_KERNEL_VERSION = 'v50.153 · 2026-09-24';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -14541,6 +14541,56 @@ function _sagComputeAges(data, fieldName) {
 
 // Δείκτες ορατότητας. ΔΕΝ μπλοκάρουν τίποτα — δίνουν στον αγρότη την πληροφορία που
 // έλειπε: πόσο παλιά είναι στην πραγματικότητα αυτά που βλέπει.
+// ── T-AVG-COVERAGE-01 (v50.153 · 24/9/2026, §8.1 απογραφής) · ΟΙ 24ΩΡΟΙ ΜΕΣΟΙ ΔΗΛΩΝΟΥΝ ΚΑΛΥΨΗ ──
+// Το TagoIO `query:'avg'` γυρίζει έναν αριθμό χωρίς πλήθος: 3 μετρήσεις και 70 έδιναν
+// ίδιας μορφής «μέσο 24ώρου» και τροφοδοτούσαν IPSI/ET0/BPI σιωπηλά. Η κάλυψη υπάρχει
+// ήδη στο `diag_stats` (n, spanH ανά μεταβλητή, μία φορά την ημέρα, έως 26 ω πίσω).
+// ΠΥΛΗ: ο μέσος επιτρέπεται μόνο με n ≥ 6 ΚΑΙ κάλυψη ≥ 6 ω. Άγνωστη κάλυψη -> δεν κρίνουμε.
+// Όταν ο μέσος αγνοείται, οι καταναλωτές πέφτουν στην τελευταία στιγμιαία τιμή (υπάρχουσα
+// διαδρομή: _sagSoilMoistRead, T-ET0-WHYNOT-01) και ο δείκτης `avg_window_status` το λέει.
+const _SAG_AVG_MIN_N = 6;
+const _SAG_AVG_MIN_SPAN_H = 6;
+function _sagAvgCov(stat) {
+  if (!stat || typeof stat !== 'object') return null;
+  const n = Number(stat.n), h = Number(stat.spanH);
+  if (!Number.isFinite(n) || !Number.isFinite(h)) return null;
+  return { n: n, spanH: Math.round(h * 10) / 10, ok: (n >= _SAG_AVG_MIN_N && h >= _SAG_AVG_MIN_SPAN_H) };
+}
+// true = ο 24ωρος μέσος του μεγέθους επιτρέπεται· κάθε κρίση καταγράφεται για τον δείκτη.
+function _sagAvgGate(data, inv, devName, varName) {
+  const cov = _sagAvgCov(inv && inv.stats ? inv.stats[varName] : null);
+  if (data && typeof data === 'object') {
+    data._sagAvgCov = Array.isArray(data._sagAvgCov) ? data._sagAvgCov : [];
+    data._sagAvgCov.push({ dev: String(devName || '—'), v: String(varName || '—'),
+      n: cov ? cov.n : null, h: cov ? cov.spanH : null, ok: cov ? cov.ok : null });
+  }
+  return cov ? cov.ok : true;
+}
+function _sagAvgCovIndicators(data) {
+  const rows = (data && Array.isArray(data._sagAvgCov)) ? data._sagAvgCov : [];
+  const seen = {}, known = [];
+  for (const r of rows) {
+    if (!r || r.ok === null || r.ok === undefined) continue;
+    const k = r.dev + '|' + r.v;
+    if (seen[k]) continue;   // ο σταθμός περνά δύο φορές από τη συγχώνευση (T-REMERGE-01)
+    seen[k] = 1; known.push(r);
+  }
+  if (!known.length) return [];
+  const bad = known.filter(r => !r.ok);
+  if (!bad.length) {
+    return [{ variable: 'avg_window_status', value: 'Πλήρη 24ωρα · ' + known.length + ' μεγέθη',
+      metadata: { color: 'green' } }];
+  }
+  return [{ variable: 'avg_window_status',
+    value: 'Ελλιπή 24ωρα: ' + bad.length + ' από ' + known.length + ' μεγέθη',
+    metadata: { color: 'orange',
+      text: bad.map(r => r.v + ' (' + r.dev + '): ' + r.n + ' μετρήσεις σε ' + r.h + ' ώρες').join(' · ')
+        + ' — όριο ' + _SAG_AVG_MIN_N + ' μετρήσεις σε ' + _SAG_AVG_MIN_SPAN_H + ' ώρες. Ο μέσος 24ώρου '
+        + 'αυτών των μεγεθών ΑΓΝΟΗΘΗΚΕ· οι δείκτες χρησιμοποιούν την τελευταία μέτρηση. Η κάλυψη '
+        + 'μετριέται στο τελευταίο 24ωρο της διάγνωσης οργάνων (έως 26 ώρες πίσω).' } }];
+}
+// ── End T-AVG-COVERAGE-01 ────────────────────────────────────────────────
+
 function _sagAgeIndicators(data) {
   const out = [];
   try {
@@ -16802,18 +16852,21 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
       // ΤΩΡΑ: το em300/em320 γράφει σε ΔΙΚΑ ΤΟΥ κλειδιά. Η επίλυση γίνεται μία φορά
       // στο τέλος (T-MET-REFERENCE-01, πιο κάτω) με ρητή προτεραιότητα στον σταθμό
       // και ρητή δήλωση της πηγής. Αγρός ΜΟΝΟ με em320 συνεχίζει να δουλεύει.
-      if (avgMap.temperature && Number.isFinite(Number(avgMap.temperature.value))) {
+      // T-AVG-COVERAGE-01: μέσος/μέγιστο/ελάχιστο ΜΟΝΟ με κάλυψη 24ώρου.
+      const _okCanT = _sagAvgGate(data, _inv, info?.name || value, 'temperature');
+      const _okCanRH = _sagAvgGate(data, _inv, info?.name || value, 'humidity');
+      if (_okCanT && avgMap.temperature && Number.isFinite(Number(avgMap.temperature.value))) {
         deviceData.canopy_temperature_avg = Number(avgMap.temperature.value);
       }
-      if (maxMap.temperature && Number.isFinite(Number(maxMap.temperature.value))) {
+      if (_okCanT && maxMap.temperature && Number.isFinite(Number(maxMap.temperature.value))) {
         deviceData.canopy_temperature_max = Number(maxMap.temperature.value);
       }
-      if (minMap.temperature && Number.isFinite(Number(minMap.temperature.value))) {
+      if (_okCanT && minMap.temperature && Number.isFinite(Number(minMap.temperature.value))) {
         deviceData.canopy_temperature_min = Number(minMap.temperature.value);
       }
 
       // T-ET0-DAILY-INPUTS-01: 24ωρος μέσος σχετικής υγρασίας από το em300/em320.
-      if (rhAvgMap.humidity && Number.isFinite(Number(rhAvgMap.humidity.value))) {
+      if (_okCanRH && rhAvgMap.humidity && Number.isFinite(Number(rhAvgMap.humidity.value))) {
         deviceData.humidity_avg = Number(rhAvgMap.humidity.value);
       }
     }
@@ -16869,7 +16922,11 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
           }),
         ], fieldName, info?.name || value, _inv);
 
+        // T-AVG-COVERAGE-01: ο 24ωρος μέσος/μέγιστο/ελάχιστο μπαίνει ΜΟΝΟ αν το 24ωρο είχε κάλυψη.
+        const _okAirT = _sagAvgGate(data, _inv, info?.name || value, 'air_temperature');
+        const _okAirRH = _sagAvgGate(data, _inv, info?.name || value, 'air_humidity');
         if (
+          _okAirT &&
           (deviceData.air_temperature_avg === null ||
             deviceData.air_temperature_avg === undefined) &&
           Number.isFinite(_sagNum(avgAirTempArr?.[0]?.value))
@@ -16877,6 +16934,7 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
           deviceData.air_temperature_avg = _sagNum(avgAirTempArr?.[0]?.value);
         }
         if (
+          _okAirT &&
           (deviceData.air_temperature_max === null ||
             deviceData.air_temperature_max === undefined) &&
           Number.isFinite(_sagNum(maxTempArr?.[0]?.value))
@@ -16884,6 +16942,7 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
           deviceData.air_temperature_max = _sagNum(maxTempArr?.[0]?.value);
         }
         if (
+          _okAirT &&
           (deviceData.air_temperature_min === null ||
             deviceData.air_temperature_min === undefined) &&
           Number.isFinite(_sagNum(minTempArr?.[0]?.value))
@@ -16891,7 +16950,7 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
           deviceData.air_temperature_min = _sagNum(minTempArr?.[0]?.value);
         }
         // T-ET0-DAILY-INPUTS-01: 24ωροι μέσοι για τον ημερήσιο τύπο FAO-56.
-        if (Number.isFinite(Number(avgRhArr?.[0]?.value))) {
+        if (_okAirRH && Number.isFinite(Number(avgRhArr?.[0]?.value))) {
           deviceData.air_humidity_avg = Number(avgRhArr[0].value);
         }
         if (Number.isFinite(Number(avgWindArr?.[0]?.value))) {
@@ -17155,6 +17214,8 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
       // παθογόνα δεν υπολογίστηκε. Γράφουμε μόνο ό,τι υπάρχει.
       for (let _i = 0; _i < _SOIL_AVG_CH.length; _i++) {
         const _arr = _soilAvgRes[_i];
+        // T-AVG-COVERAGE-01: χωρίς κάλυψη 24ώρου ο μέσος δεν γράφεται — το IPSI παίρνει τη στιγμιαία.
+        if (!_sagAvgGate(data, _inv, info?.name || value, _SOIL_AVG_CH[_i])) continue;
         if (Array.isArray(_arr) && _arr.length > 0) {
           deviceData[_SOIL_AVG_CH[_i] + '_avg'] = _arr;
         }
@@ -17185,7 +17246,8 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
       // Η γυμνή ανάθεση το διέδιδε: στον Α1 - Περαντωνάκη έδωσε soil_moisture_avg
       // = undefined -> IPSI undefined -> το FIR δεν έτρεξε -> ΚΑΝΕΝΑ από τα 10
       // παθογόνα δεν υπολογίστηκε. Γράφουμε μόνο ό,τι υπάρχει.
-      if (Array.isArray(soil_moisture_avg) && soil_moisture_avg.length > 0) {
+      if (Array.isArray(soil_moisture_avg) && soil_moisture_avg.length > 0
+          && _sagAvgGate(data, _inv, info?.name || value, 'soil_moisture')) {   // T-AVG-COVERAGE-01
         deviceData.soil_moisture_avg = soil_moisture_avg;
       }
 
@@ -17216,7 +17278,8 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
       // Η γυμνή ανάθεση το διέδιδε: στον Α1 - Περαντωνάκη έδωσε soil_moisture_avg
       // = undefined -> IPSI undefined -> το FIR δεν έτρεξε -> ΚΑΝΕΝΑ από τα 10
       // παθογόνα δεν υπολογίστηκε. Γράφουμε μόνο ό,τι υπάρχει.
-      if (Array.isArray(temp_soil_avg) && temp_soil_avg.length > 0) {
+      if (Array.isArray(temp_soil_avg) && temp_soil_avg.length > 0
+          && _sagAvgGate(data, _inv, info?.name || value, 'temp_soil')) {   // T-AVG-COVERAGE-01
         deviceData.temp_soil_avg = temp_soil_avg;
       }
 
@@ -19553,6 +19616,7 @@ module.exports = new Analysis(async (context) => {
               metadata: { color: 'grey', text: 'Έκδοση του συστήματος υπολογισμών.' } },
             ..._sagMultiSensorIndicators(measurements?.data),
             ..._sagAgeIndicators(measurements?.data),
+            ..._sagAvgCovIndicators(measurements?.data),   // T-AVG-COVERAGE-01
             // T-LIGHTRING-01 / T-DIAG-DAILY-01: ΚΑΤΑΣΤΑΣΗ ανά συσκευή — πρέπει
             // να μπει στο bundle για να τη βρει το επόμενο tick.
             ...Object.keys(measurements?.data || {})
