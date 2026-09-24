@@ -360,6 +360,16 @@
           </select>
           <div class="muted" style="font-size:.85rem; margin-top:4px">Σε καλυμμένη: η βροχή του σταθμού αγνοείται και το όριο θερμοκρασίας αέρα φτάνει 65 °C</div>
         </div>
+        <!-- v20 · 24/9/2026 · T-METER-FORM-01: ο ελεγκτής Milesight μετρά ΠΑΛΜΟΥΣ· χωρίς υδρόμετρο ο
+             καταχωρητής δεν είναι νερό. Το widget δείχνει «Μετρητής νερού» μόνο αν δηλωθεί ΝΑΙ. -->
+        <div class="field">
+          <label>Υδρόμετρο συνδεδεμένο στον ελεγκτή</label>
+          <select id="has_water_meter">
+            <option value="false">Όχι — χωρίς υδρόμετρο</option>
+            <option value="true">Ναι — υδρόμετρο παλμών στην είσοδο του ελεγκτή</option>
+          </select>
+          <div class="muted" style="font-size:.85rem; margin-top:4px">Χωρίς υδρόμετρο ο ελεγκτής μετρά μόνο παλμούς — δεν είναι κυβικά νερού. Το ταμπλό κρύβει τον «Μετρητή νερού» όσο είναι «Όχι».</div>
+        </div>
         <!-- v5: T-COVER-01 — μόνο για καλυμμένη καλλιέργεια· αλλιώς αγνοούνται. -->
         <div class="field" id="fld_cover_transmissivity">
           <label>Διαπερατότητα καλύμματος στο φως (%)</label>
@@ -2048,7 +2058,7 @@ document.addEventListener('input', function(ev){
 }, true);
 
 ['area','total_plants','irrig_emitter_lph','irrig_emitter_spacing_m','irrig_row_spacing_m',
- 'irrig_fw_pct','irrigation_system','soil_type','water_quality','covered_cultivation',
+ 'irrig_fw_pct','irrigation_system','soil_type','water_quality','covered_cultivation','has_water_meter',
  'hist_verticillium','hist_phytophthora','hist_sclerotinia','hist_rhizoctonia',
  'susceptible_years_5yr','nem_found_3yr','nem_solarization_12mo','nem_resistant_cultivar',
  'knot_observations','wound_pruning_date','wound_hail_date','wound_frost_date'].forEach(function(id){
@@ -2163,6 +2173,7 @@ function buildPayload(){
       (prevConf.soil_texture_class in SOIL_TEXTURES) ? prevConf.soil_texture_class : undefined),
     irrigation_system: _keepPrev($('irrigation_system').value || null, prevConf.irrigation_system),
     covered_cultivation: $('covered_cultivation').value === 'true',
+    has_water_meter: $('has_water_meter').value === 'true',   /* v20 · T-METER-FORM-01 */
 
     /* T-SOILMODELS-01: ιστορικό εδαφογενών/νηματωδών/πληγών — ο πυρήνας τα
        μετατρέπει σε field_history / wound_history / nematode_field_history */
@@ -2507,6 +2518,7 @@ function applyIncoming(buckets, formLocked){
         if (conf.irrigation_system!=null) $('irrigation_system').value = conf.irrigation_system;
         if (conf.water_quality!=null) $('water_quality').value = conf.water_quality;
         if (conf.covered_cultivation!=null) $('covered_cultivation').value = String(conf.covered_cultivation) === 'true' ? 'true' : 'false';
+        $('has_water_meter').value = String(conf.has_water_meter) === 'true' ? 'true' : 'false';   /* v20 · T-METER-FORM-01: κενό = Όχι */
         try { syncCoverGates(); } catch(e){}   /* T-COVERGATE-01 */
         /* T-SOILMODELS-01 */
         ['hist_verticillium','hist_phytophthora','hist_sclerotinia','hist_rhizoctonia',

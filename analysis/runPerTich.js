@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.153 · 2026-09-24';
+const SAG_KERNEL_VERSION = 'v50.154 · 2026-09-24';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -19688,6 +19688,9 @@ module.exports = new Analysis(async (context) => {
               _daily.push({ variable: 'field_method_card',
                 value: _SAG_METHOD_CARD.n,
                 metadata: { color: 'grey', text: String(_SAG_METHOD_CARD.t).slice(0, 2000) } });
+              // T-METHODCARD-02 (v50.154, §8.7): η ΙΔΙΑ κάρτα και ως field_bundle_2 — το widget δεν έχει το field_method_card στις μεταβλητές του, το field_bundle_2 ΝΑΙ (συγχωνεύεται στο shared). Μία φορά την ημέρα, χωρίς συμπίεση.
+              _daily.push({ variable: 'field_bundle_2', value: _SAG_METHOD_CARD.n, metadata: { schema: { name: 'field_bundle_2', version: 1, source: 'T-METHODCARD-02' },
+                shared: { field_method_card: { value: _SAG_METHOD_CARD.n, metadata: { color: 'grey', text: String(_SAG_METHOD_CARD.t).slice(0, 2000) } } } } });
             }
             if (_daily.length) await dev_to_send_meas.sendData(_daily);
           } catch (_eUp) {
