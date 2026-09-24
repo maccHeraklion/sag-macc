@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.154 · 2026-09-24';
+const SAG_KERNEL_VERSION = 'v50.155 · 2026-09-24';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -6065,7 +6065,9 @@ function calculate_CropGDD(hourTick, measurements, parameters) {
     // T-GDD-SEASON-01: η εποχή στην οποία ανήκει ο συσσωρευτής· το επόμενο tick
     // τη συγκρίνει για να αποφασίσει αν άνοιξε νέα εποχή.
     { variable: "gdd_season_key", value: _seasonKey, metadata: { internal: true } },
-    _cgOk,
+    // T-ACCUMNUM-01 (v50.155): «ενεργές» χωρίς αριθμό δεν λέει τίποτα — πόσες βαθμοημέρες, από πότε.
+    Object.assign(_cgOk, { value: 'Ενεργές · ' + Math.round(newAccum) + ' °C·ημ'
+      + (function () { try { const d = _sagSeasonStartDate(_seasonKey); return d ? ' από ' + d.getDate() + '/' + (d.getMonth() + 1) : ''; } catch (_e) { return ''; } })() }),
   ];
 }
 
@@ -8467,6 +8469,7 @@ function calculate_InfectionHours(hourTick, measurements, parameters) {
   // SAG-NOSILENT-01: δηλώνουμε ΚΑΙ την επιτυχία (αλλιώς το «Ανενεργό» μένει).
   // T-IHFREEZE-01: και δηλώνουμε ΡΗΤΑ την παύση — αλλιώς ο παραγωγός βλέπει
   // «Ενεργό» ενώ ο μετρητής δεν προχωρά.
+  const _ihOk = { variable: 'infection_model_status', value: 'Ώρες μόλυνσης: ενεργές', metadata: { color: 'green' } };   // T-ACCUMNUM-01: η τιμή συμπληρώνεται μετά τον βρόχο
   indicators.push(_ihFrozen
     ? { variable: 'infection_model_status', value: 'Σε παύση — παλιά μέτρηση',
         metadata: { color: 'orange',
@@ -8475,8 +8478,7 @@ function calculate_InfectionHours(hourTick, measurements, parameters) {
             + '(όριο ' + (_ihAgeLimitMin / 60).toFixed(1) + ' h). Ο μετρητής ΔΙΑΤΗΡΕΙΤΑΙ '
             + 'όπως ήταν — δεν μηδενίζεται και δεν ανεβαίνει, γιατί δεν υπάρχει μέτρηση '
             + 'για να κριθεί. ' + _SAG_X_CHK_STATION } }
-    : { variable: 'infection_model_status', value: 'Ώρες μόλυνσης: ενεργές',
-        metadata: { color: 'green' } });
+    : _ihOk);
 
   const _pWetH = _lwsSameDay ? Number(getVal(measurements, "leaf_wet_hours_today", 0)) : 0;
   // T-LWFREEZE-01: ΠΑΓΩΜΑ, όχι μηδενισμός — «δεν ξέρω» δεν είναι «στέγνωσε».
@@ -8604,6 +8606,10 @@ function calculate_InfectionHours(hourTick, measurements, parameters) {
       indicators.push({ variable: _fbDhKey, value: parseFloat(_fbNew.toFixed(2)) });
     }
   }
+  // T-ACCUMNUM-01 (v50.155): πόσοι μύκητες παρακολουθούνται και ο ψηλότερος μετρητής ωρών.
+  if (!_ihFrozen) { const _c = indicators.filter(x => x && typeof x.variable === 'string' && x.variable.indexOf(INFECTION_HOURS_COUNTER_PREFIX) === 0);
+    const _m = _c.reduce((a, x) => Math.max(a, Number(x.value) || 0), 0);
+    _ihOk.value = 'Ενεργές · ' + _c.length + (_c.length === 1 ? ' μύκητας' : ' μύκητες') + ' · μέγ. ' + Math.round(_m) + ' ω'; }
 
   return indicators;
 }
@@ -10546,9 +10552,11 @@ function calculate_BPI(dailyTich, measurements, ipsi, parameters, ipsiError = ""
     } else if (min_factor === f_Soil) {
       // FIX-13: το f_Soil πέφτει ΚΑΙ σε πολύ ζεστό έδαφος — το μήνυμα έλεγε πάντα «κρύο».
       const _soilHot = soilTemp_avg > _soilTrap.opt;   // T-BPI-SOILTEMP-01
+      // T-BPI-SOILTXT-01 (v50.155): η κρίση λέει ΤΙ μέτρησε και ΜΕ ΤΙ το σύγκρινε — αλλιώς «Ζεστό έδαφος» δίπλα σε «27,3 °C μετρημένη» διαβάζεται ως αντίφαση. Το όριο ΔΕΝ αλλάζει.
+      const _soilTxt = 'Μέσος 24ώρου εδάφους ' + soilTemp_avg.toFixed(1) + ' °C, ' + (_soilHot ? 'πάνω' : 'κάτω') + ' από το βέλτιστο ' + _soilTrap.opt.toFixed(0) + ' °C της καλλιέργειας. Μετρά στην ανάπτυξη (BPI)· η ανάγκη για νερό κρίνεται χωριστά.';
       diagnosis = _soilHot
-        ? { code: "ROOT_HEAT", message: "Περιορισμός: Ζεστό Έδαφος (Ρίζα)", color: "#e67e22" }
-        : { code: "ROOT_STRESS", message: "Περιορισμός: Κρύο Έδαφος (Ρίζα)", color: "#f1c40f" };
+        ? { code: "ROOT_HEAT", message: "Περιορισμός: Ζεστό Έδαφος (Ρίζα)", color: "#e67e22", text: _soilTxt }
+        : { code: "ROOT_STRESS", message: "Περιορισμός: Κρύο Έδαφος (Ρίζα)", color: "#f1c40f", text: _soilTxt };
       limiting_factor = "root";
     } else {
       diagnosis = { code: "LIMITED", message: "Περιορισμός: Συνθήκες", color: "#95a5a6" };
@@ -12269,7 +12277,8 @@ function calculate_GDD(hourTich, dailyTich, measurements, parameters) {
                 + (_tAge / 60).toFixed(1) + ' ωρών. Χρησιμοποιείται η τελευταία γνωστή τιμή — είναι η '
                 + 'ακριβέστερη διαθέσιμη εκτίμηση, όχι φρέσκια μέτρηση. Η πρόβλεψη γενεών παραμένει '
                 + 'χρήσιμη αλλά λιγότερο ακριβής. Ελέγξτε τον μετεωρολογικό σταθμό.' } }
-          : { variable: 'gdd_pest_status', value: 'Βαθμοημέρες εχθρών: ενεργές',
+          : { variable: 'gdd_pest_status',   // T-ACCUMNUM-01: πόσοι εχθροί παρακολουθούνται
+              value: (function () { const n = gddIndicators.filter(x => x && typeof x.variable === 'string' && x.variable.indexOf(GDD_ACCUMULATED_PREFIX) === 0).length; return 'Ενεργές · ' + n + (n === 1 ? ' εχθρός' : ' εχθροί'); })(),
               metadata: { color: 'green' } };
       })()];
     return gddIndicators;
@@ -16005,6 +16014,14 @@ function _sagForecastStatusIndicators(fcs) {
             + '. Χρησιμοποιείται ΜΟΝΟ για προειδοποιήσεις παγετού και καύσωνα — '
             + 'η δόση άρδευσης και ο κίνδυνος παθογόνων υπολογίζονται από ΜΕΤΡΗΣΕΙΣ.' } }];
     }
+    // T-FCTEXT-02 (v50.155): παλιά πρόγνωση = θέμα πλατφόρμας. Ο αγρός ΕΧΕΙ πρόγνωση — δεν του ζητάμε να ελέγξει ετικέτες και analyses.
+    if (fcs && Number.isFinite(fcs.ageH) && fcs.ageH > _SAG_FORECAST_MAX_AGE_H) {
+      return [{ variable: 'forecast_status', value: 'Παλιά πρόγνωση',
+        metadata: { color: 'grey',
+          text: 'Τελευταία λήψη πριν ' + Math.round(fcs.ageH) + ' ώρες, όριο ' + _SAG_FORECAST_MAX_AGE_H
+            + ' ώρες. Η πλατφόρμα την ανανεώνει δύο φορές την ημέρα (00:03 και 12:03) — δεν χρειάζεται ενέργεια από τον αγρό. '
+            + 'Μέχρι τότε δεν βγαίνουν προειδοποιήσεις παγετού ή καύσωνα.' } }];
+    }
     return [{ variable: 'forecast_status', value: 'Μη διαθέσιμη',
       metadata: { color: 'grey',
         text: 'Δεν υπάρχει έγκυρη πρόγνωση για αυτόν τον αγρό: '
@@ -16168,14 +16185,16 @@ function _sagSourceIndicators(data) {
   } catch (_e) { return []; }
 }
 
-function _sagMetSourceIndicators(data) {
+function _sagMetSourceIndicators(data, covered) {   // T-METCOVERED-01 (v50.155): covered = καλυμμένη καλλιέργεια
   const s = data && data._sagMetSource;
   if (!s || s === 'none') return [];
   return [{ variable: 'met_reference_source',
     value: s === 'station' ? 'Μετεωρολογικός σταθμός' : 'Αισθητήρας κόμης',
-    metadata: { color: s === 'station' ? 'green' : 'orange',
+    metadata: { color: (s === 'station' || covered) ? 'green' : 'orange',
       text: s === 'station'
         ? 'Οι θερμοκρασίες αναφοράς προέρχονται από τον μετεωρολογικό σταθμό.'
+        : covered
+        ? 'Καλυμμένη καλλιέργεια: οι θερμοκρασίες αναφοράς από τον αισθητήρα κόμης — το σωστό όργανο μέσα σε θερμοκήπιο, όπου δεν υπάρχει «έκθεση 2 m».'   // T-METCOVERED-01
         : 'Χωρίς μετεωρολογικό σταθμό: οι θερμοκρασίες έρχονται από τον αισθητήρα '
           + 'κόμης. Έχει ασπίδα ακτινοβολίας, αλλά μετράει μέσα στο φύλλωμα και όχι '
           + 'στα 2 m του προτύπου: στους αγρούς με ΚΑΙ τα δύο όργανα έδωσε ψηλότερο '
@@ -18367,6 +18386,11 @@ module.exports = new Analysis(async (context) => {
             const _eceHow = _eceFromChain
               ? ' (από μετρημένη υγρασία, Hilhorst 2000)'
               : ' (ενδεικτικά ×2,5 — λείπει μέτρηση υγρασίας)';
+            // T-ECWORST-01 (v50.155, εντολή Μιχάλη 24/9): η ημερήσια κρίση από το ΧΕΙΡΟΤΕΡΟ βάθος — όπως ήδη το νερό ρίζας (refF = max). Ως τώρα το βαθύ ECe δεν έμπαινε σε καμία κρίση (Κουτσάκης: ρηχό 1,2 / βαθύ 2,0, όριο 2,5).
+            const _eceChain2 = (e2 === null || !_ecNum1) ? null : _sagEcChain(e2, _nE('soil_moisture2'), _nE('soil_temperature2'), _ecSatE).ece;
+            const _eceW = (_eceChain2 !== null && (_eceChain === null || _eceChain2 > _eceChain)) ? { v: _eceChain2, el: 'βαθύ', how: ' (βαθύ, από μετρημένη υγρασία, Hilhorst 2000)' }
+              : (_eceChain !== null ? { v: _eceChain, el: 'ρηχό', how: ' (ρηχό, από μετρημένη υγρασία, Hilhorst 2000)' }
+              : { v: (e1 !== null ? _eceEst(e1) : NaN), el: 'ρηχό', how: _eceHow });
             const _trendPct = (sel) => {
               const xs = _hist.map(sel).filter(v => Number.isFinite(v));
               if (xs.length < 4) return null;
@@ -18405,7 +18429,7 @@ module.exports = new Analysis(async (context) => {
               _ecphIndicators.push(..._sagEcDailyVerdict({
                 e1, e2, ref1: _refOfE('1'), ref2: _refOfE('2'),
                 fert: _numInE(fieldConfig?.fert_ecw_dsm, 0.05, 15), ecw: _numInE(fieldConfig?.water_ecw_dsm, 0.05, 15),
-                eceMax: _eceMax, eceEst: (e1 !== null ? _eceEst(e1) : NaN), eceHow: _eceHow,
+                eceMax: _eceMax, eceEst: _eceW.v, eceHow: _eceW.how,   // T-ECWORST-01
                 dead: _deadDaily, refHist: _refHistE, today: _todayE, valTxt: _valTxt }));
 
               // T-SALT-KS-01: Maas-Hoffman / FAO-56 εξ.83 — μόνο με μέτρηση EC
@@ -18413,7 +18437,7 @@ module.exports = new Analysis(async (context) => {
               // της κατηγορίας ανοχής FAO-29.
               if (Number.isFinite(_eceMax) && e1 !== null && !_deadDaily) {   // T-ECVERDICT-01 (Κ5): χωρίς Ks από νεκρό όργανο
                 const _bSlope = _eceMax < 1.5 ? 14 : _eceMax < 3 ? 10 : _eceMax < 6 ? 7 : 4;
-                const _eceNow = _eceEst(e1);
+                const _eceNow = _eceW.v;   // T-ECWORST-01: χειρότερο βάθος
                 let _ks = _eceNow > _eceMax ? 1 - (_bSlope * (_eceNow - _eceMax)) / 100 : 1;
                 _ks = Math.max(0, Math.min(1, _ks));
                 const _red = Math.round((1 - _ks) * 100);
@@ -18430,11 +18454,11 @@ module.exports = new Analysis(async (context) => {
                       // T-ECUNIFY-01: το «ενδεικτικά — μετατροπή bulk→ECe»
                       // έφυγε: με μέτρηση υγρασίας ΔΕΝ είναι ενδεικτικό πια.
                       // Το _eceHow λέει ΠΟΙΟΣ δρόμος χρησιμοποιήθηκε.
-                      ? 'Maas-Hoffman (FAO-29/56): ECe~' + _eceNow.toFixed(1) + _eceHow
+                      ? 'Maas-Hoffman (FAO-29/56): ECe~' + _eceNow.toFixed(1) + _eceW.how
                         + ' > όριο ' + _eceMax
                         + ' dS/m, κλίση ' + _bSlope + '%/dS·m → διαπνοή/ανάπτυξη −' + _red
                         + '%. → Έκπλυση με νερό καλής ποιότητας· ΟΧΙ απλώς περισσότερο νερό ίδιας ποιότητας.'
-                      : 'ECe~' + _eceNow.toFixed(1) + _eceHow + ' ≤ όριο ' + _eceMax + ' dS/m της πιο ευαίσθητης καλλιέργειας.' } });
+                      : 'ECe~' + _eceNow.toFixed(1) + _eceW.how + ' ≤ όριο ' + _eceMax + ' dS/m της πιο ευαίσθητης καλλιέργειας.' } });
               }
             }
             if (phv !== null) {
@@ -19625,7 +19649,7 @@ module.exports = new Analysis(async (context) => {
                 value: Array.isArray(measurements.data[k])
                   ? measurements.data[k][0]?.value : measurements.data[k],
                 metadata: { internal: true } })),
-            ..._sagMetSourceIndicators(measurements?.data),
+            ..._sagMetSourceIndicators(measurements?.data, !!fieldConfig?.covered_cultivation),   // T-METCOVERED-01
             // T-SOURCE-CARD-01: ποιο όργανο οδηγεί κάθε δείκτη
             ..._sagSourceIndicators(measurements?.data),
             // SAG-SENSORVIS-01: ό,τι απέρριψε η πύλη ευλογοφάνειας και ό,τι
