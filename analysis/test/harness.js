@@ -166,7 +166,9 @@ function runScenario(fns, scenario) {
   }
 
   // Step 6 — FIR (daily field infection risk per pathogen)
-  const fir = fns.calculate_FIR(dailyTich, meas, ipsi, cropParams);
+  // 24/9/2026: η υπογραφή είναι (hourTich, dailyTich, measurements, ipsiLast, parameters) —
+  // η παλιά κλήση με 4 ορίσματα μετατόπιζε τα πάντα και το FIR έβγαινε NaN σιωπηλά.
+  const fir = fns.calculate_FIR(hourTich, dailyTich, meas, ipsi, cropParams);
 
   // Step 7 — Irrigation volume recommendation
   const irrigationVolume = fns.calculate_IrrigationVolume(hourTich, meas, ipsi, cropParams);
