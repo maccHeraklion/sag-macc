@@ -25,7 +25,10 @@ function run(src) {
   // ── T-BPIDAYS-W-01 ──
   ok(src.includes("perfDays=(Number.isFinite(_pd)&&_pd>0)?Math.round(_pd):null"), "perfDays από bpi_total_days");
   ok(src.includes("perfPct:y,perfDays:perfDays,"), "perfDays στο Le");
-  ok(src.includes('Le.perfDays!==null?" (σε "+Le.perfDays+(Le.perfDays===1?" ημέρα":" ημέρες")+" με πλήρη δεδομένα)":""'), "κείμενο «σε N ημέρες με πλήρη δεδομένα»");
+  ok(src.includes('Le.perfDays!==null?(Le.perfFloor?" (σε ≥"+Le.perfDays+" ημέρες με πλήρη δεδομένα)"'), "κείμενο «σε ≥N ημέρες» με σημαία");
+  ok(src.includes('Le.perfSince?" (από "+'), "κείμενο «από η/μ» με ημερομηνία αρχής");
+  ok(src.includes(':" (σε "+Le.perfDays+(Le.perfDays===1?" ημέρα":" ημέρες")+" με πλήρη δεδομένα)")):""'), "κείμενο «σε N ημέρες» χωρίς αρχή");
+  ok(src.includes("perfSince:perfSince,perfFloor:perfFloor,"), "perfSince/perfFloor στο Le");
   ok(CORE.includes('{ variable: "bpi_total_days", value: new_total_days }'), "ο πυρήνας εκπέμπει bpi_total_days (v50.151)");
   // ── T-SOILCAL-W-01 ──
   ok(src.includes('label:"_scal10"'), "soilcal_state περνά στο modal");
@@ -58,7 +61,8 @@ console.log("ΒΑΣΗ: όλοι οι έλεγχοι πέρασαν");
 const MUT = [
   ["m1 πάντα ο ρηχός", "(idx===1?_sco.d:_sco.s)", "_sco.s"],
   ["m2 χωρίς /3", '"/3 δείγματα"', '" δείγματα"'],
-  ["m3 ημέρες σεζόν κρυφές", 'Le.perfDays!==null?" (σε "', 'false?" (σε "'],
+  ["m3 ημέρες σεζόν κρυφές", 'Le.perfDays!==null?(Le.perfFloor?', 'false?(Le.perfFloor?'],
+  ["m3b η σημαία αγνοείται", '(Le.perfFloor?" (σε ≥"', '(false?" (σε ≥"'],
   ["m4 χωρίς γραμμή συσσωρευτών", 'if(TB.gdd_crop_status||TB.infection_model_status)TR.push({k:"accumulator_basis"', 'if(false)TR.push({k:"accumulator_basis"'],
   ["m5 λάθος όριο κενού", "Κενό επικοινωνίας έως 48 ώρες", "Κενό επικοινωνίας έως 24 ώρες"],
   ["m6 scN δεν διαβάζεται", "scN=Number.isFinite(Number(_scs.n))?Math.max(0,Math.floor(Number(_scs.n))):0;", "scN=0;"],

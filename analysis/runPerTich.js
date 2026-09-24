@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.151 · 2026-09-24';
+const SAG_KERNEL_VERSION = 'v50.152 · 2026-09-24';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -10569,7 +10569,19 @@ function calculate_BPI(dailyTich, measurements, ipsi, parameters, ipsiError = ""
   // αυτό το «Αξιοποίηση σεζόν 46 %» δεν λέει αν μετρήθηκε σε 5 ή σε 50 ημέρες
   // (Κουτσάκης: ~5). Προχωρά ΜΟΝΟ εδώ, μαζί με τα σύνολα — η «Νύχτα» δεν μετρά.
   const prev_days = Number(measurements?.data?.bpi_total_days?.[0]?.value ?? 0);
-  const new_total_days = ((Number.isFinite(prev_days) && prev_days >= 0) ? Math.floor(prev_days) : 0) + 1;
+  // T-BPI-SINCE-01 (v50.152 · 24/9/2026, απόφαση Μιχάλη): το παράθυρο είναι ΗΜΕΡΟΜΗΝΙΑ,
+  // όχι μόνο μετρητής. Όταν τα σύνολα ξεκινούν από το μηδέν (κανένα προηγούμενο
+  // bpi_total_actual) η αρχή είναι σήμερα και ο μετρητής 1. Όταν η αρχή είναι άγνωστη
+  // (σπορά 24/9 σε αγρούς με ιστορικό παλαιότερο από τη διατήρηση δεδομένων) η σημαία
+  // `bpi_total_days_floor` λέει «τουλάχιστον» — και φεύγει μόνη της στην επόμενη αρχή.
+  const _hadTotals = Array.isArray(measurements?.data?.bpi_total_actual) && measurements.data.bpi_total_actual.length > 0;
+  const new_total_days = _hadTotals ? (((Number.isFinite(prev_days) && prev_days >= 0) ? Math.floor(prev_days) : 0) + 1) : 1;
+  const _todayISO = moment().tz(measurements?.timezone || 'Europe/Athens').format('YYYY-MM-DD');
+  const _prevSinceRaw = String(measurements?.data?.bpi_total_since?.[0]?.value ?? '');
+  const _prevSince = /^\d{4}-\d{2}-\d{2}$/.test(_prevSinceRaw) ? _prevSinceRaw : null;
+  const new_total_since = _hadTotals ? _prevSince : _todayISO;
+  const new_total_floor = _hadTotals && !_prevSince
+    && Number(measurements?.data?.bpi_total_days_floor?.[0]?.value ?? 0) === 1;
 
   const new_total_actual = (Number.isFinite(prev_actual) ? prev_actual : 0) + daily_growth_actual;
   const new_total_potential = (Number.isFinite(prev_potential) ? prev_potential : 0) + daily_growth_potential;
@@ -10594,6 +10606,8 @@ function calculate_BPI(dailyTich, measurements, ipsi, parameters, ipsiError = ""
     total_potential: Number(new_total_potential.toFixed(2)),
     performance_pct,
     total_days: new_total_days,   // T-BPI-DAYS-01
+    total_since: new_total_since,   // T-BPI-SINCE-01
+    total_floor: new_total_floor,
   };
 
   // ── SAG-DLI-01 · το ΣΩΣΤΟ μέγεθος φωτός, δίπλα στο BPI ────────────────
@@ -10686,6 +10700,8 @@ function calculate_BPI(dailyTich, measurements, ipsi, parameters, ipsiError = ""
     { variable: "bpi_total_actual", value: Number(new_total_actual.toFixed(2)) },
     { variable: "bpi_total_potential", value: Number(new_total_potential.toFixed(2)) },
     { variable: "bpi_total_days", value: new_total_days },   // T-BPI-DAYS-01
+    ...(new_total_since ? [{ variable: "bpi_total_since", value: new_total_since }] : []),   // T-BPI-SINCE-01
+    ...(new_total_floor ? [{ variable: "bpi_total_days_floor", value: 1 }] : []),
     { variable: "bpi_performance_pct", value: performance_pct },
   ];
 
@@ -12802,11 +12818,16 @@ function _sagMsgTidy(s) {
 }
 
 // T-BPI-DAYS-01: η δήλωση κάλυψης του σωρευτικού — σε πόσες ημέρες μετρήθηκε.
-function _sagBpiDaysTxt(days) {
+// T-BPI-SINCE-01: με ημερομηνία αρχής όταν είναι γνωστή· «τουλάχιστον» όταν δεν είναι.
+function _sagBpiDaysTxt(days, since, floor) {
   const n = Number(days);
   if (!Number.isFinite(n) || n < 1) return '';
   const r = Math.round(n);
-  return ' Μετρημένο σε ' + r + (r === 1 ? ' ημέρα' : ' ημέρες') + ' με πλήρη δεδομένα.';
+  const d = r === 1 ? ' ημέρα' : ' ημέρες';
+  if (floor) return ' Μετρημένο σε τουλάχιστον ' + r + d + ' με πλήρη δεδομένα — η αρχή είναι παλαιότερη από το διαθέσιμο ιστορικό.';
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(since || ''));
+  if (m) return ' Μετρημένο από ' + Number(m[3]) + '/' + Number(m[2]) + '/' + m[1] + ' (' + r + d + ' με πλήρη δεδομένα).';
+  return ' Μετρημένο σε ' + r + d + ' με πλήρη δεδομένα.';
 }
 
 function getFertilizationGrowthMessages(bpi, bpiError, bpiContext) {
@@ -12866,13 +12887,15 @@ function getFertilizationGrowthMessages(bpi, bpiError, bpiContext) {
 
     const seasonMeta = {
       color: (Number(bpiContext.performance_pct ?? 0) >= 90) ? "green" : (Number(bpiContext.performance_pct ?? 0) >= 75) ? "blue" : (Number(bpiContext.performance_pct ?? 0) >= 60) ? "orange" : "red",
-      text: accumulated.message + _sagBpiDaysTxt(bpiContext.total_days)   // T-BPI-DAYS-01
+      text: accumulated.message + _sagBpiDaysTxt(bpiContext.total_days, bpiContext.total_since, bpiContext.total_floor)   // T-BPI-DAYS-01/T-BPI-SINCE-01
         + ((bpiContext && bpiContext.light_source && bpiContext.light_source !== 'sensor')
         ? ' (σωρευτικό με εκτιμώμενο φως — όχι μέτρηση)' : ''),
       performance_pct: bpiContext.performance_pct,
       total_actual: bpiContext.total_actual,
       total_potential: bpiContext.total_potential,
       total_days: bpiContext.total_days,   // T-BPI-DAYS-01
+      total_since: bpiContext.total_since,   // T-BPI-SINCE-01
+      total_floor: bpiContext.total_floor,
     };
 
     return [

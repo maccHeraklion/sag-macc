@@ -46,7 +46,7 @@ function run(text) {
   const ok = (cond, msg) => { if (!cond) failures.push(msg); };
 
   // ── Α. καλωδίωση ──
-  ok(text.includes("const SAG_KERNEL_VERSION = 'v50.151 · 2026-09-24';"), "έκδοση v50.151");
+  ok(text.includes("const SAG_KERNEL_VERSION = 'v50.152 · 2026-09-24';"), "έκδοση v50.152");
   ok((text.match(/if \(_cpProf && !fieldConfig\?\.covered_cultivation\) \{/g) || []).length === 1, "πύλη καλύμματος στο _anomDays");
   ok(text.includes("st.e = _wet ? 1 : 0;"), "st.e από _wet");
   ok(text.includes("const _lowSide = !rng || (cur <= rng.mn + 0.35 * (rng.mx - rng.mn));"), "_lowSide");
@@ -130,7 +130,7 @@ const MUT = [
   ["m4 παλιό κριτήριο ασυμφωνίας", "const _mismatch = (_fcE < _refillT)", "const _mismatch = (_fcE < M_wilt + 0.25 * _tawT)"],
   ["m5 χωρίς πύλη καλύμματος", "if (_cpProf && !fieldConfig?.covered_cultivation) {", "if (_cpProf) {"],
   ["m6 κάτω τρίτο -> όλο το εύρος", "0.35 * (rng.mx - rng.mn)", "1.0 * (rng.mx - rng.mn)"],
-  ["m7 παλιά έκδοση", "'v50.151 · 2026-09-24'", "'v50.150 · 2026-09-24'"],
+  ["m7 παλιά έκδοση", "'v50.152 · 2026-09-24'", "'v50.151 · 2026-09-24'"],
   ["m8 στάδιο αγνοείται", "? _omrP.stages[_stP]\n", "? _omrP.default\n"],
   ["m9 μετρητής δειγμάτων παγωμένος", "st.n = (st.n || 0) + 1;", "st.n = (st.n || 0);"],
 ];
