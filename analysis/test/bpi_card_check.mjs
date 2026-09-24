@@ -24,9 +24,11 @@ function build(core) {
   const fTemp = fnSrc(core, "fTempAsymmetric", "\n}\n") + "\n}\n";
   const bbm = fnSrc(core, "buildBPIMessages", "\nfunction _sagBlankCfg");
   const gfg = fnSrc(core, "getFertilizationGrowthMessages", "\n  // Fallback to legacy behaviour");
-  if (!fTemp || !bbm || !gfg) return null;
+  // v50.151 · T-BPI-DAYS-01: η getFertilizationGrowthMessages καλεί τον βοηθό _sagBpiDaysTxt — μπαίνει κι αυτός αυτούσιος.
+  const days = fnSrc(core, "_sagBpiDaysTxt", "\n}\n");
+  if (!fTemp || !bbm || !gfg || !days) return null;
   // Η getFertilizationGrowthMessages κόβεται στο σημείο του legacy fallback: το σώμα κλείνει με «return null».
-  const src = `${fTemp}\n${bbm}\n${gfg}\n  return null;\n}\nreturn { fTempAsymmetric, buildBPIMessages, getFertilizationGrowthMessages };`;
+  const src = `${fTemp}\n${bbm}\n${days}\n}\n${gfg}\n  return null;\n}\nreturn { fTempAsymmetric, buildBPIMessages, getFertilizationGrowthMessages };`;
   return new Function(src)();
 }
 // Η καμπύλη εδάφους, όπως στον πυρήνα (αντιγραφή του τύπου για έλεγχο τιμών)

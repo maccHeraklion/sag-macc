@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.150 · 2026-09-24';
+const SAG_KERNEL_VERSION = 'v50.151 · 2026-09-24';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -5873,6 +5873,14 @@ function _sagOliveBloomEta(st, site, tempC) {
   return Math.round(need / (perHour * 24));
 }
 
+// T-ANOM-SINCE-01 (v50.151): η δήλωση παραθύρου της θερμικής ανωμαλίας — από ποια
+// ημερομηνία αθροίζονται οι βαθμοημέρες. Χωρίς ICU: ημέρα/μήνας/έτος με το χέρι.
+function _sagAnomSinceTxt(from) {
+  if (!(from instanceof Date) || isNaN(from.getTime())) return '';
+  return ' Μετρημένο από ' + from.getDate() + '/' + (from.getMonth() + 1) + '/' + from.getFullYear()
+    + ' (έναρξη σεζόν βαθμοημερών).';
+}
+
 function _sagSeasonAnomalyDays(Tbase, Tupper, accumGDD, nowDate, latitude, seasonStart, elevM) {
   const acc = Number(accumGDD);
   if (!Number.isFinite(acc) || acc <= 0) return null;
@@ -10557,6 +10565,11 @@ function calculate_BPI(dailyTich, measurements, ipsi, parameters, ipsiError = ""
   // Read running totals from injected prev indicators (if present)
   const prev_actual = Number(measurements?.data?.bpi_total_actual?.[0]?.value ?? 0);
   const prev_potential = Number(measurements?.data?.bpi_total_potential?.[0]?.value ?? 0);
+  // T-BPI-DAYS-01 (v50.151 · 24/9/2026): πόσες ημέρες πρόσθεσαν στα σύνολα. Χωρίς
+  // αυτό το «Αξιοποίηση σεζόν 46 %» δεν λέει αν μετρήθηκε σε 5 ή σε 50 ημέρες
+  // (Κουτσάκης: ~5). Προχωρά ΜΟΝΟ εδώ, μαζί με τα σύνολα — η «Νύχτα» δεν μετρά.
+  const prev_days = Number(measurements?.data?.bpi_total_days?.[0]?.value ?? 0);
+  const new_total_days = ((Number.isFinite(prev_days) && prev_days >= 0) ? Math.floor(prev_days) : 0) + 1;
 
   const new_total_actual = (Number.isFinite(prev_actual) ? prev_actual : 0) + daily_growth_actual;
   const new_total_potential = (Number.isFinite(prev_potential) ? prev_potential : 0) + daily_growth_potential;
@@ -10580,6 +10593,7 @@ function calculate_BPI(dailyTich, measurements, ipsi, parameters, ipsiError = ""
     total_actual: Number(new_total_actual.toFixed(2)),
     total_potential: Number(new_total_potential.toFixed(2)),
     performance_pct,
+    total_days: new_total_days,   // T-BPI-DAYS-01
   };
 
   // ── SAG-DLI-01 · το ΣΩΣΤΟ μέγεθος φωτός, δίπλα στο BPI ────────────────
@@ -10671,6 +10685,7 @@ function calculate_BPI(dailyTich, measurements, ipsi, parameters, ipsiError = ""
       metadata: _lightEst ? { ...diagnosis, light_source: _lightEst.source, light_note: _lightEst.note } : diagnosis },
     { variable: "bpi_total_actual", value: Number(new_total_actual.toFixed(2)) },
     { variable: "bpi_total_potential", value: Number(new_total_potential.toFixed(2)) },
+    { variable: "bpi_total_days", value: new_total_days },   // T-BPI-DAYS-01
     { variable: "bpi_performance_pct", value: performance_pct },
   ];
 
@@ -12786,6 +12801,14 @@ function _sagMsgTidy(s) {
   return /[.!;:·]$/.test(t) ? t : (t + '.');
 }
 
+// T-BPI-DAYS-01: η δήλωση κάλυψης του σωρευτικού — σε πόσες ημέρες μετρήθηκε.
+function _sagBpiDaysTxt(days) {
+  const n = Number(days);
+  if (!Number.isFinite(n) || n < 1) return '';
+  const r = Math.round(n);
+  return ' Μετρημένο σε ' + r + (r === 1 ? ' ημέρα' : ' ημέρες') + ' με πλήρη δεδομένα.';
+}
+
 function getFertilizationGrowthMessages(bpi, bpiError, bpiContext) {
   // New contextual BPI UI messaging:
   // - Primary: daily efficiency + limiting factor
@@ -12843,11 +12866,13 @@ function getFertilizationGrowthMessages(bpi, bpiError, bpiContext) {
 
     const seasonMeta = {
       color: (Number(bpiContext.performance_pct ?? 0) >= 90) ? "green" : (Number(bpiContext.performance_pct ?? 0) >= 75) ? "blue" : (Number(bpiContext.performance_pct ?? 0) >= 60) ? "orange" : "red",
-      text: accumulated.message + ((bpiContext && bpiContext.light_source && bpiContext.light_source !== 'sensor')
+      text: accumulated.message + _sagBpiDaysTxt(bpiContext.total_days)   // T-BPI-DAYS-01
+        + ((bpiContext && bpiContext.light_source && bpiContext.light_source !== 'sensor')
         ? ' (σωρευτικό με εκτιμώμενο φως — όχι μέτρηση)' : ''),
       performance_pct: bpiContext.performance_pct,
       total_actual: bpiContext.total_actual,
       total_potential: bpiContext.total_potential,
+      total_days: bpiContext.total_days,   // T-BPI-DAYS-01
     };
 
     return [
@@ -18878,7 +18903,7 @@ module.exports = new Analysis(async (context) => {
             measurementsForCrop.data[g.variable] = [{ value: g.value }];
           }
           // T-SEASON-ANOM-01: πόσες ημέρες μπροστά/πίσω τρέχει η χρονιά
-          let _anomDays = null;
+          let _anomDays = null, _anomFrom = null;   // T-ANOM-SINCE-01: από πότε μετρά
           // T-SCOPE-01 (v50.113): ΗΤΑΝ ΜΕΣΑ ΣΤΟ try. Το `const` πέθαινε στο `}`
           // και η χρήση του 39 γραμμές πιο κάτω (θερμικός συναγερμός) ήταν
           // ReferenceError — που έσκαγε ΜΕΣΑ στο try του αγρού, ΠΡΙΝ γραφτεί το
@@ -18895,12 +18920,13 @@ module.exports = new Analysis(async (context) => {
             if (_cpProf && !fieldConfig?.covered_cultivation) {
               // T-ANCHOR-MATCH-01: η νόρμα μετριέται από την ΙΔΙΑ ημερομηνία
               // έναρξης με τον συσσωρευτή, και στο ΙΔΙΟ υψόμετρο.
+              _anomFrom = _sagSeasonStartDate(_sagSeasonKey(cropParams, new Date(now)));   // T-ANOM-SINCE-01
               _anomDays = _sagSeasonAnomalyDays(
                 Number(_cpProf.optimal_temp_range?.min) || 0,
                 Number(_cpProf.optimal_temp_range?.max) || 35,
                 Number(getVal(measurementsForCrop, 'gdd_crop_accumulated', NaN)),
                 new Date(now), fieldConfig?.latitude,
-                _sagSeasonStartDate(_sagSeasonKey(cropParams, new Date(now))),
+                _anomFrom,
                 _sagFieldElevation(measurementsForCrop, cropParams));
             }
           } catch (_eAn) { _anomDays = null; }
@@ -19019,13 +19045,14 @@ module.exports = new Analysis(async (context) => {
             if (Number.isFinite(_anomDays)) {
               indicatorsForCrop.push({ variable: 'season_thermal_anomaly', value: _anomDays,
                 metadata: { color: Math.abs(_anomDays) >= 12 ? 'orange' : 'grey', unit: 'ημέρες',
-                  text: Math.abs(_anomDays) < 5
+                  text: (Math.abs(_anomDays) < 5
                     ? 'Η εποχή εξελίσσεται κανονικά για την περιοχή σας.'
                     : ('Με βάση τη συσσωρευμένη θερμότητα, η καλλιέργεια βρίσκεται εκεί που κανονικά '
                        + 'θα ήταν σε ' + Math.abs(_anomDays) + ' ημέρες '
                        + (_anomDays > 0 ? 'αργότερα — η χρονιά είναι πρώιμη. Άνθηση, καρπόδεση και '
                           + 'συγκομιδή θα έρθουν νωρίτερα· προσαρμόστε ανάλογα ψεκασμούς και λίπανση.'
-                          : 'νωρίτερα — η χρονιά είναι όψιμη. Τα στάδια θα καθυστερήσουν αντίστοιχα.')) } });
+                          : 'νωρίτερα — η χρονιά είναι όψιμη. Τα στάδια θα καθυστερήσουν αντίστοιχα.')))
+                    + _sagAnomSinceTxt(_anomFrom) } });   // T-ANOM-SINCE-01
             }
           }
 
