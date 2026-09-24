@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.149 · 2026-09-20';
+const SAG_KERNEL_VERSION = 'v50.150 · 2026-09-24';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -11477,8 +11477,20 @@ function computeSoilMoistureLimits(parameters, cropOverride, measurements) {
           if (Number.isFinite(_floorE) && _floorE < _wpE) _wpE = Math.max(0.5, _floorE - 0.5);
           const _tawE = _fcE - _wpE;
           const _tawT = M_field_capacity - M_wilt;
-          // Ενεργοποίηση ΜΟΝΟ σε σοβαρή ασυμφωνία με τον δηλωμένο πίνακα
-          const _mismatch = (_fcE < M_wilt + 0.25 * _tawT)
+          // ── T-SOILCAL-02 (v50.150): «σοβαρή ασυμφωνία» = το στραγγισμένο πλατό
+          // του αισθητήρα κάθεται ΚΑΤΩ από το σημείο επαναπλήρωσης του πίνακα.
+          // Τότε το «πότισε» δεν σβήνει ΠΟΤΕ, όσο κι αν ποτίσει ο αγρότης
+          // (Κουτσάκης 24/9: πλατό ~28,5 %, επαναπλήρωση πίνακα 30,35 %). Το παλιό
+          // κριτήριο (< WP + 25 % TAW = 25,3 %) δεν το έπιανε. Το κάτω όριο της
+          // καλλιέργειας διαβάζεται ΟΠΩΣ στο T-OMR-STAGE-01 (στάδιο -> default).
+          const _omrP = crop?.optimal_moisture_range || {};
+          const _stP = String(parameters?.stage || '').trim();
+          const _bandP = (_omrP.stages && _stP && _omrP.stages[_stP] && typeof _omrP.stages[_stP] === 'object')
+            ? _omrP.stages[_stP]
+            : ((_omrP.default && typeof _omrP.default === 'object') ? _omrP.default : _omrP);
+          const _lbP = Number(_bandP?.lower_bound);
+          const _refillT = Number.isFinite(_lbP) ? (M_wilt + _lbP * _tawT / 100) : (M_wilt + 0.25 * _tawT);
+          const _mismatch = (_fcE < _refillT)
             || (Number.isFinite(_floorE) && _floorE < M_wilt - 3);
           if (_tawE >= 3 && _satE > _fcE + 2 && _mismatch) {
             _calInfo = { fc: Math.round(_fcE * 10) / 10, wp: Math.round(_wpE * 10) / 10,
@@ -18395,15 +18407,23 @@ module.exports = new Analysis(async (context) => {
               const _rise = (Number.isFinite(st.l) && _gap !== null && _gap <= 2)
                 ? (cur - st.l) : NaN;
               const _wet = (rng && (rng.mx - rng.mn) >= 5) || (Number.isFinite(_rise) && _rise >= 4);
-              if (_wet) { st.e = 1; }
-              else if (st.e === 1) {
-                // ΕΠΟΜΕΝΗ ημέρα μετά την ύγρανση = στραγγισμένο πλατό -> δείγμα FC
-                if (cur >= st.w + 0.8) {
-                  st.f = _scR2(Number.isFinite(st.f) ? 0.75 * st.f + 0.25 * cur : cur);
-                  st.n = (st.n || 0) + 1;
-                }
-                st.e = 0;
+              // ── T-SOILCAL-02 (v50.150 · 24/9/2026, Κουτσάκης) ──────────────
+              // ΠΡΙΝ: δείγμα FC ΜΟΝΟ την πρώτη ΣΤΕΓΝΗ ημέρα μετά από υγρή. Με
+              // καθημερινή στάγδην (θερμοκήπιο) ΚΑΘΕ ημέρα είναι υγρή -> e=1 για
+              // πάντα, n=0 για πάντα, ο SOILCAL δεν δέσμευε ΠΟΤΕ. Μετρημένο 24/9:
+              // Κουτσάκης 6 ποτίσματα +5…+16 σε 6 ημέρες, soilcal_state χωρίς f/n.
+              // ΤΩΡΑ: σε συνεχόμενες υγρές ημέρες η ένδειξη του ημερήσιου tick
+              // (πριν το επόμενο πότισμα, στο κάτω τρίτο του 24ώρου) ΕΙΝΑΙ το
+              // στραγγισμένο πλατό -> δείγμα. Η παλιά διαδρομή (στεγνή ημέρα μετά
+              // από υγρή, ένδειξη ≥ δάπεδο+0,8) μένει ακριβώς ίδια.
+              const _lowSide = !rng || (cur <= rng.mn + 0.35 * (rng.mx - rng.mn));
+              // Υγρή ημέρα: μόνο ένδειξη στο κάτω τρίτο (πριν το πότισμα). Στεγνή
+              // ημέρα: η παλιά πύλη «≥ δάπεδο + 0,8». Ποτέ η κορυφή της ημέρας.
+              if (st.e === 1 && (_wet ? _lowSide : (cur >= st.w + 0.8))) {
+                st.f = _scR2(Number.isFinite(st.f) ? 0.75 * st.f + 0.25 * cur : cur);
+                st.n = (st.n || 0) + 1;
               }
+              st.e = _wet ? 1 : 0;
               st.l = _scR2(cur); st.k = _scDayNum;
               return st;
             };
@@ -18868,7 +18888,11 @@ module.exports = new Analysis(async (context) => {
           // Το πιάνει πλέον ο audit_scope.js — σε ΟΛΟ το αρχείο, όχι εδώ μόνο.
           const _cpProf = CROP_PROFILE?.[cropParams.cultivation_type_general]?.[cropParams.cultivation_type];
           try {
-            if (_cpProf) {
+            // T-COVERED-ANOM-01 (v50.150 · 24/9/2026, Κουτσάκης): η θερμική
+            // ανωμαλία συγκρίνει GDD του ΜΕΤΡΗΜΕΝΟΥ αέρα με ΕΞΩΤΕΡΙΚΗ κλιματική
+            // νόρμα. Μέσα σε κάλυμμα ο αέρας δεν είναι ο έξω -> «Εποχή 10 ημ.
+            // πίσω» χωρίς νόημα. Σε καλυμμένη καλλιέργεια: null (σιωπή).
+            if (_cpProf && !fieldConfig?.covered_cultivation) {
               // T-ANCHOR-MATCH-01: η νόρμα μετριέται από την ΙΔΙΑ ημερομηνία
               // έναρξης με τον συσσωρευτή, και στο ΙΔΙΟ υψόμετρο.
               _anomDays = _sagSeasonAnomalyDays(
