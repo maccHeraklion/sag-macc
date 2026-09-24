@@ -20,7 +20,7 @@ function extractFn(text, name) {
 function run(text) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   // ── καλωδίωση ──
-  ok(text.includes("const SAG_KERNEL_VERSION = 'v50.155 · 2026-09-24';"), "έκδοση v50.154");
+  ok(text.includes("const SAG_KERNEL_VERSION = 'v50.156 · 2026-09-24';"), "έκδοση v50.154");
   ok(text.includes("const prev_days = Number(measurements?.data?.bpi_total_days?.[0]?.value ?? 0);"), "prev_days από το προηγούμενο bundle");
   ok(text.includes("const new_total_days = _hadTotals ? (((Number.isFinite(prev_days) && prev_days >= 0) ? Math.floor(prev_days) : 0) + 1) : 1;"), "new_total_days = prev + 1, ή 1 σε νέα αρχή");
   ok(text.includes("const new_total_since = _hadTotals ? _prevSince : _todayISO;"), "T-BPI-SINCE-01: αρχή = σήμερα μόνο σε νέα αρχή, αλλιώς η προηγούμενη");
@@ -61,7 +61,7 @@ const base = run(SRC);
 if (base.length) { console.log("ΑΠΟΤΥΧΙΑ ΒΑΣΗΣ:\n  " + base.join("\n  ")); process.exit(1); }
 console.log("ΒΑΣΗ: όλοι οι έλεγχοι πέρασαν");
 const MUT = [
-  ["m1 παλιά έκδοση", "'v50.155 · 2026-09-24'", "'v50.154 · 2026-09-24'"],
+  ["m1 παλιά έκδοση", "'v50.156 · 2026-09-24'", "'v50.155 · 2026-09-24'"],
   ["m2 μετρητής δεν προχωρά", "? Math.floor(prev_days) : 0) + 1) : 1;", "? Math.floor(prev_days) : 0) + 0) : 1;"],
   ["m2b νέα αρχή δεν μηδενίζει", "? Math.floor(prev_days) : 0) + 1) : 1;", "? Math.floor(prev_days) : 0) + 1) : ((Number.isFinite(prev_days) ? prev_days : 0) + 1);"],
   ["m2c η αρχή ξαναγράφεται κάθε μέρα", "const new_total_since = _hadTotals ? _prevSince : _todayISO;", "const new_total_since = _todayISO;"],

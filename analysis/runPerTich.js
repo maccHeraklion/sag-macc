@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.155 · 2026-09-24';
+const SAG_KERNEL_VERSION = 'v50.156 · 2026-09-24';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -8262,18 +8262,21 @@ function _sagLeafWetness(o) {
   if (hasLm && lm > _SAG_LWS_WET)
     return { wet: true, weight: _sagClamp01((lm - 10) / 40), source: 'sensor', confidence: 'MEDIUM', lm: lmOut };
 
-  if (Number.isFinite(dp)) {
-    if (ltOk && lt <= dp + 0.5)
-      return { wet: true, weight: 1, source: 'dew_leaf', confidence: 'HIGH', lm: lmOut };
-    if (Number.isFinite(T) && (T - _SAG_CANOPY_COOLING) <= dp)
-      return { wet: true, weight: 0.8, source: 'dew_air', confidence: 'MEDIUM', lm: lmOut };
-  }
+  if (Number.isFinite(dp) && ltOk && lt <= dp + 0.5)
+    return { wet: true, weight: 1, source: 'dew_leaf', confidence: 'HIGH', lm: lmOut };
+  // T-LWS-SHADED-DRY-01 (v50.156, απόφαση Μιχάλη 24/9): η ΜΕΤΡΗΣΗ ενός σκιασμένου (επαληθευμένου)
+  // αισθητήρα φύλλου υπερισχύει της ΕΚΤΙΜΗΣΗΣ δρόσου και της εφεδρείας RH — αυτό υπόσχεται το
+  // σχόλιο «ΑΣΥΜΜΕΤΡΙΑ» παραπάνω, αλλά οι κλάδοι ήταν σε λάθος σειρά. Σε θερμοκήπιο με νυχτερινή
+  // RH ≥ 90 ο περονόσπορος μετρούσε ώρες ακόμη κι αν το φύλλο έλεγε «στεγνό». Βροχή και δρόσος
+  // από τη ΜΕΤΡΗΜΕΝΗ θερμοκρασία φύλλου συνεχίζουν να προηγούνται. Μη σκιασμένος: αμετάβλητο.
+  if (hasLm && o.leafShaded === true)
+    return { wet: false, weight: 0, source: 'sensor_dry', confidence: 'HIGH', lm: lmOut };
+  if (Number.isFinite(dp) && Number.isFinite(T) && (T - _SAG_CANOPY_COOLING) <= dp)
+    return { wet: true, weight: 0.8, source: 'dew_air', confidence: 'MEDIUM', lm: lmOut };
 
   if (Number.isFinite(RH) && RH >= 90)
     return { wet: true, weight: 0.6, source: 'rh', confidence: 'LOW', lm: lmOut };
 
-  if (hasLm && o.leafShaded === true)
-    return { wet: false, weight: 0, source: 'sensor_dry', confidence: 'HIGH', lm: lmOut };
   if (hasLm)
     return { wet: false, weight: 0, source: 'sensor_unverified', confidence: 'LOW', lm: lmOut };
   return { wet: false, weight: 0, source: 'none', confidence: 'LOW', lm: null };

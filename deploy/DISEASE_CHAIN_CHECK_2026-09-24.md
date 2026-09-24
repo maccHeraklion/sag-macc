@@ -72,3 +72,5 @@
 Πυρήνας και widget ανέπαφοι. Μόνο: νέος ελεγκτής `disease_chain_check.mjs` (μπαίνει στη σουίτα),
 διόρθωση `harness.js`. Ο ελεγκτής χρειάζεται `analysis/node_modules` (moment-timezone, axios —
 gitignored· `cd analysis && npm i moment-timezone axios --no-save`).
+
+**Συνέχεια 21:50 UTC:** ο Μιχάλης ενέκρινε το εύρημα 3 → **v50.156 T-LWS-SHADED-DRY-01** (σκιασμένος στεγνός αισθητήρας υπερισχύει της εκτίμησης δρόσου και του RH ≥ 90). Ο ελεγκτής επεκτάθηκε (Β6–Β11, Γ4/Γ5), 16/16.

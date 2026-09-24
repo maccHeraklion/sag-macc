@@ -98,9 +98,21 @@ function run(src, w) {
   // Β5 ΜΟΝΟ RH (χωρίς σημείο δρόσου, χωρίς φύλλο): RH 91 -> «Σχετική υγρασία», RH 89 -> στεγνό
   const lw1 = K._sagLeafWetness({ T_air: 19, RH: 91 }), lw2 = K._sagLeafWetness({ T_air: 19, RH: 89 });
   ok(lw1.wet === true && lw1.source === "rh" && lw2.wet === false && lw2.source === "none", "Β5 εφεδρεία RH ≥ 90: 91 -> υγρό (rh), 89 -> στεγνό");
-  // Β6 στεγνός ΣΚΙΑΣΜΕΝΟΣ αισθητήρας ΔΕΝ σβήνει τη δρόσο (κώδικας: dew_air πριν το sensor_dry) — καταγράφεται ως συμπεριφορά
+  // Β6 T-LWS-SHADED-DRY-01 (v50.156): στεγνός ΣΚΙΑΣΜΕΝΟΣ αισθητήρας υπερισχύει της ΕΚΤΙΜΗΣΗΣ δρόσου και της εφεδρείας RH
+  ok(src.includes("const SAG_KERNEL_VERSION = 'v50.156 · 2026-09-24';"), "έκδοση v50.156");
   const lw3 = K._sagLeafWetness({ leafMoisture: 0, leafShaded: true, leafTemp: 22, T_air: 19, RH: 96, dewPoint: 18.4 });
-  ok(lw3.wet === true && lw3.source === "dew_air", "Β6 [ΣΥΜΠΕΡΙΦΟΡΑ] στεγνός σκιασμένος αισθητήρας + RH 96/δρόσος -> ΥΓΡΟ από «δρόσος (εκτίμηση)» — η μέτρηση φύλλου ΔΕΝ υπερισχύει (" + lw3.source + ")");
+  ok(lw3.wet === false && lw3.source === "sensor_dry", "Β6 στεγνός σκιασμένος αισθητήρας + RH 96/εκτίμηση δρόσου -> ΣΤΕΓΝΟ (η μέτρηση υπερισχύει της εκτίμησης) — " + lw3.source);
+  const lw4 = K._sagLeafWetness({ leafMoisture: 0, leafShaded: false, leafTemp: 22, T_air: 19, RH: 96, dewPoint: 18.4 });
+  ok(lw4.wet === true && lw4.source === "dew_air", "Β7 ΜΗ σκιασμένος στεγνός αισθητήρας -> η εκτίμηση δρόσου ισχύει (αμετάβλητο) — " + lw4.source);
+  const lw5 = K._sagLeafWetness({ leafMoisture: 0, leafShaded: true, leafTemp: 18.0, T_air: 19, RH: 96, dewPoint: 18.4 });
+  ok(lw5.wet === true && lw5.source === "dew_leaf", "Β8 σκιασμένος, φύλλο ΚΑΤΩ από το σημείο δρόσου (μέτρηση) -> υγρό από δρόσο φύλλου — " + lw5.source);
+  const lw6 = K._sagLeafWetness({ leafMoisture: 0, leafShaded: true, leafTemp: 22, T_air: 19, RH: 96, dewPoint: 18.4, rain1h: 1 });
+  ok(lw6.wet === true && lw6.source === "rain", "Β9 βροχή νικά τον στεγνό αισθητήρα — " + lw6.source);
+  const lw7 = K._sagLeafWetness({ leafMoisture: 0, leafShaded: true, T_air: 19, RH: 96 });
+  ok(lw7.wet === false && lw7.source === "sensor_dry", "Β10 σκιασμένος στεγνός + RH 96 χωρίς σημείο δρόσου -> στεγνό (η εφεδρεία RH δεν τον σβήνει)");
+  // Β11 ολόκληρη αλυσίδα: θερμοκήπιο, νύχτα RH 96, ΣΚΙΑΣΜΕΝΟΣ στεγνός αισθητήρας -> ο περονόσπορος ΔΕΝ μετρά, το ωίδιο ΝΑΙ
+  st = { data: {} }; let rB11 = null; for (let h = 1; h <= 6; h++) rB11 = tick(K, st, h, { T: 19, RH: 96, lm: 0, lt: 19.5 });
+  ok(rB11.cnt("pseudoperonospora_cubensis") === 0 && rB11.cnt("podosphaera_xanthii") === 6 && rB11.lws && rB11.lws.value === "Αισθητήρας φύλλου (στεγνό)", "Β11 νύχτα θερμοκηπίου RH 96 με στεγνό σκιασμένο φύλλο: περονόσπορος 0 ω, ωίδιο 6 ω (" + rB11.cnt("pseudoperonospora_cubensis") + "/" + rB11.cnt("podosphaera_xanthii") + ", " + (rB11.lws && rB11.lws.value) + ")");
   // ── Γ. αρνητικοί μάρτυρες ──
   st = { data: {} }; let rC = null; for (let h = 1; h <= 14; h++) rC = tick(K, st, h, { T: 24, RH: 40, lm: 0, lt: 23.5 });
   ok(rC.cnt("podosphaera_xanthii") === 0 && rC.cnt("pseudoperonospora_cubensis") === 0 && (rC.msg("podosphaera_xanthii") || {}).value === "Χαμηλός κίνδυνος" && (rC.msg("pseudoperonospora_cubensis") || {}).value === "Χαμηλός κίνδυνος", "Γ1 RH 40 %, στεγνό: κανένας μετρητής, όλα Χαμηλός");
@@ -109,7 +121,9 @@ function run(src, w) {
   st = { data: {} }; let rC3 = null; for (let h = 1; h <= 2; h++) rC3 = tick(K, st, h, { T: 30, RH: 50, lm: 0, lt: 29 });
   ok(rC3.cnt("podosphaera_xanthii") === 2, "Γ3 όρια συμπεριληπτικά: T 30, RH 50 -> μετρά");
   st = { data: {} }; let rC4 = null; for (let h = 1; h <= 6; h++) rC4 = tick(K, st, h, { T: 19, RH: 97, lm: 5, lt: 18.5, dp: 5 });
-  ok(rC4.cnt("pseudoperonospora_cubensis") === 6, "Γ4 RH 97 χωρίς αισθητήρα-υγρό και δρόσο μακριά -> εφεδρεία RH ≥ 90 κρατά τον περονόσπορο ενεργό (" + rC4.cnt("pseudoperonospora_cubensis") + ")");
+  ok(rC4.cnt("pseudoperonospora_cubensis") === 0 && rC4.lws && rC4.lws.value === "Αισθητήρας φύλλου (στεγνό)", "Γ4 (v50.156) RH 97 αλλά ΣΚΙΑΣΜΕΝΟΣ αισθητήρας λέει στεγνό (5 %) και δρόσος μακριά -> η μέτρηση νικά την εφεδρεία RH, περονόσπορος 0 (" + rC4.cnt("pseudoperonospora_cubensis") + ", " + (rC4.lws && rC4.lws.value) + ")");
+  st = { data: {} }; let rC5 = null; for (let h = 1; h <= 6; h++) rC5 = tick(K, st, h, { T: 19, RH: 97, dp: 5 });
+  ok(rC5.cnt("pseudoperonospora_cubensis") === 6 && rC5.lws && rC5.lws.value === "Σχετική υγρασία", "Γ5 ίδιο ΧΩΡΙΣ αισθητήρα φύλλου -> η εφεδρεία RH ≥ 90 κρατά τον περονόσπορο ενεργό (" + rC5.cnt("pseudoperonospora_cubensis") + ", " + (rC5.lws && rC5.lws.value) + ")");
   // ── Δ. παγώματα ──
   st = { data: {} }; for (let h = 1; h <= 5; h++) tick(K, st, h, { T: 24, RH: 70, lm: 0, lt: 23.5 });
   const rD = tick(K, st, 6, { T: 24, RH: 70, lm: 0, lt: 23.5, ages: { temperature: 200, humidity: 200 } });
@@ -195,6 +209,8 @@ const MUT = [
   ["m10 το μέγιστο επεισοδίου χάνεται", "const infection_hours = Math.max(rawCounter, Number(getVal(measurements, maxKey, 0)) || 0);", "const infection_hours = rawCounter;", "c"],
   ["m11 ωίδιο αμπελιού ξανά στο αγγούρι", "    (c) => c && c.cultivation_type_general === \"vineCrops\"", "    (c) => true", "c"],
   ["m12 θερμοκήπιο δεν σιωπά", "    if (_SAG_COVERED_ACTIVE) return [];\n    const RH = Array.isArray(fcs.rh)", "    if (false) return [];\n    const RH = Array.isArray(fcs.rh)", "c"],
+  ["m13 ο σκιασμένος στεγνός αισθητήρας ξανά πίσω από τη δρόσο", "  if (hasLm && o.leafShaded === true)\n    return { wet: false, weight: 0, source: 'sensor_dry', confidence: 'HIGH', lm: lmOut };\n  if (Number.isFinite(dp) && Number.isFinite(T)", "  if (hasLm && o.leafShaded === true && !Number.isFinite(dp) && !(RH >= 90))\n    return { wet: false, weight: 0, source: 'sensor_dry', confidence: 'HIGH', lm: lmOut };\n  if (Number.isFinite(dp) && Number.isFinite(T)", "c"],
+  ["m14 παλιά έκδοση", "'v50.156 · 2026-09-24'", "'v50.155 · 2026-09-24'", "c"],
   ["W1 widget χάνει το «σοβαρ»", 'function Ba(t){const s=String(t||"").toLowerCase();return s.includes("χαμηλ")?1:s.includes("μέτρι")||s.includes("μετρι")?2:s.includes("υψηλ")?3:s.includes("σοβαρ")?4:0}', 'function Ba(t){const s=String(t||"").toLowerCase();return s.includes("χαμηλ")?1:s.includes("μέτρι")||s.includes("μετρι")?2:s.includes("υψηλ")?3:0}', "w"],
   ["W2 κύρια κάρτα μόνο Σοβαρός", 'if(R<3&&!Vc)continue;const X=R===4?"b-red"', 'if(R<4&&!Vc)continue;const X=R===4?"b-red"', "w"],
 ];

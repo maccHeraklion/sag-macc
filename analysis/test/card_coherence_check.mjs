@@ -34,7 +34,7 @@ function buildWidget(w) {
 
 function run(c, w) {
   const f = []; const ok = (x, m) => { if (!x) f.push(m); };
-  ok(c.includes("const SAG_KERNEL_VERSION = 'v50.155 · 2026-09-24';"), "έκδοση v50.155");
+  ok(c.includes("const SAG_KERNEL_VERSION = 'v50.156 · 2026-09-24';"), "έκδοση v50.155");
   // ── T-ECWORST-01 ──
   ok(c.includes("eceMax: _eceMax, eceEst: _eceW.v, eceHow: _eceW.how,") && c.includes("const _eceNow = _eceW.v;"), "η ημερήσια κρίση και ο Ks παίρνουν το χειρότερο βάθος");
   ok(!c.includes("eceEst: (e1 !== null ? _eceEst(e1) : NaN)") && !c.includes("const _eceNow = _eceEst(e1);"), "η παλιά ρηχή-μόνο κλήση έφυγε");
@@ -119,7 +119,7 @@ const base = run(C, W);
 if (base.length) { console.log("ΑΠΟΤΥΧΙΑ ΒΑΣΗΣ:\n  " + base.join("\n  ")); process.exit(1); }
 console.log("ΒΑΣΗ: όλοι οι έλεγχοι πέρασαν");
 const MUT = [
-  ["C1 παλιά έκδοση", "'v50.155 · 2026-09-24'", "'v50.154 · 2026-09-24'", "c"],
+  ["C1 παλιά έκδοση", "'v50.156 · 2026-09-24'", "'v50.154 · 2026-09-24'", "c"],
   ["C2 πάντα ρηχό", "const _eceW = (_eceChain2 !== null && (_eceChain === null || _eceChain2 > _eceChain))", "const _eceW = (false)", "c"],
   ["C3 διαβάζει βαθύ και σε lse01", "const _eceChain2 = (e2 === null || !_ecNum1) ? null", "const _eceChain2 = (e2 === null) ? null", "c"],
   ["C4 Ks από ρηχό", "const _eceNow = _eceW.v;", "const _eceNow = _eceEst(e1);", "c"],
