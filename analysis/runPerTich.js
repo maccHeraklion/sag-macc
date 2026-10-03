@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.156 · 2026-09-24';
+const SAG_KERNEL_VERSION = 'v50.157 · 2026-10-04';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -10767,6 +10767,10 @@ function calculate_BPI(dailyTich, measurements, ipsi, parameters, ipsiError = ""
           threshold_critical: nt.critical,
         }
       });
+    } else if (nt) {
+      // T-WXCLEAR-01 (v50.157): μετρημένη ελάχιστη κάτω από το όριο = ΑΠΑΝΤΗΣΗ «όχι ζεστή νύχτα».
+      // Χωρίς αυτό η χθεσινή προειδοποίηση έμενε 50 ώρες πάνω από μια δροσερή νύχτα.
+      bpiIndicators.push({ variable: "night_temp_warning", value: null, metadata: {} });
     }
   }
   // ── End E1 ──────────────────────────────────────────────────────────────
@@ -13370,6 +13374,10 @@ function _bundleBuildCurrentHostSet(currentCropsConfig) {
 const _SAG_TTL_HOURLY_H  = 12;   // ωριαία παράγωγα: αντέχουν 12 χαμένα tick
 const _SAG_TTL_DAILY_H   = 50;   // ημερήσια: αντέχουν ένα χαμένο 24ωρο + περιθώριο
 const _SAG_TTL_DEFAULT_H = 50;
+// T-WXCLEAR-01 (v50.157): το widget κρατά τα weather_alert_* στο localStorage και τα ξαναβάζει
+// ΟΣΟ λείπουν από το bundle. Αν ένας πραγματικός συναγερμός απλώς εξαφανιζόταν στη λήξη, η
+// cache θα τον ανέσταινε για πάντα. Στη λήξη μένει κενή τιμή, που η cache αποθηκεύει στη θέση του.
+const _SAG_WX_TOMBSTONE = /^weather_alert_(frost|heat)$/;
 
 // Ελέγχονται ΠΡΩΤΑ: ό,τι ταιριάξει εδώ είναι ΠΑΡΑΓΩΓΟ και λήγει.
 //
@@ -13402,7 +13410,10 @@ const _SAG_TTL_PATTERNS = [
   // έπαιρναν το προεπιλεγμένο TTL των 50 ωρών και ο παγετός θα κρεμόταν
   // στην οθόνη δύο μέρες αφότου πέρασε. ΔΕΝ αγγίζει το night_temp_warning,
   // που υπολογίζεται ΜΟΝΟ στον ημερήσιο παλμό και θα έληγε πρόωρα.
-  [/^(frost|heat)_warning$/, _SAG_TTL_HOURLY_H],
+  // T-WXCLEAR-01 (v50.157): τα κλειδιά μετονομάστηκαν σε weather_alert_* στη v50.131 (T-WXALERT-01)
+  // και ο κανόνας έμεινε με το παλιό όνομα — έπαιρναν την προεπιλογή των 50 ωρών. Μετρημένο 3/10:
+  // «Καύσωνας» στον Κουτσάκη με πρόγνωση 16-18 °C.
+  [/^(weather_alert_(frost|heat)|(frost|heat)_warning)$/, _SAG_TTL_HOURLY_H],
   // T-FCWARN-01: ίδια λογική — ωριαία παράγωγα της πρόγνωσης.
   [/^rain_ahead$/,      _SAG_TTL_HOURLY_H],
   [/^infection_ahead$/, _SAG_TTL_HOURLY_H],
@@ -13536,7 +13547,13 @@ function _sagCarryEntry(prevEntry, key, nowMin, stats) {
   }
   const ttl = _sagKeyTtlHours(key);
   const ageH = (nowMin - t) / 60;
-  if (ageH > ttl) { stats.dropped.push(key); return null; }
+  if (ageH > ttl) {
+    stats.dropped.push(key);
+    // T-WXCLEAR-01: ταφόπλακα ΜΙΑ φορά — η ίδια η ταφόπλακα (κενή τιμή) λήγει κανονικά.
+    if (_SAG_WX_TOMBSTONE.test(key) && e.value !== null && e.value !== undefined && e.value !== '')
+      return { value: null, metadata: { _t: nowMin } };
+    return null;
+  }
   if (ageH >= 1) {
     // SAG-BUNDLE-FIT-01: μία σημαία, καμία διπλή αποθήκευση, σύντομη κατάληξη.
     e.metadata._s = 1;
@@ -15867,6 +15884,19 @@ function _sagHeatIndicators(fcs, crop) {
       },
     }];
   } catch (_e) { return []; }
+}
+
+// ── T-WXCLEAR-01 (v50.157) · Η ΠΡΟΕΙΔΟΠΟΙΗΣΗ ΠΟΥ ΔΕΝ ΙΣΧΥΕΙ ΣΒΗΝΕΙ ΡΗΤΑ ──────
+// Οι συναρτήσεις παραπάνω επιστρέφουν [] όταν δεν υπάρχει προειδοποίηση. Το [] σημαίνει «λείπει»,
+// και ό,τι λείπει το ξαναγεμίζει η μεταφορά-εμπρός από το προηγούμενο bundle (και η cache του
+// widget, για πάντα). Με ΕΓΚΥΡΗ πρόγνωση το «καμία προειδοποίηση» είναι ΑΠΑΝΤΗΣΗ, όχι έλλειψη:
+// γράφεται κενή τιμή. Χωρίς έγκυρη πρόγνωση ΔΕΝ ξέρουμε — μένει η μεταφορά (12 ω).
+// Οι ίδιες οι συναρτήσεις ΔΕΝ αλλάζουν: το push του παγετού διαβάζει το [0] τους απευθείας.
+function _sagWxClear(fcs, items, key) {
+  const out = Array.isArray(items) ? items : [];
+  if (!fcs || !fcs.ok) return out;
+  if (out.some(x => x && x.variable === key)) return out;
+  return out.concat([{ variable: key, value: null, metadata: {} }]);
 }
 
 // ── Η ΚΑΤΑΣΤΑΣΗ ΤΗΣ ΠΡΟΓΝΩΣΗΣ · ΠΑΝΤΑ, ΚΑΙ ΟΤΑΝ ΛΕΙΠΕΙ ─────────────────
@@ -19139,7 +19169,9 @@ module.exports = new Analysis(async (context) => {
             // T-FORECAST-01: το κρίσιμο όριο ζέστης είναι ΤΗΣ ΚΑΛΛΙΕΡΓΕΙΑΣ —
             // το ΙΔΙΟ optimal_temp_range.max που χρησιμοποιεί ήδη το IPSI ως
             // T_heat_crit. Καμία νέα αγρονομική σταθερά.
-            for (const _hw of _sagHeatIndicators(_sagFcOf(measurementsForCrop), _cpProf)) {
+            // T-WXCLEAR-01: με έγκυρη πρόγνωση χωρίς ζέστη γράφεται κενή τιμή.
+            for (const _hw of _sagWxClear(_sagFcOf(measurementsForCrop),
+                   _sagHeatIndicators(_sagFcOf(measurementsForCrop), _cpProf), 'weather_alert_heat')) {
               indicatorsForCrop.push(_hw);
             }
             indicatorsForCrop.push({ variable: 'crop_stage', value: _stEl,
@@ -19308,8 +19340,9 @@ module.exports = new Analysis(async (context) => {
               const _v = String((_f && _f.variable) || '');
               if (_v.indexOf('fir_message_') === 0) _already.add(_v.slice(12));
             }
-            for (const _ia of _sagInfectionAheadIndicators(
-                   _sagFcOf(measurementsForCrop), cropParams, PATHOGEN_PROFILE, _already)) {
+            for (const _ia of _sagWxClear(_sagFcOf(measurementsForCrop), _sagInfectionAheadIndicators(
+                   _sagFcOf(measurementsForCrop), cropParams, PATHOGEN_PROFILE, _already),
+                   'infection_ahead')) {   // T-WXCLEAR-01
               indicatorsForCrop.push(_ia);
             }
           }
@@ -19576,7 +19609,8 @@ module.exports = new Analysis(async (context) => {
           // πολυκαλλιέργεια κερδίζει η χειρότερη βαθμίδα. Ίδιο dedup με τον
           // παγετό — νέο push ΜΟΝΟ όταν αλλάξει η βαθμίδα.
           try {
-            const _hts = _all.filter(x => x && x.variable === 'weather_alert_heat');
+            // T-WXCLEAR-01: η κενή τιμή (σβήσιμο) ΔΕΝ είναι συναγερμός — αλλιώς push «null».
+            const _hts = _all.filter(x => x && x.variable === 'weather_alert_heat' && x.value);
             const _ht = _hts.find(x => String(x.value) === 'emergency') || _hts[0];
             const _htSig = _ht ? String(_ht.value) : '';
             if (_htSig && _aState.heat !== _htSig) {
@@ -19672,9 +19706,12 @@ module.exports = new Analysis(async (context) => {
             // T-FORECAST-01: ο παγετός είναι επιπέδου ΑΓΡΟΥ — δεν εξαρτάται
             // από καλλιέργεια. Ο καύσωνας μπαίνει ΑΝΑ καλλιέργεια, γιατί το
             // κρίσιμο όριο είναι δικό της.
-            ..._sagFrostIndicators(_sagFcOf(measurements)),
+            // T-WXCLEAR-01: με έγκυρη πρόγνωση χωρίς παγετό γράφεται κενή τιμή.
+            ..._sagWxClear(_sagFcOf(measurements), _sagFrostIndicators(_sagFcOf(measurements)),
+              'weather_alert_frost'),
             // T-FCWARN-01: η βροχή μπροστά είναι επιπέδου ΑΓΡΟΥ.
-            ..._sagRainAheadIndicators(_sagFcOf(measurements)),
+            ..._sagWxClear(_sagFcOf(measurements), _sagRainAheadIndicators(_sagFcOf(measurements)),
+              'rain_ahead'),   // T-WXCLEAR-01
             ..._sagForecastStatusIndicators(_sagFcOf(measurements)),
             // T-OBSERVATION-ONLY-01: ο αγρότης πρέπει να ξέρει ΓΙΑΤΙ δεν βλέπει
             // κάρτες καλλιέργειας — αλλιώς μοιάζει με βλάβη.
