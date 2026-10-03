@@ -72,7 +72,7 @@ function run(src, w) {
   ok(w.includes('.filter(x=>x.d&&x.d.value!==null&&x.d.value!==void 0&&String(x.d.value)!=="")'), "W4 κάρτα υγείας παραλείπει την κενή τιμή");
 
   let K; try { K = loadCore(src); } catch (e) { return [...f, "φόρτωση πυρήνα: " + e.message]; }
-  ok(K.SAG_KERNEL_VERSION === "v50.157 · 2026-10-04", "V έκδοση v50.157 (" + K.SAG_KERNEL_VERSION + ")");
+  ok(K.SAG_KERNEL_VERSION === "v50.158 · 2026-10-04", "V έκδοση v50.158 (" + K.SAG_KERNEL_VERSION + ")");
   ok(K._sagKeyTtlHours("weather_alert_heat") === 12 && K._sagKeyTtlHours("weather_alert_frost") === 12, "T1 TTL weather_alert_* = 12 ω (" + K._sagKeyTtlHours("weather_alert_heat") + ")");
   ok(K._sagKeyTtlHours("rain_ahead") === 12 && K._sagKeyTtlHours("night_temp_warning") === 50, "T2 TTL rain_ahead 12 / night_temp_warning 50 αμετάβλητα");
   const cuc = K.CROP_PROFILE.vegetableCrops.cucumber;
@@ -182,7 +182,7 @@ const MUT = [
   ["m11 push «null»", "x.variable === 'weather_alert_heat' && x.value);", "x.variable === 'weather_alert_heat');", "c"],
   ["m12 ζεστή νύχτα δεν σβήνει", "    } else if (nt) {\n", "    } else if (false) {\n", "c"],
   ["m13 σβήσιμο με λάθος κλειδί", "  return out.concat([{ variable: key, value: null, metadata: {} }]);", "  return out.concat([{ variable: key + '_x', value: null, metadata: {} }]);", "c"],
-  ["m14 παλιά έκδοση", "'v50.157 · 2026-10-04'", "'v50.156 · 2026-09-24'", "c"],
+  ["m14 παλιά έκδοση", "'v50.158 · 2026-10-04'", "'v50.157 · 2026-10-04'", "c"],
   ["W1 κάρτα συναγερμών δείχνει και την κενή τιμή", "const S=re[y];if(!S||!S.value)continue;", "const S=re[y];if(!S)continue;", "w"],
   ["W2 cache shared μόνο με τιμή", "if(S(ie)&&n[ie]){_sagWx9[ie]=n[ie];Z=!0}", "if(S(ie)&&n[ie]&&n[ie].value){_sagWx9[ie]=n[ie];Z=!0}", "w"],
 ];

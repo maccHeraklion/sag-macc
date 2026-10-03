@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.157 · 2026-10-04';
+const SAG_KERNEL_VERSION = 'v50.158 · 2026-10-04';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -8711,6 +8711,52 @@ let _SAG_TICK_H = 1;
 const _SAG_TICK_H_MIN = 0.5, _SAG_TICK_H_MAX = 2;
 function _sagTickHours() { return _SAG_TICK_H; }
 
+// ── T-RAIN-ACC-01 (v50.158) · Η ΒΡΟΧΗ ΑΠΟ ΤΟΝ ΜΕΤΡΗΤΗ ──────────────────────────
+// Ο S2120 με firmware 2.x στέλνει σωρευτικό μετρητή βροχής (`rain_height_acc`, βήμα 0,254 mm, βαθμονομημένος στο
+// πεδίο). Το `rain_gauge` είναι ΡΥΘΜΟΣ από το διάστημα ανατροπών — το άθροισμά του δεν είναι βροχή (μετρημένο 3/10:
+// ×2,7 του μετρητή· ο μετρητής = 0,87 του Αστεροσκοπείου στα Ανώγεια). Βροχή παραθύρου = τιμή μετρητή στο τέλος −
+// τιμή στην αρχή, με λογικούς ελέγχους. Επιστρέφει { ok, mm } ή { ok:false, why }.
+const _SAG_RAIN_MAX_MMH = 450;          // όριο οργάνου S2120 (datasheet 0–450 mm/h): έλεγχος ευλογοφάνειας
+const _SAG_RAIN_ACC_FRESH_MIN = 180;    // τελευταία τιμή παλαιότερη → σιωπηλός σταθμός, όχι «μηδέν βροχή»
+async function _sagAccPointAtOrBefore(device, iso) {
+  const r = await device.getData({ variables: ['rain_height_acc'], end_date: iso, qty: 1, ordination: 'descending' });
+  const e = Array.isArray(r) && r.length ? r[0] : null;
+  if (!e) return null;
+  const v = Number(e.value), t = Date.parse(e.time);
+  return (Number.isFinite(v) && Number.isFinite(t)) ? { v, t } : null;
+}
+async function _sagRainFromCounter(device, startISO, endISO, endPt, maxLeadMin) {
+  try {
+    const endMs = Date.parse(endISO), startMs = Date.parse(startISO);
+    const e = (endPt !== undefined) ? endPt : await _sagAccPointAtOrBefore(device, endISO);
+    if (!e) return { ok: false, why: 'χωρίς μετρητή', end: null };
+    if ((endMs - e.t) / 60000 > _SAG_RAIN_ACC_FRESH_MIN) return { ok: false, why: 'σιωπηλός σταθμός', end: e };
+    const st = await _sagAccPointAtOrBefore(device, startISO);
+    if (!st) return { ok: false, why: 'καμία τιμή πριν το παράθυρο', end: e };
+    if ((startMs - st.t) / 60000 > maxLeadMin) return { ok: false, why: 'κενό πριν το παράθυρο', end: e };
+    let mm = e.v - st.v, resets = 0, dropped = 0;
+    if (mm < -0.001) {
+      // Μηδενισμός μέσα στο παράθυρο: άθροισμα θετικών βημάτων· μετά τον μηδενισμό μετρά η νέα τιμή.
+      const ser = await device.getData({ variables: ['rain_height_acc'], start_date: new Date(st.t).toISOString(),
+        end_date: endISO, qty: 2000, ordination: 'ascending' });
+      const P = (Array.isArray(ser) ? ser : []).map(x => ({ v: Number(x.value), t: Date.parse(x.time) }))
+        .filter(x => Number.isFinite(x.v) && Number.isFinite(x.t)).sort((a, b) => a.t - b.t);
+      mm = 0;
+      for (let i = 1; i < P.length; i++) {
+        const dh = Math.max((P[i].t - P[i - 1].t) / 3600000, 1 / 60);
+        let d = P[i].v - P[i - 1].v;
+        if (d < -0.001) { resets++; d = P[i].v; }
+        if (d > _SAG_RAIN_MAX_MMH * dh + 0.254) { dropped++; continue; }   // αδύνατο βήμα: απορρίπτεται
+        if (d > 0) mm += d;
+      }
+      if (resets === 0) return { ok: false, why: 'αρνητική διαφορά χωρίς μηδενισμό', end: e };
+    }
+    const spanH = Math.max((e.t - st.t) / 3600000, 1 / 60);
+    if (!(mm >= 0) || mm > _SAG_RAIN_MAX_MMH * spanH + 0.254) return { ok: false, why: 'αδύνατη τιμή μετρητή', end: e };
+    return { ok: true, mm: Math.round(mm * 1000) / 1000, resets, dropped, end: e };
+  } catch (x) { return { ok: false, why: 'ανάγνωση απέτυχε', end: null }; }
+}
+
 function _sagRunClock() {
   if (!_SAG_RUN_NOW) {
     _SAG_RUN_NOW = moment().toISOString();
@@ -17127,7 +17173,22 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
         const _rainWindowHours = 24;   // T-RAIN-DAILY-FIX-01: πάντα 24ωρο παράθυρο
         const _rainCapMm = 200 * (_rainWindowHours / 24);
 
+        // T-RAIN-ACC-01 (v50.158): ΠΡΩΤΑ ο βαθμονομημένος μετρητής. Η διαδρομή από κάτω (ρυθμός) μένει
+        // ΜΟΝΟ για σταθμούς χωρίς μετρητή (firmware 1.13) — ζωντανά 3/10 έδινε 0 στους 26 με μετρητή.
+        let _accEnd;
+        try { _accEnd = await _sagAccPointAtOrBefore(device, now); } catch (e) { _accEnd = null; }
+        const _accDay = _accEnd ? await _sagRainFromCounter(device, start, now, _accEnd, 180) : { ok: false, why: 'χωρίς μετρητή' };
+        if (_accEnd && !_accDay.ok) {
+          console.log(`[${info?.name || value}] T-RAIN-ACC-01: μετρητής βροχής 24ω ΑΚΥΡΟΣ (${_accDay.why}) — καμία ποσότητα από τον μετρητή.`);
+        }
         let totalRain;
+        if (_accDay.ok) {
+          totalRain = [{ variable: rainKey, value: parseFloat(_accDay.mm.toFixed(2)), unit: "mm" }];
+          if (_accDay.mm > 0 || _accDay.resets || _accDay.dropped) {
+            console.log(`[${info?.name || value}] T-RAIN-ACC-01: βροχή 24ω από μετρητή ${_accDay.mm.toFixed(2)} mm`
+              + (_accDay.resets ? ` · μηδενισμοί ${_accDay.resets}` : '') + (_accDay.dropped ? ` · απορρίφθηκαν ${_accDay.dropped} αδύνατα βήματα` : ''));
+          }
+        } else
         try {
           totalRain = await device.getData({
             variables: ["rain_height"],
@@ -17141,9 +17202,10 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
         }
 
         // Εναλλακτική μόνο όταν το rain_height δεν έδωσε τίποτα (νεότεροι parser).
-        const _rainEmpty = !Array.isArray(totalRain) || totalRain.length === 0
-          || !Number.isFinite(Number(totalRain[0]?.value));
-        if (_rainEmpty) {
+        const _rainEmpty = !_accDay.ok && (!Array.isArray(totalRain) || totalRain.length === 0
+          || !Number.isFinite(Number(totalRain[0]?.value)));
+        if (_accDay.ok) { /* T-RAIN-ACC-01: η ποσότητα ήρθε από τον μετρητή */ }
+        else if (_rainEmpty) {
           let _gaugeAvg;
           try {
             _gaugeAvg = await device.getData({
@@ -17181,7 +17243,12 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
         // Τώρα έχει ΤΡΕΙΣ καταναλωτές (αναστολή ωιδίου, πηγή «Βροχή» της υγρασίας
         // φύλλου, και ο συσσωρευτής έκπλυσης ψεκασμού του T-PEI-WASHOFF-MEM-01),
         // άρα δεν είναι πια νεκρή μέτρηση όπως στον v27.
-        try {
+        // T-RAIN-ACC-01: ωριαία βροχή από τον μετρητή (ίδιο σημείο τέλους, κενό πριν την ώρα ≤ 30΄).
+        if (_accEnd) {
+          const _accH = await _sagRainFromCounter(device, moment(now).subtract(1, 'hours').toISOString(), now, _accEnd, 30);
+          if (_accH.ok) deviceData.rain_height_hourly = _accH.mm;
+        }
+        if (deviceData.rain_height_hourly === undefined && !_accDay.ok) try {
           const _h1 = await device.getData({
             variables: ["rain_height"],
             query: "sum",
@@ -17203,7 +17270,7 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
         // Ίδια φυσική με το 24ωρο: βάθος(mm) = μέση ένταση(mm/h) × 1 h. Ίδια οροφή 60 mm/h.
         // Κόστος: ΜΙΑ επιπλέον ανάγνωση ανά σταθμό rain_gauge και ανά tick, ΜΟΝΟ όταν το
         // rain_height δεν έδωσε τίποτα (το 0 είναι μέτρηση — δεν ξαναρωτάμε).
-        if (deviceData.rain_height_hourly === undefined) {
+        if (deviceData.rain_height_hourly === undefined && !_accDay.ok) {
           try {
             const _g1 = await device.getData({
               variables: ["rain_gauge"],
