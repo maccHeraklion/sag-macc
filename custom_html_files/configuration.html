@@ -577,7 +577,7 @@
           </div>
           <div class="field">
             <label>Μετρημένη απόδοση δικτύου (%)</label>
-            <input id="irrig_efficiency_pct" type="number" step="1" min="10" max="100" placeholder="π.χ. 90" />
+            <input id="irrig_efficiency_pct" type="number" step="1" min="30" max="100" placeholder="π.χ. 90" />
             <div class="muted" style="font-size:.85rem; margin-top:4px">Αν δεν ξέρεις, άφησέ το κενό</div>
           </div>
           <div class="field">
@@ -2223,8 +2223,8 @@ function buildPayload(){
     irrig_row_spacing_m:     numOrNull($('irrig_row_spacing_m').value),
     irrig_fw_fraction:       (function(){ const v = numOrNull($('irrig_fw_pct').value);
                                           return v === null ? null : Math.min(1, Math.max(0.05, v/100)); })(),
-    irrig_efficiency_measured: (function(){ const v = numOrNull($('irrig_efficiency_pct').value);
-                                            return v === null ? null : Math.min(1, Math.max(0.1, v/100)); })(),
+    irrig_efficiency_measured: (function(){ const v = numOrNull($('irrig_efficiency_pct').value);   /* v23 · T-FORM-BOUNDS-01: < 30 % → κενό */
+                                            return (v === null || v < 30) ? null : Math.min(1, v/100); })(),
     irrig_application_rate_mm_h: numOrNull(computeAppRate()),
 
     /* Ανάλυση νερού — ο πυρήνας θα τα προτιμά όταν μάθει να τα διαβάζει */
@@ -2362,27 +2362,50 @@ var _SAG_UNIT_RULES = [
     cons: 'Αλλιώς το σύστημα δεν θα δείχνει διάρκεια ποτίσματος.' },
   { id: 'irrig_row_spacing_m', label: 'απόσταση γραμμών', unit: 'm', why: 'μοιάζει με εκατοστά',
     test: function(v){ return v > 12 && v <= 1200; }, fix: function(v){ return v / 100; },
-    cons: 'Αλλιώς το σύστημα δεν θα δείχνει διάρκεια ποτίσματος.' }
+    cons: 'Αλλιώς το σύστημα δεν θα δείχνει διάρκεια ποτίσματος.' },
+  /* v23 · T-FORM-BOUNDS-01 (B-16): τα όρια του πυρήνα, χωρίς κουμπί — δεν υπάρχει ασφαλής διόρθωση να προταθεί. */
+  { id: 'irrig_efficiency_pct', key: 'low', label: 'απόδοση δικτύου', fix: null,
+    why: 'είναι κάτω από 30 % — <b>ελέγξτε το δίκτυο</b> (διαρροές, βουλωμένοι σταλάκτες, πίεση): χρειάζεται επισκευή',
+    test: function(v){ return v < 30; },
+    cons: 'Η τιμή δεν θα αποθηκευτεί· η δόση θα υπολογίζεται με την τυπική απόδοση του συστήματος άρδευσης.' },
+  { id: 'water_ecw_dsm', key: 'low', label: 'EC νερού άρδευσης', fix: null,
+    why: 'είναι κάτω από το κατώτατο 0,05 dS/m — ελέγξτε τη μέτρηση και τη μονάδα',
+    test: function(v){ return v < 0.05; },
+    cons: 'Αλλιώς το σύστημα θα αγνοήσει τη μέτρηση και θα χρησιμοποιήσει την τυπική τιμή της κλάσης νερού.' },
+  { id: 'water_ecw_dsm', key: 'mid', label: 'EC νερού άρδευσης', fix: null,
+    why: 'δεν ταιριάζει ούτε σε dS/m (έως 15) ούτε σε μS/cm (από 50) — ελέγξτε τη μονάδα και τη μέτρηση',
+    test: function(v){ return v > 15 && v < 50; },
+    cons: 'Αλλιώς το σύστημα θα αγνοήσει τη μέτρηση και θα χρησιμοποιήσει την τυπική τιμή της κλάσης νερού.' },
+  { id: 'fert_ecw_dsm', key: 'low', label: 'EC μείγματος λίπανσης', fix: null,
+    why: 'είναι κάτω από το κατώτατο 0,05 dS/m — ελέγξτε τη μέτρηση και τη μονάδα',
+    test: function(v){ return v < 0.05; },
+    cons: 'Αλλιώς το σύστημα θα αγνοήσει τη μέτρηση.' },
+  { id: 'fert_ecw_dsm', key: 'mid', label: 'EC μείγματος λίπανσης', fix: null,
+    why: 'δεν ταιριάζει ούτε σε dS/m (έως 15) ούτε σε μS/cm (από 50) — ελέγξτε τη μονάδα και τη μέτρηση',
+    test: function(v){ return v > 15 && v < 50; },
+    cons: 'Αλλιώς το σύστημα θα αγνοήσει τη μέτρηση.' }
 ];
 function _sagFmtNum(x){ return Number(x).toLocaleString('el-GR', { maximumFractionDigits: 3, useGrouping: false }); }
 function _sagUnitCheck(rule){
   var e = $(rule.id); if (!e) return null;
   var v = numOrNull(e.value);
   if (v === null || !rule.test(v)) return null;
-  return { v: v, s: rule.fix(v) };
+  return { v: v, s: rule.fix ? rule.fix(v) : null };
 }
 function _sagUnitGuard(rule){
   var e = $(rule.id); if (!e) return;
-  var box = document.getElementById(rule.id + '__unit');
+  var bid = rule.id + '__' + (rule.key || 'unit');
+  var box = document.getElementById(bid);
   var r = _sagUnitCheck(rule);
   if (!r){ if (box) box.remove(); return; }
   if (!box){
-    box = document.createElement('div'); box.id = rule.id + '__unit'; box.className = 'unitHint';
+    box = document.createElement('div'); box.id = bid; box.className = 'unitHint';
     box.style.cssText = 'margin-top:6px; padding:6px 8px; border-radius:8px; background:#fff4e5; border:1px solid #f0b75a; color:#7a4b00; font-size:.85rem';
     e.insertAdjacentElement('afterend', box);
   }
   box.innerHTML = '';
   var t = document.createElement('span');
+  if (!rule.fix){ t.innerHTML = 'Η τιμή <b>' + _sagFmtNum(r.v) + '</b> ' + rule.why + '. ' + rule.cons; box.appendChild(t); return; }
   t.innerHTML = 'Η τιμή <b>' + _sagFmtNum(r.v) + '</b> ' + rule.why + ' — εννοείτε <b>' + _sagFmtNum(r.s) + ' ' + rule.unit + '</b>; ';
   var b = document.createElement('button'); b.type = 'button'; b.className = 'btn';
   b.style.cssText = 'margin-left:6px; padding:2px 8px; font-size:.85rem';
@@ -2400,7 +2423,8 @@ function _sagUnitMsgs(){
   var out = [];
   _SAG_UNIT_RULES.forEach(function(rule){
     var r = _sagUnitCheck(rule);
-    if (r) out.push('Το πεδίο <b>' + rule.label + '</b> έχει <b>' + _sagFmtNum(r.v) + '</b> — ' + rule.why
+    if (r && !rule.fix) out.push('Το πεδίο <b>' + rule.label + '</b> έχει <b>' + _sagFmtNum(r.v) + '</b> — ' + rule.why + '. ' + rule.cons);
+    else if (r) out.push('Το πεδίο <b>' + rule.label + '</b> έχει <b>' + _sagFmtNum(r.v) + '</b> — ' + rule.why
       + '. Αν εννοείτε <b>' + _sagFmtNum(r.s) + ' ' + rule.unit + '</b>, πατήστε «Χρήση» κάτω από το πεδίο. ' + rule.cons);
   });
   return out;
