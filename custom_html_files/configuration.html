@@ -2345,6 +2345,70 @@ function refreshHints(){
   } catch(e){}
 }
 function numOrNull(v){ const t=_clean(v); if(t==='') return null; const n=parseFloat(t); return Number.isFinite(n)?n:null; }
+/* v21 · 4/10/2026 · T-FORM-UNITGUARD-01: λάθος ΜΟΝΑΔΑ τη στιγμή που γράφεται. Μετρημένο 4/10 σε 4 αγρούς: ECw 3220
+   και 400 (μS/cm αντί dS/m), απόσταση σταλακτήρων 20 και 50 (εκατοστά αντί μέτρα). Ο πυρήνας τις αγνοεί (ECw εκτός
+   0,05-15) ή δεν βγάζει διάρκεια (απόσταση > 12 m) — σωστά, αλλά ο παραγωγός το μάθαινε μόνο από την κάρτα.
+   Εδώ: υπόδειξη κάτω από το πεδίο με κουμπί «Χρήση X» + γραμμή στο παράθυρο επιβεβαίωσης. ΠΟΤΕ σιωπηλή μετατροπή.
+   Τα όρια είναι ΤΑ ΙΔΙΑ με του πυρήνα (T-MEASURED-WATER-01, T-IRR-RATE-SANITY-01). */
+var _SAG_UNIT_RULES = [
+  { id: 'water_ecw_dsm', label: 'EC νερού άρδευσης', unit: 'dS/m', why: 'μοιάζει με μS/cm',
+    test: function(v){ return v >= 50 && v <= 15000; }, fix: function(v){ return v / 1000; },
+    cons: 'Αλλιώς το σύστημα θα αγνοήσει τη μέτρηση και θα χρησιμοποιήσει την τυπική τιμή της κλάσης νερού.' },
+  { id: 'fert_ecw_dsm', label: 'EC μείγματος λίπανσης', unit: 'dS/m', why: 'μοιάζει με μS/cm',
+    test: function(v){ return v >= 50 && v <= 15000; }, fix: function(v){ return v / 1000; },
+    cons: 'Αλλιώς το σύστημα θα αγνοήσει τη μέτρηση.' },
+  { id: 'irrig_emitter_spacing_m', label: 'απόσταση σταλακτήρων', unit: 'm', why: 'μοιάζει με εκατοστά',
+    test: function(v){ return v > 12 && v <= 1200; }, fix: function(v){ return v / 100; },
+    cons: 'Αλλιώς το σύστημα δεν θα δείχνει διάρκεια ποτίσματος.' },
+  { id: 'irrig_row_spacing_m', label: 'απόσταση γραμμών', unit: 'm', why: 'μοιάζει με εκατοστά',
+    test: function(v){ return v > 12 && v <= 1200; }, fix: function(v){ return v / 100; },
+    cons: 'Αλλιώς το σύστημα δεν θα δείχνει διάρκεια ποτίσματος.' }
+];
+function _sagFmtNum(x){ return Number(x).toLocaleString('el-GR', { maximumFractionDigits: 3, useGrouping: false }); }
+function _sagUnitCheck(rule){
+  var e = $(rule.id); if (!e) return null;
+  var v = numOrNull(e.value);
+  if (v === null || !rule.test(v)) return null;
+  return { v: v, s: rule.fix(v) };
+}
+function _sagUnitGuard(rule){
+  var e = $(rule.id); if (!e) return;
+  var box = document.getElementById(rule.id + '__unit');
+  var r = _sagUnitCheck(rule);
+  if (!r){ if (box) box.remove(); return; }
+  if (!box){
+    box = document.createElement('div'); box.id = rule.id + '__unit'; box.className = 'unitHint';
+    box.style.cssText = 'margin-top:6px; padding:6px 8px; border-radius:8px; background:#fff4e5; border:1px solid #f0b75a; color:#7a4b00; font-size:.85rem';
+    e.insertAdjacentElement('afterend', box);
+  }
+  box.innerHTML = '';
+  var t = document.createElement('span');
+  t.innerHTML = 'Η τιμή <b>' + _sagFmtNum(r.v) + '</b> ' + rule.why + ' — εννοείτε <b>' + _sagFmtNum(r.s) + ' ' + rule.unit + '</b>; ';
+  var b = document.createElement('button'); b.type = 'button'; b.className = 'btn';
+  b.style.cssText = 'margin-left:6px; padding:2px 8px; font-size:.85rem';
+  b.textContent = 'Χρήση ' + _sagFmtNum(r.s);
+  b.onclick = function(){
+    e.value = _sagFmtNum(r.s);
+    e.dispatchEvent(new Event('input', { bubbles: true }));
+    e.dispatchEvent(new Event('change', { bubbles: true }));
+    _sagUnitGuard(rule);
+  };
+  box.appendChild(t); box.appendChild(b);
+}
+function _sagUnitGuardAll(){ _SAG_UNIT_RULES.forEach(_sagUnitGuard); }
+function _sagUnitMsgs(){
+  var out = [];
+  _SAG_UNIT_RULES.forEach(function(rule){
+    var r = _sagUnitCheck(rule);
+    if (r) out.push('Το πεδίο <b>' + rule.label + '</b> έχει <b>' + _sagFmtNum(r.v) + '</b> — ' + rule.why
+      + '. Αν εννοείτε <b>' + _sagFmtNum(r.s) + ' ' + rule.unit + '</b>, πατήστε «Χρήση» κάτω από το πεδίο. ' + rule.cons);
+  });
+  return out;
+}
+_SAG_UNIT_RULES.forEach(function(rule){
+  var e = $(rule.id);
+  if (e){ e.addEventListener('input', function(){ _sagUnitGuard(rule); }); e.addEventListener('change', function(){ _sagUnitGuard(rule); }); }
+});
 /* Φ1 · v19: κείμενο ή null (πεδία type=date δίνουν 'YYYY-MM-DD' ή ''). */
 function strOrNull(v){ const t=String(v==null?'':v).trim(); return t===''?null:t; }
 
@@ -2487,7 +2551,7 @@ function applyIncoming(buckets, formLocked){
          loaded γινόταν true αλλά οι σειρές καλλιεργειών δεν χτίζονταν ποτέ,
          και η αποθήκευση έστελνε authoritative crops:[]. Μπαίνει ΜΟΝΟ για
          γνήσιο αντικείμενο — primitive conf δεν είναι υδροδότηση. */
-      if (conf && typeof conf === 'object' && !Array.isArray(conf)) state.hydrated = true;
+      if (conf && typeof conf === 'object' && !Array.isArray(conf)){ state.hydrated = true; setTimeout(_sagUnitGuardAll, 0); }   /* v21 · T-FORM-UNITGUARD-01 */
       if (Array.isArray(conf?.crops) && conf.crops.length){
 
         // rebuild crops UI
@@ -2570,7 +2634,7 @@ function applyIncoming(buckets, formLocked){
   if (!usedConfiguration){
     /* M2: και η παλαιά διαδρομή μετρά ως υδροδότηση. */
     if ((latest.cultivation_type_general || state.lastDataMap.cultivation_type_general)
-        && (latest.cultivation_type || state.lastDataMap.cultivation_type)) state.hydrated = true;
+        && (latest.cultivation_type || state.lastDataMap.cultivation_type)){ state.hydrated = true; setTimeout(_sagUnitGuardAll, 0); }   /* v21 · T-FORM-UNITGUARD-01 */
     if (latest.cultivation_type_general) $('cultivation_type_general').value = latest.cultivation_type_general.value;
     refreshTypeOptions();
     if (latest.cultivation_type) $('cultivation_type').value = latest.cultivation_type.value;
@@ -2901,6 +2965,7 @@ $('btnSave').onclick = function(){
       + 'και τα «λίτρα ανά φυτό» δεν θα εμφανιστούν.');
   }
 
+  _sagUnitMsgs().forEach(function(m){ msgs.push(m); });   /* v21 · T-FORM-UNITGUARD-01 */
   var w = $('confirmAreaWarn');
   if (w){
     if (msgs.length){
