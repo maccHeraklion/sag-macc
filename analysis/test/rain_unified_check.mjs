@@ -4,7 +4,7 @@
 // Κάθε μετάλλαξη πρέπει να σκοτώνεται.
 import fs from "node:fs"; import path from "node:path"; import { fileURLToPath } from "node:url"; import { createRequire } from "node:module";
 const here = path.dirname(fileURLToPath(import.meta.url));
-const anPath = path.join(here, "..", "calculate_old_rainHeightSums.v34.js");
+const anPath = path.join(here, "..", "calculate_old_rainHeightSums.js");
 const corePath = path.join(here, "..", "runPerTich.js");
 const AN = fs.readFileSync(anPath, "utf8").replace(/\r\n/g, "\n");
 const CORE = fs.readFileSync(corePath, "utf8").replace(/\r\n/g, "\n");
@@ -137,7 +137,7 @@ async function run(src) {
   ok(y7 && y7.metadata.partial && y7.metadata.since === "2026-03" && Math.abs(y7.value - (70 + 6.096)) < 0.3, "U7 φέτος ≥ 76,1 από 2026-03 (" + JSON.stringify(y7 && [y7.value, y7.metadata.since, y7.metadata.partial]) + ")");
 
   // U8 · ερμηνεία παλιών εγγραφών v33
-  const ctx = { accFirstMs: Z("2026-05-01T00:00:00Z"), accLastMs: Z("2026-08-27T10:00:00Z") };
+  const ctx = { accFirstMs: Z("2026-05-01T00:00:00Z"), lastMs: Z("2026-08-27T10:00:00Z") };
   const rec = (src, s, e, v) => ({ value: v, metadata: { period_start_utc: s, period_end_utc: e, source_variable: src } });
   const a8 = A.readRecord(rec("rain_height", "2026-09-01T00:00:00.000Z", "2026-09-30T23:59:59.999Z", 0), ctx);
   ok(a8 && a8.cov === 0, "U8α v33 εφεδρεία ρυθμού σε σταθμό με μετρητή = άγνωστο");
@@ -145,6 +145,10 @@ async function run(src) {
   ok(b8 && b8.cov === 1 && b8.est, "U8β v33 ρυθμός πριν τον μετρητή = εκτίμηση");
   const c8 = A.readRecord(rec("rain_height_acc", "2026-09-01T00:00:00.000Z", "2026-09-30T23:59:59.999Z", 0), ctx);
   ok(c8 && c8.cov === 0, "U8γ v33 «0» από σιωπηλό μετρητή = άγνωστο");
+  const rctx = { accFirstMs: null, lastMs: Z("2026-09-15T12:00:00Z") };
+  const d8 = A.readRecord(rec("rain_height", "2026-09-20T00:00:00.000Z", "2026-09-20T23:59:59.999Z", 0), rctx);
+  const e8 = A.readRecord(rec("rain_height", "2026-09-10T00:00:00.000Z", "2026-09-10T23:59:59.999Z", 3), rctx);
+  ok(d8 && d8.cov === 0 && e8 && e8.cov === 1 && e8.est, "U8δ σταθμός χωρίς μετρητή: «0» μετά τη σιωπή = άγνωστο, πριν = εκτίμηση");
   return f;
 }
 
@@ -163,7 +167,8 @@ const MUT = [
   ["m9 ξαναγράφει μερικές περιόδους", "    if (!res.known || (have && res.coverage <= have.cov + 0.01)) continue;\n    out.push(payload('rain_height_daily', p, res));", "    if (!res.known) continue;\n    out.push(payload('rain_height_daily', p, res));"],
   ["m10 φέτος χωρίς μερικό", "partial: coverage < FULL_COV, status: est ? 'estimate' : 'measured', method: 'sum_of_months'", "partial: false, status: est ? 'estimate' : 'measured', method: 'sum_of_months'"],
   ["m11 χρόνος στο τέλος", "const mid = Math.floor((p.s + p.e) / 2);", "const mid = p.e;"],
-  ["m12 σιωπηλός μετρητής v33 = μέτρηση", "    if (ctx.accLastMs != null && ctx.accLastMs < e - _SAG_RAIN_ACC_FRESH_MIN * 60000)", "    if (false)"],
+  ["m12 σιωπηλός σταθμός v33 = μέτρηση", "  const silentCov = (ctx.lastMs != null && ctx.lastMs < e - _SAG_RAIN_ACC_FRESH_MIN * 60000)", "  const silentCov = (false)"],
+  ["m13 σιωπηλός σταθμός ρυθμού v33 = μέτρηση", "    if (ctx.accFirstMs == null) return { s, e, mm: silentCov > 0 ? v : 0, cov: silentCov, est: true, alg: 'v33' };", "    if (ctx.accFirstMs == null) return { s, e, mm: v, cov: 1, est: true, alg: 'v33' };"],
 ];
 let k = 0;
 for (const [n, a, b] of MUT) {

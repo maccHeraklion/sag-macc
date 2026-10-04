@@ -8,7 +8,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const A = path.join(here, "..", "..");
 const moment = fs.readFileSync(path.join(A, "node_modules", "moment", "min", "moment.min.js"), "utf8");
 const mtz = fs.readFileSync(path.join(A, "node_modules", "moment-timezone", "builds", "moment-timezone-with-data-1970-2030.min.js"), "utf8");
-const v34 = fs.readFileSync(path.join(A, "calculate_old_rainHeightSums.v34.js"), "utf8").replace(/\r\n/g, "\n");
+const v34 = fs.readFileSync(path.join(A, "calculate_old_rainHeightSums.js"), "utf8").replace(/\r\n/g, "\n");
 const out = `// SAG — PROBE ΞΗΡΗΣ ΕΚΤΕΛΕΣΗΣ (ΜΟΝΟ ΑΝΑΓΝΩΣΗ) · ανάλυση βροχής v34 με ζωντανά δεδομένα· ΚΑΜΙΑ εγγραφή.
 // Παράχθηκε από build_rain_v34_dryrun.mjs — μην το διορθώνεις με το χέρι.
 const __moment = (function () { const module = { exports: {} }, exports = module.exports;

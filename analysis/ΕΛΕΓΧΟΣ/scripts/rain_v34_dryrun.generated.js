@@ -206,16 +206,15 @@ function readRecord(rec, ctx) {
     const cov = Number.isFinite(Number(m.coverage)) ? clamp01(Number(m.coverage)) : 1;
     return { s, e, mm: Number.isFinite(v) ? v : 0, cov, est: m.status === 'estimate', alg: RAIN_ALG };
   }
-  // v33: πηγή μετρητής → μέτρηση, εκτός αν ο μετρητής σιωπούσε στο τέλος της περιόδου
+  // v33: η «0» ενός σταθμού που σιωπούσε στο τέλος της περιόδου δεν είναι μέτρηση (Β-2) — κάλυψη ως την τελευταία τιμή
   if (!Number.isFinite(v)) return { s, e, mm: 0, cov: 0, est: false, alg: 'v33' };
-  if (m.source_variable === 'rain_height_acc') {
-    let cov = 1;
-    if (ctx.accLastMs != null && ctx.accLastMs < e - _SAG_RAIN_ACC_FRESH_MIN * 60000) cov = clamp01((ctx.accLastMs - s) / (e - s));
-    return { s, e, mm: cov > 0 ? v : 0, cov, est: false, alg: 'v33' };
-  }
+  const silentCov = (ctx.lastMs != null && ctx.lastMs < e - _SAG_RAIN_ACC_FRESH_MIN * 60000) ? clamp01((ctx.lastMs - s) / (e - s)) : 1;
+  if (m.source_variable === 'rain_height_acc') return { s, e, mm: silentCov > 0 ? v : 0, cov: silentCov, est: false, alg: 'v33' };
   if (m.source_variable === 'rain_height') {
-    // πριν υπάρξει μετρητής = εκτίμηση από ρυθμό· μετά = η εφεδρεία της v33 (άθροισμα που δεν υπήρχε) → άγνωστο
-    if (ctx.accFirstMs == null || e <= ctx.accFirstMs + 86400000) return { s, e, mm: v, cov: 1, est: true, alg: 'v33' };
+    // σταθμός χωρίς μετρητή: εκτίμηση από ρυθμό (με τον ίδιο έλεγχο σιωπής)
+    if (ctx.accFirstMs == null) return { s, e, mm: silentCov > 0 ? v : 0, cov: silentCov, est: true, alg: 'v33' };
+    // σταθμός με μετρητή: πριν τον μετρητή = εκτίμηση ρυθμού· μετά = η εφεδρεία της v33 (άθροισμα που δεν υπήρχε) → άγνωστο
+    if (e <= ctx.accFirstMs + 86400000) return { s, e, mm: v, cov: 1, est: true, alg: 'v33' };
     return { s, e, mm: 0, cov: 0, est: false, alg: 'v33' };
   }
   return { s, e, mm: 0, cov: 0, est: false, alg: 'v33' };
@@ -270,11 +269,11 @@ async function computeForDevice(device, name, cfg) {
   const log = [];
   const accLast = await lastPointAtOrBefore(device, 'rain_height_acc', iso(now));
   const accFirst = accLast ? await firstPointIn(device, 'rain_height_acc', '2015-01-01T00:00:00.000Z', iso(now)) : null;
-  const ctx = { accLastMs: accLast ? accLast.t : null, accFirstMs: accFirst ? accFirst.t : null };
   const counter = !!accLast;
   const method = counter ? 'counter' : 'rate_sum';
   const rateLast = counter ? null : await lastPointAtOrBefore(device, 'rain_height', iso(now));
-  const lastMs = counter ? ctx.accLastMs : (rateLast ? rateLast.t : null);
+  const lastMs = counter ? accLast.t : (rateLast ? rateLast.t : null);
+  const ctx = { lastMs, accFirstMs: accFirst ? accFirst.t : null };
   const windowRain = async (sMs, eMs, leadMin) => {
     if (lastMs == null || lastMs <= sMs) return { known: false, why: 'σιωπηλός σταθμός' };   // χωρίς ανάγνωση
     const res = counter ? await rainCounterWindow(device, iso(sMs), iso(eMs), leadMin) : await rainRateWindow(device, iso(sMs), iso(eMs));
