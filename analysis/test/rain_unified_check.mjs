@@ -25,7 +25,7 @@ function load(src) {
   return mod.exports;
 }
 // Εικονικός σταθμός: σειρές ανά μεταβλητή {t(ms), v, metadata, group}
-function fakeDevice(series) {
+function fakeDevice(series, openEnd) {
   const S = {}; for (const [k, arr] of Object.entries(series)) S[k] = arr.map(x => ({ ...x }));
   const sent = [];
   return {
@@ -35,7 +35,7 @@ function fakeDevice(series) {
       let rows = [];
       for (const v of vars) rows = rows.concat((S[v] || []).map(x => ({ variable: v, value: x.v, time: new Date(x.t).toISOString(), metadata: x.metadata, group: x.group })));
       const s = q.start_date ? Date.parse(q.start_date) : -Infinity, e = q.end_date ? Date.parse(q.end_date) : Infinity;
-      rows = rows.filter(r => { const t = Date.parse(r.time); return t >= s && t <= e; });
+      rows = rows.filter(r => { const t = Date.parse(r.time); return t >= s && (openEnd ? t < e : t <= e); });   // openEnd: όπως το SDK v11
       if (q.query === "sum") return [{ value: rows.reduce((a, r) => a + Number(r.value), 0) }];
       rows.sort((a, b) => Date.parse(a.time) - Date.parse(b.time));
       if ((q.ordination || "descending") === "descending") rows.reverse();
@@ -66,7 +66,7 @@ async function run(src) {
   const blk = coreBlock(CORE);
   ok(blk && src.includes(blk), "U0 το τμήμα μετρητή είναι ΑΥΤΟΥΣΙΟ αντίγραφο του πυρήνα");
   let A; try { A = load(src); } catch (e) { return ["φόρτωση: " + e.message]; }
-  ok(A.RAIN_VERSION === "v34 · 2026-10-04", "U1 έκδοση v34");
+  ok(A.RAIN_VERSION === "v34.1 · 2026-10-04", "U1 έκδοση v34.1");
 
   // U2 · περίοδοι: γέφυρα και ώρα Ελλάδας
   const P = (u, t) => A.periodContaining(u, Z(t), TZ, cut);
@@ -108,6 +108,13 @@ async function run(src) {
   ok(by(s4, "rain_height_hourly").length === 0 && by(s4, "rain_height_daily").filter(x => x.metadata.period_key !== "2026-10-04").length === 0, "U4β σιωπηλός: καμία κλειστή ώρα/ημέρα «0»");
   const brS = by(s4, "rain_height_daily").find(x => x.metadata.period_key === "2026-10-04");
   ok(!brS || (brS.metadata.partial && brS.metadata.coverage < 0.6), "U4γ η γέφυρα (σιωπή από 10Z) είναι μερική, όχι πλήρης");
+  // U4ε · ίδιος σταθμός, ανοιχτό end_date (SDK v11): η μερική γέφυρα πρέπει να βγαίνει ΚΑΙ εδώ (ζωντανό σφάλμα v34 4/10)
+  for (const open of [false, true]) {
+    const dvP = fakeDevice({ rain_height_acc: counterSeries(Z("2026-10-03T00:00:00Z"), Z("2026-10-04T10:00:00Z"), (t) => (t > Z("2026-10-04T05:00:00Z") && t <= Z("2026-10-04T06:00:00Z")) ? 0.254 : 0) }, open);
+    const sP = await runAt(A, "2026-10-04T18:30:00Z", dvP);
+    const pP = by(sP, "current_rain_height_daily")[0];
+    ok(pP && pP.metadata.partial && Math.abs(pP.value - 3.048) < 1e-6, "U4ε σήμερα μερικό 3,048 με " + (open ? "ανοιχτό" : "κλειστό") + " end_date (" + JSON.stringify(pP && [pP.value, pP.metadata.partial]) + ")");
+  }
   const s4b = await runAt(A, "2026-10-06T10:02:00Z", dvS);
   ok(by(s4b, "rain_height_daily").length === 0, "U4δ μερική περίοδος δεν ξαναγράφεται χωρίς βελτίωση κάλυψης");
 
@@ -164,6 +171,7 @@ const MUT = [
   ["m6 ρυθμός ως μέτρηση", "return { known: true, mm: r3(sum), coverage, status: 'estimate'", "return { known: true, mm: r3(sum), coverage, status: 'measured'"],
   ["m7 v33 εφεδρεία ως μέτρηση", "    return { s, e, mm: 0, cov: 0, est: false, alg: 'v33' };\n  }\n  return", "    return { s, e, mm: v, cov: 1, est: false, alg: 'v33' };\n  }\n  return"],
   ["m8 χωρίς μερική κάλυψη", "  if (partialable.indexOf(full.why) < 0) return", "  if (true) return"],
+  ["m14 άγκυρα χωρίς +1 ms (σφάλμα SDK)", "_sagRainFromCounter(device, iso(a.t + 1), iso(e.t + 1), e, 1)", "_sagRainFromCounter(device, iso(a.t), iso(e.t), e, 0)"],
   ["m9 ξαναγράφει μερικές περιόδους", "    if (!res.known || (have && res.coverage <= have.cov + 0.01)) continue;\n    out.push(payload('rain_height_daily', p, res));", "    if (!res.known) continue;\n    out.push(payload('rain_height_daily', p, res));"],
   ["m10 φέτος χωρίς μερικό", "partial: coverage < FULL_COV, status: est ? 'estimate' : 'measured', method: 'sum_of_months'", "partial: false, status: est ? 'estimate' : 'measured', method: 'sum_of_months'"],
   ["m11 χρόνος στο τέλος", "const mid = Math.floor((p.s + p.e) / 2);", "const mid = p.e;"],

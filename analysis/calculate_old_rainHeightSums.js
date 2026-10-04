@@ -33,7 +33,7 @@ const { Analysis, Resources, Account, Device } = require("@tago-io/sdk");
 const moment = require("moment-timezone");
 
 const RAIN_ALG = "v34";
-const RAIN_VERSION = "v34 · 2026-10-04";
+const RAIN_VERSION = "v34.1 · 2026-10-04";
 const DEFAULT_TZ = "Europe/Athens";
 const DEFAULT_CUTOVER = "2026-10-04T21:00:00.000Z";   // Δευτέρα 5/10/2026 00:00 ώρα Ελλάδας
 const HOURS_BACK = 24;          // κλειστές ώρες προς έλεγχο
@@ -129,7 +129,8 @@ async function rainCounterWindow(device, startISO, endISO, leadMin) {
   let a = await _sagAccPointAtOrBefore(device, startISO);   // άγκυρα αρχής: σημείο ≤ αρχή μέσα στο κενό που επιτρέπεται…
   if (!a || (S - a.t) / 60000 > leadMin) a = await firstPointIn(device, 'rain_height_acc', startISO, endISO);   // …αλλιώς το πρώτο μέσα
   if (!a || a.t >= e.t) return { known: false, why: full.why + ' · ένα μόνο σημείο' };
-  const sub = await _sagRainFromCounter(device, iso(a.t), iso(e.t), e, 0);
+  // +1 ms και ανοχή 1΄: το «≤ χρόνος» βρίσκει ακριβώς την άγκυρα είτε το end_date είναι κλειστό (REST) είτε ανοιχτό (SDK v11)
+  const sub = await _sagRainFromCounter(device, iso(a.t + 1), iso(e.t + 1), e, 1);
   if (!sub.ok) return { known: false, why: full.why + ' · ' + sub.why };
   const coverage = clamp01((Math.min(e.t, E) - Math.max(a.t, S)) / span);
   if (coverage < MIN_COV) return { known: false, why: full.why + ' · ελάχιστη κάλυψη' };

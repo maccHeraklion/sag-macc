@@ -1,4 +1,4 @@
-// SAG — DEPLOY PROBE · ανάλυση βροχής v34 + widget (T-RAIN-UNIFIED-01) · commit 3625896 · από GitHub raw στο TagoIO.
+// SAG — DEPLOY PROBE · ανάλυση βροχής v34.1 (T-RAIN-UNIFIED-01, άγκυρα μερικής κάλυψης στο SDK) · από GitHub raw στο TagoIO.
 // Πολιτική 6aad48f03c26e2000bde4710 ΕΝΕΡΓΗ μόνο κατά το ανέβασμα. Παράθυρο hh:25–hh:15 UTC.
 const zlib = require("zlib");
 const crypto = require("crypto");
@@ -9,14 +9,11 @@ const PUBLIC_FILE_BASE = "https://api.tago.io/file/67934c48e8e573000ae5964b/";
 const REPO_RAW = "https://raw.githubusercontent.com/maccHeraklion/sag-macc";
 
 const COMMIT = "3625896";
-const DRY_RUN = true;
+const DRY_RUN = false;
 const TASKS = [
   { kind: "analysis", id: "690e32179330e4000a5d16e5", path: "analysis/calculate_old_rainHeightSums.js",
-    eol: "lf", language: "node", sha256: "e94d862326751be0b91d1096d741949bddd4850ff2adf3a2d8342906df5606eb",
-    expectLiveBefore: null },
-  { kind: "file", path: "_dist-sagMain/index-7cbd9a4e.js", target: "storage/sagMain/index-7cbd9a4e.js",
-    eol: "lf", contentType: "text/javascript", sha256: "766cc03fb0aa151de65f59224c49471ac426add5fa8d03b17abdebc757a24b86",
-    expectLiveBefore: "f906cfc9c784d795c3d671a98c591a661e78b9b79766e2459cebd90a52850a8c" },
+    eol: "lf", language: "node", sha256: "595b62d9d6f4e94e095c785b66ae6a8c5a88dc78af157dc0b556359cd7c068f5",
+    expectLiveBefore: "e94d862326751be0b91d1096d741949bddd4850ff2adf3a2d8342906df5606eb" },
 ];
 
 const CONTENT_TYPE_BY_EXT = { html: "text/html", js: "text/javascript", css: "text/css", json: "application/json", svg: "image/svg+xml" };
