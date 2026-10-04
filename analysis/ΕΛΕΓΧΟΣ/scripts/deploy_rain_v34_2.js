@@ -7,7 +7,7 @@ const TOKEN = process.env.T_ANALYSIS_TOKEN;
 const API = "https://api.us-e1.tago.io";
 const REPO_RAW = "https://raw.githubusercontent.com/maccHeraklion/sag-macc";
 
-const COMMIT = "9f7bae7";
+const COMMIT = "f3b3755";
 const TASK = { id: "690e32179330e4000a5d16e5", path: "analysis/calculate_old_rainHeightSums.js", language: "node",
   sha256: "7f86725716399f5fc53f0dea5f99805719d845daaec12ba4ed0720225c713593",
   expectLiveBefore: "595b62d9d6f4e94e095c785b66ae6a8c5a88dc78af157dc0b556359cd7c068f5" };
