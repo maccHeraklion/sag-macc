@@ -1,3 +1,7 @@
+// ⚠ ΜΗΝ ΑΝΕΒΕΙ (4/10/2026, έλεγχος πληρότητας): αυτό ήταν το αρχείο του repo, ΑΛΛΟ από τη ζωντανή v33 (που είναι πλέον
+// το calculate_old_rainHeightSums.js). Έχει ΣΦΑΛΜΑ ΟΡΙΩΝ: οι κλειστές περίοδοι σφραγίζονται στο τέλος +11-20 s και το
+// sumAggregateInRange ξεκινά από την αρχή της περιόδου → μετρά ΔΥΟ ΦΟΡΕΣ την τελευταία ώρα/μέρα/μήνα της προηγούμενης.
+// Κρατιέται μόνο για τις ιδέες του (ιεραρχικά αθροίσματα, ετήσιο). Βλ. ΕΛΕΓΧΟΣ_ΠΛΗΡΟΤΗΤΑΣ_2026-10-04.md.
 /**
  * TagoIO Analysis — Rain Height Aggregation (server-side sums + retention-smart yearly + smart PTD writes)
  *
@@ -290,6 +294,196 @@ async function getLastPoint(device, variable) {
 }
 
 /**
+ * Fetch all stored points of `variable` with write-timestamps in [startISO, endISO],
+ * adding a 2-minute buffer on the end to account for SHIFT_SECONDS on closed-period write times.
+ * Returns { sum: number, count: number }.
+ */
+async function sumAggregateInRange(device, variable, startISO, endISO) {
+  const bufferedEnd = moment.utc(endISO).add(2, "minutes").toISOString();
+  const res = await device.getData({
+    variable,
+    start_date: startISO,
+    end_date: bufferedEnd,
+    qty: 200,
+    order: "asc",
+  });
+  if (!Array.isArray(res) || !res.length) return { sum: 0, count: 0 };
+  let total = 0;
+  for (const item of res) {
+    const v = Number(item.value);
+    if (Number.isFinite(v)) total += v;
+  }
+  return { sum: total, count: res.length };
+}
+
+/**
+ * Compute current day-to-date rain from:
+ *   - sum of closed rain_height_hourly for today (dayStart → last closed hour end)
+ *   - plus the still-open partial (last closed hour end → nowUTC) from raw data
+ *
+ * Fallback: if no hourly aggregates are found for today, the partial expands back to dayStart
+ * so raw data covers the full day (same as the old behaviour).
+ */
+async function getCurrentDayFromHourly(device, nowUTC, targetHourlyVar, accVar, fallbackVar) {
+  const dayStart = nowUTC.clone().startOf("day");
+  const lastClosedHourEnd = nowUTC.clone().subtract(1, "hour").endOf("hour");
+
+  let closedSum = 0;
+  let partialStart = dayStart.clone(); // default: raw covers full day if no aggregates found
+
+  if (lastClosedHourEnd.isAfter(dayStart)) {
+    const { sum, count } = await sumAggregateInRange(
+      device,
+      targetHourlyVar,
+      dayStart.toISOString(),
+      lastClosedHourEnd.toISOString()
+    );
+    if (count > 0) {
+      closedSum = sum;
+      partialStart = lastClosedHourEnd.clone();
+    }
+    // count = 0: no hourly aggregates yet — partialStart stays at dayStart (raw fallback for full day)
+  }
+
+  const { value: partialVal, source } = await getRainInRange(
+    device,
+    accVar,
+    fallbackVar,
+    partialStart.toISOString(),
+    nowUTC.toISOString()
+  );
+
+  const total = closedSum + partialVal;
+  console.log(
+    `[PTD-Daily] closedHourlySum=${closedSum}, partial(${partialStart.toISOString()}→now)=${partialVal}, total=${total}`
+  );
+  return { value: total, source };
+}
+
+/**
+ * Compute current ISO-week-to-date rain from:
+ *   - sum of closed rain_height_daily for the current ISO week (weekStart → yesterday end)
+ *   - plus today's current daily value (already computed via getCurrentDayFromHourly)
+ *
+ * Fallback: if no daily aggregates are found for the closed days, uses raw from weekStart → dayStart.
+ */
+async function getCurrentWeekFromDaily(device, nowUTC, targetDailyVar, currentDailyValue, accVar, fallbackVar) {
+  const weekStart = nowUTC.clone().startOf("isoWeek");
+  const dayStart = nowUTC.clone().startOf("day");
+  const lastClosedDayEnd = nowUTC.clone().subtract(1, "day").endOf("day");
+
+  let closedSum = 0;
+
+  if (lastClosedDayEnd.isAfter(weekStart)) {
+    const { sum, count } = await sumAggregateInRange(
+      device,
+      targetDailyVar,
+      weekStart.toISOString(),
+      lastClosedDayEnd.toISOString()
+    );
+    if (count > 0) {
+      closedSum = sum;
+    } else if (dayStart.isAfter(weekStart)) {
+      // Fallback: no closed daily aggregates — raw for the closed-days span of this week
+      const { value: rawVal } = await getRainInRange(
+        device,
+        accVar,
+        fallbackVar,
+        weekStart.toISOString(),
+        dayStart.toISOString()
+      );
+      closedSum = rawVal;
+    }
+  }
+
+  const total = closedSum + currentDailyValue;
+  console.log(`[PTD-Weekly] closedDailySum=${closedSum}, currentDay=${currentDailyValue}, total=${total}`);
+  return { value: total };
+}
+
+/**
+ * Compute current month-to-date rain from:
+ *   - sum of closed rain_height_daily for the current month (monthStart → yesterday end)
+ *   - plus today's current daily value (already computed via getCurrentDayFromHourly)
+ *
+ * Fallback: if no daily aggregates are found for the closed days, uses raw from monthStart → dayStart.
+ */
+async function getCurrentMonthFromDaily(device, nowUTC, targetDailyVar, currentDailyValue, accVar, fallbackVar) {
+  const monthStart = nowUTC.clone().startOf("month");
+  const dayStart = nowUTC.clone().startOf("day");
+  const lastClosedDayEnd = nowUTC.clone().subtract(1, "day").endOf("day");
+
+  let closedSum = 0;
+
+  if (lastClosedDayEnd.isAfter(monthStart)) {
+    const { sum, count } = await sumAggregateInRange(
+      device,
+      targetDailyVar,
+      monthStart.toISOString(),
+      lastClosedDayEnd.toISOString()
+    );
+    if (count > 0) {
+      closedSum = sum;
+    } else if (dayStart.isAfter(monthStart)) {
+      // Fallback: no closed daily aggregates — raw for the closed-days span of this month
+      const { value: rawVal } = await getRainInRange(
+        device,
+        accVar,
+        fallbackVar,
+        monthStart.toISOString(),
+        dayStart.toISOString()
+      );
+      closedSum = rawVal;
+    }
+  }
+
+  const total = closedSum + currentDailyValue;
+  console.log(`[PTD-Monthly] closedDailySum=${closedSum}, currentDay=${currentDailyValue}, total=${total}`);
+  return { value: total };
+}
+
+/**
+ * Compute current year-to-date rain from:
+ *   - sum of closed rain_height_monthly for the current year (yearStart → last closed month end)
+ *   - plus current month-to-date value (already computed via getCurrentMonthFromDaily)
+ *
+ * Fallback: if no monthly aggregates are found, uses raw from yearStart → monthStart.
+ */
+async function getCurrentYearFromMonthly(device, nowUTC, targetMonthlyVar, currentMonthlyValue, accVar, fallbackVar) {
+  const yearStart = nowUTC.clone().startOf("year");
+  const monthStart = nowUTC.clone().startOf("month");
+  const lastClosedMonthEnd = nowUTC.clone().subtract(1, "month").endOf("month");
+
+  let closedSum = 0;
+
+  if (lastClosedMonthEnd.isAfter(yearStart)) {
+    const { sum, count } = await sumAggregateInRange(
+      device,
+      targetMonthlyVar,
+      yearStart.toISOString(),
+      lastClosedMonthEnd.toISOString()
+    );
+    if (count > 0) {
+      closedSum = sum;
+    } else if (monthStart.isAfter(yearStart)) {
+      // Fallback: no closed monthly aggregates — raw for the closed-months span of this year
+      const { value: rawVal } = await getRainInRange(
+        device,
+        accVar,
+        fallbackVar,
+        yearStart.toISOString(),
+        monthStart.toISOString()
+      );
+      closedSum = rawVal;
+    }
+  }
+
+  const total = closedSum + currentMonthlyValue;
+  console.log(`[PTD-Yearly] closedMonthlySum=${closedSum}, currentMonth=${currentMonthlyValue}, total=${total}`);
+  return { value: total };
+}
+
+/**
  * Write PTD only if:
  *   - no previous point, OR
  *   - value differs (with epsilon), OR
@@ -534,119 +728,123 @@ async function computeForDevice(device, opts) {
 
   // ----------------------------
   // CURRENT / PERIOD-TO-DATE (compute every run, store only if changed)
+  // Each level is derived from lower-level aggregate sums + the still-open partial.
+  // Raw data is only used for the one sub-period that has not yet been closed into a bucket.
   // ----------------------------
   const baseWriteTime = nowUTC.clone().add(currentShiftSeconds, "seconds");
 
-  // Current Day-to-date
+  // Current Day-to-date: Σ closed rain_height_hourly for today + open partial hour (raw)
+  let currentDailyValue = 0;
+  let currentDailySource = fallbackVar;
   if (currentDailyVar) {
-    const start = nowUTC.clone().startOf("day");
-    const end = nowUTC.clone();
-    const { value: sum, source } = await getRainInRange(
+    const { value, source } = await getCurrentDayFromHourly(
       device,
+      nowUTC,
+      targetHourlyVar,
       accVar,
-      fallbackVar,
-      start.toISOString(),
-      end.toISOString()
+      fallbackVar
     );
+    currentDailyValue = value;
+    currentDailySource = source;
+
+    const periodStart = nowUTC.clone().startOf("day");
     const writeTime = baseWriteTime.clone().add(2, "seconds");
-    const group = `current_day_${start.format("YYYY-MM-DD")}`;
+    const group = `current_day_${periodStart.format("YYYY-MM-DD")}`;
 
     await storeIfChangedPTD(device, {
       variable: currentDailyVar,
-      value: sum,
+      value: currentDailyValue,
       writeTime,
-      periodStart: start,
-      periodEnd: end,
-      sourceVar: source,
+      periodStart,
+      periodEnd: nowUTC,
+      sourceVar: currentDailySource,
       group,
       eps: ptdEpsilon,
     });
   }
 
-  // Current ISO Week-to-date
+  // Current ISO Week-to-date: Σ closed rain_height_daily for this week + today's current daily
   if (currentWeeklyVar) {
-    const start = nowUTC.clone().startOf("isoWeek");
-    const end = nowUTC.clone();
-    const { value: sum, source } = await getRainInRange(
+    const { value: weeklyVal } = await getCurrentWeekFromDaily(
       device,
+      nowUTC,
+      targetDailyVar,
+      currentDailyValue,
       accVar,
-      fallbackVar,
-      start.toISOString(),
-      end.toISOString()
+      fallbackVar
     );
+
+    const periodStart = nowUTC.clone().startOf("isoWeek");
     const writeTime = baseWriteTime.clone().add(3, "seconds");
-    const group = `current_isoweek_${start.format("GGGG-[W]WW")}`;
+    const group = `current_isoweek_${periodStart.format("GGGG-[W]WW")}`;
 
     await storeIfChangedPTD(device, {
       variable: currentWeeklyVar,
-      value: sum,
+      value: weeklyVal,
       writeTime,
-      periodStart: start,
-      periodEnd: end,
-      sourceVar: source,
+      periodStart,
+      periodEnd: nowUTC,
+      sourceVar: currentDailySource,
       group,
       eps: ptdEpsilon,
     });
   }
 
-  // Current Month-to-date
+  // Current Month-to-date: Σ closed rain_height_daily for this month + today's current daily
+  let currentMonthlyValue = 0;
   if (currentMonthlyVar) {
-    const start = nowUTC.clone().startOf("month");
-    const end = nowUTC.clone();
-    const { value: sum, source } = await getRainInRange(
+    const { value: monthlyVal } = await getCurrentMonthFromDaily(
       device,
+      nowUTC,
+      targetDailyVar,
+      currentDailyValue,
       accVar,
-      fallbackVar,
-      start.toISOString(),
-      end.toISOString()
+      fallbackVar
     );
+    currentMonthlyValue = monthlyVal;
+
+    const periodStart = nowUTC.clone().startOf("month");
     const writeTime = baseWriteTime.clone().add(4, "seconds");
-    const group = `current_month_${start.format("YYYY-MM")}`;
+    const group = `current_month_${periodStart.format("YYYY-MM")}`;
 
     await storeIfChangedPTD(device, {
       variable: currentMonthlyVar,
-      value: sum,
+      value: currentMonthlyValue,
       writeTime,
-      periodStart: start,
-      periodEnd: end,
-      sourceVar: source,
+      periodStart,
+      periodEnd: nowUTC,
+      sourceVar: currentDailySource,
       group,
       eps: ptdEpsilon,
     });
   }
 
-  // Current Year-to-date (retention-smart)
-  // if (currentYearlyVar) {
-  //   const year = nowUTC.year();
-  //   const yearStart = nowUTC.clone().startOf("year");
-  //   const monthStart = nowUTC.clone().startOf("month");
+  // Current Year-to-date: Σ closed rain_height_monthly for this year + current month-to-date
+  if (currentYearlyVar) {
+    const { value: yearlyVal } = await getCurrentYearFromMonthly(
+      device,
+      nowUTC,
+      targetMonthlyVar,
+      currentMonthlyValue,
+      accVar,
+      fallbackVar
+    );
 
-  //   const latestMonthItem = await getLatestClosedMonthlyForYear(device, targetMonthlyVar, year);
-  //   const carryYtdEnd = extractYtdEndMm(latestMonthItem);
+    const yearStart = nowUTC.clone().startOf("year");
+    const writeTime = baseWriteTime.clone().add(5, "seconds");
+    const group = `current_year_${nowUTC.year()}`;
 
-  //   const { value: currentMonthPartial, source: ytdSource } = await getRainInRange(
-  //     device,
-  //     accVar,
-  //     fallbackVar,
-  //     monthStart.toISOString(),
-  //     nowUTC.toISOString()
-  //   );
-  //   const ytd = carryYtdEnd + currentMonthPartial;
-
-  //   const writeTime = baseWriteTime.clone().add(5, "seconds");
-  //   const group = `current_year_${year}`;
-
-  //   await storeIfChangedPTD(device, {
-  //     variable: currentYearlyVar,
-  //     value: ytd,
-  //     writeTime,
-  //     periodStart: yearStart,
-  //     periodEnd: nowUTC,
-  //     sourceVar: ytdSource,
-  //     group,
-  //     eps: ptdEpsilon,
-  //   });
-  // }
+    await storeIfChangedPTD(device, {
+      variable: currentYearlyVar,
+      value: yearlyVal,
+      writeTime,
+      periodStart: yearStart,
+      periodEnd: nowUTC,
+      sourceVar: currentDailySource,
+      group,
+      eps: ptdEpsilon,
+    });
+  }
 }
 
 // ---------- Analysis entry ----------
