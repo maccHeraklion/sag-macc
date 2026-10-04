@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.158 · 2026-10-04';
+const SAG_KERNEL_VERSION = 'v50.159 · 2026-10-04';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -7678,7 +7678,7 @@ if (_SAG_COVERED_ACTIVE) {
     u2_irr = _wIn;
   }
   const _tRaw = Number(parameters?.cover_transmissivity);
-  const _trans = (Number.isFinite(_tRaw) && _tRaw > 0.2 && _tRaw <= 1) ? _tRaw : 0.65;
+  const _trans = (Number.isFinite(_tRaw) && _tRaw >= 0.2 && _tRaw <= 1) ? _tRaw : 0.65;   // T-LEGACY-01 (B-04): η φόρμα αποθηκεύει 20 % = 0,2
   const _inside = parameters?.cover_light_sensor_inside === true
     || String(parameters?.cover_light_sensor_inside ?? '').toLowerCase() === 'true';
   if (!_inside && Number.isFinite(Rs_irr) && Rs_irr > 0) {
@@ -7750,7 +7750,9 @@ const ETc = (ET0_final !== null && kc !== null) ? (ET0_final * kc) : null; // mm
   const _stoneRaw = _sagNum(parameters?.stone_fraction_pct ?? parameters?.stone_fraction);
   let _stoneFrac = 0;
   if (Number.isFinite(_stoneRaw) && _stoneRaw > 0) {
-    _stoneFrac = _stoneRaw <= 1 ? _stoneRaw : _stoneRaw / 100;
+    // T-LEGACY-01 (B-03): η φόρμα γράφει ΑΚΕΡΑΙΟ ποσοστό· «1» = 1 %, όχι κλάσμα 1,0 (→ 70 % → δόση ×0,30).
+    // Κλάσμα δεχόμαστε μόνο για παλιές ρυθμίσεις 0 < x < 1.
+    _stoneFrac = _stoneRaw < 1 ? _stoneRaw : _stoneRaw / 100;
     _stoneFrac = Math.min(0.70, _stoneFrac);   // >70 % χαλίκι δεν είναι καλλιεργήσιμο έδαφος
   }
   const _fineEarth = 1 - _stoneFrac;
@@ -10337,7 +10339,7 @@ function _sagBpiLightEstimate(measurements, parameters) {
     let trans = 1;
     if (covered) {
       const t = Number(parameters && parameters.cover_transmissivity);
-      trans = (Number.isFinite(t) && t > 0.2 && t <= 1) ? t : _SAG_COVER_TRANS_DEFAULT;
+      trans = (Number.isFinite(t) && t >= 0.2 && t <= 1) ? t : _SAG_COVER_TRANS_DEFAULT;   // T-LEGACY-01 (B-04)
     }
     const rsIn = rsMJ * trans;
     const ppfd = rsIn * 1e6 * _SAG_PAR_FRACTION * _SAG_PAR_UMOL_PER_J / 86400;
@@ -14684,6 +14686,9 @@ function _sagAgeIndicators(data) {
     if (over.length) {
       out.push({ variable: 'stale_measurement_groups', value: over.map(g => g.name).join(' · '),
         metadata: { color: 'orange', text: 'Ομάδες αισθητήρων με παλιά δεδομένα σε αυτόν τον κύκλο.' } });
+    } else {
+      // T-LEGACY-01 (B-06): ρητό σβήσιμο — αλλιώς έμενε πορτοκαλί 50 ω μετά την ανάκαμψη.
+      out.push({ variable: 'stale_measurement_groups', value: null, metadata: {} });
     }
   } catch (_e) { /* η ορατότητα δεν επιτρέπεται να ρίξει τον αγρό */ }
   return out;
@@ -15659,6 +15664,10 @@ function _sagFaultIndicators(data) {
     // ποτέ. Αποτέλεσμα: στον Κρασαγάκη (3 σόνδες στο 0 %) και στον ΚΕΚ ο αγρότης
     // άνοιγε την άρδευση και δεν έβλεπε ΚΑΜΙΑ εξήγηση γιατί λείπει η δόση.
     // Εκπέμπεται ΜΟΝΟ όταν η άρδευση όντως έπεσε -> μηδέν κόστος στους υγιείς.
+    if (!H.lostIrr) {
+      // T-LEGACY-01 (B-07): ρητό σβήσιμο — αλλιώς η κόκκινη ταινία «χωρίς δόση» έμενε 12 ω δίπλα σε έγκυρη δόση.
+      out.push({ variable: 'irrigation_sensor_fault', value: null, metadata: {} });
+    }
     if (H.lostIrr) {
       out.push({ variable: 'irrigation_sensor_fault',
         value: 'Χωρίς έγκυρη υγρασία εδάφους',
@@ -17188,7 +17197,7 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
             console.log(`[${info?.name || value}] T-RAIN-ACC-01: βροχή 24ω από μετρητή ${_accDay.mm.toFixed(2)} mm`
               + (_accDay.resets ? ` · μηδενισμοί ${_accDay.resets}` : '') + (_accDay.dropped ? ` · απορρίφθηκαν ${_accDay.dropped} αδύνατα βήματα` : ''));
           }
-        } else
+        } else if (!_accEnd)   // T-LEGACY-01 (B-01): σταθμός ΜΕ μετρητή → καμία παλιά διαδρομή (θα έδινε ψευδές 0)
         try {
           totalRain = await device.getData({
             variables: ["rain_height"],
@@ -17205,6 +17214,7 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
         const _rainEmpty = !_accDay.ok && (!Array.isArray(totalRain) || totalRain.length === 0
           || !Number.isFinite(Number(totalRain[0]?.value)));
         if (_accDay.ok) { /* T-RAIN-ACC-01: η ποσότητα ήρθε από τον μετρητή */ }
+        else if (_accEnd) { /* T-LEGACY-01 (B-01): μετρητής άκυρος → ΑΓΝΩΣΤΟ, όχι 0 ούτε ρυθμός×24 */ }
         else if (_rainEmpty) {
           let _gaugeAvg;
           try {
@@ -17232,7 +17242,7 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
           }
         }
 
-        deviceData[rainKey] = totalRain;
+        if (totalRain !== undefined) deviceData[rainKey] = totalRain;   // T-LEGACY-01 (B-01): άγνωστο = κανένα κλειδί
 
         // ── T-RAIN-HOURLY-01 (Δ9 · Σ8 · 20/8/2026) ─────────────────────────
         // ΠΡΑΓΜΑΤΙΚΟ ωριαίο άθροισμα. Δύο σημεία διάβαζαν `rain_height[0].value`
@@ -17248,7 +17258,7 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
           const _accH = await _sagRainFromCounter(device, moment(now).subtract(1, 'hours').toISOString(), now, _accEnd, 30);
           if (_accH.ok) deviceData.rain_height_hourly = _accH.mm;
         }
-        if (deviceData.rain_height_hourly === undefined && !_accDay.ok) try {
+        if (deviceData.rain_height_hourly === undefined && !_accEnd) try {   // T-LEGACY-01 (B-01)
           const _h1 = await device.getData({
             variables: ["rain_height"],
             query: "sum",
@@ -17270,7 +17280,7 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
         // Ίδια φυσική με το 24ωρο: βάθος(mm) = μέση ένταση(mm/h) × 1 h. Ίδια οροφή 60 mm/h.
         // Κόστος: ΜΙΑ επιπλέον ανάγνωση ανά σταθμό rain_gauge και ανά tick, ΜΟΝΟ όταν το
         // rain_height δεν έδωσε τίποτα (το 0 είναι μέτρηση — δεν ξαναρωτάμε).
-        if (deviceData.rain_height_hourly === undefined && !_accDay.ok) {
+        if (deviceData.rain_height_hourly === undefined && !_accEnd) {   // T-LEGACY-01 (B-01)
           try {
             const _g1 = await device.getData({
               variables: ["rain_gauge"],

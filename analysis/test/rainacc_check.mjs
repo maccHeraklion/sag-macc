@@ -39,7 +39,7 @@ const series = (t0, t1, f) => { const a = []; for (let t = t0; t <= t1; t += 5 *
 async function run(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let K; try { K = loadCore(src); } catch (e) { return ["φόρτωση πυρήνα: " + e.message]; }
-  ok(K.SAG_KERNEL_VERSION === "v50.158 · 2026-10-04", "V έκδοση v50.158 (" + K.SAG_KERNEL_VERSION + ")");
+  ok(K.SAG_KERNEL_VERSION === "v50.159 · 2026-10-04", "V έκδοση v50.159 (" + K.SAG_KERNEL_VERSION + ")");
   const R = (d, st, en, lead) => K._sagRainFromCounter(d, iso(st), iso(en), undefined, lead);
   // Ρ1 κανονική βροχή: 100 → 112,7 στο 24ωρο (σταθερά 0,529 mm/h), 1ω = ~0,53
   const lin = series(NOW - 30 * H, NOW - 2 * M, t => 100 + Math.max(0, Math.floor(((t - (NOW - 24 * H)) / (24 * H)) * 50)) * 0.254);
@@ -95,10 +95,10 @@ async function run(src) {
   // ── καλωδίωση στα ΠΡΑΓΜΑΤΙΚΑ σημεία κλήσης ──
   ok(src.includes("const _accDay = _accEnd ? await _sagRainFromCounter(device, start, now, _accEnd, 180) : { ok: false, why: 'χωρίς μετρητή' };"), "Κ1 24ωρο από μετρητή με ανοχή 3 ω");
   ok(src.includes("        if (_accDay.ok) {\n          totalRain = [{ variable: rainKey, value: parseFloat(_accDay.mm.toFixed(2)), unit: \"mm\" }];"), "Κ2 24ωρο γράφεται από τον μετρητή");
-  ok(src.includes("        } else\n        try {\n          totalRain = await device.getData({\n            variables: [\"rain_height\"],"), "Κ3 παλιά διαδρομή ΜΟΝΟ όταν ο μετρητής άκυρος");
-  ok(src.includes("const _rainEmpty = !_accDay.ok && (") && src.includes("        if (_accDay.ok) { /* T-RAIN-ACC-01: η ποσότητα ήρθε από τον μετρητή */ }\n        else if (_rainEmpty) {"), "Κ4 η εφεδρεία ρυθμού δεν πατά τον μετρητή");
+  ok(src.includes("        } else if (!_accEnd)   // T-LEGACY-01 (B-01): σταθμός ΜΕ μετρητή → καμία παλιά διαδρομή (θα έδινε ψευδές 0)\n        try {\n          totalRain = await device.getData({\n            variables: [\"rain_height\"],"), "Κ3 παλιά διαδρομή ΜΟΝΟ σε σταθμό χωρίς μετρητή");
+  ok(src.includes("const _rainEmpty = !_accDay.ok && (") && src.includes("        if (_accDay.ok) { /* T-RAIN-ACC-01: η ποσότητα ήρθε από τον μετρητή */ }\n        else if (_accEnd) { /* T-LEGACY-01 (B-01): μετρητής άκυρος → ΑΓΝΩΣΤΟ, όχι 0 ούτε ρυθμός×24 */ }\n        else if (_rainEmpty) {") && src.includes("        if (totalRain !== undefined) deviceData[rainKey] = totalRain;"), "Κ4 η εφεδρεία ρυθμού δεν πατά τον μετρητή· άκυρος μετρητής = άγνωστο, όχι 0");
   ok(src.includes("const _accH = await _sagRainFromCounter(device, moment(now).subtract(1, 'hours').toISOString(), now, _accEnd, 30);\n          if (_accH.ok) deviceData.rain_height_hourly = _accH.mm;"), "Κ5 ωριαίο από μετρητή με ανοχή 30΄");
-  ok(src.includes("if (deviceData.rain_height_hourly === undefined && !_accDay.ok) try {") && src.includes("if (deviceData.rain_height_hourly === undefined && !_accDay.ok) {\n          try {\n            const _g1"), "Κ6 ωριαίο: παλιές διαδρομές μόνο χωρίς μετρητή");
+  ok(src.includes("if (deviceData.rain_height_hourly === undefined && !_accEnd) try {") && src.includes("if (deviceData.rain_height_hourly === undefined && !_accEnd) {   // T-LEGACY-01 (B-01)\n          try {\n            const _g1"), "Κ6 ωριαίο: παλιές διαδρομές μόνο χωρίς μετρητή");
   return f;
 }
 
@@ -117,7 +117,9 @@ const MUT = [
   ["m9 εφεδρεία πατά τον μετρητή", "const _rainEmpty = !_accDay.ok && (", "const _rainEmpty = true || ("],
   ["m10 ωριαίο όχι από μετρητή", "          if (_accH.ok) deviceData.rain_height_hourly = _accH.mm;", "          if (false) deviceData.rain_height_hourly = _accH.mm;"],
   ["m11 ωριαίο ανοχή 3 ω", "now, _accEnd, 30);", "now, _accEnd, 180);"],
-  ["m12 παλιά έκδοση", "'v50.158 · 2026-10-04'", "'v50.157 · 2026-10-04'"],
+  ["m13 άκυρος μετρητής → ξανά παλιά διαδρομή (ψευδές 0)", "        } else if (!_accEnd)   // T-LEGACY-01", "        } else if (true)   // T-LEGACY-01"],
+  ["m14 άκυρος μετρητής → εφεδρεία ρυθμού", "        else if (_accEnd) { /* T-LEGACY-01", "        else if (false) { /* T-LEGACY-01"],
+  ["m12 παλιά έκδοση", "'v50.159 · 2026-10-04'", "'v50.158 · 2026-10-04'"],
 ];
 let k = 0;
 for (const [n, a, b] of MUT) {
