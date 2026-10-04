@@ -27,7 +27,7 @@ function build(text) {
 
 function run(text) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
-  ok(text.includes("const SAG_KERNEL_VERSION = 'v50.159 · 2026-10-04';"), "έκδοση v50.154");
+  ok(text.includes("const SAG_KERNEL_VERSION = 'v50.160 · 2026-10-05';"), "έκδοση v50.154");
   // καλωδίωση: επτά πύλες (κόμη T+RH, σταθμός T+RH, έδαφος se0x βρόχος, lse01 υγρασία + θερμοκρασία)
   const gates = (text.match(/_sagAvgGate\(data, _inv, info\?\.name \|\| value, /g) || []).length;
   ok(gates === 7, "7 πύλες _sagAvgGate (βρέθηκαν " + gates + ")");
@@ -70,7 +70,7 @@ const base = run(SRC);
 if (base.length) { console.log("ΑΠΟΤΥΧΙΑ ΒΑΣΗΣ:\n  " + base.join("\n  ")); process.exit(1); }
 console.log("ΒΑΣΗ: όλοι οι έλεγχοι πέρασαν");
 const MUT = [
-  ["m1 παλιά έκδοση", "'v50.159 · 2026-10-04'", "'v50.158 · 2026-10-04'"],
+  ["m1 παλιά έκδοση", "'v50.160 · 2026-10-05'", "'v50.159 · 2026-10-04'"],
   ["m2 όριο μετρήσεων 0", "const _SAG_AVG_MIN_N = 6;", "const _SAG_AVG_MIN_N = 0;"],
   ["m3 όριο ωρών 0", "const _SAG_AVG_MIN_SPAN_H = 6;", "const _SAG_AVG_MIN_SPAN_H = 0;"],
   ["m4 πύλη πάντα ανοιχτή", "return cov ? cov.ok : true;\n}", "return true;\n}"],

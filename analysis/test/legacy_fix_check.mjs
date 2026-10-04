@@ -20,7 +20,7 @@ function loadCore(src) {
 function run(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let K; try { K = loadCore(src); } catch (e) { return ["φόρτωση: " + e.message]; }
-  ok(K.SAG_KERNEL_VERSION === "v50.159 · 2026-10-04", "V έκδοση v50.159 (" + K.SAG_KERNEL_VERSION + ")");
+  ok(K.SAG_KERNEL_VERSION === "v50.160 · 2026-10-05", "V έκδοση v50.159 (" + K.SAG_KERNEL_VERSION + ")");
   // B-03 · αυτούσιο τμήμα πέτρας
   const a = src.indexOf("  const _stoneRaw = _sagNum(parameters?.stone_fraction_pct ?? parameters?.stone_fraction);");
   const b = src.indexOf("  const _fineEarth = 1 - _stoneFrac;", a);
@@ -62,7 +62,7 @@ const MUT = [
   ["m3 διαπερατότητα ξανά > 0,2 (BPI)", "      trans = (Number.isFinite(t) && t >= 0.2", "      trans = (Number.isFinite(t) && t > 0.2"],
   ["m4 παλιές ομάδες δεν σβήνουν", "      out.push({ variable: 'stale_measurement_groups', value: null, metadata: {} });", ""],
   ["m5 βλάβη άρδευσης δεν σβήνει", "      out.push({ variable: 'irrigation_sensor_fault', value: null, metadata: {} });", ""],
-  ["m6 παλιά έκδοση", "'v50.159 · 2026-10-04'", "'v50.158 · 2026-10-04'"],
+  ["m6 παλιά έκδοση", "'v50.160 · 2026-10-05'", "'v50.159 · 2026-10-04'"],
 ];
 let k = 0;
 for (const [n, a, b] of MUT) {

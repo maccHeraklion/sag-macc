@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.159 · 2026-10-04';
+const SAG_KERNEL_VERSION = 'v50.160 · 2026-10-05';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -15453,7 +15453,9 @@ function _sagSensorFaults(data, fieldName) {
       // που στην πραγματικότητα ήταν η ΜΟΝΗ πηγή — και του έλεγε ρητά «δεν
       // αλλοιώνει τις συμβουλές», ενώ ήταν το μόνο που τις αλλοίωνε.
       hasStation: data._sagMetSource === 'station',
-      rain24: Math.max(0, Number(_sagRawNum(data, 'rain_height_daily')) || 0),
+      // T-COVERED-TXT-02: τρέχει ΠΡΙΝ τον μηδενισμό του T-COVERED-01 — σε θερμοκήπιο η βροχή του σταθμού δεν
+      // βρέχει τον αισθητήρα, άρα δεν τεκμηριώνει «εκτός ζώνης ύγρανσης».
+      rain24: _SAG_COVERED_ACTIVE ? 0 : Math.max(0, Number(_sagRawNum(data, 'rain_height_daily')) || 0),
       owns: {
         soil: _ty.some(t => _SAG_SOIL_TYPES.indexOf(t) >= 0),
         soil2: _ty.some(t => ['lse02', 'se0x', 'lse01_deep'].indexOf(t) >= 0),
@@ -18933,7 +18935,7 @@ module.exports = new Analysis(async (context) => {
               metadata: { protection_days_left: _inf.daysLeft, color: 'green',
                 text: 'Προστασία έως ' // T-BUNDLE-SLIM-01: ×7 στο KEK — κάθε χαρακτήρας μετρά
                   + moment(_inf.endMs).tz('Europe/Athens').format('D/M/YYYY') + ' — ' + _inf.daysLeft
-                  + ' ημ. ακόμη. Η βροχή τη μειώνει.' } };
+                  + ' ημ. ακόμη.' + (_SAG_COVERED_ACTIVE ? '' : ' Η βροχή τη μειώνει.') } };   // T-COVERED-TXT-02
             _declIndicators.push(_pInd);
             _declProtection.push({ key: _pk, ind: _pInd });
           }

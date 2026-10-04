@@ -39,7 +39,7 @@ const series = (t0, t1, f) => { const a = []; for (let t = t0; t <= t1; t += 5 *
 async function run(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let K; try { K = loadCore(src); } catch (e) { return ["φόρτωση πυρήνα: " + e.message]; }
-  ok(K.SAG_KERNEL_VERSION === "v50.159 · 2026-10-04", "V έκδοση v50.159 (" + K.SAG_KERNEL_VERSION + ")");
+  ok(K.SAG_KERNEL_VERSION === "v50.160 · 2026-10-05", "V έκδοση v50.159 (" + K.SAG_KERNEL_VERSION + ")");
   const R = (d, st, en, lead) => K._sagRainFromCounter(d, iso(st), iso(en), undefined, lead);
   // Ρ1 κανονική βροχή: 100 → 112,7 στο 24ωρο (σταθερά 0,529 mm/h), 1ω = ~0,53
   const lin = series(NOW - 30 * H, NOW - 2 * M, t => 100 + Math.max(0, Math.floor(((t - (NOW - 24 * H)) / (24 * H)) * 50)) * 0.254);
@@ -119,7 +119,7 @@ const MUT = [
   ["m11 ωριαίο ανοχή 3 ω", "now, _accEnd, 30);", "now, _accEnd, 180);"],
   ["m13 άκυρος μετρητής → ξανά παλιά διαδρομή (ψευδές 0)", "        } else if (!_accEnd)   // T-LEGACY-01", "        } else if (true)   // T-LEGACY-01"],
   ["m14 άκυρος μετρητής → εφεδρεία ρυθμού", "        else if (_accEnd) { /* T-LEGACY-01", "        else if (false) { /* T-LEGACY-01"],
-  ["m12 παλιά έκδοση", "'v50.159 · 2026-10-04'", "'v50.158 · 2026-10-04'"],
+  ["m12 παλιά έκδοση", "'v50.160 · 2026-10-05'", "'v50.159 · 2026-10-04'"],
 ];
 let k = 0;
 for (const [n, a, b] of MUT) {
