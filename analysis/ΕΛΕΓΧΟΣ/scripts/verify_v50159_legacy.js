@@ -21,7 +21,7 @@ const txt = (x) => x ? (String(x.value).slice(0, 40) + (x.metadata && x.metadata
     try {
       const b = await get(`/device/${d.id}/data?variables=field_bundle&qty=1`);
       const e = Array.isArray(b) && b[0]; if (!e) { none++; continue; }
-      if (Date.now() - Date.parse(e.time) > 30 * 60e3) { old++; continue; }
+      if (Date.now() - Date.parse(e.time) > 75 * 60e3) { old++; continue; }
       fresh++;
       const o = unpack(e); const v = String(((o.shared || {}).kernel_version || {}).value || "—"); ver[v] = (ver[v] || 0) + 1;
       for (const c of (o.crops || [])) { const I = c.indicators || {};
