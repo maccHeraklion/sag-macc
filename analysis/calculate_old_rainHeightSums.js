@@ -33,7 +33,7 @@ const { Analysis, Resources, Account, Device } = require("@tago-io/sdk");
 const moment = require("moment-timezone");
 
 const RAIN_ALG = "v34";
-const RAIN_VERSION = "v34.1 · 2026-10-04";
+const RAIN_VERSION = "v34.2 · 2026-10-04";
 const DEFAULT_TZ = "Europe/Athens";
 const DEFAULT_CUTOVER = "2026-10-04T21:00:00.000Z";   // Δευτέρα 5/10/2026 00:00 ώρα Ελλάδας
 const HOURS_BACK = 24;          // κλειστές ώρες προς έλεγχο
@@ -124,17 +124,30 @@ async function rainCounterWindow(device, startISO, endISO, leadMin) {
   if (full.ok) return { known: true, mm: full.mm, coverage: 1, status: 'measured', partial: false, resets: full.resets };
   const partialable = ['σιωπηλός σταθμός', 'καμία τιμή πριν το παράθυρο', 'κενό πριν το παράθυρο'];
   if (partialable.indexOf(full.why) < 0) return { known: false, why: full.why };
-  const e = full.end;                                       // τελευταίο σημείο ≤ τέλος
-  if (!e || e.t <= S) return { known: false, why: full.why + ' · κανένα σημείο στο παράθυρο' };
-  let a = await _sagAccPointAtOrBefore(device, startISO);   // άγκυρα αρχής: σημείο ≤ αρχή μέσα στο κενό που επιτρέπεται…
-  if (!a || (S - a.t) / 60000 > leadMin) a = await firstPointIn(device, 'rain_height_acc', startISO, endISO);   // …αλλιώς το πρώτο μέσα
-  if (!a || a.t >= e.t) return { known: false, why: full.why + ' · ένα μόνο σημείο' };
-  // +1 ms και ανοχή 1΄: το «≤ χρόνος» βρίσκει ακριβώς την άγκυρα είτε το end_date είναι κλειστό (REST) είτε ανοιχτό (SDK v11)
-  const sub = await _sagRainFromCounter(device, iso(a.t + 1), iso(e.t + 1), e, 1);
-  if (!sub.ok) return { known: false, why: full.why + ' · ' + sub.why };
-  const coverage = clamp01((Math.min(e.t, E) - Math.max(a.t, S)) / span);
+  // Μερική κάλυψη: ΜΙΑ ανάγνωση της σειράς του παραθύρου (+ κενό που επιτρέπεται πριν), ταξινόμηση εδώ, άθροισμα θετικών
+  // βημάτων με τους κανόνες του πυρήνα (μηδενισμός, ≤ 450 mm/ω). Δεν εξαρτάται από ερωτήματα «σημείο ≤ χρόνος» (v34.2).
+  let P;
+  try {
+    const r = await device.getData({ variables: ['rain_height_acc'], start_date: iso(S - leadMin * 60000), end_date: endISO, qty: 2000, ordination: 'ascending' });
+    P = (Array.isArray(r) ? r : []).map(x => ({ v: Number(x.value), t: Date.parse(x.time) }))
+      .filter(x => Number.isFinite(x.v) && Number.isFinite(x.t) && x.t <= E).sort((p1, p2) => p1.t - p2.t);
+  } catch (x) { return { known: false, why: full.why + ' · ανάγνωση σειράς απέτυχε' }; }
+  let i0 = -1;
+  for (let i = 0; i < P.length; i++) if (P[i].t <= S) i0 = i;                       // τελευταίο σημείο ≤ αρχή (μέσα στο κενό)
+  if (i0 < 0) i0 = P.findIndex(x => x.t >= S);                                      // αλλιώς το πρώτο μέσα στο παράθυρο
+  if (i0 < 0 || i0 >= P.length - 1) return { known: false, why: full.why + ' · σειρά ' + P.length + ' σημεία' };
+  let mm = 0;
+  for (let i = i0 + 1; i < P.length; i++) {
+    const dh = Math.max((P[i].t - P[i - 1].t) / 3600000, 1 / 60);
+    let d = P[i].v - P[i - 1].v;
+    if (d < -0.001) d = P[i].v;                                                     // μηδενισμός: μετρά η νέα τιμή
+    if (d > _SAG_RAIN_MAX_MMH * dh + 0.254) continue;                               // αδύνατο βήμα: απορρίπτεται
+    if (d > 0) mm += d;
+  }
+  const last = P[P.length - 1];
+  const coverage = clamp01((Math.min(last.t, E) - Math.max(P[i0].t, S)) / span);
   if (coverage < MIN_COV) return { known: false, why: full.why + ' · ελάχιστη κάλυψη' };
-  return { known: true, mm: sub.mm, coverage, status: 'measured', partial: coverage < FULL_COV, why: full.why };
+  return { known: true, mm: r3(mm), coverage, status: 'measured', partial: coverage < FULL_COV, why: full.why };
 }
 
 // ---------- Βροχή παραθύρου από ΡΥΘΜΟ (firmware 1.13, χωρίς μετρητή) — ΕΚΤΙΜΗΣΗ ----------
