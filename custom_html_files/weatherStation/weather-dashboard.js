@@ -21,6 +21,7 @@
     accSteps: null,
     accLoaded: false,
     accLoading: false,
+    altitudeParam: null,
   };
 
   const labels = {
@@ -128,7 +129,11 @@
   const API_HOST = "https://api.us-e1.tago.io";
   // Charted/tabled signals only. dew_point is intentionally excluded — it has no
   // chart or history column, so its metric card is fed by live data alone.
-  const AGG_AVG_VARS = ["air_temperature", "air_humidity", "barometric_pressure_hpa", "wind_speed_kmh", "wind_direction_sensor", "uv_index", "light_intensity"];
+  const AGG_AVG_VARS = ["air_temperature", "air_humidity", "barometric_pressure_hpa", "wind_speed_kmh", "uv_index", "light_intensity"];
+  // Γωνίες: ο μέσος όρος του server είναι αριθμητικός (350° και 10° → 180°). Φορτώνονται ωμές τιμές και
+  // ο μέσος όρος βγαίνει διανυσματικά εδώ (circularMeanDeg). ~8.600 σημεία στις 30 ημέρες.
+  const CIRC_VARS = ["wind_direction_sensor"];
+  const CIRC_SET = new Set(CIRC_VARS);
   // Η βροχή ΔΕΝ αθροίζεται από το rain_gauge: είναι ένταση, όχι ποσότητα, και το άθροισμά της βγαίνει
   // 2–3 φορές η πραγματική βροχή (έλεγχος 4/10/2026, §10.4–10.5). Η βροχή έρχεται από τον μετρητή.
   const AGG_SUM_VARS = [];
@@ -241,6 +246,49 @@
     return out;
   }
   // ═══ ΤΕΛΟΣ ΥΠΟΛΟΓΙΣΜΟΥ ΒΡΟΧΗΣ ═══════════════════════════════════════════════════════════════════════════
+
+  // ═══ ΒΟΗΘΗΤΙΚΑ ΜΕΤΕΩΡΟΛΟΓΙΑΣ (T-CRETAWX-WX-01, 5/10/2026) ════════════════════════════════════════════════
+  // Αυτόνομο: καμία αναφορά στο state/DOM. Ο ελεγκτής analysis/test/cretaweather_wx_check.mjs το εκτελεί αυτούσιο.
+  //
+  // Υψόμετρο ανά σταθμό (m), από το ψηφιακό μοντέλο εδάφους της Open-Meteo στις συντεταγμένες του αγρού (5/10/2026).
+  // Η θέση ελέγχθηκε με την πίεση: ο 04e8 μετρά ~18 hPa λιγότερα από τον 047e, όσο αντιστοιχεί στη διαφορά υψομέτρου
+  // Γαλύφων (298 m) – Ποταμιών (176 m). Η παράμετρος widget `altitude_m` (αν οριστεί) έχει προτεραιότητα.
+  const STATION_ALTITUDE_M = {
+    "684c458bcd7675000a9ae991": 298,   // sensecap_s2120_04e8 · ΓΑΛΥΦΑ
+    "67fe9a063b56fa000ac75c4b": 219,   // sensecap_s2120_0138 · ΕΛΙΑ
+    "67fe99b670defa000a954bbe": 179,   // sensecap_s2120_057C · ΚΟΞΑΡΗ
+    "684c39adfcf7b1000a8dd206": 176,   // sensecap_s2120_047e · ΠΟΤΑΜΙΕΣ
+  };
+  // Ο connector των S2120 προσθέτει 550 Pa σε κάθε μέτρηση πίεσης: `(τιμή + 550) / 100`. Δεν υπάρχει στον decoder
+  // της Seeed και απομακρύνει τις τιμές από το μοντέλο (με αυτό 3–7 hPa, χωρίς 1–2 hPa). Αφαιρείται εδώ.
+  // ΑΝ διορθωθεί ο connector (ενέργεια Α6 της αναφοράς), αυτή η τιμή γίνεται 0 ΤΗΝ ΙΔΙΑ ΣΤΙΓΜΗ.
+  const PARSER_PRESSURE_OFFSET_HPA = 5.5;
+  const STALE_HOURS = 6;                       // τιμή παλαιότερη → «—» και «Ο σταθμός δεν στέλνει από…»
+
+  // Πίεση σταθμού (όπως τη γράφει ο connector) → πίεση στη στάθμη της θάλασσας (πρότυπη ατμόσφαιρα ICAO).
+  // Χωρίς γνωστό υψόμετρο: null (η σελίδα δείχνει τότε την πίεση στο ύψος του σταθμού).
+  function pressureToMsl(hpa, altitudeM) {
+    const p = Number(hpa) - PARSER_PRESSURE_OFFSET_HPA;
+    if (!Number.isFinite(p) || !Number.isFinite(altitudeM)) return null;
+    return p * Math.pow(1 - 2.25577e-5 * altitudeM, -5.25588);
+  }
+  // Δείκτης ψυχρότητας: ορίζεται μόνο για θερμοκρασία ≤ 10 °C και άνεμο > 4,8 km/h (NWS/Environment Canada).
+  function windChillApplies(tempC, windKmh) {
+    return Number.isFinite(Number(tempC)) && Number.isFinite(Number(windKmh)) && Number(tempC) <= 10 && Number(windKmh) > 4.8;
+  }
+  // Μέσος όρος γωνιών (μοίρες) με διανύσματα: 350° και 10° → 0°, όχι 180°. Χωρίς τιμές ή αντίθετες γωνίες → null.
+  function circularMeanDeg(degs) {
+    let s = 0, c = 0, n = 0;
+    degs.forEach((d) => { const r = Number(d) * Math.PI / 180; if (Number.isFinite(r)) { s += Math.sin(r); c += Math.cos(r); n += 1; } });
+    if (!n || Math.hypot(s, c) / n < 1e-6) return null;
+    const deg = Math.atan2(s, c) * 180 / Math.PI;
+    return Math.round(((deg % 360) + 360) % 360 * 10) / 10;
+  }
+  function isStaleAt(time, nowMs, hours) {
+    const t = new Date(time).getTime();
+    return !Number.isFinite(t) || nowMs - t > hours * 3600000;
+  }
+  // ═══ ΤΕΛΟΣ ΒΟΗΘΗΤΙΚΩΝ ΜΕΤΕΩΡΟΛΟΓΙΑΣ ═════════════════════════════════════════════════════════════════════
 
   function normalizeRecord(raw) {
     if (!raw || typeof raw !== "object") return null;
@@ -369,6 +417,8 @@
     if (token && !state.apiToken) state.apiToken = String(token).trim();
     const deviceToken = map.get("device_api_token");
     if (deviceToken && !state.deviceToken) state.deviceToken = String(deviceToken).trim();
+    const altitude = Number(map.get("altitude_m"));
+    if (map.has("altitude_m") && Number.isFinite(altitude)) state.altitudeParam = altitude;
     const deviceMapRaw = map.get("device_map") || map.get("station_map");
     if (!deviceMapRaw) return;
     try {
@@ -418,10 +468,17 @@
     return null;
   }
 
+  // Μία γραμμή ιστορικού = μία αποστολή. Το πρώτο πακέτο του TagoIO φέρνει την «τελευταία τιμή» ΚΑΘΕ μεταβλητής,
+  // ακόμα κι αν είναι ημερών (σταθμός με βλάβη αισθητήρα): κρατάμε μόνο ό,τι απέχει ≤ 10΄ από τη νεότερη τιμή.
   function pushHistory(records) {
     const row = {};
-    records.forEach((record) => { row[record.variable] = record; });
-    row.time = records.map((r) => r.time).find(Boolean) || new Date().toISOString();
+    const newest = Math.max(...records.map((r) => new Date(r.time).getTime()).filter(Number.isFinite));
+    records.forEach((record) => {
+      const t = new Date(record.time).getTime();
+      if (Number.isFinite(newest) && Number.isFinite(t) && newest - t > 10 * 60000) return;
+      row[record.variable] = record;
+    });
+    row.time = Number.isFinite(newest) ? new Date(newest).toISOString() : new Date().toISOString();
     state.history.unshift(row);
     state.history = state.history.slice(0, rangeOptions[state.range]?.maxRows || 420);
   }
@@ -452,11 +509,14 @@
     const dailyRain = getDisplayMetric(device.id, defByKey("rain_day"));
     const rainRate = getDisplayMetric(device.id, defByKey("rain_rate"));
     const monthlyRain = getDisplayMetric(device.id, defByKey("rain_month"));
-    const staleCount = metricDefinitions.filter((def) => {
+    const staleDefs = metricDefinitions.filter((def) => {
       const rec = getDisplayMetric(device.id, def);
-      return !rec || isStale(rec.time, 6);
-    }).length;
+      return !rec || isStale(rec.time, STALE_HOURS);
+    });
+    const staleCount = staleDefs.length;
     const statusClass = staleCount > 3 ? "warn" : "ok";
+    const qualityClass = staleCount ? "warn" : "ok";
+    const staleNames = staleDefs.map((def) => def.label).join(", ");
     const weather = weatherLabel(temp?.value, humidity?.value, wind?.value, rainRate?.value);
     const rainText = (rec) => rec && rec.value != null ? `${rec.prefix || ""}${fmt(rec.value, 2)} mm` : "—";
     const raining = Number(rainRate?.value) > 0;
@@ -466,7 +526,7 @@
       : `${raining ? `Βρέχει: ${fmt(rainRate.value, 1)} mm/ώρα. ` : ""}${rainText(dailyRain)} σήμερα, ${rainText(monthlyRain)} τον μήνα.`;
     $("summaryGrid").innerHTML = [
       `<div class="mini-card"><h3>Τρέχουσα Κατάσταση <span class="tag ${statusClass}">${staleCount > 3 ? "Έλεγχος" : "Ενεργός"}</span></h3><div class="weather-inline"><div class="icon">${weather.icon}</div><div><strong>${weather.text}</strong><span>${state.lastPayloadAt ? `Τελευταία ανανέωση: ${formatTime(state.lastPayloadAt)}` : "Αναμονή δεδομένων"}</span></div></div></div>`,
-      `<div class="mini-card"><h3>Ποιότητα Δεδομένων <span class="tag ${statusClass}">${staleCount > 3 ? "Μερική" : "Ομαλή"}</span></h3><p>${staleCount ? `${staleCount} βασικές μετρήσεις χρειάζονται έλεγχο χρόνου ή mapping.` : "Οι βασικές μετρήσεις θερμοκρασίας, υγρασίας, πίεσης και ανέμου ενημερώνονται κανονικά."}</p></div>`,
+      `<div class="mini-card"><h3>Ποιότητα Δεδομένων <span class="tag ${qualityClass}">${staleCount ? "Μερική" : "Ομαλή"}</span></h3><p>${staleCount ? `Δεν ενημερώνονται τις τελευταίες ${STALE_HOURS} ώρες: ${esc(staleNames)}.` : "Οι βασικές μετρήσεις θερμοκρασίας, υγρασίας, πίεσης και ανέμου ενημερώνονται κανονικά."}</p></div>`,
       `<div class="mini-card"><h3>Βροχόπτωση <span class="tag ${rainTag[0]}">${rainTag[1]}</span></h3><p>${rainSummary}</p></div>`,
       `<div class="mini-card"><h3>Λειτουργία Σταθμού</h3><p>Συσκευή: ${esc(device.name)}. Άνεμος ${fmt(wind?.value, 2)} km/h, υγρασία ${fmt(humidity?.value, 0)}%.</p></div>`,
     ].join("");
@@ -476,9 +536,14 @@
     $("metricGrid").innerHTML = metricDefinitions.map((def) => {
       const rec = getDisplayMetric(device.id, def);
       const unit = def.unit || units[def.key] || rec?.unit || "";
-      const hasValue = rec && (!def.rain || rec.value != null);
-      const value = hasValue ? `${rec.prefix || ""}${fmt(rec.value, def.digits)}${unit ? ` ${unit}` : ""}` : (def.rain ? "—" : fmt(rec?.value, def.digits));
-      const foot = def.rain ? (rec?.foot || "") : (rec ? def.foot : "Δεν υπάρχει διαθέσιμη τιμή");
+      const stale = !def.rain && rec && isStaleAt(rec.time, Date.now(), STALE_HOURS);
+      const hasValue = rec && !stale && (!def.rain || rec.value != null);
+      const value = hasValue ? `${rec.prefix || ""}${fmt(rec.value, def.digits)}${unit ? ` ${unit}` : ""}` : (def.rain || stale ? "—" : fmt(rec?.value, def.digits));
+      const foot = def.rain ? (rec?.foot || "")
+        : stale ? `Ο αισθητήρας δεν στέλνει από ${formatTime(rec.time)}`
+        : !rec ? "Δεν υπάρχει διαθέσιμη τιμή"
+        : PRESSURE_VARS.has(def.key) ? pressureFoot()
+        : def.foot;
       return `<article class="metric-card ${def.accent}">
         <div class="metric-top">${rec?.time ? esc(relativeTime(rec.time)) : "Έλεγχος δεδομένου"}</div>
         <div><div class="metric-value">${esc(value)}</div><div class="metric-label">${esc(def.label)}</div></div>
@@ -503,7 +568,7 @@
     const rows = sorted.slice(0, 12).map((row) => {
       const val = (names, digits, unit) => {
         const rec = names.map((name) => row[name]).find(Boolean);
-        return rec ? `${fmt(rec.value, digits)} ${unit}` : "—";
+        return rec ? `${fmt(displayValue(rec.variable, rec.value), digits)} ${unit}` : "—";
       };
       return `<tr><td>${esc(formatTime(row.time))}</td><td>${val(["air_temperature", "temperature"], 1, "°C")}</td><td>${val(["air_humidity", "humidity"], 0, "%")}</td><td>${val(["barometric_pressure_hpa", "pressure"], 1, "hPa")}</td><td>${val(["wind_speed_kmh"], 2, "km/h")}</td><td>${val(["wind_direction_sensor", "wind_direction", "wind_dir"], 0, "°")}</td><td>${val(["uv_index"], 0, "")}</td><td>${val(["light_intensity", "lux", "illuminance", "solar_radiation_lux"], 0, "lux")}</td><td>${rainForRow(row)}</td><td>Έγκυρο</td></tr>`;
     });
@@ -523,7 +588,10 @@
     const keys = Object.keys(state.latest).filter((key) => labels[key]).sort((a, b) => (labels[a] || a).localeCompare(labels[b] || b, "el"));
     $("measurementList").innerHTML = keys.length ? keys.map((key) => {
       const rec = state.latest[key];
-      return `<div class="measurement-item"><span>${esc(labels[key] || key)}</span><strong>${esc(fmt(rec.value, 2))} ${esc(units[key] || rec.unit || "")}</strong></div>`;
+      let shown = `${fmt(displayValue(key, rec.value), 2)} ${units[key] || rec.unit || ""}`;
+      if (key === "wind_chill" && !windChillApplies(state.latest.air_temperature?.value, state.latest.wind_speed_kmh?.value)) shown = "— (ορίζεται μόνο ≤ 10 °C με άνεμο)";
+      if (isStaleAt(rec.time, Date.now(), STALE_HOURS)) shown += ` · από ${formatTime(rec.time)}`;
+      return `<div class="measurement-item"><span>${esc(labels[key] || key)}</span><strong>${esc(shown)}</strong></div>`;
     }).join("") : `<div class="empty">Δεν έχουν ληφθεί δεδομένα ακόμα.</div>`;
   }
 
@@ -531,7 +599,27 @@
 
   function getDisplayMetric(deviceId, def) {
     if (def.rain) return rainMetric(def.rain);
-    return getMetric(deviceId, def);
+    const rec = getMetric(deviceId, def);
+    if (!rec || !PRESSURE_VARS.has(rec.variable)) return rec;
+    return { ...rec, value: displayValue(rec.variable, rec.value) };
+  }
+
+  // Υψόμετρο του σταθμού που προβάλλεται: παράμετρος widget `altitude_m`, αλλιώς ο πίνακας STATION_ALTITUDE_M.
+  const PRESSURE_VARS = new Set(["barometric_pressure_hpa", "pressure"]);
+  function stationAltitude() {
+    if (Number.isFinite(state.altitudeParam)) return state.altitudeParam;
+    const alt = STATION_ALTITUDE_M[state.selectedDevice];
+    return Number.isFinite(alt) ? alt : null;
+  }
+  // Η τιμή όπως εμφανίζεται: η πίεση σε στάθμη θάλασσας όταν ξέρουμε το υψόμετρο· όλα τα άλλα αυτούσια.
+  function displayValue(variable, value) {
+    if (!PRESSURE_VARS.has(variable)) return value;
+    const msl = pressureToMsl(value, stationAltitude());
+    return msl == null ? value : msl;
+  }
+  function pressureFoot() {
+    const alt = stationAltitude();
+    return alt == null ? "Στο ύψος του σταθμού" : `Στη στάθμη της θάλασσας · υψόμετρο ${alt} m`;
   }
 
   // Προσθέτει τιμές του μετρητή βροχής (ιστορικό ή ζωντανές) στη σειρά του επιλεγμένου σταθμού.
@@ -596,7 +684,7 @@
     const rows = [];
     historyRowsForRange(range).forEach((row) => {
       const rec = names.map((name) => row[name]).find(Boolean);
-      if (rec && (!deviceId || deviceId === "default" || !rec.device || rec.device === deviceId) && Number.isFinite(Number(rec.value))) rows.push({ time: row.time, value: Number(rec.value) });
+      if (rec && (!deviceId || deviceId === "default" || !rec.device || rec.device === deviceId) && Number.isFinite(Number(rec.value))) rows.push({ time: row.time, value: Number(displayValue(rec.variable, rec.value)) });
     });
     return rows.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
   }
@@ -883,8 +971,9 @@
     if (useAggregate) {
       AGG_AVG_VARS.forEach((v) => requests.push({ vars: [v], fn: "avg" }));
       AGG_SUM_VARS.forEach((v) => requests.push({ vars: [v], fn: "sum" }));
+      requests.push({ vars: CIRC_VARS, fn: null });
     } else {
-      requests.push({ vars: [...AGG_AVG_VARS, ...AGG_SUM_VARS], fn: null });
+      requests.push({ vars: [...AGG_AVG_VARS, ...AGG_SUM_VARS, ...CIRC_VARS], fn: null });
     }
 
     const allRecords = [];
@@ -913,9 +1002,10 @@
       const slot = Math.floor(t / options.bucketMs) * options.bucketMs;
       let entry = slots.get(slot);
       if (!entry) { entry = { time: new Date(slot).toISOString(), vals: {} }; slots.set(slot, entry); }
-      const acc = entry.vals[rec.variable] || (entry.vals[rec.variable] = { sum: 0, count: 0, sumMode: SUM_SET.has(rec.variable), unit: rec.unit, device: rec.device });
+      const acc = entry.vals[rec.variable] || (entry.vals[rec.variable] = { sum: 0, count: 0, angles: [], sumMode: SUM_SET.has(rec.variable), circ: CIRC_SET.has(rec.variable), unit: rec.unit, device: rec.device });
       acc.sum += Number(rec.value);
       acc.count += 1;
+      if (acc.circ) acc.angles.push(Number(rec.value));
       if (rec.unit != null) acc.unit = rec.unit;
       if (rec.device != null) acc.device = rec.device;
     });
@@ -925,7 +1015,8 @@
       .map(([, entry]) => {
         const row = { time: entry.time, slotMs: options.bucketMs };
         Object.entries(entry.vals).forEach(([variable, acc]) => {
-          const value = acc.sumMode ? acc.sum : acc.sum / acc.count;
+          const value = acc.circ ? circularMeanDeg(acc.angles) : acc.sumMode ? acc.sum : acc.sum / acc.count;
+          if (value == null) return;
           row[variable] = { variable, value, unit: acc.unit, time: entry.time, device: acc.device };
         });
         return row;
