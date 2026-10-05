@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="el">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Smart Agro Genius - Μετεωρολογικός Σταθμός</title>
+    <link rel="stylesheet" href="./weather-dashboard.css" />
+  </head>
+  <body>
+    <div class="app" aria-live="polite">
+      <section class="main">
+        <header class="topbar">
+          <div>Smart Agro Genius</div>
+          <div id="connectionState">Σύνδεση...</div>
+        </header>
+        <div class="crumb" id="stationName">Μετεωρολογικός Σταθμός</div>
+
+        <main class="page">
+          <div class="content">
+            <section class="card">
+              <div class="hero-top">
+                <div>
+                  <div class="title-row">
+                    <h1 id="dashboardTitle">Μετεωρολογικός Σταθμός</h1>
+                    <span class="sub" id="lastUpdate">Αναμονή live δεδομένων</span>
+                  </div>
+                  <p class="sub">Ενοποιημένη προβολή τελευταίων μετρήσεων, τάσεων, συμβάντων και ποιοτικού ελέγχου δεδομένων για καθημερινή επιχειρησιακή παρακολούθηση.</p>
+                  <div class="toolbar" id="viewTabs">
+                    <button class="pill active" data-scroll="metrics" type="button">Τελευταίες Μετρήσεις</button>
+                    <button class="pill" data-scroll="charts" type="button">Διαγράμματα</button>
+                    <button class="pill" data-scroll="history" type="button">Ιστορικό</button>
+                  </div>
+                </div>
+                <div class="hero-actions">
+                  <button class="btn btn-primary" id="refreshBtn" type="button">Ανανέωση μετρήσεων</button>
+                  <button class="btn btn-secondary" id="openAllMeasurements" type="button">Όλες οι μεταβλητές</button>
+                </div>
+              </div>
+
+              <div class="summary-grid" id="summaryGrid"></div>
+            </section>
+
+            <section class="card" id="metrics">
+              <div class="title-row">
+                <h1>Τελευταίες Μετρήσεις</h1>
+                <div class="sub">Live mapping από τις αρχικές μεταβλητές του Tago weather station.</div>
+              </div>
+              <div class="station-grid" id="metricGrid"></div>
+            </section>
+
+            <section id="charts">
+              <div class="card">
+                <div class="title-row">
+                  <h1>Χρονοσειρές</h1>
+                  <div class="toolbar">
+                    <button class="pill active" data-range="24h" type="button">24 ώρες</button>
+                    <button class="pill" data-range="7d" type="button">7 ημέρες</button>
+                    <button class="pill" data-range="30d" type="button">30 ημέρες</button>
+                  </div>
+                </div>
+                <div class="charts-grid" id="chartsGrid"></div>
+              </div>
+            </section>
+
+            <section class="card" id="history">
+              <div class="title-row">
+                <h1>Ιστορικό Μετρήσεων</h1>
+                <div class="sub">Πρόσφατες τιμές από realtime/start payloads.</div>
+              </div>
+              <div class="table-wrap">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Χρόνος</th>
+                      <th>Θερμ. Αέρα</th>
+                      <th>Υγρασία</th>
+                      <th>Πίεση</th>
+                      <th>Άνεμος</th>
+                      <th>Διεύθυνση</th>
+                      <th>UV</th>
+                      <th>Lux</th>
+                      <th>Βροχή</th>
+                      <th>Κατάσταση</th>
+                    </tr>
+                  </thead>
+                  <tbody id="historyRows"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </main>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="measurementsModal" role="dialog" aria-modal="true" aria-labelledby="measurementsTitle">
+      <div class="modal">
+        <div class="modal-head">
+          <h3 id="measurementsTitle">Όλες οι μεταβλητές</h3>
+          <button class="close-btn" data-close-modal="measurementsModal" type="button" aria-label="Κλείσιμο">×</button>
+        </div>
+        <div class="measurement-list" id="measurementList"></div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="chartModal" role="dialog" aria-modal="true" aria-labelledby="chartModalTitle">
+      <div class="modal chart-modal">
+        <div class="modal-head">
+          <div>
+            <h3 id="chartModalTitle">Χρονοσειρά</h3>
+            <div class="modal-sub" id="chartModalMeta">Μονάδες</div>
+          </div>
+          <button class="close-btn" data-close-modal="chartModal" type="button" aria-label="Κλείσιμο">×</button>
+        </div>
+        <div class="chart-modal-body" id="chartModalBody"></div>
+      </div>
+    </div>
+	<script src="https://admin.tago.io/dist/custom-widget.min.js"></script>
+    <script src="./weather-dashboard.js"></script>
+  </body>
+</html>

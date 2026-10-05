@@ -43,7 +43,10 @@
     "files": [
       { "file": "custom_html_files/configuration.html", "target": "html_files/configuration.html" },
       { "file": "custom_html_files/gateway-board.html", "target": "html_files/gateway-board.html", "note": "Στόλος Gateways (iframe widget 6a9d33718592a5000b70ee30 στο dashboard 6877622f4090c0000ad94a01). Ζούσε ΜΟΝΟ ζωντανά μέχρι τις 19/9 — μπήκε στο git αυτούσιο πριν αλλαχθεί." },
-      { "file": "custom_html_files/sag-fleet.html", "target": "storage/sagMain/sag-fleet.html", "note": "Εποπτεία Στόλου (iframe widget 6a9887242f585a000bd83e68 στο dashboard 6a988679239762000cdc97b9). Διαβάζει fleet_field/fleet_summary από τη συσκευή SAG Εποπτεία 6a98855ca06e41000bfae024. Μετακινήθηκε στο backup16-09/ στις 16/9 — επαναφέρθηκε 19/9 μέσω deploy probe." }
+      { "file": "custom_html_files/sag-fleet.html", "target": "storage/sagMain/sag-fleet.html", "note": "Εποπτεία Στόλου (iframe widget 6a9887242f585a000bd83e68 στο dashboard 6a988679239762000cdc97b9). Διαβάζει fleet_field/fleet_summary από τη συσκευή SAG Εποπτεία 6a98855ca06e41000bfae024. Μετακινήθηκε στο backup16-09/ στις 16/9 — επαναφέρθηκε 19/9 μέσω deploy probe." },
+      { "file": "custom_html_files/weatherStation/weather-dashboard.js", "target": "storage/weatherStation/weather-dashboard.js", "note": "Cretaweather (δημόσια dashboards ΓΑΛΥΦΑ 04e8 · ΕΛΙΑ 0138 · ΚΟΞΑΡΗ 057C · ΠΟΤΑΜΙΕΣ 047e, iframe storage/weatherStation/index.html). Ζούσε ΜΟΝΟ ζωντανά (7/7/2026) — μπήκε στο git 5/10 με το αρχικό ως weather-dashboard.ORIGINAL_2026-07-07.js (sha256 335941e4…). T-CRETAWX-RAIN-01: βροχή από τον μετρητή rain_height_acc, όχι από άθροισμα rain_gauge. Ελεγκτής analysis/test/cretaweather_rain_check.mjs." },
+      { "file": "custom_html_files/weatherStation/index.html", "target": "storage/weatherStation/index.html", "note": "Αμετάβλητο από το ζωντανό (7/7/2026)." },
+      { "file": "custom_html_files/weatherStation/weather-dashboard.css", "target": "storage/weatherStation/weather-dashboard.css", "note": "Αμετάβλητο από το ζωντανό (7/7/2026)." }
     ]
   },
   "parsers": {
