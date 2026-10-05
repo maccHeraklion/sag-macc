@@ -1,5 +1,17 @@
-// Analysis B: uc511_ack_checker (single fetch, retry cap+notify, action removal based on anyResent)
-// Preserves original transmit sequence for rule events (ruleX_set / ruleX_enable) using a per-rule timeline.
+// Analysis B: uc511_ack_checker — επανάληψη εντολών UC511 που δεν επιβεβαιώθηκαν (T-IRRIG-RETRY-01, 5/10/2026).
+//
+// Τρέχει κάθε λεπτό όσο υπάρχει η one-off cron action που δημιουργεί το UC511_downlink. Για κάθε ελεγκτή:
+//  - Βαλβίδες: κρατά ΜΟΝΟ την τελευταία εντολή ανά βαλβίδα (valve_X_command / valve_X_time_command)· οι παλιότερες
+//    έχουν αντικατασταθεί από τον χρήστη και δεν ξαναστέλνονται ποτέ.
+//  - Επιβεβαίωση = uplink valve_X ή valve_X_command_feedback ΜΕΤΑ την εντολή με την ΖΗΤΟΥΜΕΝΗ κατάσταση
+//    (on/off). Ένα περιοδικό uplink με την παλιά κατάσταση δεν μετρά πια ως επιβεβαίωση.
+//  - Αν δεν επιβεβαιωθεί σε RETRY_EVERY_MIN (5΄), ξαναστέλνεται, και ξανά κάθε 5΄, έως RETRY_MAX_OPEN φορές για
+//    άνοιγμα / RETRY_MAX_CLOSE για κλείσιμο (το κλείσιμο επιμένει περισσότερο: είναι η ασφαλής κατεύθυνση).
+//  - Μετά το όριο γράφεται ΜΙΑ φορά uc511_ack_failed και η εντολή σταματά (δεν ξαναρχίζει από την αρχή).
+//  - Η κατάσταση κάθε εντολής φυλάσσεται σε device param ack_state_<κλειδί> = {"ts","n","last","failed"}· το ts
+//    ταυτοποιεί την εντολή, οπότε νέα εντολή ξεκινά αυτόματα από το μηδέν.
+//  - Κανόνες (ruleN_set / ruleN_enable): ίδιος ρυθμός· επιβεβαίωση = νέο ruleN (FE53) μετά την εντολή. Το FF55
+//    ξαναχτίζεται με τον ΙΔΙΟ encoder με το UC511_downlink (duration_sec, water_pulses, weekday_mask, μήνας HW v4+).
 
 const { Analysis, Account, Device, Utils } = require("@tago-io/sdk");
 
@@ -9,9 +21,9 @@ module.exports = new Analysis(async (context, scope) => {
     return context.log('Missing/invalid "account_token" for checker.');
   }
   const DEFAULT_PORT = Number(env.default_PORT || 85);
-  const MAX_RETRIES = Number(env.MAX_RETRIES ?? 3); // set in Environment
-  const MIN_WAIT_MS = Number(env.MIN_WAIT_MS ?? 60_000); // ms before first resend attempt (default 60s)
+  const cfg = retryConfig(env);
   const account = new Account({ token: env.account_token });
+  const now = Date.now();
 
   const devices = await listAllDevicesByTags(account, [
     { key: "manufacturer", value: "milesight" },
@@ -19,10 +31,7 @@ module.exports = new Analysis(async (context, scope) => {
   ]);
   if (!devices.length) return context.log("No uc511 devices found.");
 
-  const WINDOW_MS = 10 * 60 * 1000;
-  const sinceISO = new Date(Date.now() - WINDOW_MS).toISOString();
-
-  let anyResent = false;
+  const sinceISO = new Date(now - cfg.lookbackMs).toISOString();
   let anyPending = false;
 
   for (const dev of devices) {
@@ -30,238 +39,181 @@ module.exports = new Analysis(async (context, scope) => {
       const token = await ensureDeviceToken(account, dev.id);
       const device = new Device({ token });
 
-      // -------- Single fetch of last 10 minutes (all variables)
-      const data = await device.getData({ start_date: sinceISO, qty: 1000 });
+      // Μόνο οι εντολές μας στο παράθυρο· αν δεν υπάρχει καμία, ο ελεγκτής παραλείπεται χωρίς άλλη ανάγνωση.
+      const cmdRows = await device.getData({ variables: COMMAND_VARS, start_date: sinceISO, qty: 200 }).catch(() => []);
+      const commands = (cmdRows || [])
+        .map((r) => ({ variable: String(r.variable || ""), value: r.value, metadata: r.metadata || {}, ts: rowTs(r) }))
+        // Multi-controller safety: autofill broadcasts the widget command into EVERY controller that declares the
+        // variable; only the copy whose metadata.target_device is THIS controller is ours to resend.
+        .filter((c) => !(c.metadata.target_device && String(c.metadata.target_device) !== String(dev.id)));
+      if (!commands.length) continue;
 
-      // Index by variable for fast lookups
-      const byVar = new Map();
-      for (const r of data) {
-        const varName = String(r.variable || "");
-        const ts = new Date(r.time || r.date || r.created_at).getTime() || 0;
-        if (!byVar.has(varName)) byVar.set(varName, []);
-        byVar.get(varName).push({ ...r, __ts: ts });
+      const firstTs = Math.min(...commands.map((c) => c.ts));
+      const ackRows = await device
+        .getData({ variables: ACK_VARS, start_date: new Date(firstTs - 1000).toISOString(), qty: 1000 })
+        .catch(() => []);
+      const acks = (ackRows || []).map((r) => ({ variable: String(r.variable || ""), value: r.value, ts: rowTs(r) }));
+
+      const params = await account.devices.paramList(dev.id);
+      const hwMajor = parseHwMajor((dev.tags || []).find((t) => t.key === "hw_version")?.value);
+
+      const jobs = [];
+      for (const c of latestValveCommands(commands)) {
+        const payload = c.kind === "time" ? buildValveTimePayload(c.valve, c.minutes) : buildValvePayload(c.valve, c.state);
+        if (!payload) continue;
+        jobs.push({ key: `valve_${c.valve}`, ts: c.ts, open: c.state === "on", acked: isValveAcked(c, acks),
+          payloads: [payload], detail: { valve: c.valve, variable: c.variable, value: c.value } });
       }
-      for (const arr of byVar.values()) arr.sort((a, b) => a.__ts - b.__ts);
-
-      // Cache device params for retries (reduce paramList calls)
-      const paramsCache = await account.devices.paramList(dev.id);
-
-      // Helpers bound to this device
-      const getRetries = (key) => getRetriesCached(paramsCache, key);
-      const setRetries = async (key, value) => {
-        const body = upsertRetryParam(paramsCache, key, String(value));
-        await account.devices.paramSet(dev.id, body);
-      };
-      const resetRetry = async (key) => {
-        const p = paramsCache.find(x => x.key === `ack_retry_${key}`);
-        if (p && p.value !== "0") {
-          await account.devices.paramSet(dev.id, { id: p.id, key: p.key, value: "0", sent: false });
-          p.value = "0";
-        }
-      };
-
-      const hasAckAfter = (ackVar, ts) => {
-        const arr = byVar.get(ackVar);
-        if (!arr || !arr.length) return false;
-        for (let i = arr.length - 1; i >= 0; i--) {
-          if (arr[i].__ts > ts) return true;
-          if (arr[i].__ts <= ts) break;
-        }
-        return false;
-      };
-
-      // Collect commands in window
-      const commandVarsRegex = /^(valve_\d+_command|valve_\d+_time_command|rule\d+_(enable|set))$/i;
-      const commands = [];
-      for (const [varName, arr] of byVar.entries()) {
-        if (!commandVarsRegex.test(varName)) continue;
-        for (const r of arr) {
-          // Multi-controller safety: the widget stamps commands with metadata.target_device, and
-          // autofill broadcasts them into EVERY controller that declares the variable. Skip the
-          // broadcast copies whose target is a DIFFERENT controller — otherwise this checker would
-          // resend the downlink to the wrong device and physically open its valve.
-          const td = r.metadata && r.metadata.target_device;
-          if (td && String(td) !== String(dev.id)) continue;
-          commands.push({ variable: varName, value: r.value, metadata: r.metadata || {}, ts: r.__ts });
-        }
-      }
-
-      // IMPORTANT: sort chronologically (oldest -> newest) to preserve original transmit sequence
-      commands.sort((a, b) => a.ts - b.ts);
-
-      // ---------- VALVE HANDLING (same behavior as before, replayed in chronological order) ----------
-      for (const c of commands) {
-        const variable = c.variable;
-        const ts = c.ts;
-        const retryKey = variable.replace(/\s+/g, "").toLowerCase();
-
-        // ---- valve_X_command -> expect valve_X > ts
-        const mValve = variable.match(/^valve_(\d+)_command$/i);
-        if (mValve) {
-          const x = Number(mValve[1]);
-          const ackVar = `valve_${x}`;
-          if (hasAckAfter(ackVar, ts)) {
-            await resetRetry(retryKey);
-          } else {
-            const payload = buildValvePayload(x, String(c.value).toLowerCase());
-            if (payload) {
-              const { resent, stillPending } = await maybeResendWithCap({
-                account, context, device, dev, DEFAULT_PORT,
-                payloads: [payload],
-                retryKey, MAX_RETRIES, ts, minWaitMs: MIN_WAIT_MS,
-                type: "valve_command",
-                detail: { valve: x, state: c.value },
-                getRetries, setRetries,
-              });
-              if (resent) anyResent = true;
-              if (stillPending) anyPending = true;
-            }
-          }
-          continue;
-        }
-
-        // ---- valve_X_time_command (> 3 minutes) -> expect valve_X > ts
-        const mValveT = variable.match(/^valve_(\d+)_time_command$/i);
-        if (mValveT) {
-          const x = Number(mValveT[1]);
-          const minutes = Number(c.value) || 0;
-          if (minutes > 3) {
-            const ackVar = `valve_${x}`;
-            if (hasAckAfter(ackVar, ts)) {
-              await resetRetry(retryKey);
-            } else {
-              const payload = buildValveTimePayload(x, minutes);
-              if (payload) {
-                const { resent, stillPending } = await maybeResendWithCap({
-                  account, context, device, dev, DEFAULT_PORT,
-                  payloads: [payload],
-                  retryKey, MAX_RETRIES, ts, minWaitMs: MIN_WAIT_MS,
-                  type: "valve_time_command",
-                  detail: { valve: x, minutes },
-                  getRetries, setRetries,
-                });
-                if (resent) anyResent = true;
-                if (stillPending) anyPending = true;
-              }
-            }
-          } else {
-            await resetRetry(retryKey); // explicitly OK (<=3m)
-          }
-          continue;
-        }
-      }
-
-      // ---------- RULE SEQUENCE HANDLING (unified logic that preserves original order) ----------
-      // Build per-rule timelines from the already-sorted commands
-      const ruleEventRe = /^rule(\d+)_(enable|set)$/i;
-      const rulesMap = new Map();
-
-      // Normalize rule events into a list per ruleId with their ts and source row
-      for (const c of commands) {
-        const m = c.variable.match(ruleEventRe);
-        if (!m) continue;
-        const ruleId = clampInt(Number(m[1]), 1, 16);
-        if (!rulesMap.has(ruleId)) rulesMap.set(ruleId, []);
-        rulesMap.get(ruleId).push({
-          kind: m[2],            // "set" | "enable"
-          ts: c.ts,
-          raw: c,
-        });
-      }
-
-      // For each rule timeline: keep only unacked events, then resend in chronological order as one batch
-      for (const [ruleId, evts] of rulesMap.entries()) {
-        const ackVar = `rule${ruleId}`;
-
-        // Filter only pending (no ack after their own ts)
-        const pending = evts.filter(e => !hasAckAfter(ackVar, e.ts));
-        if (!pending.length) {
-          // Reset individual counters if they exist (optional hygiene)
-          for (const e of evts) {
-            const key = `rule${ruleId}_${e.kind}`.toLowerCase();
-            await resetRetry(key).catch(() => {});
-          }
-          continue;
-        }
-
-        // Build payloads in the same sequence they were sent (pending is chronological due to global sort)
+      for (const r of pendingRuleSequences(commands, acks)) {
         const payloads = [];
-        let earliestTS = pending[0].ts;
-        const detailSeq = [];
-
-        // Optional: squash superseded 'set' events by keeping only the last one before enable.
-        // Current implementation: sends all pending in order exactly as they came.
-        for (const e of pending) {
-          if (e.ts < earliestTS) earliestTS = e.ts;
-
+        for (const e of r.events) {
           if (e.kind === "set") {
-            const ff55 = buildFF53FromMetadata(ruleId, e.raw.metadata || {});
-            if (ff55) {
-              payloads.push(ff55);
-              // optional refresh after set
-              payloads.push(`FF53${byteHex(ruleId)}`);
-              detailSeq.push({ kind: "set", meta_ok: true, ts: new Date(e.ts).toISOString() });
-            } else {
-              // metadata missing => can't rebuild, reset its individual retry to avoid looping
-              await resetRetry(`rule${ruleId}_set`.toLowerCase()).catch(() => {});
-            }
-          } else if (e.kind === "enable") {
-            const desired = normalizeBool(e.raw.value) ? 1 : 0;
-            const payload = `FF4B03${byteHex(ruleId)}${byteHex(desired)}`;
-            payloads.push(payload);
-            // optional refresh after enable
-            payloads.push(`FF53${byteHex(ruleId)}`);
-            detailSeq.push({ kind: "enable", desired, ts: new Date(e.ts).toISOString() });
+            const ff55 = buildFF55FromMetadata(r.ruleId, e.metadata, hwMajor);
+            if (ff55) payloads.push(ff55, `FF53${byteHex(r.ruleId)}`);
+          } else {
+            payloads.push(`FF4B03${byteHex(r.ruleId)}${byteHex(normalizeBool(e.value) ? 1 : 0)}`, `FF53${byteHex(r.ruleId)}`);
           }
         }
-
-        // If we have something to send, use a single retry key per rule sequence
-        if (payloads.length) {
-          const retryKey = `rule${ruleId}_seq`;
-          const { resent, stillPending } = await maybeResendWithCap({
-            account, context, device, dev, DEFAULT_PORT,
-            payloads,
-            retryKey,
-            MAX_RETRIES,
-            ts: earliestTS, // earliest pending event is the base ts
-            minWaitMs: MIN_WAIT_MS,
-            type: "rule_sequence",
-            detail: { rule: ruleId, seq: detailSeq },
-            getRetries, setRetries,
-          });
-          if (resent) anyResent = true;
-          if (stillPending) anyPending = true;
-        }
+        if (payloads.length) jobs.push({ key: `rule${r.ruleId}`, ts: r.ts, open: true, acked: false, payloads,
+          detail: { rule: r.ruleId, events: r.events.map((e) => e.kind) } });
       }
 
+      for (const job of jobs) {
+        const paramKey = `ack_state_${job.key}`;
+        const param = params.find((p) => p.key === paramKey);
+        const d = retryDecision(parseState(param && param.value), job, now, cfg);
+        if (d.pending) anyPending = true;
+        if (d.action === "send") {
+          context.log(`[${dev.name}] ${job.key}: χωρίς επιβεβαίωση ${Math.round((now - job.ts) / 60000)}΄ → επανάληψη ${d.state.n}/${d.max}`);
+          for (const pl of job.payloads) {
+            await Utils.sendDownlink(account, dev.id, { payload: pl, port: DEFAULT_PORT, confirmed: false })
+              .catch((e) => context.log(`downlink ${pl} failed: ${e?.message || e}`));
+          }
+        } else if (d.action === "give_up") {
+          context.log(`[${dev.name}] ${job.key}: ΑΠΟΤΥΧΙΑ μετά από ${d.state.n} επαναλήψεις — σταματά.`);
+          await device.sendData([{ variable: "uc511_ack_failed", value: job.key, metadata: {
+            device_id: dev.id, device_name: dev.name || "", detail: job.detail,
+            last_cmd_time: new Date(job.ts).toISOString(), retries: d.state.n, max_retries: d.max,
+          } }]).catch(() => {});
+        } else if (d.action === "done" && d.state.n > 0) {
+          context.log(`[${dev.name}] ${job.key}: επιβεβαιώθηκε μετά από ${d.state.n} επανάληψη(εις).`);
+        }
+        if (d.write) {
+          const body = { id: param ? param.id : null, key: paramKey, value: JSON.stringify(d.state), sent: false };
+          await account.devices.paramSet(dev.id, body).catch((e) => context.log(`param ${paramKey}: ${e?.message || e}`));
+        }
+      }
     } catch (e) {
       context.log(`Device ${dev.name || dev.id} error: ${e?.message || e}`);
     }
   }
 
-  // --- Action lifecycle (ONLY anyResent matters) ---
+  // --- Action lifecycle: η cron μένει όσο κάποια εντολή περιμένει επιβεβαίωση ή επανάληψη ---
   try {
-    if (anyResent || anyPending) {
-      context.log(anyResent ? "Resends occurred; keeping action to run again." : "Commands still within min-wait window; keeping action.");
+    if (anyPending) {
+      context.log("Εκκρεμούν εντολές· η action μένει.");
     } else {
-      // try delete by scope.action.id first
       const firedID = scope?.action?.id;
-      let deleted = 0;
-
       if (firedID) {
         await account.actions.delete(firedID);
-        deleted = 1;
-        context.log(`No resends; deleted action by scope id: ${firedID}`);
+        context.log(`Καμία εκκρεμότητα· διαγράφηκε η action ${firedID}.`);
       } else {
-        // fallback: delete ALL matching throttle actions by tags
-        deleted = await deleteThrottleActionsByTags(account);
-        context.log(`No resends; deleted ${deleted} pending throttle action(s) by tags.`);
+        const deleted = await deleteThrottleActionsByTags(account);
+        context.log(`Καμία εκκρεμότητα· διαγράφηκαν ${deleted} action(s) με βάση τα tags.`);
       }
     }
   } catch (e) {
     context.log("Warn: action cleanup error:", e?.message || e);
   }
 });
+
+const COMMAND_VARS = [1, 2].flatMap((x) => [`valve_${x}_command`, `valve_${x}_time_command`])
+  .concat(Array.from({ length: 16 }, (_, i) => [`rule${i + 1}_set`, `rule${i + 1}_enable`]).flat());
+const ACK_VARS = [1, 2].flatMap((x) => [`valve_${x}`, `valve_${x}_command_feedback`])
+  .concat(Array.from({ length: 16 }, (_, i) => `rule${i + 1}`));
+
+// ═══ ΛΟΓΙΚΗ ΕΠΑΝΑΛΗΨΗΣ (καθαρές συναρτήσεις· ελέγχονται από test/uc511_retry_check.mjs)
+function retryConfig(env) {
+  const num = (v, d) => (v != null && v !== "" && Number.isFinite(Number(v)) ? Number(v) : d);
+  const everyMs = num(env.RETRY_EVERY_MIN, 5) * 60000;
+  const maxOpen = num(env.RETRY_MAX_OPEN, 6);   // άνοιγμα / κανόνες: 6 × 5΄ = έως 30΄ μετά την εντολή
+  const maxClose = num(env.RETRY_MAX_CLOSE, 24); // κλείσιμο: 24 × 5΄ = έως 2 ώρες
+  return { everyMs, maxOpen, maxClose, lookbackMs: (Math.max(maxOpen, maxClose) + 2) * everyMs + 10 * 60000 };
+}
+
+function latestValveCommands(commands) {
+  const byValve = new Map();
+  for (const c of commands) {
+    const m = c.variable.match(/^valve_(\d+)_(command|time_command)$/i);
+    if (!m) continue;
+    const valve = Number(m[1]);
+    const prev = byValve.get(valve);
+    if (!prev || c.ts > prev.ts) byValve.set(valve, { ...c, valve, kind: m[2] === "time_command" ? "time" : "onoff" });
+  }
+  const out = [];
+  for (const c of byValve.values()) {
+    if (c.kind === "time") {
+      const minutes = Number(c.value) || 0;
+      if (minutes <= 0) continue;
+      out.push({ ...c, state: "on", minutes });
+    } else {
+      const state = String(c.value).toLowerCase();
+      if (state === "on" || state === "off") out.push({ ...c, state });
+    }
+  }
+  return out;
+}
+
+function isValveAcked(c, acks) {
+  const names = [`valve_${c.valve}`, `valve_${c.valve}_command_feedback`];
+  for (const a of acks) {
+    if (!names.includes(a.variable) || a.ts <= c.ts) continue;
+    const v = String(a.value).toLowerCase();
+    if (v === c.state) return true;
+    // Χρονικό άνοιγμα που πρόλαβε να κλείσει μόνο του: «off» μετά τη λήξη της διάρκειας σημαίνει ότι άνοιξε.
+    if (c.kind === "time" && v === "off" && a.ts >= c.ts + c.minutes * 60000 - 30000) return true;
+  }
+  return false;
+}
+
+function pendingRuleSequences(commands, acks) {
+  const byRule = new Map();
+  for (const c of commands) {
+    const m = c.variable.match(/^rule(\d+)_(enable|set)$/i);
+    if (!m) continue;
+    const ruleId = Number(m[1]);
+    if (!byRule.has(ruleId)) byRule.set(ruleId, []);
+    byRule.get(ruleId).push({ kind: m[2].toLowerCase(), ts: c.ts, value: c.value, metadata: c.metadata || {} });
+  }
+  const out = [];
+  for (const [ruleId, evts] of byRule) {
+    const lastAck = Math.max(-Infinity, ...acks.filter((a) => a.variable === `rule${ruleId}`).map((a) => a.ts));
+    const events = evts.filter((e) => e.ts >= lastAck).sort((a, b) => a.ts - b.ts);
+    if (events.length) out.push({ ruleId, ts: events[0].ts, events });
+  }
+  return out;
+}
+
+function parseState(raw) {
+  try {
+    const s = JSON.parse(raw);
+    if (s && typeof s === "object" && Number.isFinite(s.ts)) return s;
+  } catch (_) { /* παλιά τιμή ή κενό */ }
+  return null;
+}
+
+// Επιστρέφει { action: "wait"|"send"|"give_up"|"done"|"idle", state, write, pending, max }
+function retryDecision(prev, job, now, cfg) {
+  const max = job.open ? cfg.maxOpen : cfg.maxClose;
+  const fresh = !prev || prev.ts !== job.ts;
+  const state = fresh ? { ts: job.ts, n: 0, last: job.ts, failed: false } : { ...prev };
+  if (job.acked) return { action: "done", state: { ...state, done: true }, write: !fresh && !prev.done, pending: false, max };
+  if (state.failed || state.done) return { action: "idle", state, write: false, pending: false, max };
+  if (now - state.last < cfg.everyMs) return { action: "wait", state, write: false, pending: true, max };
+  if (state.n >= max) return { action: "give_up", state: { ...state, failed: true }, write: true, pending: false, max };
+  return { action: "send", state: { ...state, n: state.n + 1, last: now }, write: true, pending: true, max };
+}
+// ═══ ΤΕΛΟΣ ΛΟΓΙΚΗΣ ΕΠΑΝΑΛΗΨΗΣ
 
 /* Helper */
 async function deleteThrottleActionsByTags(account) {
@@ -296,11 +248,13 @@ async function deleteThrottleActionsByTags(account) {
 
 /* ================= helpers ================= */
 function toEnv(arr){ const o={}; for(const x of (arr||[])) o[x.key]=x.value; return o; }
+function rowTs(r){ return new Date(r.time || r.date || r.created_at).getTime() || 0; }
 function clampInt(n, min, max){ n=Math.floor(Number(n)||0); if(n<min)n=min; if(n>max)n=max; return n; }
 function byteHex(n){ return clampInt(n,0,255).toString(16).padStart(2,"0").toUpperCase(); }
 function toLE24Hex(n){ n=clampInt(n,0,0xFFFFFF); const b0=(n&0xFF).toString(16).padStart(2,"0"); const b1=((n>>8)&0xFF).toString(16).padStart(2,"0"); const b2=((n>>16)&0xFF).toString(16).padStart(2,"0"); return (b0+b1+b2).toUpperCase(); }
 function toLE32Hex(n){ n=Number(n)>>>0; const b0=(n&0xFF).toString(16).padStart(2,"0"); const b1=((n>>>8)&0xFF).toString(16).padStart(2,"0"); const b2=((n>>>16)&0xFF).toString(16).padStart(2,"0"); const b3=((n>>>24)&0xFF).toString(16).padStart(2,"0"); return (b0+b1+b2+b3).toUpperCase(); }
 function normalizeBool(v){ if(typeof v==="boolean")return v; if(typeof v==="number")return v!==0; const s=String(v).toLowerCase(); return s==="true"||s==="1"||s==="on"; }
+function parseHwMajor(raw){ const m=String(raw||"").trim().match(/v?\s*(\d+)/i); if(!m)return null; const n=Number(m[1]); return Number.isFinite(n)?n:null; }
 
 function buildValvePayload(x, state){
   if (x === 1) { if (state === "on") return "FF1D2000"; if (state === "off") return "FF1D0000"; }
@@ -317,120 +271,34 @@ function buildValveTimePayload(x, minutes){
   if (x === 2) return ("FF1DA100" + secsHex + "00000000").toUpperCase();
   return null;
 }
-function buildFF53FromMetadata(ruleId, md){
+// FF55 — ΙΔΙΟΣ encoder με το UC511_downlink.js (RULE SET / UPDATE). Αν αλλάξει εκεί, αλλάζει κι εδώ.
+function buildFF55FromMetadata(ruleId, md, hwMajor){
   const startISO = md.start_iso; if (!startISO) return null;
-  const enableFlag = typeof md.enabled === "boolean" ? (md.enabled ? 1 : 0) : 1;
   const startTS = Math.floor(new Date(startISO).getTime() / 1000);
-  const endTS = 0;
+  const enableFlag = typeof md.enabled === "boolean" ? (md.enabled ? 1 : 0) : 1;
   const isLoop = md.repeat ? 1 : 0;
   let loopPeriod = 0x01, pA = 0x00, pB = 0x00;
-
   if (md.repeat) {
     const every = clampInt(md.interval, 1, 65535);
     const unit = String(md.unit || "day").toLowerCase();
-    if (unit.startsWith("week")) { loopPeriod = 0x02; pA = 0x7F; pB = clampInt(every, 1, 255); }
-    else if (unit.startsWith("month")) { loopPeriod = 0x01; const days = clampInt(every * 30, 1, 65535); pA = days & 0xFF; pB = (days >> 8) & 0xFF; }
-    else { loopPeriod = 0x01; const days = clampInt(every, 1, 65535); pA = days & 0xFF; pB = (days >> 8) & 0xFF; }
-  }
-
-  const actType = 0x02; const valve = clampInt(md.valve || 1, 1, 3);
-  const op = 0x01; const timed = Number(md.duration_min) > 0 ? 1 : 0;
-  const durationSec = clampInt((Number(md.duration_min) || 0) * 60, 0, 0xFFFFFFFF);
-  const flow = Number(md.pulses) > 0 ? 1 : 0; const pulses = clampInt(Number(md.pulses) || 0, 0xFFFFFFFF);
-
-  const ff53 =
-    "FF55" + byteHex(ruleId) + byteHex(enableFlag) + byteHex(0x01) +
-    toLE32Hex(startTS) + toLE32Hex(endTS) + byteHex(isLoop) +
-    byteHex(loopPeriod) + byteHex(pA) + byteHex(pB) +
-    byteHex(actType) + byteHex(valve) + byteHex(op) +
-    byteHex(timed) + toLE32Hex(durationSec) + byteHex(flow) + toLE32Hex(pulses);
-
-  return ff53.toUpperCase();
-}
-
-// ===== retry bookkeeping with cached params =====
-function getRetriesCached(paramsCache, key){
-  const p = paramsCache.find(x => x.key === `ack_retry_${key}`);
-  return p ? Number(p.value) || 0 : 0;
-}
-function upsertRetryParam(paramsCache, key, value){
-  const existing = paramsCache.find(x => x.key === `ack_retry_${key}`);
-  if (existing) {
-    existing.value = value;
-    return { id: existing.id, key: existing.key, value: existing.value, sent: false };
-  }
-  const keyFull = `ack_retry_${key}`;
-  paramsCache.push({ id: null, key: keyFull, value, sent: false });
-  return { id: null, key: keyFull, value, sent: false };
-}
-
-// Resend while under cap; notify when exceeded; returns { resent, stillPending }
-async function maybeResendWithCap({
-  account, context, device, dev, DEFAULT_PORT,
-  payloads, retryKey, MAX_RETRIES, ts, minWaitMs, type, detail,
-  getRetries, setRetries
-}) {
-  const waitElapsed = Date.now() - ts;
-  if (waitElapsed < minWaitMs) {
-    context.log(`[${retryKey}] Waiting ${Math.round(waitElapsed / 1000)}s / ${Math.round(minWaitMs / 1000)}s before first resend.`);
-    return { resent: false, stillPending: true };
-  }
-
-  const count = getRetries(retryKey);
-  const next = count + 1;
-
-  if (next <= MAX_RETRIES) {
-    await setRetries(retryKey, next);
-    for (const pl of payloads) {
-      if (!pl) continue;
-      console.log(`Sending downlink to device ${dev.id}: ${pl}`);
-      await Utils.sendDownlink(account, dev.id, { payload: pl, port: DEFAULT_PORT, confirmed: false }).catch(() => {});
+    if (unit.startsWith("week")) {
+      loopPeriod = 0x02;
+      const wmask = Number(md.weekday_mask) & 0x7f;
+      pA = wmask ? wmask : 0x7f;
+      pB = clampInt(every, 1, 255);
+    } else if (unit.startsWith("month")) {
+      if ((hwMajor ?? 0) >= 4) { loopPeriod = 0x00; const months = clampInt(every, 1, 65535); pA = months & 0xff; pB = (months >> 8) & 0xff; }
+      else { loopPeriod = 0x01; const days = clampInt(every * 30, 1, 65535); pA = days & 0xff; pB = (days >> 8) & 0xff; }
+    } else {
+      loopPeriod = 0x01; const days = clampInt(every, 1, 65535); pA = days & 0xff; pB = (days >> 8) & 0xff;
     }
-    return { resent: true, stillPending: false };
   }
-
-  // === MAX RETRIES EXCEEDED: log event + notify MACC_Manager users ===
-  const payloadMeta = {
-    device_id: dev.id,
-    device_name: dev.name || "",
-    type,
-    detail,
-    last_cmd_time: new Date(ts).toISOString(),
-    retries: count,
-    max_retries: MAX_RETRIES,
-  };
-
-  // 1) datapoint for history / dashboards
-  await device.sendData([{
-    variable: "uc511_ack_failed",
-    value: retryKey,
-    metadata: payloadMeta,
-  }]).catch(() => {});
-
-  // 2) direct notifications (optional — currently logged)
-  try {
-    const title = "ΔΟΚΙΜΗ - Αποτυχια αποστολης UC511";
-    const message =
-      `Device: ${payloadMeta.device_name || payloadMeta.device_id}\n` +
-      `Command: ${retryKey}\n` +
-      `Retries: ${payloadMeta.retries} / ${payloadMeta.max_retries}\n` +
-      `Last command time: ${payloadMeta.last_cmd_time}`;
-
-    console.log('Title: ', title, ', message: ', message);
-    // await notifyMACCManagers(account, context, { title, message, data: payloadMeta });
-  } catch (e) {
-    console.log("notify MACC_Manager failed:", e?.message || e);
-  }
-
-  // 3) RESET the corresponding ack counter so we don't keep it stuck at cap
-  try {
-    await setRetries(retryKey, 0);
-  } catch (err) {
-    // fall back to log; next run will see 0 or recreate the param
-    console.log(`Failed to reset ack_retry_${retryKey}:`, err?.message || err);
-  }
-
-  return { resent: false, stillPending: false }; // no resend, gave up
+  const valve = clampInt(md.valve || 1, 1, 3);
+  const durationSec = clampInt(md.duration_sec != null ? Number(md.duration_sec) : (Number(md.duration_min) || 0) * 60, 0, 0xffffffff);
+  const pulses = clampInt(Number(md.water_pulses ?? md.pulses) || 0, 0, 0xffffffff);
+  return ("FF55" + byteHex(ruleId) + byteHex(enableFlag) + byteHex(0x01) + toLE32Hex(startTS) + toLE32Hex(0) +
+    byteHex(isLoop) + byteHex(loopPeriod) + byteHex(pA) + byteHex(pB) + byteHex(0x02) + byteHex(valve) + byteHex(0x01) +
+    byteHex(durationSec > 0 ? 1 : 0) + toLE32Hex(durationSec) + byteHex(pulses > 0 ? 1 : 0) + toLE32Hex(pulses)).toUpperCase();
 }
 
 async function listAllDevicesByTags(account, requiredTags){
@@ -451,36 +319,4 @@ async function ensureDeviceToken(account, device_id){
   try { const tokens = await account.devices.tokenList(device_id); if (tokens?.[0]?.token) return tokens[0].token; } catch (_) {}
   const created = await account.devices.tokenCreate(device_id, { name: "uc511_checker_tmp" });
   return created?.token;
-}
-
-// List Run users by tag and send TagoRun notifications.
-// Works with Account tokens that have permission to manage Run users/notifications.
-async function notifyMACCManagers(account, context, { title, message, data }) {
-  const managers = await getMACCManagers(account);
-  for (let i = 0; i < managers.length; i++) {
-    await sendPush(account, context, title, message, managers[i].id);
-  }
-}
-async function sendPush(account, context, titleToSend, messageToSend, userID){
-  await account.run.notificationCreate(userID, {
-    title: titleToSend,
-    message: messageToSend,
-    // buttons_autodisable: false,
-  }).then(context.log).catch(context.log);
-}
-// Tries multiple SDK shapes to list Run users and filter by tag.
-async function getMACCManagers(account) {
-  let users = [];
-  let page = 1;
-  while (true) {
-    const page_users = await account.run.listUsers({ page, fields: ["id", "name", "tags"] });
-    if (!page_users.length) break;
-    users = users.concat(page_users);
-    page++;
-  }
-  const maccAdmins  = users.filter(user =>
-    user.tags?.some(tag => tag.key === "access" && tag.value === "MACC_Manager")
-  );
-  console.log('MACC administrators: ', maccAdmins);
-  return maccAdmins;
 }
