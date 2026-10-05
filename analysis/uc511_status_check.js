@@ -95,6 +95,8 @@ module.exports = new Analysis(async (context, scope) => {
             device_id: dev.id, device_name: dev.name || "", detail: job.detail,
             last_cmd_time: new Date(job.ts).toISOString(), retries: d.state.n, max_retries: d.max,
           } }]).catch(() => {});
+        } else if (d.action === "expired") {
+          context.log(`[${dev.name}] ${job.key}: παλιά εντολή (${Math.round((now - job.ts) / 60000)}΄) χωρίς ιστορικό ελέγχου — δεν ξαναστέλνεται.`);
         } else if (d.action === "done" && d.state.n > 0) {
           context.log(`[${dev.name}] ${job.key}: επιβεβαιώθηκε μετά από ${d.state.n} επανάληψη(εις).`);
         }
@@ -202,14 +204,18 @@ function parseState(raw) {
   return null;
 }
 
-// Επιστρέφει { action: "wait"|"send"|"give_up"|"done"|"idle", state, write, pending, max }
+// Επιστρέφει { action: "wait"|"send"|"give_up"|"expired"|"done"|"idle", state, write, pending, max }
+// Οι επαναλήψεις είναι στα ts + 5΄, ts + 10΄, … (από τη στιγμή της εντολής, χωρίς ολίσθηση).
 function retryDecision(prev, job, now, cfg) {
   const max = job.open ? cfg.maxOpen : cfg.maxClose;
   const fresh = !prev || prev.ts !== job.ts;
   const state = fresh ? { ts: job.ts, n: 0, last: job.ts, failed: false } : { ...prev };
   if (job.acked) return { action: "done", state: { ...state, done: true }, write: !fresh && !prev.done, pending: false, max };
   if (state.failed || state.done) return { action: "idle", state, write: false, pending: false, max };
-  if (now - state.last < cfg.everyMs) return { action: "wait", state, write: false, pending: true, max };
+  // Εντολή που ο checker δεν είδε ποτέ στο πρώτο 10λεπτο (πριν το deploy ή όσο δεν έτρεχε): ΔΕΝ ανασταίνεται —
+  // ένα «άνοιξε» ώρες μετά θα άνοιγε βαλβίδα απρόσμενα.
+  if (fresh && now - job.ts > 2 * cfg.everyMs) return { action: "expired", state: { ...state, failed: true }, write: true, pending: false, max };
+  if (now < state.ts + (state.n + 1) * cfg.everyMs) return { action: "wait", state, write: false, pending: true, max };
   if (state.n >= max) return { action: "give_up", state: { ...state, failed: true }, write: true, pending: false, max };
   return { action: "send", state: { ...state, n: state.n + 1, last: now }, write: true, pending: true, max };
 }

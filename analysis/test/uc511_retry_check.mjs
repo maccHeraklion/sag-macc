@@ -59,6 +59,15 @@ function run(code, dl) {
   const dNew = R.retryDecision(R.parseState(failedOld), { ts: T0, open: true, acked: false }, T0 + 5 * M + 1000, cfg);
   ok(dNew.action === "send" && dNew.state.n === 1, "U4 νέα εντολή μετά από αποτυχημένη ξεκινά από 1 (" + dNew.action + ")");
   ok(R.parseState("0") === null && R.parseState("") === null, "U4β παλιές τιμές param «0» = καμία κατάσταση");
+  // U9 παλιά εντολή που ο checker δεν είδε ποτέ (πριν το deploy) δεν ανασταίνεται
+  const dOld = R.retryDecision(null, { ts: T0, open: true, acked: false }, T0 + 60 * M, cfg);
+  ok(dOld.action === "expired" && !dOld.pending, "U9α «άνοιξε» 60΄ πριν, χωρίς ιστορικό → δεν ξαναστέλνεται (" + dOld.action + ")");
+  ok(R.retryDecision(null, { ts: T0, open: false, acked: false }, T0 + 6 * M, cfg).action === "send", "U9β 6΄ μετά, πρώτη ματιά → κανονική επανάληψη");
+  // U10 χωρίς ολίσθηση: ο checker τρέχει κάθε 61΄΄, οι επαναλήψεις μένουν στα 5΄,10΄,…
+  { let saved = null; const at = [];
+    for (let s = 0; s <= 130 * 60; s += 61) { const d = R.retryDecision(R.parseState(saved), { ts: T0, open: false, acked: false }, T0 + s * 1000, cfg);
+      if (d.action === "send") at.push(Math.floor(s / 60)); if (d.write) saved = JSON.stringify(d.state); }
+    ok(at.length === 24 && at[23] <= 121, "U10 24 επαναλήψεις έως ~120΄ παρά τον ρυθμό 61΄΄ (" + at.length + " · τελευταία " + at[23] + "΄)"); }
 
   // U5 μόνο η τελευταία εντολή ανά βαλβίδα
   const latest = R.latestValveCommands([cmd("valve_1_command", "on", 0), cmd("valve_1_command", "off", 2),
@@ -103,9 +112,11 @@ else console.log("OK — uc511_retry_check: όλοι οι έλεγχοι πέρ�
 
 // Μεταλλάξεις: κάθε μία πρέπει να ρίχνει τουλάχιστον έναν έλεγχο.
 const MUT = [
-  ["5΄ → 1΄", "num(env.RETRY_EVERY_MIN, 5)", "num(env.RETRY_EVERY_MIN, 1)"],
+  ["χωρίς λήξη παλιών εντολών", "if (fresh && now - job.ts > 2 * cfg.everyMs)", "if (false)"],
+  ["ολίσθηση από την τελευταία αποστολή", "now < state.ts + (state.n + 1) * cfg.everyMs", "now - state.last < cfg.everyMs"],
+  ["5΄ → 1΄","num(env.RETRY_EVERY_MIN, 5)", "num(env.RETRY_EVERY_MIN, 1)"],
   ["χωρίς έλεγχο κατάστασης στην επιβεβαίωση", "if (v === c.state) return true;", "return true;"],
-  ["επανεκκίνηση μετά το όριο", "state: { ...state, failed: true }", "state: { ...state, n: 0, last: now }"],
+  ["επανεκκίνηση μετά το όριο", "action: \"give_up\", state: { ...state, failed: true }", "action: \"give_up\", state: { ...state, n: 0, last: now }"],
   ["όλες οι εντολές αντί της τελευταίας", "if (!prev || c.ts > prev.ts)", "if (true)"],
   ["παλιό duration_min", "md.duration_sec != null ? Number(md.duration_sec) : ", ""],
   ["παλιό bug παλμών", "clampInt(Number(md.water_pulses ?? md.pulses) || 0, 0, 0xffffffff)", "clampInt(Number(md.pulses) || 0, 0xffffffff)"],
