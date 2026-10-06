@@ -39,20 +39,26 @@ module.exports = new Analysis(async (context, scope) => {
       const token = await ensureDeviceToken(account, dev.id);
       const device = new Device({ token });
 
-      // Μόνο οι εντολές μας στο παράθυρο· αν δεν υπάρχει καμία, ο ελεγκτής παραλείπεται χωρίς άλλη ανάγνωση.
-      const cmdRows = await device.getData({ variables: COMMAND_VARS, start_date: sinceISO, qty: 200 }).catch(() => []);
-      const commands = (cmdRows || [])
-        .map((r) => ({ variable: String(r.variable || ""), value: r.value, metadata: r.metadata || {}, ts: rowTs(r) }))
+      // ΜΙΑ ανάγνωση όλου του παραθύρου (όπως ο παλιός checker) και διαχωρισμός εδώ. Το getData με λίστα
+      // μεταβλητών επέστρεφε κενό σιωπηλά (6/10: οι εντολές δεν βρίσκονταν ποτέ) — γι' αυτό ΟΧΙ φίλτρο variables.
+      let rows;
+      try {
+        rows = await device.getData({ start_date: sinceISO, qty: 5000 });
+      } catch (e) {
+        context.log(`[${dev.name}] getData απέτυχε: ${e?.message || e}`);
+        anyPending = true; // άγνωστη κατάσταση: η action μένει να ξαναδοκιμάσει
+        continue;
+      }
+      const all = (Array.isArray(rows) ? rows : [])
+        .map((r) => ({ variable: String(r.variable || ""), value: r.value, metadata: r.metadata || {}, ts: rowTs(r) }));
+      const commands = all
+        .filter((r) => COMMAND_SET.has(r.variable))
         // Multi-controller safety: autofill broadcasts the widget command into EVERY controller that declares the
         // variable; only the copy whose metadata.target_device is THIS controller is ours to resend.
         .filter((c) => !(c.metadata.target_device && String(c.metadata.target_device) !== String(dev.id)));
       if (!commands.length) continue;
-
-      const firstTs = Math.min(...commands.map((c) => c.ts));
-      const ackRows = await device
-        .getData({ variables: ACK_VARS, start_date: new Date(firstTs - 1000).toISOString(), qty: 1000 })
-        .catch(() => []);
-      const acks = (ackRows || []).map((r) => ({ variable: String(r.variable || ""), value: r.value, ts: rowTs(r) }));
+      const acks = all.filter((r) => ACK_SET.has(r.variable));
+      context.log(`[${dev.name}] εντολές στο παράθυρο: ${commands.length}, μηνύματα κατάστασης: ${acks.length}`);
 
       const params = await account.devices.paramList(dev.id);
       const hwMajor = parseHwMajor((dev.tags || []).find((t) => t.key === "hw_version")?.value);
@@ -133,6 +139,8 @@ const COMMAND_VARS = [1, 2].flatMap((x) => [`valve_${x}_command`, `valve_${x}_ti
   .concat(Array.from({ length: 16 }, (_, i) => [`rule${i + 1}_set`, `rule${i + 1}_enable`]).flat());
 const ACK_VARS = [1, 2].flatMap((x) => [`valve_${x}`, `valve_${x}_command_feedback`])
   .concat(Array.from({ length: 16 }, (_, i) => `rule${i + 1}`));
+const COMMAND_SET = new Set(COMMAND_VARS);
+const ACK_SET = new Set(ACK_VARS);
 
 // ═══ ΛΟΓΙΚΗ ΕΠΑΝΑΛΗΨΗΣ (καθαρές συναρτήσεις· ελέγχονται από test/uc511_retry_check.mjs)
 function retryConfig(env) {
