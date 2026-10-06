@@ -5,7 +5,7 @@
 //    έχουν αντικατασταθεί από τον χρήστη και δεν ξαναστέλνονται ποτέ.
 //  - Επιβεβαίωση = uplink valve_X ή valve_X_command_feedback ΜΕΤΑ την εντολή με την ΖΗΤΟΥΜΕΝΗ κατάσταση
 //    (on/off). Ένα περιοδικό uplink με την παλιά κατάσταση δεν μετρά πια ως επιβεβαίωση.
-//  - Αν δεν επιβεβαιωθεί σε RETRY_EVERY_MIN (5΄), ξαναστέλνεται, και ξανά κάθε 5΄, έως RETRY_MAX_OPEN φορές για
+//  - Αν δεν επιβεβαιωθεί σε RETRY_EVERY_MIN (3΄), ξαναστέλνεται, και ξανά κάθε 3΄, έως RETRY_MAX_OPEN φορές για
 //    άνοιγμα / RETRY_MAX_CLOSE για κλείσιμο (το κλείσιμο επιμένει περισσότερο: είναι η ασφαλής κατεύθυνση).
 //  - Μετά το όριο γράφεται ΜΙΑ φορά uc511_ack_failed και η εντολή σταματά (δεν ξαναρχίζει από την αρχή).
 //  - Η κατάσταση κάθε εντολής φυλάσσεται σε device param ack_state_<κλειδί> = {"ts","n","last","failed"}· το ts
@@ -144,9 +144,9 @@ const ACK_SET = new Set(ACK_VARS);
 // ═══ ΛΟΓΙΚΗ ΕΠΑΝΑΛΗΨΗΣ (καθαρές συναρτήσεις· ελέγχονται από test/uc511_retry_check.mjs)
 function retryConfig(env) {
   const num = (v, d) => (v != null && v !== "" && Number.isFinite(Number(v)) ? Number(v) : d);
-  const everyMs = num(env.RETRY_EVERY_MIN, 5) * 60000;
-  const maxOpen = num(env.RETRY_MAX_OPEN, 6);   // άνοιγμα / κανόνες: 6 × 5΄ = έως 30΄ μετά την εντολή
-  const maxClose = num(env.RETRY_MAX_CLOSE, 24); // κλείσιμο: 24 × 5΄ = έως 2 ώρες
+  const everyMs = num(env.RETRY_EVERY_MIN, 3) * 60000;
+  const maxOpen = num(env.RETRY_MAX_OPEN, 10);  // άνοιγμα / κανόνες: 10 × 3΄ = έως 30΄ μετά την εντολή
+  const maxClose = num(env.RETRY_MAX_CLOSE, 40); // κλείσιμο: 40 × 3΄ = έως 2 ώρες
   return { everyMs, maxOpen, maxClose, lookbackMs: (Math.max(maxOpen, maxClose) + 2) * everyMs + 10 * 60000 };
 }
 
@@ -212,14 +212,14 @@ function parseState(raw) {
 }
 
 // Επιστρέφει { action: "wait"|"send"|"give_up"|"expired"|"done"|"idle", state, write, pending, max }
-// Οι επαναλήψεις είναι στα ts + 5΄, ts + 10΄, … (από τη στιγμή της εντολής, χωρίς ολίσθηση).
+// Οι επαναλήψεις είναι στα ts + 3΄, ts + 6΄, … (από τη στιγμή της εντολής, χωρίς ολίσθηση).
 function retryDecision(prev, job, now, cfg) {
   const max = job.open ? cfg.maxOpen : cfg.maxClose;
   const fresh = !prev || prev.ts !== job.ts;
   const state = fresh ? { ts: job.ts, n: 0, last: job.ts, failed: false } : { ...prev };
   if (job.acked) return { action: "done", state: { ...state, done: true }, write: !fresh && !prev.done, pending: false, max };
   if (state.failed || state.done) return { action: "idle", state, write: false, pending: false, max };
-  // Εντολή που ο checker δεν είδε ποτέ στο πρώτο 10λεπτο (πριν το deploy ή όσο δεν έτρεχε): ΔΕΝ ανασταίνεται —
+  // Εντολή που ο checker δεν είδε ποτέ στο πρώτο 6λεπτο (πριν το deploy ή όσο δεν έτρεχε): ΔΕΝ ανασταίνεται —
   // ένα «άνοιξε» ώρες μετά θα άνοιγε βαλβίδα απρόσμενα.
   if (fresh && now - job.ts > 2 * cfg.everyMs) return { action: "expired", state: { ...state, failed: true }, write: true, pending: false, max };
   if (now < state.ts + (state.n + 1) * cfg.everyMs) return { action: "wait", state, write: false, pending: true, max };
