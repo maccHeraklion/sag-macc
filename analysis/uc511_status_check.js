@@ -46,7 +46,6 @@ module.exports = new Analysis(async (context, scope) => {
         rows = await device.getData({ start_date: sinceISO, qty: 5000 });
       } catch (e) {
         context.log(`[${dev.name}] getData απέτυχε: ${e?.message || e}`);
-        anyPending = true; // άγνωστη κατάσταση: η action μένει να ξαναδοκιμάσει
         continue;
       }
       const all = (Array.isArray(rows) ? rows : [])
