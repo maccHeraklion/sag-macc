@@ -79,7 +79,7 @@ function run(code, dl) {
   const off = { ...cmd("valve_1_command", "off", 10), valve: 1, state: "off", kind: "onoff" };
   ok(!R.isValveAcked(off, [ack("valve_1", "on", 11)]), "U6α periodic «on» μετά από «off» ΔΕΝ είναι επιβεβαίωση");
   ok(!R.isValveAcked(off, [ack("valve_1", "off", 9)]), "U6β «off» ΠΡΙΝ την εντολή δεν μετρά");
-  ok(R.isValveAcked(off, [ack("valve_1_command_feedback", "off", 10.3)]), "U6γ feedback «off» μετά = επιβεβαίωση");
+  ok(!R.isValveAcked(off, [ack("valve_1_command_feedback", "off", 10.3)]), "U6γ ηχώ feedback «off» ΧΩΡΙΣ valve_1 ΔΕΝ είναι επιβεβαίωση (6/10)");
   ok(R.isValveAcked(off, [ack("valve_1", "off", 10.5)]), "U6δ valve_1 «off» μετά = επιβεβαίωση");
   ok(!R.isValveAcked(off, [ack("valve_2", "off", 11)]), "U6ε άλλη βαλβίδα δεν μετρά");
   const t2 = { ...cmd("valve_1_time_command", 2, 0), valve: 1, state: "on", kind: "time", minutes: 2 };
@@ -116,6 +116,7 @@ const MUT = [
   ["ολίσθηση από την τελευταία αποστολή", "now < state.ts + (state.n + 1) * cfg.everyMs", "now - state.last < cfg.everyMs"],
   ["3΄ → 1΄", "num(env.RETRY_EVERY_MIN, 3)", "num(env.RETRY_EVERY_MIN, 1)"],
   ["χωρίς έλεγχο κατάστασης στην επιβεβαίωση", "if (v === c.state) return true;", "return true;"],
+  ["η ηχώ μετρά ως επιβεβαίωση", "if (a.variable !== status || a.ts <= c.ts) continue;", "if (!a.variable.startsWith(status) || a.ts <= c.ts) continue;"],
   ["επανεκκίνηση μετά το όριο", "action: \"give_up\", state: { ...state, failed: true }", "action: \"give_up\", state: { ...state, n: 0, last: now }"],
   ["όλες οι εντολές αντί της τελευταίας", "if (!prev || c.ts > prev.ts)", "if (true)"],
   ["παλιό duration_min", "md.duration_sec != null ? Number(md.duration_sec) : ", ""],

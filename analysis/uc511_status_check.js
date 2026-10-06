@@ -3,8 +3,9 @@
 // Τρέχει κάθε λεπτό όσο υπάρχει η one-off cron action που δημιουργεί το UC511_downlink. Για κάθε ελεγκτή:
 //  - Βαλβίδες: κρατά ΜΟΝΟ την τελευταία εντολή ανά βαλβίδα (valve_X_command / valve_X_time_command)· οι παλιότερες
 //    έχουν αντικατασταθεί από τον χρήστη και δεν ξαναστέλνονται ποτέ.
-//  - Επιβεβαίωση = uplink valve_X ή valve_X_command_feedback ΜΕΤΑ την εντολή με την ΖΗΤΟΥΜΕΝΗ κατάσταση
-//    (on/off). Ένα περιοδικό uplink με την παλιά κατάσταση δεν μετρά πια ως επιβεβαίωση.
+//  - Επιβεβαίωση = uplink κατάστασης valve_X ΜΕΤΑ την εντολή με την ΖΗΤΟΥΜΕΝΗ κατάσταση (on/off). Το
+//    valve_X_command_feedback (FE1D) είναι μόνο «παρέλαβα την εντολή», όχι κατάσταση βαλβίδας: ΔΕΝ αρκεί
+//    (δοκιμή 6/10, 7352: ηχώ off χωρίς ποτέ valve_1=off). Ένα δεύτερο «κλείσε» σε κλειστή βαλβίδα δεν βλάπτει.
 //  - Αν δεν επιβεβαιωθεί σε RETRY_EVERY_MIN (3΄), ξαναστέλνεται, και ξανά κάθε 3΄, έως RETRY_MAX_OPEN φορές για
 //    άνοιγμα / RETRY_MAX_CLOSE για κλείσιμο (το κλείσιμο επιμένει περισσότερο: είναι η ασφαλής κατεύθυνση).
 //  - Μετά το όριο γράφεται ΜΙΑ φορά uc511_ack_failed και η εντολή σταματά (δεν ξαναρχίζει από την αρχή).
@@ -174,9 +175,9 @@ function latestValveCommands(commands) {
 }
 
 function isValveAcked(c, acks) {
-  const names = [`valve_${c.valve}`, `valve_${c.valve}_command_feedback`];
+  const status = `valve_${c.valve}`; // μόνο η κατάσταση· η ηχώ _command_feedback δεν είναι επιβεβαίωση εκτέλεσης
   for (const a of acks) {
-    if (!names.includes(a.variable) || a.ts <= c.ts) continue;
+    if (a.variable !== status || a.ts <= c.ts) continue;
     const v = String(a.value).toLowerCase();
     if (v === c.state) return true;
     // Χρονικό άνοιγμα που πρόλαβε να κλείσει μόνο του: «off» μετά τη λήξη της διάρκειας σημαίνει ότι άνοιξε.
