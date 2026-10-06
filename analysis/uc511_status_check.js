@@ -6,7 +6,7 @@
 //  - Επιβεβαίωση = uplink κατάστασης valve_X ΜΕΤΑ την εντολή με την ΖΗΤΟΥΜΕΝΗ κατάσταση (on/off). Το
 //    valve_X_command_feedback (FE1D) είναι μόνο «παρέλαβα την εντολή», όχι κατάσταση βαλβίδας: ΔΕΝ αρκεί
 //    (δοκιμή 6/10, 7352: ηχώ off χωρίς ποτέ valve_1=off). Ένα δεύτερο «κλείσε» σε κλειστή βαλβίδα δεν βλάπτει.
-//  - Αν δεν επιβεβαιωθεί σε RETRY_EVERY_MIN (3΄), ξαναστέλνεται, και ξανά κάθε 3΄, έως RETRY_MAX_OPEN φορές για
+//  - Αν δεν επιβεβαιωθεί σε RETRY_EVERY_MIN (1΄), ξαναστέλνεται, και ξανά κάθε 1΄, έως RETRY_MAX_OPEN φορές για
 //    άνοιγμα / RETRY_MAX_CLOSE για κλείσιμο (το κλείσιμο επιμένει περισσότερο: είναι η ασφαλής κατεύθυνση).
 //  - Μετά το όριο γράφεται ΜΙΑ φορά uc511_ack_failed και η εντολή σταματά (δεν ξαναρχίζει από την αρχή).
 //  - Η κατάσταση κάθε εντολής φυλάσσεται σε device param ack_state_<κλειδί> = {"ts","n","last","failed"}· το ts
@@ -145,10 +145,13 @@ const ACK_SET = new Set(ACK_VARS);
 // ═══ ΛΟΓΙΚΗ ΕΠΑΝΑΛΗΨΗΣ (καθαρές συναρτήσεις· ελέγχονται από test/uc511_retry_check.mjs)
 function retryConfig(env) {
   const num = (v, d) => (v != null && v !== "" && Number.isFinite(Number(v)) ? Number(v) : d);
-  const everyMs = num(env.RETRY_EVERY_MIN, 3) * 60000;
-  const maxOpen = num(env.RETRY_MAX_OPEN, 10);  // άνοιγμα / κανόνες: 10 × 3΄ = έως 30΄ μετά την εντολή
-  const maxClose = num(env.RETRY_MAX_CLOSE, 40); // κλείσιμο: 40 × 3΄ = έως 2 ώρες
-  return { everyMs, maxOpen, maxClose, lookbackMs: (Math.max(maxOpen, maxClose) + 2) * everyMs + 10 * 60000 };
+  const everyMs = num(env.RETRY_EVERY_MIN, 1) * 60000;
+  const maxOpen = num(env.RETRY_MAX_OPEN, 30);  // άνοιγμα / κανόνες: 30 × 1΄ = έως 30΄ μετά την εντολή
+  const maxClose = num(env.RETRY_MAX_CLOSE, 120); // κλείσιμο: 120 × 1΄ = έως 2 ώρες
+  // «Παλιά» εντολή = την πρωτοβλέπει ο checker μετά από 2 διαστήματα, όχι όμως νωρίτερα από 6΄ (μια καθυστέρηση
+  // ενός κύκλου του cron δεν πρέπει να χάνει κανονικές εντολές).
+  const expireMs = Math.max(2 * everyMs, 6 * 60000);
+  return { everyMs, maxOpen, maxClose, expireMs, lookbackMs: (Math.max(maxOpen, maxClose) + 2) * everyMs + 10 * 60000 };
 }
 
 function latestValveCommands(commands) {
@@ -213,7 +216,7 @@ function parseState(raw) {
 }
 
 // Επιστρέφει { action: "wait"|"send"|"give_up"|"expired"|"done"|"idle", state, write, pending, max }
-// Οι επαναλήψεις είναι στα ts + 3΄, ts + 6΄, … (από τη στιγμή της εντολής, χωρίς ολίσθηση).
+// Οι επαναλήψεις είναι στα ts + 1΄, ts + 2΄, … (από τη στιγμή της εντολής, χωρίς ολίσθηση).
 function retryDecision(prev, job, now, cfg) {
   const max = job.open ? cfg.maxOpen : cfg.maxClose;
   const fresh = !prev || prev.ts !== job.ts;
@@ -222,7 +225,7 @@ function retryDecision(prev, job, now, cfg) {
   if (state.failed || state.done) return { action: "idle", state, write: false, pending: false, max };
   // Εντολή που ο checker δεν είδε ποτέ στο πρώτο 6λεπτο (πριν το deploy ή όσο δεν έτρεχε): ΔΕΝ ανασταίνεται —
   // ένα «άνοιξε» ώρες μετά θα άνοιγε βαλβίδα απρόσμενα.
-  if (fresh && now - job.ts > 2 * cfg.everyMs) return { action: "expired", state: { ...state, failed: true }, write: true, pending: false, max };
+  if (fresh && now - job.ts > cfg.expireMs) return { action: "expired", state: { ...state, failed: true }, write: true, pending: false, max };
   if (now < state.ts + (state.n + 1) * cfg.everyMs) return { action: "wait", state, write: false, pending: true, max };
   if (state.n >= max) return { action: "give_up", state: { ...state, failed: true }, write: true, pending: false, max };
   return { action: "send", state: { ...state, n: state.n + 1, last: now }, write: true, pending: true, max };

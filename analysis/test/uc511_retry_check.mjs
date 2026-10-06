@@ -1,5 +1,5 @@
 // Ελεγκτής T-IRRIG-RETRY-01 (analysis/uc511_status_check.js): εντολή βαλβίδας χωρίς επιβεβαίωση ξαναστέλνεται
-// μετά από 3΄ και κάθε 3΄ έως το όριο· μόνο η τελευταία εντολή ανά βαλβίδα· επιβεβαίωση μόνο με τη ζητούμενη
+// μετά από 1΄ και κάθε 1΄ έως το όριο· μόνο η τελευταία εντολή ανά βαλβίδα· επιβεβαίωση μόνο με τη ζητούμενη
 // κατάσταση· μετά το όριο σταματά ΜΙΑ φορά (όχι βρόχος)· το FF55 είναι ίδιο με του UC511_downlink.
 // Εκτελεί τον ΠΡΑΓΜΑΤΙΚΟ κώδικα (μπλοκ «ΛΟΓΙΚΗ ΕΠΑΝΑΛΗΨΗΣ» + encoders).
 import fs from "node:fs"; import path from "node:path"; import { fileURLToPath } from "node:url";
@@ -39,35 +39,36 @@ function run(code, dl) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let R; try { R = load(code); } catch (e) { return ["U0 φόρτωση: " + e.message]; }
 
-  // U1 ρυθμός: πρώτη επανάληψη στα 3΄, μετά κάθε 3΄
+  // U1 ρυθμός: πρώτη επανάληψη στο 1΄, μετά κάθε 1΄
   const cfg = R.retryConfig({});
-  ok(cfg.everyMs === 3 * M && cfg.maxOpen === 10 && cfg.maxClose === 40, "U1α προεπιλογές 3΄ / 10 / 40 (" + JSON.stringify(cfg) + ")");
+  ok(cfg.everyMs === 1 * M && cfg.maxOpen === 30 && cfg.maxClose === 120 && cfg.expireMs === 6 * M, "U1α προεπιλογές 1΄ / 30 / 120 / λήξη 6΄ (" + JSON.stringify(cfg) + ")");
   const close = simulate(R, { ts: T0, open: false, acked: false }, 200);
-  ok(JSON.stringify(close.sends.slice(0, 3)) === "[3,6,9]", "U1β κλείσιμο: επαναλήψεις 3΄,6΄,9΄ (" + close.sends.slice(0, 5) + ")");
-  ok(close.sends.length === 40 && close.sends[39] === 120, "U1γ κλείσιμο: 40 επαναλήψεις έως 120΄ (" + close.sends.length + ")");
+  ok(JSON.stringify(close.sends.slice(0, 3)) === "[1,2,3]", "U1β κλείσιμο: επαναλήψεις 1΄,2΄,3΄ (" + close.sends.slice(0, 5) + ")");
+  ok(close.sends.length === 120 && close.sends[119] === 120, "U1γ κλείσιμο: 120 επαναλήψεις έως 120΄ (" + close.sends.length + ")");
   // U2 όριο: μία εγκατάλειψη, καμία αποστολή μετά (ο παλιός κώδικας μηδένιζε και ξανάρχιζε)
-  ok(JSON.stringify(close.gaveUp) === "[123]" && close.lastPending === false, "U2α κλείσιμο: εγκατάλειψη μία φορά στα 123΄ (" + close.gaveUp + ")");
+  ok(JSON.stringify(close.gaveUp) === "[121]" && close.lastPending === false, "U2α κλείσιμο: εγκατάλειψη μία φορά στα 121΄ (" + close.gaveUp + ")");
   const open = simulate(R, { ts: T0, open: true, acked: false }, 120);
-  ok(open.sends.length === 10 && open.sends[9] === 30 && JSON.stringify(open.gaveUp) === "[33]", "U2β άνοιγμα: 10 επαναλήψεις έως 30΄, εγκατάλειψη 33΄ (" + open.sends + " | " + open.gaveUp + ")");
-  ok(cfg.lookbackMs > 123 * M, "U2γ το παράθυρο ανάγνωσης καλύπτει όλη τη ζωή της εντολής (" + cfg.lookbackMs / M + "΄)");
+  ok(open.sends.length === 30 && open.sends[29] === 30 && JSON.stringify(open.gaveUp) === "[31]", "U2β άνοιγμα: 30 επαναλήψεις έως 30΄, εγκατάλειψη 31΄ (" + open.sends + " | " + open.gaveUp + ")");
+  ok(cfg.lookbackMs > 121 * M, "U2γ το παράθυρο ανάγνωσης καλύπτει όλη τη ζωή της εντολής (" + cfg.lookbackMs / M + "΄)");
   // U3 επιβεβαίωση σταματά τις επαναλήψεις
-  const acked = simulate(R, { ts: T0, open: false, acked: false }, 60, 4);
-  ok(JSON.stringify(acked.sends) === "[3]" && acked.gaveUp.length === 0 && acked.lastPending === false, "U3 επιβεβαίωση στο 4΄: μόνο μία επανάληψη (" + acked.sends + ")");
+  const acked = simulate(R, { ts: T0, open: false, acked: false }, 60, 2);
+  ok(JSON.stringify(acked.sends) === "[1]" && acked.gaveUp.length === 0 && acked.lastPending === false, "U3 επιβεβαίωση στο 2΄: μόνο μία επανάληψη (" + acked.sends + ")");
   ok(simulate(R, { ts: T0, open: true, acked: false }, 60, 0).sends.length === 0, "U3β επιβεβαίωση αμέσως: καμία επανάληψη");
   // U4 νέα εντολή = νέα μέτρηση (το ts ταυτοποιεί την εντολή)
   const failedOld = JSON.stringify({ ts: T0 - 300 * M, n: 6, last: T0 - 270 * M, failed: true });
-  const dNew = R.retryDecision(R.parseState(failedOld), { ts: T0, open: true, acked: false }, T0 + 3 * M + 1000, cfg);
+  const dNew = R.retryDecision(R.parseState(failedOld), { ts: T0, open: true, acked: false }, T0 + 1 * M + 1000, cfg);
   ok(dNew.action === "send" && dNew.state.n === 1, "U4 νέα εντολή μετά από αποτυχημένη ξεκινά από 1 (" + dNew.action + ")");
   ok(R.parseState("0") === null && R.parseState("") === null, "U4β παλιές τιμές param «0» = καμία κατάσταση");
   // U9 παλιά εντολή που ο checker δεν είδε ποτέ (πριν το deploy) δεν ανασταίνεται
   const dOld = R.retryDecision(null, { ts: T0, open: true, acked: false }, T0 + 60 * M, cfg);
   ok(dOld.action === "expired" && !dOld.pending, "U9α «άνοιξε» 60΄ πριν, χωρίς ιστορικό → δεν ξαναστέλνεται (" + dOld.action + ")");
   ok(R.retryDecision(null, { ts: T0, open: false, acked: false }, T0 + 4 * M, cfg).action === "send", "U9β 4΄ μετά, πρώτη ματιά → κανονική επανάληψη");
-  // U10 χωρίς ολίσθηση: ο checker τρέχει κάθε 61΄΄, οι επαναλήψεις μένουν στα 3΄,6΄,…
+  ok(R.retryDecision(null, { ts: T0, open: false, acked: false }, T0 + 7 * M, cfg).action === "expired", "U9γ 7΄ μετά, πρώτη ματιά → παλιά (όριο 6΄)");
+  // U10 χωρίς ολίσθηση: ο checker τρέχει κάθε 59΄΄ (jitter του cron), οι επαναλήψεις συνεχίζουν κάθε κύκλο
   { let saved = null; const at = [];
-    for (let s = 0; s <= 130 * 60; s += 61) { const d = R.retryDecision(R.parseState(saved), { ts: T0, open: false, acked: false }, T0 + s * 1000, cfg);
+    for (let s = 0; s <= 130 * 60; s += 59) { const d = R.retryDecision(R.parseState(saved), { ts: T0, open: false, acked: false }, T0 + s * 1000, cfg);
       if (d.action === "send") at.push(Math.floor(s / 60)); if (d.write) saved = JSON.stringify(d.state); }
-    ok(at.length === 40 && at[39] <= 121, "U10 40 επαναλήψεις έως ~120΄ παρά τον ρυθμό 61΄΄ (" + at.length + " · τελευταία " + at[39] + "΄)"); }
+    ok(at.length === 120 && at[119] <= 125, "U10 120 επαναλήψεις έως ~122΄ με ρυθμό 59΄΄ (" + at.length + " · τελευταία " + at[119] + "΄)"); }
 
   // U5 μόνο η τελευταία εντολή ανά βαλβίδα
   const latest = R.latestValveCommands([cmd("valve_1_command", "on", 0), cmd("valve_1_command", "off", 2),
@@ -112,9 +113,10 @@ else console.log("OK — uc511_retry_check: όλοι οι έλεγχοι πέρ�
 
 // Μεταλλάξεις: κάθε μία πρέπει να ρίχνει τουλάχιστον έναν έλεγχο.
 const MUT = [
-  ["χωρίς λήξη παλιών εντολών", "if (fresh && now - job.ts > 2 * cfg.everyMs)", "if (false)"],
+  ["χωρίς λήξη παλιών εντολών", "if (fresh && now - job.ts > cfg.expireMs)", "if (false)"],
   ["ολίσθηση από την τελευταία αποστολή", "now < state.ts + (state.n + 1) * cfg.everyMs", "now - state.last < cfg.everyMs"],
-  ["3΄ → 1΄", "num(env.RETRY_EVERY_MIN, 3)", "num(env.RETRY_EVERY_MIN, 1)"],
+  ["1΄ → 5΄", "num(env.RETRY_EVERY_MIN, 1)", "num(env.RETRY_EVERY_MIN, 5)"],
+  ["χωρίς ελάχιστο 6΄ στη λήξη", "Math.max(2 * everyMs, 6 * 60000)", "2 * everyMs"],
   ["χωρίς έλεγχο κατάστασης στην επιβεβαίωση", "if (v === c.state) return true;", "return true;"],
   ["η ηχώ μετρά ως επιβεβαίωση", "if (a.variable !== status || a.ts <= c.ts) continue;", "if (!a.variable.startsWith(status) || a.ts <= c.ts) continue;"],
   ["επανεκκίνηση μετά το όριο", "action: \"give_up\", state: { ...state, failed: true }", "action: \"give_up\", state: { ...state, n: 0, last: now }"],
