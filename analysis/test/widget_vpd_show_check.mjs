@@ -25,14 +25,23 @@ function run(w) {
     const L = Le({ vpd: { value: 0.9, time: now }, bpi_performance_pct: { value: 55 } });
     ok(L.perfPct === 55 && "stomata" in L && "bucketLabel" in L, "Κ6 τα υπόλοιπα πεδία της κάρτας άθικτα");
     // απόδοση γραμμής
-    const s0 = w.indexOf('Le.vpd&&e.jsxs("div",{title:'); const s1 = w.indexOf("})]}),", s0);
+    // T-VPD-SHOW-02: η γραμμή τελειώνει εκεί που αρχίζει η γραμμή στομάτων (εσωτερικά span έχουν κι αυτά «})]})»)
+    const s0 = w.indexOf('Le.vpd&&e.jsxs("div",{title:'); const s1 = w.indexOf('Le.stomata&&e.jsxs("div",{className:"muted"', s0);
     if (s0 < 0 || s1 < 0) throw new Error("δεν βρέθηκε η γραμμή");
-    const expr = w.slice(s0, s1 + 5);   // «})]})» = 5 χαρακτήρες
+    const expr = w.slice(s0, s1).replace(/\/\*[^*]*\*\/$/, "").replace(/,$/, "");
     const e = { jsx: (t, p) => ({ t, p }), jsxs: (t, p) => ({ t, p }) };
     const flat = (x) => x == null || x === false ? "" : typeof x === "string" || typeof x === "number" ? String(x) : Array.isArray(x) ? x.map(flat).join("") : flat(x.p && x.p.children);
     const node = new Function("Le", "e", "return " + expr + ";")({ vpd: at(1.85) }, e);
     const txt = flat(node);
-    ok(/Έλλειμμα πίεσης υδρατμών \(VPD\): 1,85 kPa καταπόνηση/.test(txt), "Α1 κείμενο γραμμής (" + txt + ")");
+    ok(/Έλλειμμα πίεσης υδρατμών \(VPD\): 1,85 kPa\s*καταπόνηση/.test(txt), "Α1 κείμενο γραμμής (" + txt + ")");
+    // T-VPD-SHOW-02: χωρίς επικάλυψη — γραμμή flex με αναδίπλωση/κενό σειρών, σήμα με μικρό padding και δικό του ύψος
+    const st = node && node.p && node.p.style || {};
+    ok(st.display === "flex" && st.flexWrap === "wrap" && Number(st.rowGap) > 0 && Number(st.lineHeight) >= 1.2, "Δ1 γραμμή flex+wrap με κενό σειρών (" + JSON.stringify(st) + ")");
+    const kids = (node && node.p && node.p.children) || [];
+    const badge = kids.find(k => k && k.p && k.p.className === "badge b-red");
+    const bs = badge && badge.p.style || {};
+    ok(badge && bs.display === "inline-block" && /^2px/.test(String(bs.padding)) && Number(bs.lineHeight) >= 1.2 && bs.whiteSpace === "normal" && bs.maxWidth === "100%", "Δ2 σήμα inline-block με μικρό padding (" + JSON.stringify(bs) + ")");
+    ok(kids.length === 2 && kids[0].t === "span" && /VPD/.test(flat(kids[0])) && /kPa/.test(flat(kids[0])), "Δ3 κείμενο+τιμή μαζί σε ένα span (δεν σπάνε χωριστά)");
     ok(node && node.p && /0,4–1,2 καλό/.test(node.p.title), "Α2 επεξήγηση ζωνών στο title");
     ok(new Function("Le", "e", "return " + expr + ";")({ vpd: null }, e) === null, "Α3 χωρίς VPD → καμία γραμμή");
     ok(w.includes('(Le.perfPct!==null||Le.stomata||Le.bucketLabel||Le.vpd)&&e.jsxs("div",{className:"bpi-extra"'), "Α4 η περιοχή ανοίγει και μόνο με VPD");
@@ -45,6 +54,9 @@ if (base.length) { console.log("ΑΠΟΤΥΧΙΑ ΒΑΣΗΣ:\n  " + base.join("\
 console.log("ΒΑΣΗ: όλοι οι έλεγχοι πέρασαν");
 const MUT = [
   ["m1 όριο υγρού 0,5", "v<0.4?[", "v<0.5?["],
+  ["m10 χωρίς αναδίπλωση (επικάλυψη)", 'display:"flex",flexWrap:"wrap",alignItems:"center",columnGap:6,rowGap:4,', ""],
+  ["m12 σήμα χωρίς αναδίπλωση (βγαίνει έξω από στενή κάρτα)", 'whiteSpace:"normal",maxWidth:"100%"', ""],
+  ["m11 σήμα με το μεγάλο padding της .badge", 'padding:"2px 8px",lineHeight:1.3,display:"inline-block"', 'display:"inline"'],
   ["m2 όριο καλού 1,0", "v<=1.2?[", "v<=1.0?["],
   ["m3 όριο ξηρού 2,0", "v<=1.6?[", "v<=2.0?["],
   ["m4 χωρίς έλεγχο παλαιότητας", "if(Number.isFinite(tm)&&Date.now()-tm>3*36e5)return null;", ""],
