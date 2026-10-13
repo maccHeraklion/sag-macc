@@ -92,26 +92,10 @@ function run(c, w) {
   // ── T-BPI-SOILTXT-01 ──
   ok((c.match(/, text: _soilTxt \}/g) || []).length === 2 && c.includes("' °C, ' + (_soilHot ? 'πάνω' : 'κάτω') + ' από το βέλτιστο ' + _soilTrap.opt.toFixed(0) + ' °C"), "Ε1 ζεστό/κρύο έδαφος λέει μέτρηση και βέλτιστο");
   ok(c.includes("opt: peak - 3, max: optMax + 5, src: 'optimal_temp_range'"), "Ε2 το Topt = peak − 3 ΔΕΝ άλλαξε (απόφαση εκκρεμεί)");
-  // ── widget ──
-  ok(w.includes('soil_moisture_limits_status:"Όρια υγρασίας: τύπος εδάφους"') && w.includes('soil_temp_source:"Θερμοκρασία εδάφους τώρα"'), "Ζ1 ετικέτες");
-  ok(w.includes('.filter(x=>!(x.k==="soil_moisture_limits_status"&&String(x.d.value)==="Εντάξει"))'), "Ζ2 το «Εντάξει» ορίων κρύβεται");
-  ok(w.includes('children:FV(x)+AG(md)}') && w.includes('RWX.map(ROW),OKR.length?e.jsxs("details"') && w.includes('" έλεγχοι εντάξει"'), "Ζ3 γραμμές μέσω ROW, ομάδα «Όργανα και δεδομένα»");
-  let G; try { G = buildWidget(w); } catch (e) { f.push("εξαγωγή widget: " + e.message); return f; }
-  const AC = c9 => c9 === "red" || c9 === "orange" || c9 === "yellow", CO = x => String(((x.d || {}).metadata || {}).color || "");
-  const RW = [{ k: "sensor_faults", d: { value: "Όργανα: 3", metadata: { color: "green" } } }, { k: "device_battery", d: { value: "ok", metadata: { color: "green" } } },
-    { k: "measurement_age", d: { value: "παλιές", metadata: { color: "orange" } } }, { k: "soil_ece1", d: { value: 1.18, metadata: { color: "grey", unit: "dS/m" } } },
-    { k: "measurement_sources", d: { value: "Ένα όργανο", metadata: { color: "grey" } } }];
-  const g = G(RW, AC, CO);
-  ok(g.OKR.length === 3 && g.OKR.every(x => ["sensor_faults", "device_battery", "measurement_sources"].includes(x.k)), "Η1 τα «εντάξει» οργάνων/δεδομένων ομαδοποιούνται (πράσινο ΚΑΙ γκρι)");
-  ok(g.RWX.length === 2 && g.RWX.some(x => x.k === "measurement_age") && g.RWX.some(x => x.k === "soil_ece1"), "Η2 το πορτοκαλί ΜΕΝΕΙ έξω από την ομάδα, τα άλλα μεγέθη δεν αγγίζονται");
-  ok(g.FV({ k: "soil_ece1", d: { value: 1.18, metadata: { unit: "dS/m" } } }) === "1,18 dS/m", "Η3 αριθμός σε el-GR με μονάδα");
-  ok(g.FV({ k: "soil_depth_divergence", d: { value: 1.08, metadata: { unit: "% κ.ό.", text: "Διαφορά υγρασίας ρηχού-βαθέος: 1,1 μονάδες (24,6 % στα 10 cm έναντι 23,5 % στα 30 cm). Ομοιόμορφη διαβροχή." } } }) === "ρηχό 24,6 % · βαθύ 23,5 %", "Η4 ρηχό/βαθύ αντί για «1.08»");
-  ok(g.FV({ k: "soil_depth_divergence", d: { value: 1.08, metadata: { unit: "% κ.ό." } } }) === "1,08 % κ.ό.", "Η5 χωρίς κείμενο (κομμένο από BUNDLE-FIT) -> αριθμός με μονάδα");
-  ok(g.FV({ k: "x", d: { value: "Εντάξει", metadata: {} } }) === "Εντάξει", "Η6 κείμενο αυτούσιο");
-  const tOld = Math.floor(Date.now() / 6e4) - 20 * 60;
-  ok(g.AG({ _s: 1, _t: tOld }) === " · ⏱ πριν 20ω", "Θ1 ημερήσια κρίση χωρίς κείμενο -> ⏱ πριν 20ω");
-  ok(g.AG({ _s: 1, _t: tOld, text: "έχει κείμενο" }) === "" && g.AG({ _t: tOld }) === "" && g.AG({ _s: 1 }) === "" && g.AG(null) === "", "Θ2 με κείμενο (το βάζει ο πυρήνας) / χωρίς σφραγίδα / χωρίς σημαία -> τίποτα");
-  ok(g.AG({ _s: 1, _t: Math.floor(Date.now() / 6e4) - 3 * 24 * 60 }) === " · ⏱ πριν 3ημ", "Θ3 ημέρες πάνω από 48 ω");
+  // ── widget ── T-CARD-W-01 (ομάδα «Όργανα και δεδομένα», FV, ⏱) ΑΝΤΙΚΑΤΑΣΤΑΘΗΚΕ 13/10 από T-HEALTH-PLAIN-01
+  // (εντολή Μιχάλη, Ρηγάκης): η υγεία δείχνει μόνο όργανα/δεδομένα, ρηχό/βαθύ πήγε στις «Ειδοποιήσεις για τον αγρό».
+  // Ο νέος σχεδιασμός ελέγχεται εκτελεστικά με μεταλλάξεις στο widget_health_plain_check.mjs.
+  ok((w.match(/T-HEALTH-PLAIN-01/g) || []).length === 3 && !w.includes("const OKK={"), "Ζ1 κάρτα υγείας = T-HEALTH-PLAIN-01 (βλ. widget_health_plain_check)");
   return f;
 }
 
@@ -128,11 +112,6 @@ const MUT = [
   ["C7 η σημαία covered δεν περνά", "..._sagMetSourceIndicators(measurements?.data, !!fieldConfig?.covered_cultivation),", "..._sagMetSourceIndicators(measurements?.data),", "c"],
   ["C8 μύκητες πριν τον βρόχο", "  if (!_ihFrozen) { const _c = indicators.filter(", "  if (false) { const _c = indicators.filter(", "c"],
   ["C9 Topt αλλαγμένο", "opt: peak - 3, max: optMax + 5, src: 'optimal_temp_range'", "opt: peak, max: optMax + 5, src: 'optimal_temp_range'", "c"],
-  ["W1 «Εντάξει» ορίων ξαναφαίνεται", '.filter(x=>!(x.k==="soil_moisture_limits_status"&&String(x.d.value)==="Εντάξει"))', "", "w"],
-  ["W2 πορτοκαλί μπαίνει στην ομάδα", "const OKR=RW.filter(x=>OKK[x.k]&&!AC(CO(x)));", "const OKR=RW.filter(x=>OKK[x.k]);", "w"],
-  ["W3 αριθμοί με τελεία", 'return v.toLocaleString("el-GR",{maximumFractionDigits:2})+(md.unit?" "+md.unit:"")', 'return String(v)+(md.unit?" "+md.unit:"")', "w"],
-  ["W4 ⏱ και πάνω σε κείμενο", "if(md&&md._s===1&&!md.text&&Number.isFinite(Number(md._t)))", "if(md&&md._s===1&&Number.isFinite(Number(md._t)))", "w"],
-  ["W5 ρηχό/βαθύ χάνεται", 'if(m)return "ρηχό "+m[1]+" % · βαθύ "+m[3]+" %"', 'if(false)return ""', "w"],
 ];
 let k = 0;
 for (const [n, a, b, which] of MUT) {

@@ -8,10 +8,13 @@ const F = fs.readFileSync(path.join(here, "..", "..", "custom_html_files", "conf
 const C = fs.readFileSync(path.join(here, "..", "runPerTich.js"), "utf8").replace(/\r\n/g, "\n");
 if (W.includes("\r\n") || F.includes("\r\n")) throw new Error("widget/φόρμα πρέπει να είναι LF");
 
+// T-HEALTH-PLAIN-01 (13/10): οι ωμές γραμμές της κάρτας μεθόδου ΔΕΝ εμφανίζονται πια· ο αναγνώστης (MC) δίνει μόνο
+// κείμενο ανά κλειδί, για όσα η κάρτα «Πώς υπολογίστηκαν» εξηγεί (π.χ. τι λείπει για τις ασθένειες).
+const MC_END = "return o})();";
 function buildReader(src) {
-  const a = src.indexOf('const _mc9=(TB.field_method_card'); const b = src.indexOf('if(TB.gdd_crop_status||TB.infection_model_status)TR.push', a);
+  const a = src.indexOf("const MC=(()=>{const o={};try{const t=TB.field_method_card"); const b = src.indexOf(MC_END, a);
   if (a < 0 || b < 0) throw new Error("αναγνώστης κάρτας δεν βρέθηκε");
-  return new Function("TB", "TR", "TL", src.slice(a, b) + "\nreturn TR;");
+  return new Function("TB", src.slice(a, b + MC_END.length) + "\nreturn MC;");
 }
 function run(w, f, c) {
   const x = []; const ok = (cond, m) => { if (!cond) x.push(m); };
@@ -29,18 +32,14 @@ function run(w, f, c) {
   ok(!/x\.meter1M3=M\*C;/.test(w), "widget: η παλιά άνευ όρων μετατροπή έφυγε");
   // ── widget · κάρτα μεθόδου ──
   let R; try { R = buildReader(w); } catch (e) { x.push("εξαγωγή: " + e.message); return x; }
-  const TL = { soil_depth_basis: "Βάθη μέτρησης υγρασίας", et0_inputs_basis: "Είσοδοι ζήτησης νερού", met_reference_source: "Πηγή θερμοκρασιών αναφοράς", crop_stage: "Υδατικό στάδιο (FAO-56)" };
-  const TB = { field_method_card: { value: 3, metadata: { text: "soil_depth_basis: Δύο βάθη 10+30 cm.\nmet_reference_source: Οι θερμοκρασίες από τον σταθμό.\ncucumber/crop_stage: ΥΔΑΤΙΚΟ στάδιο FAO-56 — όχι φαινολογία.\nχωρίς άνω-κάτω" } } };
-  const TR = [{ k: "soil_depth_basis", d: { value: "Δύο βάθη", metadata: { _m: 1 } } }];
-  const out = R(TB, TR, TL);
-  ok(out[0].k === "soil_depth_basis" && out[0].d.metadata.text === "Δύο βάθη 10+30 cm." && out[0].d.metadata._m === 1, "Α1 το κείμενο μεθόδου κολλά στη γραμμή που ήδη υπάρχει");
-  const met = out.find(r => r.k === "mc:met_reference_source");
-  ok(met && met.d.value === "Πηγή θερμοκρασιών αναφοράς" && met.d.metadata.text === "Οι θερμοκρασίες από τον σταθμό." && met.mcLabel === "Μέθοδος (ημερήσια κάρτα)", "Α2 νέα γραμμή με ετικέτα από TL");
-  const cs = out.find(r => r.k === "mc:cucumber/crop_stage");
-  ok(cs && cs.d.value === "cucumber · Υδατικό στάδιο (FAO-56)" && /φαινολογία/.test(cs.d.metadata.text), "Α3 γραμμή ανά καλλιέργεια με πρόθεμα");
-  ok(out.length === 3, "Α4 η γραμμή χωρίς «:» αγνοείται (" + out.length + ")");
-  ok(R({}, [{ k: "a", d: { value: 1 } }], TL).length === 1, "Α5 χωρίς κάρτα: τίποτα δεν αλλάζει");
-  ok(w.includes('children:TL[x.k]||x.mcLabel||x.k}'), "widget: η ετικέτα της γραμμής δέχεται τις νέες γραμμές");
+  const TB = { field_method_card: { value: 4, metadata: { text: "soil_depth_basis: Δύο βάθη 10+30 cm.\npathogen_analysis_status: Κοινό κείμενο αγρού.\ncitrusfruits orange:2/pathogen_analysis_status: Λείπει η υγρασία φύλλου.\nolive koroneiki:1/crop_stage: ΥΔΑΤΙΚΟ στάδιο — όχι φαινολογία.\nχωρίς άνω-κάτω" } } };
+  const out = R(TB);
+  ok(out.soil_depth_basis === "Δύο βάθη 10+30 cm.", "Α1 κείμενο κοινού κλειδιού");
+  ok(out.pathogen_analysis_status === "Κοινό κείμενο αγρού.", "Α2 το κοινό κείμενο προτιμάται από το ανά καλλιέργεια (" + out.pathogen_analysis_status + ")");
+  ok(out.crop_stage === "ΥΔΑΤΙΚΟ στάδιο — όχι φαινολογία.", "Α3 κλειδί ανά καλλιέργεια βρίσκεται παρά το πρόθεμα «olive koroneiki:1/»");
+  ok(Object.keys(out).length === 3 && !Object.keys(out).some(k => /[ :/]/.test(k)), "Α4 μόνο καθαρά κλειδιά, η γραμμή χωρίς «:» αγνοείται (" + Object.keys(out) + ")");
+  ok(Object.keys(R({})).length === 0, "Α5 χωρίς κάρτα: τίποτα");
+  ok(!w.includes("Μέθοδος (ημερήσια κάρτα)") && w.includes('if(mode===3)return PL(t||MC[x.k]||"");'), "widget: καμία ωμή γραμμή μεθόδου· το κείμενο μπαίνει μόνο όπου χρειάζεται");
   // ── πυρήνας ──
   ok(c.includes("const SAG_KERNEL_VERSION = 'v50.160 · 2026-10-05';"), "πυρήνας v50.154");
   ok(c.includes("_daily.push({ variable: 'field_bundle_2', value: _SAG_METHOD_CARD.n,") && c.includes("shared: { field_method_card: { value: _SAG_METHOD_CARD.n,"), "πυρήνας: field_bundle_2 → shared.field_method_card");
@@ -56,9 +55,9 @@ const MUT = [
   ["W1 σημαία προεπιλογή ΝΑΙ", "sagMeterBox={v:!1}", "sagMeterBox={v:!0}", "w"],
   ["W2 m³ χωρίς όρο", "x.meter1M3=sagMeterBox.v?M*C:null", "x.meter1M3=M*C", "w"],
   ["W3 παλμοί ως m³", 'defaultUnit:"pulse",conversions:{pulse:v9=>v9}', 'defaultUnit:"m³",conversions:{pulse:v9=>v9}', "w"],
-  ["W4 το κείμενο δεν κολλά στη γραμμή", "const _row=_pre?null:TR.find(x9=>x9.k===_k);", "const _row=null;", "w"],
-  ["W5 το πρόθεμα καλλιέργειας χάνεται", '_pre=_sl>=0?_kf.slice(0,_sl)+" · ":""', '_pre=""', "w"],
-  ["W6 ετικέτα γραμμής παλιά", "children:TL[x.k]||x.mcLabel||x.k}", "children:TL[x.k]}", "w"],
+  ["W4 το ανά καλλιέργεια σκεπάζει το κοινό", "if(m&&(!(m[2] in o)||!m[1]))", "if(m)", "w"],
+  ["W5 το πρόθεμα καλλιέργειας δεν αφαιρείται", String.raw`/^(?:(.*)\/)?([a-z0-9_]+):\s*(.+)$/`, String.raw`/^()([^:]+?):\s*(.+)$/`, "w"],
+  ["W6 το κείμενο μεθόδου δεν χρησιμοποιείται", 'if(mode===3)return PL(t||MC[x.k]||"");', "if(mode===3)return PL(t);", "w"],
   ["F1 φόρμα δεν αποθηκεύει", "    has_water_meter: $('has_water_meter').value === 'true',   /* v20 · T-METER-FORM-01 */\n", "", "f"],
   ["F2 φόρμα προεπιλογή ΝΑΙ", "String(conf.has_water_meter) === 'true' ? 'true' : 'false';", "String(conf.has_water_meter) === 'false' ? 'false' : 'true';", "f"],
   ["C1 παλιά έκδοση", "'v50.160 · 2026-10-05'", "'v50.159 · 2026-10-04'", "c"],

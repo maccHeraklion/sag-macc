@@ -6,11 +6,12 @@ const W = fs.readFileSync(path.join(here, "..", "..", "_dist-sagMain", "index-7c
 const F = fs.readFileSync(path.join(here, "..", "..", "custom_html_files", "configuration.html"), "utf8");
 function run(w, form) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
-  // B-05 · ο χάρτης ετικετών της κάρτας υγείας, εκτελεσμένος
-  const a = w.indexOf("const HL={"); const b = w.indexOf("};", a);
-  let HL = null; try { HL = new Function("return " + w.slice(a + 9, b + 1))(); } catch (e) { f.push("B-05 HL δεν διαβάζεται: " + e.message); }
-  ok(HL && HL.irrigation_warning === "Προειδοποίηση άρδευσης", "B-05 το irrigation_warning έχει γραμμή στην κάρτα υγείας");
-  ok(w.includes('.filter(x=>x.d&&x.d.value!==null&&x.d.value!==void 0&&String(x.d.value)!=="")'), "B-05 η κάρτα υγείας παραλείπει κενή τιμή (δεν εμφανίζεται «null»)");
+  // B-05 · T-HEALTH-PLAIN-01 (13/10): το irrigation_warning μετακόμισε από την «Υγεία εγκατάστασης» στις
+  // «Ειδοποιήσεις για τον αγρό» (είναι προειδοποίηση νερού, όχι βλάβη οργάνου). Ο χάρτης AK εκτελείται.
+  const a = w.indexOf("const AK=["); const b = w.indexOf("]];", a);
+  let AK = null; try { AK = new Function("return " + w.slice(a + 9, b + 2))(); } catch (e) { f.push("B-05 AK δεν διαβάζεται: " + e.message); }
+  ok(AK && AK.some(([k, l]) => k === "irrigation_warning" && l === "Νερό άρδευσης"), "B-05 το irrigation_warning έχει γραμμή στις ειδοποιήσεις");
+  ok(w.includes('const RWS=AK.map(([k,l])=>({k,l,d:RA[k]})).filter(x=>x.d&&x.d.value!==null&&x.d.value!==void 0&&String(x.d.value)!=="")'), "B-05 οι ειδοποιήσεις παραλείπουν κενή τιμή (δεν εμφανίζεται «null»)");
   // B-08 · WATER_INFO εκτελεσμένο: us = ecw × 1000
   const s = form.indexOf("  excellent: { ecw:"); const e = form.indexOf("\n};", s);
   let WI = null; try { WI = new Function("return {" + form.slice(s, e) + "\n}")(); } catch (x) { f.push("B-08 WATER_INFO δεν διαβάζεται: " + x.message); }
@@ -27,7 +28,7 @@ const base = run(W, F);
 if (base.length) { console.log("ΑΠΟΤΥΧΙΑ ΒΑΣΗΣ:\n  " + base.join("\n  ")); process.exit(1); }
 console.log("ΒΑΣΗ: όλοι οι έλεγχοι πέρασαν");
 const MUT = [
-  ["W1 χωρίς irrigation_warning", 'const HL={irrigation_warning:"Προειδοποίηση άρδευσης",', 'const HL={', "w"],
+  ["W1 χωρίς irrigation_warning", '["irrigation_warning","Νερό άρδευσης"],', '', "w"],
   ["F1 good ξανά 450–1.300", "us:'700 – 2.000 μS/cm'", "us:'450 – 1.300 μS/cm'", "f"],
   ["F2 poor ξανά > 2.000", "us:'> 3.000 μS/cm'", "us:'> 2.000 μS/cm'", "f"],
 ];

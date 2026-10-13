@@ -1,4 +1,4 @@
-// Ελεγκτής widget · T-BPIDAYS-W-01 + T-SOILCAL-W-01 + T-ACCUMBASIS-W-01.
+// Ελεγκτής widget · T-BPIDAYS-W-01 + T-SOILCAL-W-01 (+ T-ACCUMBASIS-W-01, αφαιρέθηκε 13/10).
 // Τρέχει τον πραγματικό κώδικα του _sagEv10 και διασταυρώνει τα σταθερά κείμενα με τις
 // σταθερές του ΠΥΡΗΝΑ. Κάθε μετάλλαξη πρέπει να σκοτώνεται.
 import fs from "node:fs"; import path from "node:path"; import { fileURLToPath } from "node:url";
@@ -44,14 +44,10 @@ function run(src) {
   const e4 = E(S, refs("{όχι json"), "soil_moisture1", chk(S));
   ok(e4 && e4.scHas === false && e4.n === S.length, "Α4 χαλασμένο JSON: σιωπή, το υπόλοιπο memo ζει");
   ok(src.includes('_sagEv10.scN>=3?" — αρκετά για να προσαρμοστούν τα όρια.":" — μέχρι τότε ισχύουν τα όρια του πίνακα."'), "κείμενο k/3 με τις δύο εκβάσεις");
-  // ── T-ACCUMBASIS-W-01 ──
-  ok(src.includes('accumulator_basis:"Βάση συσσωρευτών (βαθμοημέρες, ώρες μόλυνσης)"'), "ετικέτα στην κάρτα «Πώς υπολογίστηκαν»");
-  ok(src.includes('if(TB.gdd_crop_status||TB.infection_model_status)TR.push({k:"accumulator_basis"'), "η γραμμή μπαίνει μόνο όταν υπάρχουν συσσωρευτές");
-  const gap = coreConst("_SAG_TICK_GAP_MAX_H"), tmin = coreConst("_SAG_TICK_H_MIN"), tmax = coreConst("_SAG_TICK_H_MAX");
-  const air = (CORE.match(/name: 'αέρας',\s*limit: (\d+)/) || [])[1];
-  ok(gap === 48 && src.includes("Κενό επικοινωνίας έως 48 ώρες") && src.includes("πάνω από 48 ώρες δεν συμπληρώνεται"), "το 48 ω του widget = _SAG_TICK_GAP_MAX_H του πυρήνα");
-  ok(tmin === 0.5 && tmax === 2 && src.includes("(0,5–2 ώρες)"), "το 0,5–2 ω του widget = _SAG_TICK_H_MIN/MAX");
-  ok(air === "90" && src.includes("παλαιότερη από 90΄ παγώνει"), "το 90΄ του widget = όριο ηλικίας αέρα του πυρήνα");
+  // ── T-ACCUMBASIS-W-01 ── ΑΦΑΙΡΕΘΗΚΕ 13/10 με T-HEALTH-PLAIN-01 (εντολή Μιχάλη, Ρηγάκης: «περιττή και ακατανόητη
+  // πληροφορία, άχρηστη στον αγρότη»). Το κείμενο «Βάση συσσωρευτών» (48 ω / 0,5–2 ω / 90΄) δεν εμφανίζεται πια· οι
+  // σταθερές του πυρήνα δεν άλλαξαν. Αν ξαναμπεί κείμενο με αριθμούς, ξαναμπαίνει και η διασταύρωση.
+  ok(!src.includes("accumulator_basis") && !src.includes("Κενό επικοινωνίας έως"), "το κείμενο συσσωρευτών δεν εμφανίζεται (T-HEALTH-PLAIN-01)");
   return f;
 }
 
@@ -63,8 +59,6 @@ const MUT = [
   ["m2 χωρίς /3", '"/3 δείγματα"', '" δείγματα"'],
   ["m3 ημέρες σεζόν κρυφές", 'Le.perfDays!==null?(Le.perfFloor?', 'false?(Le.perfFloor?'],
   ["m3b η σημαία αγνοείται", '(Le.perfFloor?" (σε ≥"', '(false?" (σε ≥"'],
-  ["m4 χωρίς γραμμή συσσωρευτών", 'if(TB.gdd_crop_status||TB.infection_model_status)TR.push({k:"accumulator_basis"', 'if(false)TR.push({k:"accumulator_basis"'],
-  ["m5 λάθος όριο κενού", "Κενό επικοινωνίας έως 48 ώρες", "Κενό επικοινωνίας έως 24 ώρες"],
   ["m6 scN δεν διαβάζεται", "scN=Number.isFinite(Number(_scs.n))?Math.max(0,Math.floor(Number(_scs.n))):0;", "scN=0;"],
   ["m7 χαλασμένο JSON ρίχνει το memo", "catch{}", "catch(e){throw e}"],
   ["m8 perfDays με μηδέν", "perfDays=(Number.isFinite(_pd)&&_pd>0)?Math.round(_pd):null", "perfDays=Number.isFinite(_pd)?Math.round(_pd):null"],
