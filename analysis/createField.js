@@ -93,6 +93,8 @@ const DEVICE_TYPE_VARIABLES = {
     "current_rain_height_weekly",
     "current_rain_height_monthly",
     "current_rain_height_yearly",
+    "rain_gauge",               // ραγδαιότητα + βροχή 5λέπτου (fw 2.x) · T-RAIN-CUST-01
+    "rain_height",              // το ίδιο για fw 1.13
     "barometric_pressure_hpa",
     "dew_point",
     "wind_direction_sensor"

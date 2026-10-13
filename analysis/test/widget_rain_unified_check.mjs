@@ -33,8 +33,8 @@ function run(w) {
   ok(H.sagRainFlag("air_temperature", { alg: "v34", partial: true }, now - 9e9, "20 °C") === "20 °C", "W2στ άλλες μεταβλητές ανέγγιχτες");
   ok(w.includes('w=T(j),k=w?sagRainFlag(j,w.m,w.t,B(j,w.v)):"—"') && w.includes('const $=k?sagRainFlag(N,k.m,k.t,T(N,k.v)):"—"') && w.includes('S=c?sagRainFlag(n,c.metadata,Date.parse(c.time),Ya(n,c.value)):"—"'), "W2ζ καλωδίωση στις τρεις οθόνες");
   ok(w.includes('M.push(sagRainH(d,u,o,v))') && w.includes('const o=sagRainT(d,u,Date.parse('), "W1δ καλωδίωση στο ιστορικό");
-  ok(w.includes('rain_height:{label:"🌧 Βροχή ανά αποστολή (εκτίμηση ρυθμού)"') && !w.includes("(5λεπτο)"), "W3 ετικέτα ανά αποστολή");
-  ok(["Σήμερα", "Αυτή την εβδομάδα", "Αυτό τον μήνα", "Φέτος"].every(x => w.includes('(' + x + ')",...H.rain_height,showSum:!1}')), "W4 χωρίς «Σύνολο» στα τρέχοντα");
+  ok(w.includes('rain_height:{label:"🌧 Βροχή τελευταίου 5λέπτου",...H.rain_height,showSum:!1}'), "W3 ετικέτα 5λέπτου (T-RAIN-CUST-01)");
+  ok(["Βροχή ημέρας", "Ύψος βροχής (Αυτή την εβδομάδα)", "Βροχή μήνα", "Βροχή έτους"].every(x => w.includes('"🌧 ' + x + '",...H.rain_height,showSum:!1}')), "W4 χωρίς «Σύνολο» στα τρέχοντα");
   return f;
 }
 const base = run(W);
@@ -47,7 +47,7 @@ const MUT = [
   ["m4 χωρίς «≥»", '(m.partial?"≥ ":est?"≈ ":"")', '(est?"≈ ":"")'],
   ["m5 χωρίς «από»", 'm.partial&&m.since?" · από "', 'false?" · από "'],
   ["m6 κεντρική κάρτα χωρίς σήμανση", 'S=c?sagRainFlag(n,c.metadata,Date.parse(c.time),Ya(n,c.value)):"—"', 'S=c?Ya(n,c.value):"—"'],
-  ["m7 «Σύνολο» στο φέτος", '(Φέτος)",...H.rain_height,showSum:!1}', '(Φέτος)",...H.rain_height}'],
+  ["m7 «Σύνολο» στο φέτος", 'Βροχή έτους",...H.rain_height,showSum:!1}', 'Βροχή έτους",...H.rain_height}'],
   ["m8 v33 κερδίζει", 'h.q=2+(Number(m.coverage)||0)', 'h.q=0'],
 ];
 let k = 0;

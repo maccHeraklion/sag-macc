@@ -100,7 +100,9 @@ const DEVICE_TYPE_VARIABLES = {
   s2120: [
     "air_temperature", "air_humidity", "wind_speed_kmh", "uv_index", "light_intensity",
     "rain_height_hourly", "current_rain_height_daily", "current_rain_height_weekly",
-    "current_rain_height_monthly", "current_rain_height_yearly", "barometric_pressure_hpa",
+    "current_rain_height_monthly", "current_rain_height_yearly",
+    "rain_gauge", "rain_height",   // ραγδαιότητα + βροχή 5λέπτου · T-RAIN-CUST-01
+    "barometric_pressure_hpa",
     "dew_point", "wind_direction_sensor",
   ],
   se0x: ["soil_moisture1", "soil_temperature1", "conduct_soil1", "soil_moisture2", "soil_temperature2", "conduct_soil2"],
