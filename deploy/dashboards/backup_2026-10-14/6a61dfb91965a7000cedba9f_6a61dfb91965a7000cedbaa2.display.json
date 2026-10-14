@@ -1,0 +1,425 @@
+{
+ "dashboard": "6a61dfb91965a7000cedba9f",
+ "widget": "6a61dfb91965a7000cedbaa2",
+ "read_at": "2026-10-14",
+ "theme": {
+  "color": {
+   "background": null
+  }
+ },
+ "variables": [
+  {
+   "variable": "batterypct",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "hw_version",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "valve_1",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "valve_1_command",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "valve_1_time_command",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "valve_2",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "valve_2_command",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "valve_2_time_command",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule1",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule1_enable",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule1_set",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule2",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule2_enable",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule2_set",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule3",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule3_enable",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule3_set",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule4",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule4_enable",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule4_set",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule5",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule5_enable",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule5_set",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule6",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule6_enable",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule6_set",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule7",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule7_enable",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule7_set",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule8",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule8_enable",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule8_set",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule9",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule9_enable",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule9_set",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule10",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule10_enable",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule10_set",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule11",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule11_enable",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule11_set",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule12",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule12_enable",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule12_set",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule13",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule13_enable",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule13_set",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule14",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule14_enable",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule14_set",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule15",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule15_enable",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule15_set",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule16",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule16_enable",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rule16_set",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "rules_enabled_mask",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "valve_1_command_feedback",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  },
+  {
+   "variable": "valve_2_command_feedback",
+   "origin": {
+    "id": "684c3fbaf71517000a449750",
+    "bucket": "684c3fbaf71517000a449750"
+   }
+  }
+ ]
+}

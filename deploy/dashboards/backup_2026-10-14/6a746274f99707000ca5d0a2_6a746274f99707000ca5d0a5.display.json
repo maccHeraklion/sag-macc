@@ -1,0 +1,1119 @@
+{
+ "read_at": "2026-10-14",
+ "note": "display.variables πριν (παλιά μορφή origin)",
+ "variables": [
+  {
+   "variable": "air_temperature",
+   "origin": {
+    "id": "6a313a9bb99739000d4aafa9",
+    "bucket": "6a313a9bb99739000d4aafa9"
+   }
+  },
+  {
+   "variable": "air_humidity",
+   "origin": {
+    "id": "6a313a9bb99739000d4aafa9",
+    "bucket": "6a313a9bb99739000d4aafa9"
+   }
+  },
+  {
+   "variable": "wind_speed_kmh",
+   "origin": {
+    "id": "6a313a9bb99739000d4aafa9",
+    "bucket": "6a313a9bb99739000d4aafa9"
+   }
+  },
+  {
+   "variable": "uv_index",
+   "origin": {
+    "id": "6a313a9bb99739000d4aafa9",
+    "bucket": "6a313a9bb99739000d4aafa9"
+   }
+  },
+  {
+   "variable": "light_intensity",
+   "origin": {
+    "id": "6a313a9bb99739000d4aafa9",
+    "bucket": "6a313a9bb99739000d4aafa9"
+   }
+  },
+  {
+   "variable": "rain_height_hourly",
+   "origin": {
+    "id": "6a313a9bb99739000d4aafa9",
+    "bucket": "6a313a9bb99739000d4aafa9"
+   }
+  },
+  {
+   "variable": "current_rain_height_daily",
+   "origin": {
+    "id": "6a313a9bb99739000d4aafa9",
+    "bucket": "6a313a9bb99739000d4aafa9"
+   }
+  },
+  {
+   "variable": "current_rain_height_weekly",
+   "origin": {
+    "id": "6a313a9bb99739000d4aafa9",
+    "bucket": "6a313a9bb99739000d4aafa9"
+   }
+  },
+  {
+   "variable": "current_rain_height_monthly",
+   "origin": {
+    "id": "6a313a9bb99739000d4aafa9",
+    "bucket": "6a313a9bb99739000d4aafa9"
+   }
+  },
+  {
+   "variable": "current_rain_height_yearly",
+   "origin": {
+    "id": "6a313a9bb99739000d4aafa9",
+    "bucket": "6a313a9bb99739000d4aafa9"
+   }
+  },
+  {
+   "variable": "barometric_pressure_hpa",
+   "origin": {
+    "id": "6a313a9bb99739000d4aafa9",
+    "bucket": "6a313a9bb99739000d4aafa9"
+   }
+  },
+  {
+   "variable": "dew_point",
+   "origin": {
+    "id": "6a313a9bb99739000d4aafa9",
+    "bucket": "6a313a9bb99739000d4aafa9"
+   }
+  },
+  {
+   "variable": "wind_direction_sensor",
+   "origin": {
+    "id": "6a313a9bb99739000d4aafa9",
+    "bucket": "6a313a9bb99739000d4aafa9"
+   }
+  },
+  {
+   "variable": "soil_ph",
+   "origin": {
+    "id": "69f1c0c03766b6000ba2bdff",
+    "bucket": "69f1c0c03766b6000ba2bdff"
+   }
+  },
+  {
+   "variable": "temp_soil",
+   "origin": {
+    "id": "69f1c0c03766b6000ba2bdff",
+    "bucket": "69f1c0c03766b6000ba2bdff"
+   }
+  },
+  {
+   "variable": "leaf_temperature",
+   "origin": {
+    "id": "69f85c07f79d76000a2baf05",
+    "bucket": "69f85c07f79d76000a2baf05"
+   }
+  },
+  {
+   "variable": "leaf_moisture",
+   "origin": {
+    "id": "69f85c07f79d76000a2baf05",
+    "bucket": "69f85c07f79d76000a2baf05"
+   }
+  },
+  {
+   "variable": "soil_moisture1",
+   "origin": {
+    "id": "69f85e0aef3625000f9a9587",
+    "bucket": "69f85e0aef3625000f9a9587"
+   }
+  },
+  {
+   "variable": "soil_temperature1",
+   "origin": {
+    "id": "69f85e0aef3625000f9a9587",
+    "bucket": "69f85e0aef3625000f9a9587"
+   }
+  },
+  {
+   "variable": "conduct_soil1",
+   "origin": {
+    "id": "69f85e0aef3625000f9a9587",
+    "bucket": "69f85e0aef3625000f9a9587"
+   }
+  },
+  {
+   "variable": "fertility_index1",
+   "origin": {
+    "id": "69f85e0aef3625000f9a9587",
+    "bucket": "69f85e0aef3625000f9a9587"
+   }
+  },
+  {
+   "variable": "soil_moisture2",
+   "origin": {
+    "id": "69f85e0aef3625000f9a9587",
+    "bucket": "69f85e0aef3625000f9a9587"
+   }
+  },
+  {
+   "variable": "soil_temperature2",
+   "origin": {
+    "id": "69f85e0aef3625000f9a9587",
+    "bucket": "69f85e0aef3625000f9a9587"
+   }
+  },
+  {
+   "variable": "conduct_soil2",
+   "origin": {
+    "id": "69f85e0aef3625000f9a9587",
+    "bucket": "69f85e0aef3625000f9a9587"
+   }
+  },
+  {
+   "variable": "fertility_index2",
+   "origin": {
+    "id": "69f85e0aef3625000f9a9587",
+    "bucket": "69f85e0aef3625000f9a9587"
+   }
+  },
+  {
+   "variable": "soil_moisture1",
+   "origin": {
+    "id": "69f85d886b36a6000ab90fa4",
+    "bucket": "69f85d886b36a6000ab90fa4"
+   }
+  },
+  {
+   "variable": "soil_temperature1",
+   "origin": {
+    "id": "69f85d886b36a6000ab90fa4",
+    "bucket": "69f85d886b36a6000ab90fa4"
+   }
+  },
+  {
+   "variable": "conduct_soil1",
+   "origin": {
+    "id": "69f85d886b36a6000ab90fa4",
+    "bucket": "69f85d886b36a6000ab90fa4"
+   }
+  },
+  {
+   "variable": "fertility_index1",
+   "origin": {
+    "id": "69f85d886b36a6000ab90fa4",
+    "bucket": "69f85d886b36a6000ab90fa4"
+   }
+  },
+  {
+   "variable": "soil_moisture2",
+   "origin": {
+    "id": "69f85d886b36a6000ab90fa4",
+    "bucket": "69f85d886b36a6000ab90fa4"
+   }
+  },
+  {
+   "variable": "soil_temperature2",
+   "origin": {
+    "id": "69f85d886b36a6000ab90fa4",
+    "bucket": "69f85d886b36a6000ab90fa4"
+   }
+  },
+  {
+   "variable": "conduct_soil2",
+   "origin": {
+    "id": "69f85d886b36a6000ab90fa4",
+    "bucket": "69f85d886b36a6000ab90fa4"
+   }
+  },
+  {
+   "variable": "fertility_index2",
+   "origin": {
+    "id": "69f85d886b36a6000ab90fa4",
+    "bucket": "69f85d886b36a6000ab90fa4"
+   }
+  },
+  {
+   "variable": "soil_moisture1",
+   "origin": {
+    "id": "6a7446498acfb8000ccca926",
+    "bucket": "6a7446498acfb8000ccca926"
+   }
+  },
+  {
+   "variable": "soil_temperature1",
+   "origin": {
+    "id": "6a7446498acfb8000ccca926",
+    "bucket": "6a7446498acfb8000ccca926"
+   }
+  },
+  {
+   "variable": "conduct_soil1",
+   "origin": {
+    "id": "6a7446498acfb8000ccca926",
+    "bucket": "6a7446498acfb8000ccca926"
+   }
+  },
+  {
+   "variable": "fertility_index1",
+   "origin": {
+    "id": "6a7446498acfb8000ccca926",
+    "bucket": "6a7446498acfb8000ccca926"
+   }
+  },
+  {
+   "variable": "soil_moisture2",
+   "origin": {
+    "id": "6a7446498acfb8000ccca926",
+    "bucket": "6a7446498acfb8000ccca926"
+   }
+  },
+  {
+   "variable": "soil_temperature2",
+   "origin": {
+    "id": "6a7446498acfb8000ccca926",
+    "bucket": "6a7446498acfb8000ccca926"
+   }
+  },
+  {
+   "variable": "conduct_soil2",
+   "origin": {
+    "id": "6a7446498acfb8000ccca926",
+    "bucket": "6a7446498acfb8000ccca926"
+   }
+  },
+  {
+   "variable": "fertility_index2",
+   "origin": {
+    "id": "6a7446498acfb8000ccca926",
+    "bucket": "6a7446498acfb8000ccca926"
+   }
+  },
+  {
+   "variable": "batterypct",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "hw_version",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "valve_1",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "valve_1_command",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "valve_1_time_command",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "valve_1_command_feedback",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "valve_2",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "valve_2_command",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "valve_2_time_command",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "valve_2_command_feedback",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rules_enabled_mask",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule1",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule1_enable",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule1_set",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule2",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule2_enable",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule2_set",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule3",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule3_enable",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule3_set",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule4",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule4_enable",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule4_set",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule5",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule5_enable",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule5_set",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule6",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule6_enable",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule6_set",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule7",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule7_enable",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule7_set",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule8",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule8_enable",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule8_set",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule9",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule9_enable",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule9_set",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule10",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule10_enable",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule10_set",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule11",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule11_enable",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule11_set",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule12",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule12_enable",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule12_set",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule13",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule13_enable",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule13_set",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule14",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule14_enable",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule14_set",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule15",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule15_enable",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule15_set",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule16",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule16_enable",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "rule16_set",
+   "origin": {
+    "id": "6977952a05f6ae0009e7e211",
+    "bucket": "6977952a05f6ae0009e7e211"
+   }
+  },
+  {
+   "variable": "batterypct",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "hw_version",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "valve_1",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "valve_1_command",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "valve_1_time_command",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "valve_1_command_feedback",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "valve_2",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "valve_2_command",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "valve_2_time_command",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "valve_2_command_feedback",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rules_enabled_mask",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule1",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule1_enable",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule1_set",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule2",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule2_enable",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule2_set",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule3",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule3_enable",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule3_set",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule4",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule4_enable",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule4_set",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule5",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule5_enable",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule5_set",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule6",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule6_enable",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule6_set",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule7",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule7_enable",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule7_set",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule8",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule8_enable",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule8_set",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule9",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule9_enable",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule9_set",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule10",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule10_enable",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule10_set",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule11",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule11_enable",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule11_set",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule12",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule12_enable",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule12_set",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule13",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule13_enable",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule13_set",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule14",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule14_enable",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule14_set",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule15",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule15_enable",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule15_set",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule16",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule16_enable",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  },
+  {
+   "variable": "rule16_set",
+   "origin": {
+    "id": "6a749040f99707000cb101f2",
+    "bucket": "6a749040f99707000cb101f2"
+   }
+  }
+ ]
+}

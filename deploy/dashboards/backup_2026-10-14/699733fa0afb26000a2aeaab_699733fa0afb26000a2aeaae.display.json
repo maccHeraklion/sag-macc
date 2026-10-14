@@ -1,0 +1,355 @@
+{
+ "read_at": "2026-10-14",
+ "variables": [
+  {
+   "origin": "699733fae43c8b000aafec9f",
+   "variable": "configuration"
+  },
+  {
+   "origin": "699733fae43c8b000aafec9f",
+   "variable": "field_bundle"
+  },
+  {
+   "origin": "699733fae43c8b000aafec9f",
+   "variable": "forecast"
+  },
+  {
+   "origin": "699733fae43c8b000aafec9f",
+   "variable": "field_calendar"
+  },
+  {
+   "origin": "699733fae43c8b000aafec9f",
+   "variable": "subscription_until"
+  },
+  {
+   "origin": "688b7dcb11758d000906fa22",
+   "variable": "conduct_soil1"
+  },
+  {
+   "origin": "688b7dcb11758d000906fa22",
+   "variable": "conduct_soil2"
+  },
+  {
+   "origin": "688b7dcb11758d000906fa22",
+   "variable": "soil_moisture1"
+  },
+  {
+   "origin": "688b7dcb11758d000906fa22",
+   "variable": "soil_moisture2"
+  },
+  {
+   "origin": "688b7dcb11758d000906fa22",
+   "variable": "soil_temperature1"
+  },
+  {
+   "origin": "688b7dcb11758d000906fa22",
+   "variable": "soil_temperature2"
+  },
+  {
+   "origin": "67fe9ae85fccdd000a4bdd42",
+   "variable": "leaf_moisture"
+  },
+  {
+   "origin": "67fe9ae85fccdd000a4bdd42",
+   "variable": "leaf_temperature"
+  },
+  {
+   "origin": "69779a27a6e2fb0011490969",
+   "variable": "temperature"
+  },
+  {
+   "origin": "69779a27a6e2fb0011490969",
+   "variable": "humidity"
+  },
+  {
+   "origin": "699733fae43c8b000aafec9f",
+   "variable": "history_request"
+  },
+  {
+   "origin": "699733fae43c8b000aafec9f",
+   "variable": "history_data"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "batterypct"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "hw_version"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "valve_1"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "valve_1_command"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "valve_1_time_command"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "valve_1_command_feedback"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "valve_2"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "valve_2_command"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "valve_2_time_command"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "valve_2_command_feedback"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rules_enabled_mask"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule1"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule1_enable"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule1_set"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule2"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule2_enable"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule2_set"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule3"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule3_enable"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule3_set"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule4"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule4_enable"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule4_set"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule5"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule5_enable"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule5_set"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule6"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule6_enable"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule6_set"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule7"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule7_enable"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule7_set"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule8"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule8_enable"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule8_set"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule9"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule9_enable"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule9_set"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule10"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule10_enable"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule10_set"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule11"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule11_enable"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule11_set"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule12"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule12_enable"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule12_set"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule13"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule13_enable"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule13_set"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule14"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule14_enable"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule14_set"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule15"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule15_enable"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule15_set"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule16"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule16_enable"
+  },
+  {
+   "origin": "6977947d83514a000bc8092f",
+   "variable": "rule16_set"
+  },
+  {
+   "origin": "699733fae43c8b000aafec9f",
+   "variable": "field_bundle_2"
+  },
+  {
+   "variable": "soil_moisture1",
+   "origin": {
+    "id": "688cd0e4fbe87e000a219941",
+    "bucket": "688cd0e4fbe87e000a219941"
+   }
+  },
+  {
+   "variable": "soil_temperature1",
+   "origin": {
+    "id": "688cd0e4fbe87e000a219941",
+    "bucket": "688cd0e4fbe87e000a219941"
+   }
+  },
+  {
+   "variable": "conduct_soil1",
+   "origin": {
+    "id": "688cd0e4fbe87e000a219941",
+    "bucket": "688cd0e4fbe87e000a219941"
+   }
+  },
+  {
+   "variable": "soil_moisture2",
+   "origin": {
+    "id": "688cd0e4fbe87e000a219941",
+    "bucket": "688cd0e4fbe87e000a219941"
+   }
+  },
+  {
+   "variable": "soil_temperature2",
+   "origin": {
+    "id": "688cd0e4fbe87e000a219941",
+    "bucket": "688cd0e4fbe87e000a219941"
+   }
+  },
+  {
+   "variable": "conduct_soil2",
+   "origin": {
+    "id": "688cd0e4fbe87e000a219941",
+    "bucket": "688cd0e4fbe87e000a219941"
+   }
+  }
+ ]
+}
