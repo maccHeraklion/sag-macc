@@ -1,0 +1,11 @@
+{
+ "task": "T-DASH-R4-01",
+ "approved_by": "Michalis, 14/10/2026: «ναι ενεργοποίησε της πανεταικ»",
+ "dashboard": "6a746274f99707000ca5d0a2",
+ "widget": "6a746274f99707000ca5d0a5",
+ "label": "ΠΑΝΕΤΕΚ",
+ "controllers": { "6977952a05f6ae0009e7e211": "milesight_uc511_0332 (Ελεγκτής 1)", "6a749040f99707000cb101f2": "milesight_uc511_9341 (Ελεγκτης2)" },
+ "before": { "analysis_run": "" },
+ "after": { "analysis_run": "68deb0d47a8161000a558867" },
+ "rollback": "update_widget patch {\"analysis_run\": null} — data/display unchanged; full data source copy in backup_2026-10-14/6a746274f99707000ca5d0a2_6a746274f99707000ca5d0a5.two.json"
+}
