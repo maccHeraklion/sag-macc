@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.160 · 2026-10-05';
+const SAG_KERNEL_VERSION = 'v50.161 · 2026-10-14';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -9371,12 +9371,36 @@ function calculate_PEI(parameters, measurements, pathogen) {
 // κύριο βρόχο (T-DECL-01) και διαβάζεται εδώ. Η στόχευση ΔΕΝ ξαναφιλτράρεται
 // με _pesticideProtectsPathogen: η ρητή δήλωση του αγρότη ΕΙΝΑΙ η στόχευση —
 // εγγραφή υπάρχει μόνο για τα παθογόνα που ο ίδιος σημείωσε.
+// ── T-PEST-ALIAS-01 (v50.161 · 14/10/2026) · συνώνυμα εμπορικών/γραμμένων ονομάτων ─────────────
+// ΜΟΝΟ προς σκευάσματα που ΗΔΗ υπάρχουν στον κατάλογο — καμία νέα σταθερά. Κλειδί = όνομα μετά από
+// _peiStrip (πεζά, χωρίς τόνους) με τα μη αλφαριθμητικά ως ένα κενό. Πηγή: ημερολόγια αγρών 14/10.
+const _SAG_PEST_REF_ALIAS = {
+  'karate': 'lambda_cyhalothrin', 'karate zeon': 'lambda_cyhalothrin', 'λαμδα σαιχαλοθριν': 'lambda_cyhalothrin',
+  'neemazal': 'azadirachtin', 'neemazal t s': 'azadirachtin', 'azadiraktinh': 'azadirachtin', 'azadiraktini': 'azadirachtin',
+  'azadirachtine': 'azadirachtin', 'αζαδιραχτινη': 'azadirachtin', 'αζαδιρακτινη': 'azadirachtin',
+  'heliosoufre': 'sulfur', 'θειο': 'sulfur', 'θειαφι': 'sulfur', 'θειαφη': 'sulfur',
+  'χαλκος': 'copperHydroxide', 'χαλκοσ': 'copperHydroxide', 'copper': 'copperHydroxide',
+  'βακιλος': 'bt', 'βακιλλος': 'bt', 'bacillus': 'bt', 'bacillus thuringiensis': 'bt',
+  'δελταμεθρινη': 'deltamethrin', 'decis': 'deltamethrin', 'σπινοσαντ': 'spinosad',
+};
+function _sagPestAliasKey(ref) {
+  try {
+    const k = _SAG_PEST_REF_ALIAS[_peiStrip(ref).replace(/[^a-z0-9\u03b1-\u03c9\u03c2]+/g, ' ').trim()];
+    if (!k) return null;
+    for (const catObj of Object.values(PESTICIDE_PROFILE || {})) {
+      if (typeof catObj === 'object' && !Array.isArray(catObj) && catObj[k]) return k;
+    }
+  } catch (_e) {}
+  return null;
+}
 function _sagFindPesticideByRef(ref) {
   if (!ref) return null;
   const key = String(ref).trim();
   for (const catObj of Object.values(PESTICIDE_PROFILE || {})) {
     if (typeof catObj === 'object' && !Array.isArray(catObj) && catObj[key]) return catObj[key];
   }
+  const _ak = _sagPestAliasKey(key);   // T-PEST-ALIAS-01
+  if (_ak) { for (const catObj of Object.values(PESTICIDE_PROFILE || {})) { if (typeof catObj === 'object' && !Array.isArray(catObj) && catObj[_ak]) return catObj[_ak]; } }
   const norm = _peiStrip(key);
   if (norm.length < 3) return null;
   for (const catObj of Object.values(PESTICIDE_PROFILE || {})) {
@@ -9396,6 +9420,8 @@ function _sagPesticideKeyByRef(ref) {
   for (const catObj of Object.values(PESTICIDE_PROFILE || {})) {
     if (typeof catObj === 'object' && !Array.isArray(catObj) && catObj[key]) return key;
   }
+  const _ak = _sagPestAliasKey(key);   // T-PEST-ALIAS-01
+  if (_ak) return _ak;
   const norm = _peiStrip(key);
   if (norm.length < 3) return null;
   for (const catObj of Object.values(PESTICIDE_PROFILE || {})) {
