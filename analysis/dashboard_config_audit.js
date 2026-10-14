@@ -73,22 +73,24 @@ async function get(p) {
       if (!a || a.length < 200) break;
       page++;
     }
-    for (const d of dashes) {
-      let info;
-      try { info = await get(`/dashboard/${d.id}`); } catch (e) { console.log("ΤΑΜERR|" + d.label + "|" + e.message); continue; }
-      const wids = [...new Set((info.arrangement || []).map(a => a.widget_id))];
-      for (const wid of wids) {
-        let w;
-        try { w = await get(`/dashboard/${d.id}/widget/${wid}`); } catch (e) { continue; }
-        const url = String(w && w.display && w.display.url || "");
-        if (!/storage\/sagMain\/index\.html/.test(url)) continue;
-        n++;
-        const f = sagDashRules(w);
-        if (!f.length) { clean++; continue; }
-        for (const x of f) counts[x.level]++;
-        console.log("ΤΑΜ|" + d.label + " (" + d.id + ")|" + f.map(x => x.level + " " + x.code + ": " + x.msg).join(" ¦ "));
-      }
-    }
+    // Παράλληλη ανάγνωση (10 ταυτόχρονα): σειριακά ~800 αιτήματα ξεπερνούσαν το όριο των 2 λεπτών της analysis.
+    const pool = async (items, k, fn) => { let i = 0; await Promise.all(Array.from({ length: k }, async () => { while (i < items.length) { const it = items[i++]; await fn(it); } })); };
+    const jobs = [];
+    await pool(dashes, 10, async (d) => {
+      try { const info = await get(`/dashboard/${d.id}`); for (const wid of new Set((info.arrangement || []).map(a => a.widget_id))) jobs.push({ d, wid }); }
+      catch (e) { console.log("ΤΑΜERR|" + d.label + "|" + e.message); }
+    });
+    await pool(jobs, 10, async ({ d, wid }) => {
+      let w;
+      try { w = await get(`/dashboard/${d.id}/widget/${wid}`); } catch (e) { return; }
+      const url = String(w && w.display && w.display.url || "");
+      if (!/storage\/sagMain\/index\.html/.test(url)) return;
+      n++;
+      const f = sagDashRules(w);
+      if (!f.length) { clean++; return; }
+      for (const x of f) counts[x.level]++;
+      console.log("ΤΑΜ|" + d.label + " (" + d.id + ")|" + f.map(x => x.level + " " + x.code + ": " + x.msg).join(" ¦ "));
+    });
   } catch (e) { console.log("ΤΑΜERR|" + e.message); }
   console.log("ΤΑΜΣ|widget sagMain: " + n + " · χωρίς ευρήματα: " + clean + " · CRITICAL " + counts.CRITICAL + " · HIGH " + counts.HIGH + " · MEDIUM " + counts.MEDIUM + " · LOW " + counts.LOW);
   console.log("ΤΑΜ=== ΤΕΛΟΣ ===");
