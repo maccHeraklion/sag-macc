@@ -1,0 +1,8 @@
+{"dashboard":"6997398f48a699000ad793dc","label":"Τσαγκαράκης","widget":"6997398f48a699000ad793df","field_origin":"6997398e9eee12000ad6f3a8","read_at":"2026-10-14","data":[
+{"qty":500,"origin":"6997398e9eee12000ad6f3a8","timezone":"Europe/Athens","variables":["configuration","field_bundle","forecast","field_calendar","subscription_until","history_request","history_data"]},
+{"qty":500,"origin":"68dfb225f78a1d000a313160","timezone":"Europe/Athens","variables":["battery","humidity","temperature"]},
+{"qty":500,"origin":"67fe99036ae7fc000a89e0ff","timezone":"Europe/Athens","variables":["leaf_moisture","leaf_temperature"]},
+{"qty":500,"origin":"6797625d7188ba0009c5bfae","timezone":"Europe/Athens","variables":["soil_moisture1","soil_moisture2","soil_temperature1","soil_temperature2"]},
+{"qty":500,"origin":"6997398e9eee12000ad6f3a8","timezone":"Europe/Athens","variables":["configuration","spray_declaration","forecast","field_calendar","subscription_until","history_request","history_data"]},
+{"qty":500,"origin":"6997398e9eee12000ad6f3a8","timezone":"Europe/Athens","variables":["configuration","inspection_declaration","forecast","field_calendar","subscription_until","history_request","history_data"]}
+]}

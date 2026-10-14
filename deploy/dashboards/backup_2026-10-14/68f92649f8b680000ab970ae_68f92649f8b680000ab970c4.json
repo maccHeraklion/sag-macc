@@ -1,0 +1,5 @@
+{"dashboard":"68f92649f8b680000ab970ae","label":"TEMPLATE SAG_OpenField_Template","widget":"68f92649f8b680000ab970c4","field_origin":"686c0f54172d7e000b7191f3","read_at":"2026-10-14","data":[
+{"qty":500,"bucket":"68769148c134c9000ab65bd1","origin":"686c0f54172d7e000b7191f3","variables":["configuration","field_bundle","forecast"]},
+{"qty":500,"bucket":"68769148c134c9000ab65bd1","origin":"686c0f54172d7e000b7191f3","variables":["configuration","spray_declaration","forecast"]},
+{"qty":500,"bucket":"68769148c134c9000ab65bd1","origin":"686c0f54172d7e000b7191f3","variables":["configuration","inspection_declaration","forecast"]}
+]}

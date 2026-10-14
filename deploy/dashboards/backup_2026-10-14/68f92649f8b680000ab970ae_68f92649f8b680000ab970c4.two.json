@@ -1,0 +1,27 @@
+{
+ "dashboard": "68f92649f8b680000ab970ae",
+ "widget": "68f92649f8b680000ab970c4",
+ "label": "TEMPLATE SAG_OpenField_Template",
+ "data": [
+  {
+   "qty": 500,
+   "origin": "686c0f54172d7e000b7191f3",
+   "variables": [
+    "configuration",
+    "field_bundle",
+    "forecast"
+   ]
+  },
+  {
+   "qty": 500,
+   "origin": "686c0f54172d7e000b7191f3",
+   "variables": [
+    "field_calendar",
+    "spray_declaration",
+    "inspection_declaration",
+    "declaration_undo",
+    "action_log"
+   ]
+  }
+ ]
+}

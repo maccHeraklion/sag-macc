@@ -1,0 +1,14 @@
+{"dashboard":"6a425d5179b84e000b38a677","label":"ΚΑΜΠΑΝΗΣ","widget":"6a425d5179b84e000b38a67a","field_origin":"6a425d51ef0469000b69611c","read_at":"2026-10-14","data":[
+{"qty":500,"origin":"6a425d51ef0469000b69611c","variables":["configuration","field_bundle","forecast","field_calendar","history_request","history_data","field_bundle_2","soil_ece1","soil_ece2"]},
+{"qty":500,"origin":"6a2bb0b8ad3db0000c568348","variables":["soil_moisture1","soil_temperature1","conduct_soil1","soil_moisture2","soil_temperature2","conduct_soil2"],"timezone":"Europe/Athens"},
+{"qty":500,"origin":"6a2bb0d7b99739000d135b44","variables":["soil_moisture1","soil_temperature1","conduct_soil1","soil_moisture2","soil_temperature2","conduct_soil2"],"timezone":"Europe/Athens"},
+{"qty":500,"origin":"6a2bb332bf4706000c79e7fc","variables":["air_temperature","air_humidity","wind_speed_kmh","uv_index","light_intensity","rain_height_hourly","current_rain_height_daily","current_rain_height_weekly","current_rain_height_monthly","current_rain_height_yearly","barometric_pressure_hpa","dew_point","wind_direction_sensor","rain_gauge","rain_height"],"timezone":"Europe/Athens"},
+{"qty":500,"origin":"6a7c71cd0ad4a1000b4e78d5","variables":["soil_moisture1"],"timezone":"Europe/Athens"},
+{"qty":500,"origin":"6a7c71cd0ad4a1000b4e78d5","variables":["soil_temperature1"],"timezone":"Europe/Athens"},
+{"qty":500,"origin":"6a7c71cd0ad4a1000b4e78d5","variables":["conduct_soil1"],"timezone":"Europe/Athens"},
+{"qty":500,"origin":"6a7c71cd0ad4a1000b4e78d5","variables":["soil_moisture2"],"timezone":"Europe/Athens"},
+{"qty":500,"origin":"6a7c71cd0ad4a1000b4e78d5","variables":["soil_temperature2"],"timezone":"Europe/Athens"},
+{"qty":500,"origin":"6a7c71cd0ad4a1000b4e78d5","variables":["conduct_soil2"],"timezone":"Europe/Athens"},
+{"qty":500,"origin":"6a425d51ef0469000b69611c","variables":["configuration","spray_declaration","forecast","field_calendar","history_request","history_data","field_bundle_2"]},
+{"qty":500,"origin":"6a425d51ef0469000b69611c","variables":["configuration","inspection_declaration","forecast","field_calendar","history_request","history_data","field_bundle_2"]}
+]}

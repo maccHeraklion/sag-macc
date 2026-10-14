@@ -1,0 +1,5 @@
+{"dashboard":"6a38f8cb4009f5000c364ffd","label":"Κρασαγάκης","widget":"6a38f8cb4009f5000c365000","field_origin":"6a38f8ca7a1bff000c231b77","read_at":"2026-10-14","data":[
+{"qty":500,"bucket":"68769148c134c9000ab65bd1","origin":"6a38f8ca7a1bff000c231b77","variables":["configuration","field_bundle","forecast"]},
+{"qty":500,"bucket":"68769148c134c9000ab65bd1","origin":"6a38f8ca7a1bff000c231b77","variables":["configuration","spray_declaration","forecast"]},
+{"qty":500,"bucket":"68769148c134c9000ab65bd1","origin":"6a38f8ca7a1bff000c231b77","variables":["configuration","inspection_declaration","forecast"]}
+]}

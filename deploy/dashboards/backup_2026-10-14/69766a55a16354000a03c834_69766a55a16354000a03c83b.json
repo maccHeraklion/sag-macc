@@ -1,0 +1,7 @@
+{"dashboard":"69766a55a16354000a03c834","label":"Σκοτίνα Πάνω","widget":"69766a55a16354000a03c83b","field_origin":"68529ad70de23f000ab85f2a","read_at":"2026-10-14","data":[
+{"qty":10000,"origin":"68529ad70de23f000ab85f2a","timezone":"Europe/Athens","variables":["field_bundle","configuration","forecast","soil_ece","field_calendar","history_request","history_data"]},
+{"qty":10000,"origin":"67f3ec9f30b56a00090d20d6","timezone":"Europe/Athens","variables":["air_humidity","air_temperature","wind_chill","wind_direction_sensor","wind_speed_kmh","uv_index","rain_height","barometric_pressure_hpa","dew_point","light_intensity","rain_height_hourly","rain_height_daily","rain_height_weekly","rain_height_monthly","current_rain_height_daily","current_rain_height_weekly","current_rain_height_monthly","current_rain_height_yearly","rain_gauge"]},
+{"qty":10000,"origin":"67f3ec04a4ccc0000a1349bd","timezone":"Europe/Athens","variables":["conduct_soil","temp_soil","soil_moisture"]},
+{"qty":10000,"origin":"68529ad70de23f000ab85f2a","timezone":"Europe/Athens","variables":["spray_declaration","configuration","forecast"]},
+{"qty":10000,"origin":"68529ad70de23f000ab85f2a","timezone":"Europe/Athens","variables":["inspection_declaration","configuration","forecast"]}
+]}

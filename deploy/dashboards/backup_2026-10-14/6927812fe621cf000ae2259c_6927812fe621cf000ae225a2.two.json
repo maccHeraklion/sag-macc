@@ -1,0 +1,228 @@
+{
+ "dashboard": "6927812fe621cf000ae2259c",
+ "widget": "6927812fe621cf000ae225a2",
+ "label": "Α1",
+ "data": [
+  {
+   "qty": 10000,
+   "origin": "68769148c134c9000ab65bd1",
+   "variables": [
+    "plant_stress",
+    "bpi_message",
+    "configuration",
+    "forecast",
+    "field_bundle",
+    "history_request",
+    "history_data",
+    "soil_ece"
+   ]
+  },
+  {
+   "qty": 10000,
+   "origin": "681c8f825e2146000a16693b",
+   "variables": [
+    "air_humidity",
+    "air_temperature",
+    "wind_chill",
+    "wind_direction_sensor",
+    "wind_speed_kmh",
+    "dew_point",
+    "rain_height",
+    "barometric_pressure_hpa",
+    "uv_index",
+    "light_intensity",
+    "rain_height_hourly",
+    "rain_height_daily",
+    "rain_height_weekly",
+    "rain_height_monthly",
+    "current_rain_height_daily",
+    "current_rain_height_weekly",
+    "current_rain_height_monthly",
+    "current_rain_height_yearly",
+    "rain_gauge"
+   ]
+  },
+  {
+   "qty": 10000,
+   "origin": "681862052ad137000ab02c0e",
+   "variables": [
+    "batterypct",
+    "valve_1",
+    "valve_1_pulse",
+    "valve_2",
+    "valve_2_pulse",
+    "valve_1_command",
+    "valve_1_time_command",
+    "valve_2_time_command",
+    "valve_2_command"
+   ]
+  },
+  {
+   "qty": 10000,
+   "origin": "67ada906a04298000a0a1a4d",
+   "variables": [
+    "conduct_soil",
+    "soil_moisture",
+    "temp_soil"
+   ]
+  },
+  {
+   "qty": 10000,
+   "origin": "68186154c227a7000ad5ae99",
+   "variables": [
+    "leaf_moisture",
+    "leaf_temperature"
+   ]
+  },
+  {
+   "qty": 10000,
+   "origin": "6818620516339f00099d76a5",
+   "variables": [
+    "valve_1",
+    "valve_2",
+    "valve_1_pulse",
+    "valve_2_pulse",
+    "batterypct",
+    "valve_1_command",
+    "valve_2_command",
+    "valve_1_time_command",
+    "valve_2_time_command"
+   ]
+  },
+  {
+   "qty": 10000,
+   "origin": "681859264f9c59000a881ace",
+   "variables": [
+    "temperature",
+    "humidity"
+   ]
+  },
+  {
+   "qty": 500,
+   "origin": "681862052ad137000ab02c0e",
+   "timezone": "Europe/Athens",
+   "variables": [
+    "rules_enabled_mask",
+    "rule1",
+    "rule1_enable",
+    "rule1_set",
+    "rule2",
+    "rule2_enable",
+    "rule2_set",
+    "rule3",
+    "rule3_enable",
+    "rule3_set",
+    "rule4",
+    "rule4_enable",
+    "rule4_set",
+    "rule5",
+    "rule5_enable",
+    "rule5_set",
+    "rule6",
+    "rule6_enable",
+    "rule6_set",
+    "rule7",
+    "rule7_enable",
+    "rule7_set",
+    "rule8",
+    "rule8_enable",
+    "rule8_set",
+    "rule9",
+    "rule9_enable",
+    "rule9_set",
+    "rule10",
+    "rule10_enable",
+    "rule10_set",
+    "rule11",
+    "rule11_enable",
+    "rule11_set",
+    "rule12",
+    "rule12_enable",
+    "rule12_set",
+    "rule13",
+    "rule13_enable",
+    "rule13_set",
+    "rule14",
+    "rule14_enable",
+    "rule14_set",
+    "rule15",
+    "rule15_enable",
+    "rule15_set",
+    "rule16",
+    "rule16_enable",
+    "rule16_set",
+    "valve_1_command_feedback",
+    "valve_2_command_feedback"
+   ]
+  },
+  {
+   "qty": 500,
+   "origin": "6818620516339f00099d76a5",
+   "timezone": "Europe/Athens",
+   "variables": [
+    "rules_enabled_mask",
+    "rule1",
+    "rule1_enable",
+    "rule1_set",
+    "rule2",
+    "rule2_enable",
+    "rule2_set",
+    "rule3",
+    "rule3_enable",
+    "rule3_set",
+    "rule4",
+    "rule4_enable",
+    "rule4_set",
+    "rule5",
+    "rule5_enable",
+    "rule5_set",
+    "rule6",
+    "rule6_enable",
+    "rule6_set",
+    "rule7",
+    "rule7_enable",
+    "rule7_set",
+    "rule8",
+    "rule8_enable",
+    "rule8_set",
+    "rule9",
+    "rule9_enable",
+    "rule9_set",
+    "rule10",
+    "rule10_enable",
+    "rule10_set",
+    "rule11",
+    "rule11_enable",
+    "rule11_set",
+    "rule12",
+    "rule12_enable",
+    "rule12_set",
+    "rule13",
+    "rule13_enable",
+    "rule13_set",
+    "rule14",
+    "rule14_enable",
+    "rule14_set",
+    "rule15",
+    "rule15_enable",
+    "rule15_set",
+    "rule16",
+    "rule16_enable",
+    "rule16_set",
+    "valve_1_command_feedback",
+    "valve_2_command_feedback"
+   ]
+  },
+  {
+   "qty": 500,
+   "origin": "68769148c134c9000ab65bd1",
+   "variables": [
+    "field_calendar",
+    "spray_declaration",
+    "inspection_declaration",
+    "declaration_undo",
+    "action_log"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,66 @@
+{
+ "dashboard": "6a424cb4eb6593000ca19fe1",
+ "widget": "6a424cb4eb6593000ca19fe4",
+ "label": "Μιχάλης Χ",
+ "data": [
+  {
+   "qty": 500,
+   "origin": "6a424cb4eb6593000ca19fd0",
+   "variables": [
+    "configuration",
+    "field_bundle",
+    "forecast",
+    "history_request",
+    "history_data",
+    "soil_ece1",
+    "soil_ece2"
+   ]
+  },
+  {
+   "qty": 500,
+   "origin": "69f329a24d843200108202f7",
+   "timezone": "Europe/Athens",
+   "variables": [
+    "soil_moisture1",
+    "soil_temperature1",
+    "conduct_soil1",
+    "soil_moisture2",
+    "soil_temperature2",
+    "conduct_soil2"
+   ]
+  },
+  {
+   "qty": 500,
+   "origin": "684c342a13af9d000a77bef3",
+   "timezone": "Europe/Athens",
+   "variables": [
+    "air_temperature",
+    "air_humidity",
+    "wind_speed_kmh",
+    "uv_index",
+    "light_intensity",
+    "rain_height_hourly",
+    "current_rain_height_daily",
+    "current_rain_height_weekly",
+    "current_rain_height_monthly",
+    "current_rain_height_yearly",
+    "barometric_pressure_hpa",
+    "dew_point",
+    "wind_direction_sensor",
+    "rain_gauge",
+    "rain_height"
+   ]
+  },
+  {
+   "qty": 500,
+   "origin": "6a424cb4eb6593000ca19fd0",
+   "variables": [
+    "field_calendar",
+    "spray_declaration",
+    "inspection_declaration",
+    "declaration_undo",
+    "action_log"
+   ]
+  }
+ ]
+}

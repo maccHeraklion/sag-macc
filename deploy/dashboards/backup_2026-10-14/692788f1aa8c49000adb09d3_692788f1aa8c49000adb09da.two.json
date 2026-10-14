@@ -1,0 +1,64 @@
+{
+ "dashboard": "692788f1aa8c49000adb09d3",
+ "widget": "692788f1aa8c49000adb09da",
+ "label": "Β1",
+ "data": [
+  {
+   "qty": 10000,
+   "origin": "68765f4122fc6f000adec108",
+   "timezone": "Europe/Athens",
+   "variables": [
+    "plant_stress",
+    "bpi_message",
+    "configuration",
+    "forecast",
+    "field_bundle",
+    "history_request",
+    "history_data",
+    "soil_ece"
+   ]
+  },
+  {
+   "qty": 10000,
+   "bucket": "67ada90670d187000a621235",
+   "origin": "67ada90670d187000a621235",
+   "timezone": "Europe/Athens",
+   "variables": [
+    "conduct_soil",
+    "soil_moisture",
+    "temp_soil"
+   ]
+  },
+  {
+   "qty": 10000,
+   "bucket": "681861540a7b23000a5283f1",
+   "origin": "681861540a7b23000a5283f1",
+   "timezone": "Europe/Athens",
+   "variables": [
+    "leaf_moisture",
+    "leaf_temperature"
+   ]
+  },
+  {
+   "qty": 10000,
+   "bucket": "68185926c227a7000ad4be75",
+   "origin": "68185926c227a7000ad4be75",
+   "timezone": "Europe/Athens",
+   "variables": [
+    "temperature",
+    "humidity"
+   ]
+  },
+  {
+   "qty": 500,
+   "origin": "68765f4122fc6f000adec108",
+   "variables": [
+    "field_calendar",
+    "spray_declaration",
+    "inspection_declaration",
+    "declaration_undo",
+    "action_log"
+   ]
+  }
+ ]
+}

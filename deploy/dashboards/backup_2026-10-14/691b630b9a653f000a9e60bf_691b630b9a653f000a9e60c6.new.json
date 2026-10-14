@@ -1,0 +1,6 @@
+{"dashboard":"691b630b9a653f000a9e60bf","widget":"691b630b9a653f000a9e60c6","data":[
+{"qty":10000,"origin":"68feaa80b92ceb000af181d2","variables":["plant_stress","bpi_message","configuration","forecast","field_bundle","history_request","history_data","soil_ece1","soil_ece2"]},
+{"qty":10000,"origin":"684c4e48cc1cd8000a10ddb9","variables":["air_humidity","air_temperature","wind_chill","wind_direction_sensor","wind_speed_kmh","rain_height","uv_index","light_intensity","dew_point","barometric_pressure_hpa","rain_height_hourly","rain_height_daily","current_rain_height_daily","current_rain_height_weekly","current_rain_height_monthly","current_rain_height_yearly","rain_height_monthly","rain_gauge"]},
+{"qty":10000,"origin":"6891d4d15e263c000a682e75","variables":["battery","conduct_soil1","conduct_soil2","soil_moisture1","soil_moisture2","soil_temperature1","soil_temperature2"]},
+{"qty":500,"origin":"68feaa80b92ceb000af181d2","variables":["field_calendar","spray_declaration","inspection_declaration","declaration_undo","action_log"]}
+]}

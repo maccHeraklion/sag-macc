@@ -1,0 +1,9 @@
+{"dashboard":"69b282280e42140009a2bbdd","widget":"69b282280e42140009a2bbe0","data":[
+{"qty":500,"origin":"69b28228439c11000a7fb3aa","timezone":"Europe/Athens","variables":["configuration","field_bundle","forecast","subscription_until","history_request","history_data","soil_ece1","soil_ece2","field_bundle_2"]},
+{"qty":500,"origin":"684c42522cbc3d000a4faae9","timezone":"Europe/Athens","variables":["batterypct","hw_version","rule1","rule10","rule10_enable","rule10_set","rule11","rule11_enable","rule11_set","rule12","rule12_enable","rule12_set","rule13","rule13_enable","rule13_set","rule14","rule14_enable","rule14_set","rule15","rule15_enable","rule15_set","rule16","rule16_enable","rule16_set","rule1_enable","rule1_set","rule2","rule2_enable","rule2_set","rule3","rule3_enable","rule3_set","rule4","rule4_enable","rule4_set","rule5","rule5_enable","rule5_set","rule6","rule6_enable","rule6_set","rule7","rule7_enable","rule7_set","rule8","rule8_enable","rule8_set","rule9","rule9_enable","rule9_set","valve_1","valve_1_command","valve_1_time_command","valve_2","valve_2_command","valve_2_time_command"]},
+{"qty":500,"origin":"68d6691e15f048000abad6e8","timezone":"Europe/Athens","variables":["conduct_soil2","soil_moisture2","soil_temperature2","conduct_soil1","soil_moisture1","soil_temperature1"]},
+{"qty":500,"origin":"684c0e90df4dd2000a09fb43","timezone":"Europe/Athens","variables":["dew_point","humidity","temperature"]},
+{"qty":500,"origin":"679791f44c1a960009574564","timezone":"Europe/Athens","variables":["leaf_moisture","leaf_temperature"]},
+{"qty":500,"origin":"684c42522cbc3d000a4faae9","timezone":"Europe/Athens","variables":["rules_enabled_mask","valve_1_command_feedback","valve_2_command_feedback"]},
+{"qty":500,"origin":"69b28228439c11000a7fb3aa","variables":["field_calendar","spray_declaration","inspection_declaration","declaration_undo","action_log"]}
+]}

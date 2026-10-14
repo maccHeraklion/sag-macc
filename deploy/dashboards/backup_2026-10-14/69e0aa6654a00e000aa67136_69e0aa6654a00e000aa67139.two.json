@@ -1,0 +1,63 @@
+{
+ "dashboard": "69e0aa6654a00e000aa67136",
+ "widget": "69e0aa6654a00e000aa67139",
+ "label": "ΓΡΙΝΙΑΡΑΚΗΣ ΓΙΑΝΝΗΣ",
+ "data": [
+  {
+   "qty": 500,
+   "origin": "69e0aa6554a00e000aa67124",
+   "variables": [
+    "configuration",
+    "field_bundle",
+    "forecast",
+    "subscription_until",
+    "history_request",
+    "history_data",
+    "soil_ece1",
+    "soil_ece2"
+   ]
+  },
+  {
+   "qty": 500,
+   "origin": "69779797803f37000a21342e",
+   "timezone": "Europe/Athens",
+   "variables": [
+    "soil_moisture1",
+    "soil_temperature1",
+    "conduct_soil1",
+    "soil_moisture2",
+    "soil_temperature2",
+    "conduct_soil2",
+    "fertility_index2",
+    "fertility_index1"
+   ]
+  },
+  {
+   "qty": 500,
+   "origin": "69f1c7b866cc6a00090edc9e",
+   "variables": [
+    "humidity",
+    "temperature"
+   ]
+  },
+  {
+   "qty": 500,
+   "origin": "69f85a0fb313c5000901d994",
+   "variables": [
+    "leaf_temperature",
+    "leaf_moisture"
+   ]
+  },
+  {
+   "qty": 500,
+   "origin": "69e0aa6554a00e000aa67124",
+   "variables": [
+    "field_calendar",
+    "spray_declaration",
+    "inspection_declaration",
+    "declaration_undo",
+    "action_log"
+   ]
+  }
+ ]
+}

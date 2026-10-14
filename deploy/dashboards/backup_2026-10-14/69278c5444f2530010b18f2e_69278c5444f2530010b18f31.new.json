@@ -1,0 +1,7 @@
+{"dashboard":"69278c5444f2530010b18f2e","widget":"69278c5444f2530010b18f31","data":[
+{"qty":10000,"origin":"68767409c4b1ae000be14078","timezone":"Europe/Athens","variables":["plant_stress","bpi_message","configuration","forecast","field_bundle","history_request","history_data","soil_ece"]},
+{"qty":10000,"bucket":"67ada906394a4d000a52b416","origin":"67ada906394a4d000a52b416","timezone":"Europe/Athens","variables":["conduct_soil","soil_moisture","temp_soil"]},
+{"qty":10000,"bucket":"683efef2651b78000a111ec4","origin":"683efef2651b78000a111ec4","timezone":"Europe/Athens","variables":["leaf_moisture","leaf_temperature"]},
+{"qty":10000,"bucket":"681859265e2146000a8f48cd","origin":"681859265e2146000a8f48cd","timezone":"Europe/Athens","variables":["temperature","humidity"]},
+{"qty":500,"origin":"68767409c4b1ae000be14078","variables":["field_calendar","spray_declaration","inspection_declaration","declaration_undo","action_log"]}
+]}

@@ -1,0 +1,87 @@
+{
+ "dashboard": "69278837e450f3000a3f4ccf",
+ "widget": "69278837e450f3000a3f4cd2",
+ "label": "Β3",
+ "data": [
+  {
+   "qty": 500,
+   "origin": "6876940f515b60000a851baa",
+   "timezone": "Europe/Athens",
+   "variables": [
+    "plant_stress",
+    "bpi_message",
+    "configuration",
+    "forecast",
+    "field_bundle",
+    "history_request",
+    "history_data",
+    "soil_ece"
+   ]
+  },
+  {
+   "qty": 500,
+   "origin": "681c8f9c4f9c59000a0e3368",
+   "timezone": "Europe/Athens",
+   "variables": [
+    "air_humidity",
+    "air_temperature",
+    "wind_chill",
+    "wind_direction_sensor",
+    "wind_speed_kmh",
+    "dew_point",
+    "rain_height",
+    "barometric_pressure_hpa",
+    "uv_index",
+    "light_intensity",
+    "current_rain_height_daily",
+    "current_rain_height_weekly",
+    "current_rain_height_monthly",
+    "current_rain_height_yearly",
+    "rain_height_hourly",
+    "rain_height_daily",
+    "rain_height_weekly",
+    "rain_height_monthly",
+    "rain_gauge"
+   ]
+  },
+  {
+   "qty": 500,
+   "origin": "67ada906576be9000ab1e281",
+   "timezone": "Europe/Athens",
+   "variables": [
+    "conduct_soil",
+    "soil_moisture",
+    "temp_soil"
+   ]
+  },
+  {
+   "qty": 500,
+   "origin": "6818615438b932000a309624",
+   "timezone": "Europe/Athens",
+   "variables": [
+    "leaf_moisture",
+    "leaf_temperature"
+   ]
+  },
+  {
+   "qty": 500,
+   "origin": "6818592638b932000a2fb11b",
+   "timezone": "Europe/Athens",
+   "variables": [
+    "temperature",
+    "humidity"
+   ]
+  },
+  {
+   "qty": 500,
+   "origin": "6876940f515b60000a851baa",
+   "variables": [
+    "field_calendar",
+    "spray_declaration",
+    "inspection_declaration",
+    "declaration_undo",
+    "action_log"
+   ]
+  }
+ ]
+}
