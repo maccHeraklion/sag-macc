@@ -111,6 +111,7 @@ const DEVICE_TYPE_VARIABLES = {
   lse01_shallow: ["soil_moisture1", "soil_temperature1", "conduct_soil1"],
   lse01_deep: ["soil_moisture2", "soil_temperature2", "conduct_soil2"],
   lms01_ls: ["leaf_temperature", "leaf_moisture"],
+  aglwpp01: ["pressure_adc_mv", "battery"],
   // Default to v4 (rules); myAnalysis overrides this from env UC511_HW_GENERATION before wiring.
   uc511: uc511Vars("v4"),
 };
