@@ -49,6 +49,32 @@ async function myAnalysis(context, scope) {
     return console.log("createClient aborted — the client name is empty.");
   }
 
+  // ── T-USER-DUP-01 (15/10/2026): stop BEFORE creating anything if this email is already taken ──
+  // A second submit of the same form used to create a second client device + a second access
+  // policy and then fail on the run user ("δημιουργήθηκε μερικώς"). The email is the client's
+  // identity (login + access tag), so one email = one client.
+  const TAGO_API = "https://api.us-e1.tago.io";
+  try {
+    const dup = await account.devices.list({
+      page: 1, amount: 5, fields: ["id", "name"],
+      filter: { tags: [{ key: "isClient", value: "yes" }, { key: "email", value: email }] },
+    });
+    if (Array.isArray(dup) && dup.length) {
+      await sendValidation("danger", `Υπάρχει ήδη πελάτης «${String(dup[0].name).trim()}» με email ${email} (μαζί με τον χρήστη του). Δεν δημιουργήθηκε δεύτερος. Για επιπλέον χρήστη χρησιμοποίησε τη «Δημιουργία Χρήστη».`);
+      return console.log(`createClient aborted — client with email ${email} already exists: ${dup.map((d) => d.id).join(", ")}`);
+    }
+    const ru = await (await fetch(`${TAGO_API}/run/users?page=1&amount=20&filter[email]=${encodeURIComponent(email)}`, {
+      headers: { Authorization: account_token },
+    })).json();
+    const ruHit = ru && Array.isArray(ru.result) && ru.result.find((u) => String(u.email || "").trim().toLowerCase() === email);
+    if (ruHit) {
+      await sendValidation("danger", `Το email ${email} χρησιμοποιείται ήδη από τον χρήστη «${String(ruHit.name || email).trim()}». Χρησιμοποίησε διαφορετικό email για τον νέο πελάτη.`);
+      return console.log(`createClient aborted — run user with email ${email} already exists: ${ruHit.id}`);
+    }
+  } catch (e) {
+    console.log(`[dup-check] lookup failed, continuing: ${e && e.message}`);
+  }
+
   const Custom_HTTPS_Connector = "5f5a8f3351d4db99c40dece5";
   const HTTPS_Network = "5bbd0d144051a50034cd19fb";
 
@@ -58,7 +84,8 @@ async function myAnalysis(context, scope) {
     network: HTTPS_Network,
     type: "mutable"
   });
-  console.log('clientDevice: ', clientDevice)
+  // Log the id only — the create result also carries the device token, which must not land in the console.
+  console.log('Client device created:', clientDevice.device_id)
   const deviceInfo =  await account.devices.info(clientDevice.device_id);
     
     deviceInfo.tags.push({
@@ -129,30 +156,39 @@ async function myAnalysis(context, scope) {
     let policyErr = "";
     const TEMPLATE_AM_ID = "6a425a68ae7393000c3c0edc";
     const TEMPLATE_EMAIL = "chris-kamp@hotmail.com";
-    const TAGO_API = "https://api.us-e1.tago.io";
     try {
-      const tmplRes = await fetch(`${TAGO_API}/am/${TEMPLATE_AM_ID}`, {
+      // A policy for this email may already exist (e.g. an earlier, interrupted run) — reuse it, never duplicate.
+      const amList = await (await fetch(`${TAGO_API}/am?page=1&amount=20&orderBy=name,asc&filter[name]=${encodeURIComponent(email)}`, {
         headers: { Authorization: account_token },
-      });
-      const tmplBody = await tmplRes.json();
-      const template = tmplBody?.result ?? tmplBody;
-      if (!template || typeof template !== "object" || (!template.permissions && !template.targets)) {
-        throw new Error("Template policy not readable: " + JSON.stringify(tmplBody));
+      })).json();
+      const amHit = amList && Array.isArray(amList.result) && amList.result.find((p) => String(p.name || "").trim().toLowerCase() === email);
+      if (amHit) {
+        console.log(`Access policy already exists for ${email}: ${amHit.id} — not creating another.`);
+        policyOk = true;
+      } else {
+        const tmplRes = await fetch(`${TAGO_API}/am/${TEMPLATE_AM_ID}`, {
+          headers: { Authorization: account_token },
+        });
+        const tmplBody = await tmplRes.json();
+        const template = tmplBody?.result ?? tmplBody;
+        if (!template || typeof template !== "object" || (!template.permissions && !template.targets)) {
+          throw new Error("Template policy not readable: " + JSON.stringify(tmplBody));
+        }
+        // Deep clone + replace the template email with this client's email.
+        const cloned = JSON.parse(JSON.stringify(template).split(TEMPLATE_EMAIL).join(email));
+        // Drop server-managed fields so POST creates a brand-new policy.
+        for (const f of ["id", "am_id", "created_at", "updated_at", "profile"]) delete cloned[f];
+        cloned.name = email;
+        cloned.active = true;
+        const amRes = await fetch(`${TAGO_API}/am`, {
+          method: "POST",
+          headers: { Authorization: account_token, "Content-Type": "application/json" },
+          body: JSON.stringify(cloned),
+        });
+        const amBody = await amRes.json();
+        console.log("Access policy created:", amBody);
+        policyOk = !!(amBody && (amBody.status === true || amBody?.result?.am_id));
       }
-      // Deep clone + replace the template email with this client's email.
-      const cloned = JSON.parse(JSON.stringify(template).split(TEMPLATE_EMAIL).join(email));
-      // Drop server-managed fields so POST creates a brand-new policy.
-      for (const f of ["id", "am_id", "created_at", "updated_at", "profile"]) delete cloned[f];
-      cloned.name = email;
-      cloned.active = true;
-      const amRes = await fetch(`${TAGO_API}/am`, {
-        method: "POST",
-        headers: { Authorization: account_token, "Content-Type": "application/json" },
-        body: JSON.stringify(cloned),
-      });
-      const amBody = await amRes.json();
-      console.log("Access policy created:", amBody);
-      policyOk = !!(amBody && (amBody.status === true || amBody?.result?.am_id));
     } catch (err) {
       policyErr = (err && err.message) ? err.message : String(err);
       console.error("Access policy creation failed:", err);
