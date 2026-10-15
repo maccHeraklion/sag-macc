@@ -22,6 +22,9 @@
     accLoaded: false,
     accLoading: false,
     altitudeParam: null,
+    // Σύνολο έτους από την ανάλυση βροχής (current_rain_height_yearly)
+    yearRec: null,
+    yearLoading: false,
   };
 
   const labels = {
@@ -96,12 +99,18 @@
     { key: "wind_speed_kmh", aliases: ["wind_speed_kmh"], label: "Ταχύτητα Ανέμου", accent: "accent-wind", digits: 2, foot: "Μέση ταχύτητα" },
     { key: "wind_direction_sensor", aliases: ["wind_direction_sensor", "wind_direction", "wind_dir"], label: "Κατεύθυνση Ανέμου", accent: "accent-neutral", digits: 0, foot: "Γωνιακή διεύθυνση" },
     { key: "dew_point", aliases: ["dew_point"], label: "Σημείο δρόσου", accent: "accent-neutral", digits: 1, foot: "Έλεγχος διαθεσιμότητας" },
-    // Βροχή: υπολογίζεται εδώ, ζωντανά, από τον μετρητή του σταθμού (rain_height_acc) — βλ. ΥΠΟΛΟΓΙΣΜΟΣ ΒΡΟΧΗΣ.
-    { key: "rain_day", rain: "day", label: "Βροχόπτωση Ημέρας", accent: "accent-rain", digits: 2, unit: "mm" },
-    { key: "rain_week", rain: "week", label: "Βροχόπτωση Εβδομάδας", accent: "accent-rainm", digits: 2, unit: "mm" },
-    { key: "rain_month", rain: "month", label: "Βροχόπτωση Μήνα", accent: "accent-rainm", digits: 2, unit: "mm" },
-    { key: "rain_rate", rain: "hour", label: "Ένταση Βροχής", accent: "accent-rain", digits: 1, unit: "mm/ώρα" },
+    // Βροχή (T-CRETAWX-RAIN-02, ίδια 5 στοιχεία με το widget SAG · T-RAIN-CUST-01):
+    //  ημέρα / μήνας: ζωντανά από τον μετρητή του σταθμού (rain_height_acc) — βλ. ΥΠΟΛΟΓΙΣΜΟΣ ΒΡΟΧΗΣ·
+    //  έτος: το σύνολο της ανάλυσης βροχής v34 (current_rain_height_yearly), όπως στο SAG·
+    //  ραγδαιότητα / 5λεπτο: η ένταση του οργάνου (rain_gauge = mm/h × 5/60) της τελευταίας αποστολής, όπως στο SAG.
+    { key: "rain_day", rain: "day", label: "Βροχή Ημέρας", accent: "accent-rain", digits: 2, unit: "mm" },
+    { key: "rain_month", rain: "month", label: "Βροχή Μήνα", accent: "accent-rainm", digits: 2, unit: "mm" },
+    { key: "rain_year", rain: "year", label: "Βροχή Έτους", accent: "accent-rainm", digits: 1, unit: "mm" },
+    { key: "rain_rate", rain: "rate", label: "Ραγδαιότητα Βροχής", accent: "accent-rain", digits: 1, unit: "mm/ώρα" },
+    { key: "rain_5min", rain: "5min", label: "Βροχή τελευταίου 5λέπτου", accent: "accent-rain", digits: 2, unit: "mm" },
   ];
+  const RAIN_GAUGE_FRESH_MIN = 30;             // ραγδαιότητα / 5λεπτο: παλαιότερη αποστολή → «—» (όπως στο SAG)
+  const RAIN_YEAR_FRESH_H = 4;                 // σύνολο έτους: παλαιότερο → «—» (όπως στο SAG)
   const defByKey = (key) => metricDefinitions.find((def) => def.key === key);
 
   const weatherKeys = new Set([
@@ -641,6 +650,8 @@
   function rainMetric(unit) {
     const now = Date.now();
     const def = metricDefinitions.find((d) => d.rain === unit);
+    if (unit === "rate" || unit === "5min") return rainGaugeMetric(unit, def, now);
+    if (unit === "year") return rainYearMetric(def, now);
     if (!state.accLoaded && !state.acc.length) return { value: null, time: null, unit: def.unit, foot: state.accLoading ? "Φόρτωση μετρητή βροχής…" : "Αναμονή δεδομένων μετρητή" };
     const S = rainPeriodStart(unit, now);
     const res = rainWindow(state.acc, S, now, unit === "hour" ? RAIN_LEAD_HOUR_MIN : RAIN_LEAD_MIN, now);
@@ -660,6 +671,55 @@
       value: res.mm, time, unit: def.unit, prefix: res.partial ? "≥ " : "",
       foot: res.partial ? `${since} · λείπουν μετρήσεις στην αρχή` : `${since} · μετρητής σταθμού`,
     };
+  }
+
+  // Ραγδαιότητα / 5λεπτο από την τελευταία αποστολή του οργάνου (rain_gauge· στους σταθμούς fw 1.13 rain_height).
+  function rainGaugeMetric(unit, def, now) {
+    const pick = ["rain_gauge", "rain_height"].map((n) => (state.latestByDevice[state.selectedDevice] || {})[n] || state.latest[n])
+      .filter((r) => r && Number.isFinite(Number(r.value)) && Number.isFinite(new Date(r.time).getTime()))
+      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())[0];
+    if (!pick) return { value: null, time: null, unit: def.unit, foot: "Δεν υπάρχει μέτρηση έντασης" };
+    if ((now - new Date(pick.time).getTime()) / 60000 > RAIN_GAUGE_FRESH_MIN) {
+      return { value: null, time: pick.time, unit: def.unit, foot: `Ο σταθμός δεν στέλνει από ${formatTime(pick.time)}` };
+    }
+    const v = Number(pick.value);
+    return unit === "rate"
+      ? { value: v * 12, time: pick.time, unit: def.unit, foot: "Ένταση του οργάνου στην τελευταία αποστολή" }
+      : { value: v, time: pick.time, unit: def.unit, foot: "Τελευταία αποστολή του σταθμού (5 λεπτά)" };
+  }
+
+  // Σύνολο έτους: η τελευταία εγγραφή current_rain_height_yearly της ανάλυσης βροχής (ίδια τιμή με το SAG).
+  function rainYearMetric(def, now) {
+    const rec = state.yearRec;
+    if (!rec) return { value: null, time: null, unit: def.unit, foot: state.yearLoading ? "Φόρτωση συνόλου έτους…" : "Αναμονή συνόλου έτους" };
+    if ((now - new Date(rec.time).getTime()) / 3600000 > RAIN_YEAR_FRESH_H) {
+      return { value: null, time: rec.time, unit: def.unit, foot: `Χωρίς πρόσφατη ενημέρωση από ${formatTime(rec.time)}` };
+    }
+    const m = rec.metadata || {};
+    const since = m.partial && m.since ? ` · δεδομένα από ${String(m.since).split("-").reverse().join("/")}` : "";
+    return {
+      value: Number(rec.value), time: rec.time, unit: def.unit, prefix: m.partial ? "≥ " : m.status === "estimate" ? "≈ " : "",
+      foot: `Από 1/1 · ενημερώνεται κάθε ώρα${since}`,
+    };
+  }
+
+  async function fetchYearly(deviceId) {
+    const token = state.deviceToken || state.apiToken;
+    if (!token) return;
+    state.yearLoading = true;
+    try {
+      const url = API_HOST + "/data?variable[]=current_rain_height_yearly&qty=1&ordination=descending";
+      const res = await fetch(url, { headers: { "Authorization": token } });
+      if (!res.ok) { console.warn("[SAG rain] year status", res.status, await res.text()); return; }
+      const json = await res.json();
+      const rec = (json.result || []).map(normalizeRecord).filter(Boolean).find((r) => !r.device || r.device === deviceId);
+      if (rec) state.yearRec = rec;
+    } catch (err) {
+      console.warn("[SAG rain] year fetch error", err);
+    } finally {
+      state.yearLoading = false;
+      render();
+    }
   }
 
   function rainSeries(range) {
@@ -902,6 +962,7 @@
       state.historyLoaded = false;
     });
     if (!state.accLoaded && !state.accLoading) fetchCounter(deviceId);
+    if (!state.yearLoading) fetchYearly(deviceId);
   }
 
   // Ιστορικό του μετρητή βροχής: από την αρχή του μήνα / της εβδομάδας / των 30 ημερών (ό,τι είναι παλαιότερο),

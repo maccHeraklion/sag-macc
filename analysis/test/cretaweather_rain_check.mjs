@@ -89,6 +89,11 @@ function run(code) {
   ok(/p\.t !== arr\[i - 1\]\.t/.test(addAcc), "R9 addAccPoints αφαιρεί διπλότυπα ίδιου χρόνου");
   // R10 η σελίδα δεν αθροίζει πια το rain_gauge πουθενά
   ok(!/AGG_SUM_VARS = \[[^\]]*rain_gauge/.test(code) && !/derivedRainRecord/.test(code), "R10 κανένα άθροισμα rain_gauge στη σελίδα");
+  // R11 ίδια 5 στοιχεία με το SAG (T-CRETAWX-RAIN-02): ημέρα, μήνας, έτος, ραγδαιότητα, 5λεπτο — χωρίς εβδομάδα
+  const defs = code.slice(code.indexOf("const metricDefinitions"), code.indexOf("const defByKey"));
+  ok(['rain: "day"', 'rain: "month"', 'rain: "year"', 'rain: "rate"', 'rain: "5min"'].every((x) => defs.includes(x)) && !/rain: "week"/.test(defs), "R11α οι 5 κάρτες βροχής, χωρίς εβδομάδα");
+  ok(/value: v \* 12/.test(code) && /RAIN_GAUGE_FRESH_MIN = 30;/.test(code), "R11β ραγδαιότητα = rain_gauge × 12, «—» μετά από 30΄");
+  ok(/variable\[\]=current_rain_height_yearly/.test(code), "R11γ έτος από current_rain_height_yearly (όπως στο SAG)");
   return f;
 }
 
@@ -103,6 +108,8 @@ const mutants = [
   ["εβδομάδα από Κυριακή", (s) => s.replace("((local.getUTCDay() + 6) % 7)", "local.getUTCDay()")],
   ["μπάρα χωρίς τιμές = 0", (s) => s.replace("value: has ? Math.round((cum[b] - cum[Math.max(a, 0)]) * 1000) / 1000 : null", "value: Math.round((cum[b] - cum[Math.max(a, 0)]) * 1000) / 1000")],
   ["επιστροφή στο rain_gauge", (s) => s.replace("const AGG_SUM_VARS = [];", 'const AGG_SUM_VARS = ["rain_gauge"];')],
+  ["ραγδαιότητα χωρίς ×12", (s) => s.replace("value: v * 12", "value: v")],
+  ["επιστροφή εβδομάδας", (s) => s.replace('{ key: "rain_year", rain: "year"', '{ key: "rain_week", rain: "week", label: "Βροχόπτωση Εβδομάδας", accent: "accent-rainm", digits: 2, unit: "mm" },\n    { key: "rain_year", rain: "year"')],
 ];
 let killed = 0;
 for (const [name, mut] of mutants) {
