@@ -16,6 +16,8 @@
     { "file": "analysis/removeSensorFromField.js",            "id": "6a4f635fc1b8d1000dbf1d38", "name": "removeSensorFromField",            "runtime": "node-legacy", "role": "detach a sensor" },
     { "file": "analysis/createClient.js",                     "id": "68380ee0c4cfb6000a7728d7", "name": "createClient",                     "runtime": "node-legacy", "role": "create client" },
     { "file": "analysis/createUserForClient.js",              "id": "6a4e09150b39b5000b1e9b0b", "name": "createUserForClient",              "runtime": "node-legacy", "role": "create RUN user + per-field access" },
+    { "file": "analysis/addDevice.js",                        "id": "683ef4c4872ac3000a8d7c10", "name": "addDevice",                        "runtime": "node-legacy", "role": "Καταχώρηση Συσκευής form: validate EUI + create sensor device (imported from live 16/10/2026)" },
+    { "file": "analysis/addGateway.js",                       "id": "6877561c8c9608000a4e62f9", "name": "addGateway",                       "runtime": "node-legacy", "role": "Πύλη Καταχώρησης form: validate EUI + create gateway device (imported from live 16/10/2026)" },
     { "file": "analysis/subscriptionControl.js",              "id": "681e2290d3c9ea000a86f998", "name": "subscriptionControl",              "runtime": "node-legacy", "role": "subscription gating" },
     { "file": "analysis/migrateControllerRuleVars.js",        "id": "6a6b1483e4b1e5000bd58cce", "name": "migrateControllerRuleVars",        "runtime": "node-legacy", "role": "ONE-OFF migration" },
     { "file": "analysis/migrateFieldBundle2.js",              "id": "6a4b706b0b39b5000b93024b", "name": "migrateFieldBundle2",              "runtime": "node-legacy", "role": "ONE-OFF migration" },
