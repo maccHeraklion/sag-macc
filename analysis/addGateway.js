@@ -3,6 +3,8 @@ var import_sdk = require("@tago-io/sdk");
 const { Analysis, Account, Resources } = require("@tago-io/sdk");
 
 
+const MILESIGHT_OUIS = ['24e124', '1cc316', 'c0ba1f'];
+
 async function validateEUIFromManufacturer(manufacturer, eui, dashboard_device) {
 
   // Each vendor has its own initial bits baesed on their OUI. Reference: https://standards-oui.ieee.org/oui/oui.txt //
@@ -36,8 +38,10 @@ async function validateEUIFromManufacturer(manufacturer, eui, dashboard_device) 
       }
       break;
     case "milesight":
-      if (!eui.startsWith('24e124')){
-        const message = "Δόθηκε λάθος κωδικός EUI: ".concat(eui).concat(" για συσκευή milesight! Το EUI των συσκευών milesight ξεκινάει με 24e124!");
+      // T-GW-OUI-01 (16/10/2026): Milesight owns three IEEE OUIs — 24:E1:24, 1C:C3:16 and C0:BA:1F (MA-L 2025,
+      // newer SG50 gateways, e.g. C0BA1FFFFE054786). Accepting only 24e124 rejected real Milesight hardware.
+      if (!MILESIGHT_OUIS.some((p) => eui.startsWith(p))){
+        const message = "Δόθηκε λάθος κωδικός EUI: ".concat(eui).concat(" για συσκευή milesight! Το EUI των συσκευών milesight ξεκινάει με ").concat(MILESIGHT_OUIS.join(" ή ")).concat("!");
         console.log('Error in validateEUIFromManufacturer with message: ', message);
         await dashboard_device.sendData({ variable: "validation", value: message, metadata: { color: "red" } });
         return {
