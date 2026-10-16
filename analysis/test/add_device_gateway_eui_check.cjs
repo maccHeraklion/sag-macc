@@ -1,10 +1,10 @@
-// T-GW-OUI-01 check: node analysis/test/add_device_gateway_eui_check.cjs analysis/addGateway.js milesight sg50 C0BA1FFFFE054786
+// T-GW-OUI-01 / T-DEV-FAIL-01 check: node analysis/test/add_device_gateway_eui_check.cjs analysis/addGateway.js milesight sg50 C0BA1FFFFE054786 ["error text"]
 const Module = require('module'); const path = require('path');
-const [file, manufacturer, type, eui] = process.argv.slice(2);
+const [file, manufacturer, type, eui, failWith] = process.argv.slice(2); // failWith: make devices.create throw this text
 const created = [];
 const sdk = {
   Analysis: class { constructor(fn) { this.fn = fn; } },
-  Account: class { constructor() { this.devices = { create: async (d) => { created.push(d.name + ' (serial ' + d.serie_number + ')'); return {}; } }; } },
+  Account: class { constructor() { this.devices = { create: async (d) => { if (failWith) throw failWith; created.push(d.name + ' (serial ' + d.serie_number + ')'); return {}; } }; } },
   Resources: {},
   Device: class { constructor() {} async sendData(d) { console.log(`  → ΦΟΡΜΑ [${d.metadata.color}] ${d.value}`); } },
   Utils: { getTokenByName: async () => 'T' },

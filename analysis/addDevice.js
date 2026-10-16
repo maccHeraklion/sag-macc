@@ -246,9 +246,12 @@ async function myAnalysis(context, scope) {
     console.error(error);
     if (error == 'Serial number already in use') {
       message = "Ήδη καταχωρημένη συσκευή στο σύστημα με κωδικό EUI: ".concat(eui).concat("!");
-      await dashboard_device.sendData({ variable: "validation", value: message, metadata: { color: "red" } });
-      return;
+    } else {
+      // T-DEV-FAIL-01 (16/10/2026): any other failure used to fall through to the green "Επιτυχή καταχώρηση".
+      message = "Αποτυχία καταχώρησης συσκευής ".concat(devicename).concat(": ").concat((error && error.message) || String(error)).concat(". Η συσκευή ΔΕΝ δημιουργήθηκε.");
     }
+    await dashboard_device.sendData({ variable: "validation", value: message, metadata: { color: "red" } });
+    return;
   }
 
 
