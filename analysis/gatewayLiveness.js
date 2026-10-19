@@ -90,8 +90,27 @@ async function loadState() {
     const p = (r || [])[0];
     const ids = String((p && p.metadata && p.metadata.ids) || "").split(",").filter(Boolean);
     const cursor = Number((p && p.metadata && p.metadata.cursor) || 0) || 0;
-    return { ids, cursor };
-  } catch (e) { return { ids: [], cursor: 0 }; }
+    /* T-GWID-02 (19/10): ΜΝΗΜΗ ΘΕΣΗΣ ανά gateway. Από τις 19/10 οι parsers SE02/SE0X/SE01 στέλνουν lrrid ΧΩΡΙΣ
+       lrrlat/lrrlon. Αν σε μια εκτέλεση το gateway το κατονομάζουν μόνο τέτοιοι αισθητήρες, η θέση χανόταν και η
+       πινέζα έφευγε (Πόμπια 16:23). Κρατάμε την τελευταία γνωστή θέση κάθε κωδικού LRR. */
+    const pos = {};
+    const raw = p && p.metadata && p.metadata.pos;
+    if (raw && typeof raw === "object") for (const [k, v] of Object.entries(raw)) {
+      if (v && Number.isFinite(Number(v.lat)) && Number.isFinite(Number(v.lon))) pos[k] = { lat: Number(v.lat), lon: Number(v.lon) };
+    }
+    // Πρώτη φορά (κενή μνήμη θέσης): σπορά από τις ήδη γραμμένες κάρτες gateway_row.
+    if (!Object.keys(pos).length) {
+      try {
+        const rows = await api(`/device/${OVERSEER}/data?variables[]=gateway_row&qty=300`);
+        for (const r of rows || []) {
+          const l = r && r.metadata && r.metadata.location;
+          if (r && r.value && !pos[r.value] && l && Number.isFinite(Number(l.lat)) && Number.isFinite(Number(l.lng)))
+            pos[String(r.value)] = { lat: Number(l.lat), lon: Number(l.lng) };
+        }
+      } catch (e) { /* χωρίς σπορά — θα γεμίσει σταδιακά */ }
+    }
+    return { ids, cursor, pos };
+  } catch (e) { return { ids: [], cursor: 0, pos: {} }; }
 }
 
 (async () => {
@@ -175,6 +194,13 @@ async function loadState() {
     }
   }));
 
+  // 3β · T-GWID-02: θέση από τη μνήμη όταν αυτή η εκτέλεση δεν τη βρήκε· η μνήμη ενημερώνεται με κάθε νέα θέση.
+  const pos = st.pos || {};
+  for (const [id, g] of gw.entries()) {
+    if (g.lat != null && g.lon != null) pos[id] = { lat: Number(g.lat), lon: Number(g.lon) };
+    else if (pos[id]) { g.lat = pos[id].lat; g.lon = pos[id].lon; g.posMem = true; }
+  }
+
   // 4 · Οι κάρτες. ΜΙΑ ανά gateway.
   const now = Date.now();
   const out = [];
@@ -236,7 +262,7 @@ async function loadState() {
 
   // 5 · Η μνήμη για την επόμενη φορά.
   out.push({ variable: "gateway_scan_state", value: stillKnown.length,
-    metadata: { ids: stillKnown.join(","), cursor,
+    metadata: { ids: stillKnown.join(","), cursor, pos,
       text: "Μνήμη σάρωσης: ποιες συσκευές στέλνουν ταυτότητα gateway. Μειώνει τις"
         + " αναγνώσεις από ~220 σε ~" + (stillKnown.length + DISCOVER_PER_RUN) + " ανά εκτέλεση." } });
 
