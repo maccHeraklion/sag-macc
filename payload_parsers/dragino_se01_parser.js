@@ -83,6 +83,14 @@ if (payload_raw) {
 }
  
 // Add ignorable variables in this array.
+// T-GWID-03: η θέση του gateway (lrrlat/lrrlon) μπαίνει ΠΑΝΩ στην εγγραφή lrrid — καμία νέα εγγραφή.
+const _sagGwId = payload.find(x => x.variable === 'lrrid');
+const _sagGwLat = payload.find(x => x.variable === 'lrrlat');
+const _sagGwLon = payload.find(x => x.variable === 'lrrlon');
+if (_sagGwId && _sagGwLat && _sagGwLon) {
+  const la = Number(_sagGwLat.value), lo = Number(_sagGwLon.value);
+  if (Number.isFinite(la) && Number.isFinite(lo) && !(la === 0 && lo === 0)) _sagGwId.location = { lat: la, lng: lo };
+}
 const ignore_vars = ['customerdxprofileid','customerrealmid','rf_chain', 'channel', 'modulation', 'app_id', 'dev_id', 'gtw_trusted', 'port','classb','delayed','encodingtype','fcntdown','fcntup','gwrecvtime','recvtime','application_id', 'device_id', 'downlink_key', 'lora_bandwidth','lora_spreading_factor', 'coding_rate', 'frequency', 'timestamp','time','fport','fcnt','payload','gateway_eui','rssi','snr','frm_payload','lora_coding_rate','deveui','fcntdn','adrbit','mtype','mic_hex','lrcid','lrrrssi','lrrsnr','lrresp','spfact','subband','late','devlrrcnt','BaseStationData','modelcfg','DriverCfg','txpower','nbtrans','downlinkurl','margin','batterytime','batterylevel','lostuplinksas','lrrlat','lrrlon','maxwaitasresps','payloadencryption'];
  
 // Remove unwanted variables.

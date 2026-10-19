@@ -12,6 +12,14 @@
    (join, status, ack) ΕΣΚΑΖΕ τον parser και ΧΑΝΟΤΑΝ ολοκληρο.
    Το περιεχομενο της λιστας ειναι απαραλλακτο. ───────────────────────── */
 // === List of unwanted variables from Actility ===
+// T-GWID-03: η θέση του gateway (lrrlat/lrrlon) μπαίνει ΠΑΝΩ στην εγγραφή lrrid — καμία νέα εγγραφή.
+const _sagGwId = payload.find(x => x.variable === 'lrrid');
+const _sagGwLat = payload.find(x => x.variable === 'lrrlat');
+const _sagGwLon = payload.find(x => x.variable === 'lrrlon');
+if (_sagGwId && _sagGwLat && _sagGwLon) {
+  const la = Number(_sagGwLat.value), lo = Number(_sagGwLon.value);
+  if (Number.isFinite(la) && Number.isFinite(lo) && !(la === 0 && lo === 0)) _sagGwId.location = { lat: la, lng: lo };
+}
 const ignore_vars = ['customerdxprofileid','customerrealmid',
   'fport', 'fcnt', 'time', 'payload', 'deveui',
   'frequency', 'fcntup', 'fcntdn', 'adrbit', 'mtype',
