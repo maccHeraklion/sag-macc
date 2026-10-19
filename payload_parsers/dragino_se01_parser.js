@@ -83,7 +83,7 @@ if (payload_raw) {
 }
  
 // Add ignorable variables in this array.
-const ignore_vars = ['customerdxprofileid','customerrealmid','rf_chain', 'channel', 'modulation', 'app_id', 'dev_id', 'gtw_trusted', 'port','classb','delayed','encodingtype','fcntdown','fcntup','gwrecvtime','recvtime','application_id', 'device_id', 'downlink_key', 'lora_bandwidth','lora_spreading_factor', 'coding_rate', 'frequency', 'timestamp','time','fport','fcnt','payload','gateway_eui','rssi','snr','frm_payload','lora_coding_rate','deveui','fcntdn','adrbit','mtype','mic_hex','lrcid','lrrrssi','lrrsnr','lrresp','spfact','subband','lrrid','late','devlrrcnt','BaseStationData','modelcfg','DriverCfg','txpower','nbtrans','downlinkurl','margin','batterytime','batterylevel','lostuplinksas','lrrlat','lrrlon','maxwaitasresps','payloadencryption'];
+const ignore_vars = ['customerdxprofileid','customerrealmid','rf_chain', 'channel', 'modulation', 'app_id', 'dev_id', 'gtw_trusted', 'port','classb','delayed','encodingtype','fcntdown','fcntup','gwrecvtime','recvtime','application_id', 'device_id', 'downlink_key', 'lora_bandwidth','lora_spreading_factor', 'coding_rate', 'frequency', 'timestamp','time','fport','fcnt','payload','gateway_eui','rssi','snr','frm_payload','lora_coding_rate','deveui','fcntdn','adrbit','mtype','mic_hex','lrcid','lrrrssi','lrrsnr','lrresp','spfact','subband','late','devlrrcnt','BaseStationData','modelcfg','DriverCfg','txpower','nbtrans','downlinkurl','margin','batterytime','batterylevel','lostuplinksas','lrrlat','lrrlon','maxwaitasresps','payloadencryption'];
  
 // Remove unwanted variables.
 payload = payload.filter(x => !ignore_vars.includes(x.variable));

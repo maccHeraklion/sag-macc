@@ -16,7 +16,7 @@ const ignore_vars = ['customerdxprofileid','customerrealmid',
   'fport', 'fcnt', 'time', 'payload', 'deveui',
   'frequency', 'fcntup', 'fcntdn', 'adrbit', 'mtype',
   'mic_hex', 'lrcid', 'lrrrssi', 'lrrsnr', 'lrresp',
-  'spfact', 'subband', 'lrrid', 'late', 'lrrlat', 'lrrlon',
+  'spfact', 'subband', 'late', 'lrrlat', 'lrrlon',
   'devlrrcnt', 'BaseStationData', 'modelcfg', 'DriverCfg',
   'txpower', 'nbtrans', 'downlinkurl', 'lostuplinksas'
 ];
