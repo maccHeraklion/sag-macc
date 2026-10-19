@@ -8,7 +8,7 @@
 // DRY = true: μόνο έλεγχοι, ΤΙΠΟΤΑ δεν γράφεται.
 const crypto = require("crypto");
 const vm = require("vm");
-const DRY = true;
+const DRY = false;   // πρόβα 17:43 UTC πέρασε και στους δύο· εντολή Μιχάλη «ναι προχώρα και στους SE0X και SE01»
 const TOKEN = process.env.T_ANALYSIS_TOKEN;
 const API = "https://api.us-e1.tago.io";
 const TARGETS = [
