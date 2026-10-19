@@ -47,17 +47,23 @@ function run(code, o) {
         dragging: { enable() { cap.enabled = true; } },
         setView() { return m; },
         invalidateSize() {},
+        /* T-GWMAP-02: επιλογή υποβάθρου + «ο χρήστης έπιασε τον χάρτη» */
+        getContainer() { return { addEventListener() {} }; },
+        on() { return m; },
       };
       return m;
     },
-    tileLayer() { return { addTo() {} }; },
-    layerGroup() { return { addTo() { return {}; } }; },
+    tileLayer() { const t = { addTo() { cap.tiles = (cap.tiles || 0) + 1; return t; } }; return t; },
+    layerGroup(arr) { return { addTo() { return {}; }, _n: (arr || []).length }; },
+    control: { layers(base) { cap.layers = Object.keys(base || {}); return { addTo() {} }; } },
   };
   const win = { L };
   if (o.touch) win.ontouchstart = null;
   if (!o.noMatchMedia) {
     win.matchMedia = (q) => {
       if (o.mmThrows) throw new Error("boom");
+      /* any-pointer: fine = υπάρχει ΚΑΠΟΥ ποντίκι (laptop με οθόνη αφής), ακόμη κι αν η κύρια είναι αφή */
+      if (q.indexOf("any-pointer") >= 0) return { matches: o.pointer === "fine" || o.anyFine === true };
       return { matches: q.indexOf("coarse") >= 0 ? o.pointer === "coarse" : o.pointer === "fine" };
     };
   }
@@ -87,6 +93,13 @@ function scenarios(code) {
   r = run(code, { pointer: "fine", touch: true, maxTouchPoints: 10 });
   want("laptop ΑΦΗΣ+ΠΟΝΤΙΚΙ → σέρνεται", r.cap.opts.dragging, true);
   want("laptop ΑΦΗΣ+ΠΟΝΤΙΚΙ → χωρίς πέπλο", r.veil.hidden, true);
+
+  /* T-GWMAP-02 — η αναφορά 19/10: υπολογιστής όπου η ΚΥΡΙΑ συσκευή δηλώνεται αφή (coarse) αλλά υπάρχει ποντίκι.
+     Εκεί το πέπλο έβγαινε — και δεν έφευγε ποτέ (display:flex ακύρωνε το hidden). */
+  r = run(code, { pointer: "coarse", anyFine: true, touch: true, maxTouchPoints: 10 });
+  want("αφή κύρια + ποντίκι κάπου → σέρνεται", r.cap.opts.dragging, true);
+  want("αφή κύρια + ποντίκι κάπου → χωρίς πέπλο", r.veil.hidden, true);
+  want("υπόβαθρα: Χάρτης + Δορυφόρος", JSON.stringify(r.cap.layers), JSON.stringify(["Χάρτης", "Δορυφόρος"]));
 
   r = run(code, { pointer: "coarse", touch: true, maxTouchPoints: 5 });
   want("κινητό → κλειδωμένος αρχικά", r.cap.opts.dragging, false);
@@ -163,6 +176,9 @@ const MUTATIONS = [
   ["το πέπλο δεν κρύβεται", /_veil\.hidden = true;/, ""],
   ["ο τροχός ζουμάρει μόνος", /scrollWheelZoom: false/, "scrollWheelZoom: true"],
   ["η εφεδρεία αγνοεί την αφή", /\|\| \(navigator && navigator\.maxTouchPoints > 0\)/, "|| false"],
+  /* T-GWMAP-02 */
+  ["πέπλο και με ποντίκι (η αναφορά 19/10)", /\n\s+&& window\.matchMedia\('\(any-pointer: fine\)'\)\.matches !== true/, ""],
+  ["χωρίς δορυφόρο", /, 'Δορυφόρος': _sat/, ""],
 ];
 
 console.log("\n--- ΜΕΤΑΛΛΑΞΕΙΣ (κάθε μία ΠΡΕΠΕΙ να σκοτωθεί) ---");

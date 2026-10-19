@@ -54,6 +54,32 @@ function ageTxt(h) {
   return "πριν " + Math.round(h / 24) + "ημ";
 }
 
+/* T-GWMAP-02 (19/10) · ΖΩΝΤΑΝΟΣ ΚΑΤΑΛΟΓΟΣ ΤΟΥ ΣΤΟΛΟΥ.
+   Ο χάρτης κρατούσε ΠΑΓΩΜΕΝΟ αντίγραφο της 19/9 (παράμετρος widget `fleet_roster`): 33 gateways ενώ υπάρχουν 35,
+   χωρίς τις αλλαγές θέσης. Η θέση ζει στην ετικέτα `coordinates` («πλάτος, μήκος») και το όνομα τοποθεσίας στην
+   `comment` κάθε συσκευής με `is_gateway=yes`. Η TagoIO δέχεται ΔΙΠΛΑ κλειδιά ετικετών (Αγχίαλος 19/9: δύο
+   `coordinates`, η μία στο Ιόνιο) — γι' αυτό κρατάμε μόνο τιμές μέσα στην Ελλάδα και, αν μένουν δύο διαφορετικές,
+   σημαδεύουμε ΑΣΥΜΦΩΝΙΑ αντί να διαλέξουμε σιωπηλά. Μία ανάγνωση ανά εκτέλεση. */
+const GR_BOX = { latMin: 33.5, latMax: 42.5, lngMin: 19, lngMax: 30.5 };
+function rosterEntry(d) {
+  const tags = Array.isArray(d && d.tags) ? d.tags : [];
+  const val = (k) => { const t = tags.find((x) => x && x.key === k); return t ? String(t.value || "").trim() : ""; };
+  const seen = [];
+  for (const t of tags) {
+    if (!t || t.key !== "coordinates") continue;
+    const m = String(t.value || "").match(/^\s*(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)\s*$/);
+    if (!m) continue;
+    const lat = Number(m[1]), lng = Number(m[2]);
+    if (!(lat >= GR_BOX.latMin && lat <= GR_BOX.latMax && lng >= GR_BOX.lngMin && lng <= GR_BOX.lngMax)) continue;
+    if (!seen.some((p) => Math.abs(p.lat - lat) < 1e-5 && Math.abs(p.lng - lng) < 1e-5)) seen.push({ lat, lng });
+  }
+  const e = { id: d.id, name: val("comment") || d.name, dev: d.name };
+  if (seen.length) { e.lat = Number(seen[0].lat.toFixed(6)); e.lng = Number(seen[0].lng.toFixed(6)); }
+  if (seen.length > 1) e.conflict = 1;
+  if (val("deployedGateway") !== "yes") e.storage = true;
+  return e;
+}
+
 /* Η ΜΝΗΜΗ: ποιες συσκευές ξέρουμε ότι στέλνουν lrrid, και πού σταμάτησε η ανακάλυψη.
    Ζει σε ΜΙΑ μεταβλητή της συσκευής εποπτείας. Αν λείπει ή είναι χαλασμένη, δεν ρίχνει
    την εκτέλεση — απλώς κάνουμε πλήρη σάρωση και την ξαναχτίζουμε. */
@@ -83,6 +109,17 @@ async function loadState() {
   }
   const live = devs.filter((d) => d.last_input);
   const byId = new Map(live.map((d) => [d.id, d]));
+
+  // 1β · T-GWMAP-02: ο ζωντανός κατάλογος των gateways (1 ανάγνωση). Αποτυχία ΔΕΝ ρίχνει την εκτέλεση.
+  let roster = [];
+  try {
+    const g = await api(`/device?amount=200&page=1&fields[]=id&fields[]=name&fields[]=tags`
+      + `&filter[tags][0][key]=is_gateway&filter[tags][0][value]=yes`);
+    reads++;
+    // Διπλή ασφάλεια: κι αν το φίλτρο αγνοηθεί, κρατάμε ΜΟΝΟ όσα έχουν is_gateway=yes.
+    roster = (g || []).filter((d) => (d.tags || []).some((t) => t && t.key === "is_gateway" && t.value === "yes"))
+      .map(rosterEntry);
+  } catch (e) { console.log("ΚΑΤΑΛΟΓΟΣ|σφάλμα " + ((e && e.message) || e)); }
 
   // 2 · Ποιες ρωτάμε: τις ΓΝΩΣΤΕΣ + ένα κυλιόμενο παράθυρο από τις υπόλοιπες.
   const st = await loadState(); reads++;
@@ -186,6 +223,16 @@ async function loadState() {
         + ` εξυπηρετούν τους υπόλοιπους ΕΙΝΑΙ ΑΟΡΑΤΑ εδώ — ΤΕΧΝΙΚΑ ΑΓΝΩΣΤΑ,`
         + ` ΟΧΙ χαλασμένα. Οι συσκευές-gateway της TagoIO ΔΕΝ στέλνουν δικά τους δεδομένα.` } });
 
+  // 4β · T-GWMAP-02: ο κατάλογος — ΜΟΝΟ αν διαβάστηκε (ένας άδειος κατάλογος θα έσβηνε τον χάρτη).
+  if (roster.length) {
+    const withPos = roster.filter((r) => r.lat != null).length;
+    const conflicts = roster.filter((r) => r.conflict).length;
+    out.push({ variable: "gateway_roster", value: roster.length,
+      metadata: { list: roster, with_position: withPos, conflicts,
+        text: `Κατάλογος στόλου: ${roster.length} gateways, ${withPos} με θέση από την ετικέτα coordinates`
+          + (conflicts ? `, ${conflicts} με ΑΣΥΜΦΩΝΙΑ θέσης (διπλή ετικέτα)` : "") + "." } });
+  }
+
   // 5 · Η μνήμη για την επόμενη φορά.
   out.push({ variable: "gateway_scan_state", value: stillKnown.length,
     metadata: { ids: stillKnown.join(","), cursor,
@@ -202,6 +249,8 @@ async function loadState() {
   /* T-GWHONEST-01: και η κονσόλα. Όποιος τη διαβάζει για να καταλάβει τι
      συμβαίνει διάβαζε την ίδια αναλήθεια που βγάλαμε από τον πίνακα.
      Μπαίνει ΚΑΙ η κάλυψη, ώστε το «gateways=N» να μην διαβάζεται ξεκομμένο. */
+  console.log(`ΚΑΤΑΛΟΓΟΣ|gateways=${roster.length}|με θέση=${roster.filter((r) => r.lat != null).length}`
+    + `|ασυμφωνίες=${roster.filter((r) => r.conflict).length}`);
   console.log(`ΣΥΝΟΨΗ|gateways ορατά=${total}`
     + `|με απόδειξη ζωής=${alive}|αραιός μάρτυρας=${suspect}`
     + `|χωρίς πρόσφατο μάρτυρα=${dead}`

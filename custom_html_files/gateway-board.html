@@ -40,6 +40,8 @@ h1{font-size:20px; margin:0 0 4px}
 #mapveil{position:absolute; inset:0; z-index:400; border-radius:11px;
   display:flex; align-items:flex-end; justify-content:center; padding-bottom:14px;
   background:transparent; cursor:pointer; -webkit-tap-highlight-color:transparent}
+/* T-GWMAP-02: χωρίς αυτό, το display:flex ακυρώνει το hidden και το πέπλο μένει πάνω στον χάρτη για πάντα. */
+#mapveil[hidden]{display:none}
 #mapveil span{background:rgba(17,24,39,.82); color:#fff; font-size:12.5px;
   padding:7px 13px; border-radius:999px; box-shadow:0 2px 10px rgba(0,0,0,.25)}
 .dot{display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:7px; vertical-align:-1px; flex:0 0 auto}
@@ -133,7 +135,7 @@ var $ = function (id) { return document.getElementById(id); };
 var ALIVE_GREEN_H = 1;
 var ALIVE_YELLOW_H = 6;
 var NOT_LIFE_SIGNS = ['location', 'gateway_config', 'gateway_row',
-  'gateway_summary', 'gateway_scan_state'];
+  'gateway_summary', 'gateway_scan_state', 'gateway_roster'];
 
 /* T-GWBOARD-ACTILITY-01 · Το χρώμα της ανάλυσης gatewayLiveness σε χρώμα της
    σελίδας. Η ανάλυση λέει «orange», η σελίδα ξέρει «yellow» — ίδιο πράγμα. */
@@ -229,7 +231,7 @@ function originOf(row) {
    Κάθε εγγραφή που ΔΕΝ έστειλε ποτέ δεδομένα εμφανίζεται ως ΑΔΗΛΩΤΗ αντί να
    εξαφανίζεται. Συσκευή που στέλνει αλλά ΔΕΝ είναι στον κατάλογο εμφανίζεται
    κανονικά — ο κατάλογος προσθέτει, δεν φιλτράρει. */
-function applyRoster(list) {
+function applyRoster(list, live) {
   if (!Array.isArray(list)) return 0;
   var n = 0;
   for (var i = 0; i < list.length; i++) {
@@ -255,13 +257,15 @@ function applyRoster(list) {
     } else {
       state.gw[id].roster = true;
       state.gw[id].storage = !!r.storage;
-      if (!state.gw[id].name && r.name) state.gw[id].name = String(r.name);
+      /* T-GWMAP-02: ο ΖΩΝΤΑΝΟΣ κατάλογος (gateway_roster) αντικαθιστά όνομα και θέση του παγωμένου. */
+      if (r.name && (live || !state.gw[id].name)) state.gw[id].name = String(r.name);
       /* Η θέση του δικτύου ΥΠΕΡΙΣΧΥΕΙ: στην Αγχίαλο η ετικέτα είχε λάθος
          μήκος (20,78 αντί 22,78) και το δίκτυο το διέψευσε. */
-      if (rHas && state.gw[id].lat == null) {
+      if (rHas && (state.gw[id].lat == null || (live && state.gw[id].fromRoster))) {
         state.gw[id].lat = rLat; state.gw[id].lng = rLng; state.gw[id].fromRoster = true;
       }
     }
+    if (live) { state.gw[id].posConflict = !!r.conflict; state.gw[id].liveRoster = true; }
     n++;
   }
   state.rosterSize = n;
@@ -310,10 +314,19 @@ function ingest(rows) {
     }
 
     if (r.variable === 'gateway_row' || r.variable === 'gateway_summary'
-        || r.variable === 'gateway_scan_state') {
+        || r.variable === 'gateway_scan_state' || r.variable === 'gateway_roster') {
       /* Η συσκευή που μεταφέρει τις γραμμές ΔΕΝ είναι gateway. Αν δεν το
          σημαδέψουμε, θα εμφανιζόταν ως ένα επιπλέον «άγνωστο» κουτί. */
       e.container = true;
+    }
+
+    /* T-GWMAP-02: ο ζωντανός κατάλογος του στόλου — μόνο η ΝΕΟΤΕΡΗ εγγραφή μετράει. */
+    if (r.variable === 'gateway_roster' && r.metadata && Array.isArray(r.metadata.list)) {
+      if (!state.rosterTime || Date.parse(r.time) >= Date.parse(state.rosterTime)) {
+        state.rosterTime = r.time;
+        applyRoster(r.metadata.list, true);
+      }
+      continue;
     }
 
     if (r.variable === 'gateway_row' && r.value) {
@@ -395,7 +408,9 @@ function initMap() {
   var _isTouch = false;
   try {
     if (window.matchMedia) {
-      _isTouch = window.matchMedia('(pointer: coarse)').matches === true;
+      /* T-GWMAP-02: και laptop με οθόνη αφής μπορεί να δηλώνει coarse. Πέπλο μόνο αν ΔΕΝ υπάρχει ποντίκι. */
+      _isTouch = window.matchMedia('(pointer: coarse)').matches === true
+        && window.matchMedia('(any-pointer: fine)').matches !== true;
     } else {
       /* Πολύ παλιός φυλλομετρητής: πέφτω στην παλιά ένδειξη. */
       _isTouch = ('ontouchstart' in window)
@@ -427,9 +442,28 @@ function initMap() {
       _veil.addEventListener('pointerup', _unlock);
     }
   }
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  /* T-GWMAP-02: δύο υπόβαθρα — Χάρτης (OpenStreetMap) και Δορυφόρος (Esri World Imagery, με ονόματα). */
+  var _osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19, attribution: '© OpenStreetMap'
-  }).addTo(state.map);
+  });
+  var _sat = L.layerGroup([
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19, maxNativeZoom: 18, attribution: 'Εικόνες © Esri, Maxar, Earthstar Geographics'
+    }),
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19, maxNativeZoom: 18
+    })
+  ]);
+  _osm.addTo(state.map);
+  L.control.layers({ 'Χάρτης': _osm, 'Δορυφόρος': _sat }, null, { position: 'topright', collapsed: false }).addTo(state.map);
+  /* T-GWMAP-02: μόλις ο χρήστης πιάσει τον χάρτη, οι ενημερώσεις δεν τον ξαναμετακινούν. */
+  try {
+    var _mc = state.map.getContainer();
+    var _mark = function () { state.userMoved = true; };
+    _mc.addEventListener('mousedown', _mark);
+    _mc.addEventListener('touchstart', _mark, { passive: true });
+    state.map.on('dragstart', _mark);
+  } catch (_eM) {}
   state.layer = L.layerGroup().addTo(state.map);
   setTimeout(function () { try { state.map.invalidateSize(); } catch (_e) {} }, 250);
 }
@@ -486,7 +520,9 @@ function drawMap(list) {
     state.markers[g.id] = m;
     pts.push([g.lat, g.lng]);
   }
-  if (pts.length > 0) {
+  /* T-GWMAP-02: πριν, ΚΑΘΕ ενημέρωση ξανάκανε fitBounds και ο χάρτης πηδούσε πίσω. */
+  if (pts.length > 0 && !state.userMoved && pts.length !== state.fitN) {
+    state.fitN = pts.length;
     try { state.map.fitBounds(pts, { padding: [40, 40], maxZoom: 13 }); } catch (_e) {}
   }
 }
@@ -494,6 +530,7 @@ function drawMap(list) {
 function focusGateway(id) {
   var g = state.gw[id];
   if (!g || g.lat == null || !state.map) return;
+  state.userMoved = true;
   try {
     state.map.setView([g.lat, g.lng], 14);
     var m = state.markers[id];
@@ -579,7 +616,8 @@ function render() {
         + (g.storage ? ' (αποθήκη)' : '') + '</span>'
       : (g.lat == null)
       ? '<span style="color:var(--red)">χωρίς θέση — δεν εμφανίζεται στον χάρτη</span>'
-      : '<span class="mono">' + g.lat.toFixed(5) + ', ' + g.lng.toFixed(5) + '</span>';
+      : '<span class="mono">' + g.lat.toFixed(5) + ', ' + g.lng.toFixed(5) + '</span>'
+        + (g.posConflict ? ' · <span style="color:var(--red)">ασυμφωνία θέσης στις ετικέτες της συσκευής</span>' : '');
     li.innerHTML =
       '<div class="gwname"><span class="dot ' + s.cls + '"></span>'
       + esc(g.name || '(χωρίς όνομα)') + '</div>'
