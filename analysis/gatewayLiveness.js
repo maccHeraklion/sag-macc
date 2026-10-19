@@ -2,6 +2,7 @@
 // SAG · gatewayLiveness — ΖΩΝΤΑΝΙΑ ΤΩΝ GATEWAYS ΑΠΟ ΤΟΥΣ ΙΔΙΟΥΣ ΤΟΥΣ ΑΙΣΘΗΤΗΡΕΣ
 // T-GWLIVE-01 (19/9/2026) · εντολή Μιχάλη: «προχώρα με την ανάλυση για τα gateways»
 // + T-GWMAP-02 (19/10/2026): ζωντανός κατάλογος `gateway_roster` (repo commit d9c3af1)
+// + T-GWID-02 (19/10/2026): μνήμη θέσης ανά gateway · T-GWID-03: θέση από το `location` της εγγραφής lrrid
 // ════════════════════════════════════════════════════════════════════════════
 //
 // ΤΟ ΠΡΟΒΛΗΜΑ (μετρημένο 19/9): ο πίνακας «Στόλος Gateways» δείχνει 21 «με δεδομένα»,
@@ -79,6 +80,24 @@ function rosterEntry(d) {
   if (seen.length > 1) e.conflict = 1;
   if (val("deployedGateway") !== "yes") e.storage = true;
   return e;
+}
+
+/* T-GWID-03 (19/10): ΘΕΣΗ ΑΠΟ ΤΗΝ ΕΓΓΡΑΦΗ lrrid. Οι parsers SE02/SE0X/SE01 βάζουν τη θέση του gateway ως `location`
+   ΠΑΝΩ στην εγγραφή lrrid (0 επιπλέον εγγραφές) αντί για χωριστές lrrlat/lrrlon. Η TagoIO τη γυρνά είτε {lat,lng}
+   είτε GeoJSON Point· η σειρά του πίνακα κρίνεται από το κουτί της Ελλάδας (πλάτος 33,5–42,5 δεν τέμνει μήκος 19–30,5). */
+function locOf(row) {
+  const l = row && row.location;
+  if (!l) return null;
+  const inGR = (lat, lng) => lat >= GR_BOX.latMin && lat <= GR_BOX.latMax && lng >= GR_BOX.lngMin && lng <= GR_BOX.lngMax;
+  if (l.lat != null && l.lng != null) {
+    const la = Number(l.lat), lo = Number(l.lng);
+    return inGR(la, lo) ? { lat: la, lng: lo } : null;
+  }
+  const c = Array.isArray(l.coordinates) ? l.coordinates.map(Number) : null;
+  if (!c || c.length < 2) return null;
+  if (inGR(c[1], c[0])) return { lat: c[1], lng: c[0] };
+  if (inGR(c[0], c[1])) return { lat: c[0], lng: c[1] };
+  return null;
 }
 
 /* Η ΜΝΗΜΗ: ποιες συσκευές ξέρουμε ότι στέλνουν lrrid, και πού σταμάτησε η ανακάλυψη.
@@ -189,6 +208,7 @@ async function loadState() {
       }
       const la = pick("lrrlat"), lo = pick("lrrlon");
       if (la && lo && la.value != null && lo.value != null) { g.lat = la.value; g.lon = lo.value; }
+      else { const lp = locOf(idRow); if (lp) { g.lat = lp.lat; g.lon = lp.lng; } }
       if (g.devs.length < 5) g.devs.push(d.name);
       gw.set(key, g);
     }

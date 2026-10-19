@@ -45,6 +45,18 @@ async function scenarios(src) {
   r = await runOnce(src, { scanState: { metadata: { ids: "s1", cursor: 0, pos: { "10006847": { lat: 1, lon: 1 } } } }, sensorRows: rowsPos });
   want("Γ1 η θέση του δικτύου υπερισχύει", card(r.posted).location, { lat: 35.1, lng: 25.2 });
   want("Γ2 η μνήμη ενημερώνεται", mem(r.posted)["10006847"], { lat: 35.1, lon: 25.2 });
+  // Δ (T-GWID-03): θέση ΜΟΝΟ ως location της εγγραφής lrrid — GeoJSON [μήκος, πλάτος]
+  r = await runOnce(src, { scanState: { metadata: { ids: "s1", cursor: 0 } }, oldRows: [], sensorRows: [{ variable: "lrrid", value: "10006847", time: now, location: { type: "Point", coordinates: [24.871716, 34.994354] } }] });
+  want("Δ1 θέση από location GeoJSON", card(r.posted).location, { lat: 34.994354, lng: 24.871716 });
+  want("Δ2 μπαίνει στη μνήμη", mem(r.posted)["10006847"], { lat: 34.994354, lon: 24.871716 });
+  // Ε: ίδια, αλλά ο πίνακας σε σειρά [πλάτος, μήκος] και ως {lat,lng}
+  r = await runOnce(src, { scanState: { metadata: { ids: "s1", cursor: 0 } }, oldRows: [], sensorRows: [{ variable: "lrrid", value: "10006847", time: now, location: { type: "Point", coordinates: [34.994354, 24.871716] } }] });
+  want("Ε1 GeoJSON σε σειρά πλάτος-μήκος", card(r.posted).location, { lat: 34.994354, lng: 24.871716 });
+  r = await runOnce(src, { scanState: { metadata: { ids: "s1", cursor: 0 } }, oldRows: [], sensorRows: [{ variable: "lrrid", value: "10006847", time: now, location: { lat: 34.994354, lng: 24.871716 } }] });
+  want("Ε2 location ως {lat,lng}", card(r.posted).location, { lat: 34.994354, lng: 24.871716 });
+  // Ζ: θέση εκτός Ελλάδας (σκουπίδι) → καμία θέση
+  r = await runOnce(src, { scanState: { metadata: { ids: "s1", cursor: 0 } }, oldRows: [], sensorRows: [{ variable: "lrrid", value: "10006847", time: now, location: { lat: 0, lng: 0 } }] });
+  want("Ζ1 θέση εκτός Ελλάδας απορρίπτεται", card(r.posted).location, undefined);
   return bad;
 }
 const base = await scenarios(SRC);
@@ -53,6 +65,9 @@ const MUT = [
   ["χωρίς χρήση μνήμης", "else if (pos[id]) { g.lat = pos[id].lat; g.lon = pos[id].lon; g.posMem = true; }", ""],
   ["η μνήμη δεν αποθηκεύεται", "cursor, pos,", "cursor,"],
   ["χωρίς σπορά", "if (!Object.keys(pos).length) {", "if (false) {"],
+  ["χωρίς θέση από lrrid", "else { const lp = locOf(idRow); if (lp) { g.lat = lp.lat; g.lon = lp.lng; } }", ""],
+  ["GeoJSON χωρίς αναστροφή", "if (inGR(c[1], c[0])) return { lat: c[1], lng: c[0] };", ""],
+  ["χωρίς έλεγχο Ελλάδας", "return inGR(la, lo) ? { lat: la, lng: lo } : null;", "return { lat: la, lng: lo };"],
   ["η μνήμη δεν ενημερώνεται", "if (g.lat != null && g.lon != null) pos[id] = { lat: Number(g.lat), lon: Number(g.lon) };\n    else if", "if (false) {}\n    else if"],
 ];
 let k = 0;
