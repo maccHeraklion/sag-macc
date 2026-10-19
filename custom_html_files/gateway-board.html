@@ -82,7 +82,7 @@ h1{font-size:20px; margin:0 0 4px}
     <div class="tile"><div class="n" id="cRed" style="color:var(--red)">0</div><div class="l">χωρίς πρόσφατο μάρτυρα</div></div>
     <div class="tile"><div class="n" id="cGrey" style="color:var(--grey)">0</div><div class="l">άγνωστα</div></div>
     <div class="tile"><div class="n" id="cNoLoc" style="color:var(--muted)">0</div><div class="l">χωρίς θέση</div></div>
-    <div class="tile"><div class="n" id="cUndec" style="color:var(--blue)">0</div><div class="l">αδήλωτα</div></div>
+    <div class="tile"><div class="n" id="cUndec" style="color:var(--blue)">0</div><div class="l">χωρίς ταυτοποίηση</div></div>
     <div class="tile"><div class="n" id="cNet">0</div><div class="l">από το δίκτυο</div></div>
   </div>
 
@@ -100,7 +100,7 @@ h1{font-size:20px; margin:0 0 4px}
           <span><span class="dot green"></span>&lt; 1 ώρα</span>
           <span><span class="dot yellow"></span>1 – 6 ώρες</span>
           <span><span class="dot red"></span>&gt; 6 ώρες</span>
-          <span><span class="dot grey"></span>χωρίς ένδειξη</span>
+          <span><span class="dot grey"></span>χωρίς ταυτοποίηση (όχι βλάβη)</span>
         </div>
       </div>
     </div>
@@ -418,7 +418,8 @@ function initMap() {
     }
   } catch (_e) { _isTouch = false; }
   state.map = L.map(el, {
-    scrollWheelZoom: false,
+    /* T-GWMAP-03: ζουμ με τη ροδέλα σε υπολογιστή (αίτημα Μιχάλη 19/10). Σε κινητό μένει κλειστό. */
+    scrollWheelZoom: !_isTouch,
     dragging: !_isTouch
   }).setView([37.9, 23.7], 6);
   if (_isTouch) {
@@ -546,6 +547,8 @@ function sortedList() {
     if (!Object.prototype.hasOwnProperty.call(state.gw, k)) continue;
     /* T-GWBOARD-ACTILITY-01: η συσκευή-δοχείο μένει εκτός. */
     if (state.gw[k].container) continue;
+    /* T-GWMAP-03: συσκευή καταλόγου που ταυτίστηκε με gateway του δικτύου — εμφανίζεται ΜΕΣΑ σε εκείνο. */
+    if (state.gw[k].mergedInto) continue;
     out.push(state.gw[k]);
   }
   /* Σειρά ΧΡΗΣΙΜΟΤΗΤΑΣ, όχι αλφαβητική: πρώτα ό,τι θέλει δουλειά. */
@@ -563,7 +566,51 @@ function sortedList() {
   return out;
 }
 
+/* T-GWMAP-03 · ΤΑΥΤΙΣΗ gateway δικτύου ↔ συσκευή καταλόγου με ΘΕΣΗ (≤ LINK_M μέτρα).
+   Το δίκτυο δίνει κωδικό LRR και θέση· ο κατάλογος όνομα τοποθεσίας και θέση. Πρώτα τα πλησιέστερα ζεύγη,
+   το καθένα μία φορά. Δεύτερος υποψήφιος μέσα στην ακτίνα → το όνομα είναι ΠΙΘΑΝΟ, όχι βέβαιο. */
+var LINK_M = 200;
+function _distM(a, b) {
+  var dLat = (a.lat - b.lat) * 111320;
+  var dLng = (a.lng - b.lng) * 111320 * Math.cos(a.lat * Math.PI / 180);
+  return Math.sqrt(dLat * dLat + dLng * dLng);
+}
+function linkByPosition() {
+  var nets = [], ros = [], k;
+  for (k in state.gw) {
+    if (!Object.prototype.hasOwnProperty.call(state.gw, k)) continue;
+    var g = state.gw[k];
+    g.mergedInto = null;
+    if (g.fromNetwork) { g.linked = null; if (g.lat != null) nets.push(g); }
+    else if (g.roster && !g.container && g.lat != null) ros.push(g);
+  }
+  var pairs = [];
+  for (var i = 0; i < nets.length; i++) for (var j = 0; j < ros.length; j++) {
+    var d = _distM(nets[i], ros[j]);
+    if (d <= LINK_M) pairs.push({ n: nets[i], r: ros[j], d: d });
+  }
+  pairs.sort(function (a, b) { return a.d - b.d; });
+  var usedN = {}, usedR = {};
+  for (var p = 0; p < pairs.length; p++) {
+    var P = pairs[p];
+    if (usedN[P.n.id] || usedR[P.r.id]) continue;
+    usedN[P.n.id] = true; usedR[P.r.id] = true;
+    var rivals = 0;
+    for (var q = 0; q < pairs.length; q++) {
+      if (q !== p && (pairs[q].n === P.n || pairs[q].r === P.r)) rivals++;
+    }
+    P.r.mergedInto = P.n.id;
+    P.n.linked = { id: P.r.id, name: P.r.name || '', dist: Math.round(P.d), sure: rivals === 0 };
+    if (P.r.phone && !P.n.phone) P.n.phone = P.r.phone;
+    if (P.n.nameSure !== true && P.r.name) {
+      if (rivals === 0) { P.n.name = P.r.name; P.n.nameGuess = ''; }
+      else P.n.nameGuess = P.r.name + ' (' + Math.round(P.d) + ' m, υπάρχει κι άλλο κοντά)';
+    }
+  }
+}
+
 function render() {
+  linkByPosition();
   var list = sortedList();
   var c = { green: 0, yellow: 0, red: 0, grey: 0 }, noLoc = 0, undec = 0, net = 0;
   for (var i = 0; i < list.length; i++) {
@@ -612,7 +659,8 @@ function render() {
     li.setAttribute('data-id', g.id);
     var tel = telHref(g.phone);
     var pos = isUndeclared(g)
-      ? '<span style="color:var(--blue)">ΑΔΗΛΩΤΟ — δεν έχει στείλει ποτέ δεδομένα'
+      ? '<span style="color:var(--blue)">ΧΩΡΙΣ ΤΑΥΤΟΠΟΙΗΣΗ — οι αισθητήρες που εξυπηρετεί δεν αναφέρουν'
+        + ' από ποιο gateway πέρασαν. ΔΕΝ σημαίνει ότι είναι εκτός λειτουργίας'
         + (g.storage ? ' (αποθήκη)' : '') + '</span>'
       : (g.lat == null)
       ? '<span style="color:var(--red)">χωρίς θέση — δεν εμφανίζεται στον χάρτη</span>'

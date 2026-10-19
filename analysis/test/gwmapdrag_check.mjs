@@ -87,7 +87,10 @@ function scenarios(code) {
   let r = run(code, { pointer: "fine" });
   want("desktop χωρίς αφή → σέρνεται", r.cap.opts.dragging, true);
   want("desktop → χωρίς πέπλο", r.veil.hidden, true);
-  want("ο τροχός δεν ζουμάρει μόνος", r.cap.opts.scrollWheelZoom, false);
+  /* T-GWMAP-03 (19/10, αίτημα Μιχάλη): σε υπολογιστή η ροδέλα ΚΑΝΕΙ ζουμ· σε κινητό όχι (ελέγχεται παρακάτω). */
+  want("υπολογιστής → ζουμ με ροδέλα", r.cap.opts.scrollWheelZoom, true);
+  const rm = run(code, { pointer: "coarse", touch: true, maxTouchPoints: 5 });
+  want("κινητό → χωρίς ζουμ ροδέλας", rm.cap.opts.scrollWheelZoom, false);
 
   /* ΤΟ ΣΕΝΑΡΙΟ ΤΗΣ ΑΝΑΦΟΡΑΣ */
   r = run(code, { pointer: "fine", touch: true, maxTouchPoints: 10 });
@@ -174,7 +177,8 @@ const MUTATIONS = [
   ["λείπει ο ακροατής click",
     /_veil\.addEventListener\('click', _unlock\);/, ""],
   ["το πέπλο δεν κρύβεται", /_veil\.hidden = true;/, ""],
-  ["ο τροχός ζουμάρει μόνος", /scrollWheelZoom: false/, "scrollWheelZoom: true"],
+  ["ροδέλα και σε κινητό", /scrollWheelZoom: !_isTouch/, "scrollWheelZoom: true"],
+  ["χωρίς ροδέλα σε υπολογιστή (η αναφορά 19/10)", /scrollWheelZoom: !_isTouch/, "scrollWheelZoom: false"],
   ["η εφεδρεία αγνοεί την αφή", /\|\| \(navigator && navigator\.maxTouchPoints > 0\)/, "|| false"],
   /* T-GWMAP-02 */
   ["πέπλο και με ποντίκι (η αναφορά 19/10)", /\n\s+&& window\.matchMedia\('\(any-pointer: fine\)'\)\.matches !== true/, ""],
