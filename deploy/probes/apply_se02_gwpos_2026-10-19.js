@@ -7,7 +7,7 @@
 // DRY = true: μόνο έλεγχοι, ΤΙΠΟΤΑ δεν γράφεται.
 const crypto = require("crypto");
 const vm = require("vm");
-const DRY = true;
+const DRY = false;   // πρόβα 17:04 UTC πέρασε· ρητή έγκριση Μιχάλη: «εγκρίνω την αλλαγή του SE02 στην παραγωγή»
 const TOKEN = process.env.T_ANALYSIS_TOKEN;
 const API = "https://api.us-e1.tago.io";
 const CONNECTOR = "67adaadd576be9000ab220a6";
