@@ -1,0 +1,38 @@
+{
+  "_note": "ΑΝΤΙΓΡΑΦΟ ΠΡΙΝ ΤΗΝ ΑΛΛΑΓΗ — 19/10/2026, T-DASH-TABS-01. Ο Μιχάλης έφτιαξε νέο πελάτη (Αμμουδάρες) και το κουμπί «Παραμετροποίηση» άνοιγε την Άρδευση.",
+  "_cause": "Το sagMain πηγαίνει σε καρτέλες με ΣΤΑΘΕΡΟ ΔΕΙΚΤΗ (ys={patho:1,irrig:4,config:3} στο index-7cbd9a4e.js). Στις 19/9 αφαιρέθηκε η κενή καρτέλα «Παθογόνα» από το πρότυπο 68f92649 (δικό μας λάθος: ελέγχθηκε ο createField, ΟΧΙ το widget). Κάθε αγρός μετά έχει 5 καρτέλες → config(3)=Άρδευση, irrig(4)=Προγραμματισμός. Μόνο οι Αμμουδάρες (16/10) δημιουργήθηκαν μετά.",
+  "_also": "Οι καρτέλες Άρδευση/Προγραμματισμός του προτύπου (και άρα των Αμμουδάρων) δείχνουν ελεγκτές ΑΛΛΩΝ πελατών: uc511_0817 (Παρισάκης/Σκόυφης), uc511_0458 (Μεγάλη Ντάμα Κάτω), uc511_9864. analysis_run κενό → δεν στέλνεται downlink από αυτά τα widgets (ΥΠΟ ΕΛΕΓΧΟ), αλλά ο νέος πελάτης βλέπει ξένες βάνες/μετρητές και μπορεί να γράψει εντολές στις συσκευές τους.",
+  "tabs_6_standard": [
+    { "key": "8NMj9hO5Rvi1FPYVd3dgs", "link": "", "type": "hidden", "value": "Αρχική", "hidden": true },
+    { "key": "e7Z8F5mLs6bacwGDxPc-o", "link": "", "type": "hidden", "value": "Παθογόνα", "hidden": true },
+    { "key": "oou7iKKLVdNb3No6BlERp", "link": "", "type": "hidden", "value": "Μετρήσεις", "hidden": true },
+    { "key": "XpOV787fvpT8I0gKHfM3H", "link": "", "type": "hidden", "value": "Παραμετροποίηση", "hidden": true },
+    { "key": "zpQzGb2h_PUwgEOzWb79Q", "link": "", "type": "hidden", "value": "Άρδευση", "hidden": true },
+    { "key": "jQgMIP9y06LEsrmqJQOiM", "link": "", "type": "hidden", "value": "Προγραμματισμός", "hidden": true }
+  ],
+  "ammoudares": {
+    "dashboard": "6ad202ac5a0327000c98a2ad",
+    "field_device": "6ad202ac174a0b000cf10008",
+    "tabs_BEFORE": [
+      { "key": "8NMj9hO5Rvi1FPYVd3dgs", "link": "", "type": "hidden", "value": "Αρχική", "hidden": true },
+      { "key": "oou7iKKLVdNb3No6BlERp", "link": "", "type": "hidden", "value": "Μετρήσεις", "hidden": true },
+      { "key": "XpOV787fvpT8I0gKHfM3H", "link": "", "type": "hidden", "value": "Παραμετροποίηση", "hidden": true },
+      { "key": "zpQzGb2h_PUwgEOzWb79Q", "link": "", "type": "hidden", "value": "Άρδευση", "hidden": true },
+      { "key": "jQgMIP9y06LEsrmqJQOiM", "link": "", "type": "hidden", "value": "Προγραμματισμός", "hidden": true }
+    ],
+    "widget_irrigation_6ad202ac5a0327000c98a2b3_data_BEFORE": [
+      { "qty": 500, "bucket": "684c444dcc1cd8000a0f2b21", "origin": "684c444dcc1cd8000a0f2b21", "variables": ["valve_1","valve_2","valve_1_command","valve_2_command","valve_1_time_command","valve_2_time_command","valve_1_pulse","valve_2_pulse"] },
+      { "qty": 500, "bucket": "67fe9a453b56fa000ac762da", "origin": "67fe9a453b56fa000ac762da", "variables": ["valve_1","valve_2","valve_1_command","valve_2_command","valve_1_time_command","valve_2_time_command","valve_1_pulse","valve_2_pulse"] }
+    ],
+    "widget_rules_6ad202ac5a0327000c98a2b1_data_BEFORE": [
+      { "qty": 500, "bucket": "684c444dcc1cd8000a0f2b21", "origin": "684c444dcc1cd8000a0f2b21", "variables": ["rule1"] },
+      { "qty": 500, "bucket": "67bd98d739006c000ada33ef", "origin": "684c376d508354000ae0bdf2", "variables": ["rule1"] }
+    ]
+  },
+  "template": {
+    "dashboard": "68f92649f8b680000ab970ae",
+    "tabs_BEFORE": "ίδιες 5 καρτέλες με τις Αμμουδάρες (βλ. και SAG_OpenField_Template_tabs_2026-09-19.json → tabs_AFTER)",
+    "widget_irrigation_68f9451942496b000a9db6ad_data": "ίδια με τις Αμμουδάρες (0458 + 0817) — ΔΕΝ αλλάζει σε αυτό το βήμα",
+    "widget_rules_68f9df3434f800000959bcc6_data": "ίδια με τις Αμμουδάρες (0458 + 9864/bucket 67bd98d7) — ΔΕΝ αλλάζει σε αυτό το βήμα"
+  }
+}

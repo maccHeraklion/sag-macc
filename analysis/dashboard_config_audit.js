@@ -54,6 +54,19 @@ function sagDashRules(widget) {
   return out;
 }
 
+// R8: το sagMain πηγαίνει σε καρτέλες με ΣΤΑΘΕΡΟ ΔΕΙΚΤΗ (index-7cbd9a4e.js: ys={patho:1,irrig:4,config:3}).
+// Αν λείπει/μετακινηθεί καρτέλα, το «Παραμετροποίηση» ανοίγει άλλη καρτέλα (Αμμουδάρες 16/10: άνοιγε την Άρδευση,
+// επειδή στις 19/9 αφαιρέθηκε η κενή «Παθογόνα» από το πρότυπο). Τα κλειδιά είναι κοινά σε όλα τα ταμπλό του προτύπου.
+function sagTabRules(tabs) {
+  const out = [];
+  const keys = (Array.isArray(tabs) ? tabs : []).map(t => t && t.key);
+  const WANT = { 1: "e7Z8F5mLs6bacwGDxPc-o", 3: "XpOV787fvpT8I0gKHfM3H", 4: "zpQzGb2h_PUwgEOzWb79Q" };
+  const NAME = { 1: "Παθογόνα", 3: "Παραμετροποίηση", 4: "Άρδευση" };
+  for (const [i, k] of Object.entries(WANT)) if (keys[+i] !== k)
+    out.push({ level: "HIGH", code: "R8", msg: "καρτέλα θέσης " + i + " δεν είναι «" + NAME[i] + "» (" + keys.length + " καρτέλες) — τα κουμπιά του widget ανοίγουν λάθος καρτέλα" });
+  return out;
+}
+
 async function get(p) {
   const r = await fetch(API + p, { headers: { Authorization: TOKEN } });
   const j = await r.json().catch(() => ({}));
@@ -77,16 +90,16 @@ async function get(p) {
     const pool = async (items, k, fn) => { let i = 0; await Promise.all(Array.from({ length: k }, async () => { while (i < items.length) { const it = items[i++]; await fn(it); } })); };
     const jobs = [];
     await pool(dashes, 10, async (d) => {
-      try { const info = await get(`/dashboard/${d.id}`); for (const wid of new Set((info.arrangement || []).map(a => a.widget_id))) jobs.push({ d, wid }); }
+      try { const info = await get(`/dashboard/${d.id}`); for (const wid of new Set((info.arrangement || []).map(a => a.widget_id))) jobs.push({ d, wid, tabs: info.tabs }); }
       catch (e) { console.log("ΤΑΜERR|" + d.label + "|" + e.message); }
     });
-    await pool(jobs, 10, async ({ d, wid }) => {
+    await pool(jobs, 10, async ({ d, wid, tabs }) => {
       let w;
       try { w = await get(`/dashboard/${d.id}/widget/${wid}`); } catch (e) { return; }
       const url = String(w && w.display && w.display.url || "");
       if (!/storage\/sagMain\/index\.html/.test(url)) return;
       n++;
-      const f = sagDashRules(w);
+      const f = sagDashRules(w).concat(sagTabRules(tabs));
       if (!f.length) { clean++; return; }
       for (const x of f) counts[x.level]++;
       console.log("ΤΑΜ|" + d.label + " (" + d.id + ")|" + f.map(x => x.level + " " + x.code + ": " + x.msg).join(" ¦ "));

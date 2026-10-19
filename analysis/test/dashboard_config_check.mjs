@@ -60,6 +60,17 @@ function run(src) {
     const one = { data: [Object.assign({}, pilot.data[0], { variables: pilot.data[0].variables.filter(x => x !== v) }), pilot.data[1]] };
     ok(R(W(one)).some(y => y.code === "R1" && y.level === "CRITICAL" && y.msg.startsWith(v + ": λείπει")), "Γ9 λείπει μόνο το " + v + " → CRITICAL R1");
   }
+  // Δ. R8 — σειρά καρτελών (Αμμουδάρες 16/10: 5 καρτέλες → «Παραμετροποίηση» άνοιγε την Άρδευση)
+  let T; try { T = new Function(fnText(src, "sagTabRules") + "\nreturn sagTabRules;")(); } catch (e) { f.push("εξαγωγή R8: " + e.message); return f; }
+  const TABS = JSON.parse(fs.readFileSync(path.join(here, "..", "..", "deploy", "backup", "dashboard-widgets", "Ammoudares_and_template_2026-10-19.json"), "utf8"));
+  ok(T(TABS.tabs_6_standard).length === 0, "Δ1 6 κανονικές καρτέλες → όχι R8");
+  ok(T(TABS.ammoudares.tabs_BEFORE).some(y => y.code === "R8" && /θέσης 3/.test(y.msg)), "Δ2 οι 5 καρτέλες των Αμμουδάρων (πριν) → R8 στη θέση 3");
+  ok(T(undefined).length === 3, "Δ3 χωρίς καρτέλες → R8 και στις 3 θέσεις");
+  // οι θέσεις του κανόνα ΤΑΙΡΙΑΖΟΥΝ με τους δείκτες του ζωντανού widget — αν αλλάξει το widget, ο έλεγχος σπάει εδώ
+  const WJS = fs.readFileSync(path.join(here, "..", "..", "_dist-sagMain", "index-7cbd9a4e.js"), "utf8");
+  const m = WJS.match(/ys=\{bpi:0,stress:0,patho:(\d+),irrig:(\d+),config:(\d+)\}/);
+  const wantPos = [...src.matchAll(/(\d): "(e7Z8F5mLs6bacwGDxPc-o|XpOV787fvpT8I0gKHfM3H|zpQzGb2h_PUwgEOzWb79Q)"/g)].map(x => x[2] + "@" + x[1]).sort().join(",");
+  ok(m && wantPos === ["XpOV787fvpT8I0gKHfM3H@" + m[3], "e7Z8F5mLs6bacwGDxPc-o@" + m[1], "zpQzGb2h_PUwgEOzWb79Q@" + m[2]].sort().join(","), "Δ4 θέσεις R8 = δείκτες widget (" + (m && m.slice(1).join("/")) + " ↔ " + wantPos + ")");
   return f;
 }
 const base = run(SRC);
@@ -76,6 +87,8 @@ const MUT = [
   ["m8 λίστα χωρίς action_log", '"declaration_undo", "action_log"];', '"declaration_undo"];'],
   ["m9 χωρίς R5", "if (legacy) add(", "if (false) add("],
   ["m10 χωρίς R3", 'if (fieldEntries.length !== 1) add("CRITICAL", "R3"', 'if (false) add("CRITICAL", "R3"'],
+  ["m11 χωρίς R8", "for (const [i, k] of Object.entries(WANT)) if (keys[+i] !== k)", "for (const [i, k] of Object.entries(WANT)) if (false)"],
+  ["m12 R8 λάθος θέση Παραμετροποίησης", '3: "XpOV787fvpT8I0gKHfM3H"', '2: "XpOV787fvpT8I0gKHfM3H"'],
 ];
 let killed = 0;
 for (const [n, a, b] of MUT) {
