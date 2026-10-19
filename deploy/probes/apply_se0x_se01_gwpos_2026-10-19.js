@@ -25,7 +25,7 @@ const BLOCK = [
   "  if (Number.isFinite(la) && Number.isFinite(lo) && !(la === 0 && lo === 0)) _sagGwId.location = { lat: la, lng: lo };",
   "}",
 ];
-const sha16 = (s) => crypto.createHash("sha256").update(s.replace(/^﻿/, "").replace(/\r\n/g, "\n"), "utf8").digest("hex").slice(0, 16);
+const sha16 = (s) => crypto.createHash("sha256").update(s.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n"), "utf8").digest("hex").slice(0, 16);
 async function api(p, opts = {}) {
   const r = await fetch(API + p, { ...opts, headers: { Authorization: TOKEN, "Content-Type": "application/json" } });
   const j = await r.json().catch(() => ({}));
