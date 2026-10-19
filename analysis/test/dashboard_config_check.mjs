@@ -71,6 +71,18 @@ function run(src) {
   const m = WJS.match(/ys=\{bpi:0,stress:0,patho:(\d+),irrig:(\d+),config:(\d+)\}/);
   const wantPos = [...src.matchAll(/(\d): "(e7Z8F5mLs6bacwGDxPc-o|XpOV787fvpT8I0gKHfM3H|zpQzGb2h_PUwgEOzWb79Q)"/g)].map(x => x[2] + "@" + x[1]).sort().join(",");
   ok(m && wantPos === ["XpOV787fvpT8I0gKHfM3H@" + m[3], "e7Z8F5mLs6bacwGDxPc-o@" + m[1], "zpQzGb2h_PUwgEOzWb79Q@" + m[2]].sort().join(","), "Δ4 θέσεις R8 = δείκτες widget (" + (m && m.slice(1).join("/")) + " ↔ " + wantPos + ")");
+  // Ε. R9 — καρτέλες βανών με ξένους ελεγκτές (Αμμουδάρες 16/10: uc511_0458/0817 από το πρότυπο)
+  let V; try { V = new Function(fnText(src, "sagValveTabRules") + "\nreturn sagValveTabRules;")(); } catch (e) { f.push("εξαγωγή R9: " + e.message); return f; }
+  const ammSag = { data: [{ origin: "6ad202ac174a0b000cf10008", variables: ["field_bundle"] }, { origin: "6891d4a12e379b000a0cdf6f", variables: ["soil_moisture1"] }] };
+  const ammValve = [{ display: { url: "x/html_files/valvesControl.html" }, data: TABS.ammoudares.widget_irrigation_6ad202ac5a0327000c98a2b3_data_BEFORE }];
+  const r9 = V(ammSag, ammValve);
+  ok(r9.length === 1 && r9[0].code === "R9" && r9[0].level === "CRITICAL" && /^οι καρτέλες βανών δείχνουν 2 /.test(r9[0].msg), "Ε1 Αμμουδάρες (πριν): 2 ξένοι ελεγκτές → ΕΝΑ CRITICAL R9 (" + (r9[0] && r9[0].msg) + ")");
+  ok(V(ammSag, [{ display: {}, data: TABS.ammoudares.widget_rules_6ad202ac5a0327000c98a2b1_data_BEFORE }]).some(y => y.code === "R9"), "Ε6 ξένος ελεγκτής ΜΟΝΟ στην καρτέλα κανόνων (rule1) → R9");
+  ok(V(ammSag, [{ display: {}, data: [{ origin: "67fdf9f10c797f000a7b6d09", variables: ["air_temperature", "rain_gauge"] }] }]).length === 0, "Ε5 σταθμός/αισθητήρας σε καρτέλα βανών (Volta, ΙΔΕ) → όχι R9");
+  ok(V(ammSag, [{ display: {}, data: [] }]).length === 0, "Ε2 Αμμουδάρες (μετά, κενές καρτέλες) → όχι R9");
+  const ownSag = { data: [{ origin: "684c444dcc1cd8000a0f2b21", variables: ["valve_1", "valve_1_command"] }] };
+  ok(V(ownSag, [{ display: {}, data: [{ origin: "684c444dcc1cd8000a0f2b21", variables: ["valve_1"] }] }]).length === 0, "Ε3 ο δικός του ελεγκτής → όχι R9");
+  ok(V({ data: [{ origin: "684c376d508354000ae0bdf2", variables: ["rule1_set"] }] }, [{ display: {}, data: [{ origin: "684c376d508354000ae0bdf2", variables: ["rule1"] }] }]).length === 0, "Ε4 ελεγκτής μόνο με κανόνες → όχι R9");
   return f;
 }
 const base = run(SRC);
@@ -89,6 +101,9 @@ const MUT = [
   ["m10 χωρίς R3", 'if (fieldEntries.length !== 1) add("CRITICAL", "R3"', 'if (false) add("CRITICAL", "R3"'],
   ["m11 χωρίς R8", "for (const [i, k] of Object.entries(WANT)) if (keys[+i] !== k)", "for (const [i, k] of Object.entries(WANT)) if (false)"],
   ["m12 R8 λάθος θέση Παραμετροποίησης", '3: "XpOV787fvpT8I0gKHfM3H"', '2: "XpOV787fvpT8I0gKHfM3H"'],
+  ["m13 χωρίς R9", "if (e.origin && isCtl(e) && !own.has(e.origin))", "if (false)"],
+  ["m15 R9 μετρά και αισθητήρες", "if (e.origin && isCtl(e) && !own.has(e.origin))", "if (e.origin && !own.has(e.origin))"],
+  ["m14 R9 αγνοεί τους κανόνες", "rule\\d+(_set|_enable)?)$/.test(v));\n  const own", "zzz)$/.test(v));\n  const own"],
 ];
 let killed = 0;
 for (const [n, a, b] of MUT) {

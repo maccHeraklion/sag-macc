@@ -660,7 +660,11 @@ function ensureFieldBundleSibling(widget, sibling) {
   if (Array.isArray(widget.data)) {
     for (const d of widget.data) {
       const vars = Array.isArray(d?.variables) ? d.variables : null;
-      if (vars && vars.includes("field_bundle") && !vars.includes(sibling)) {
+      // T-DASH-SRC-03 (19/10): το πρότυπο έχει ΔΕΥΤΕΡΗ πηγή του ίδιου αγρού με τις καταγραφές (field_calendar κ.λπ.,
+      // T-DASH-SRC-01). Αν η μεταβλητή υπάρχει ήδη σε ΟΠΟΙΑΔΗΠΟΤΕ πηγή της ίδιας συσκευής, δεν ξαναμπαίνει —
+      // αλλιώς διπλή δήλωση → κάθε εγγραφή ×4 (Αμμουδάρες 16/10).
+      const elsewhere = widget.data.some((o) => o !== d && o?.origin === d?.origin && Array.isArray(o?.variables) && o.variables.includes(sibling));
+      if (vars && vars.includes("field_bundle") && !vars.includes(sibling) && !elsewhere) {
         vars.push(sibling);
         changed = true;
       }

@@ -67,6 +67,23 @@ function sagTabRules(tabs) {
   return out;
 }
 
+// R9: οι καρτέλες Άρδευση/Προγραμματισμός (valvesControl/valvesRules) δείχνουν ΜΟΝΟ ελεγκτές του ίδιου ταμπλό
+// (όσους έχει και το sagMain). Το πρότυπο 68f92649 κουβαλούσε ελεγκτές άλλων πελατών (uc511_0817/0458/9864) και
+// κάθε νέος αγρός τους κληρονομούσε (Αμμουδάρες 16/10). ΚΙΝΔΥΝΟΣ: ο UC511_status_check ξαναστέλνει ΚΑΘΕ
+// ανεπιβεβαίωτη εντολή σε ΟΠΟΙΟΝΔΗΠΟΤΕ uc511 όσο τρέχει — άρα εντολή γραμμένη από ξένο ταμπλό μπορεί να φτάσει στη βάνα.
+// Μετρά μόνο πηγές με μεταβλητές βανών/κανόνων: οι καρτέλες βανών δείχνουν και σταθμό/αισθητήρα εδάφους (Volta, ΙΔΕ).
+function sagValveTabRules(sagWidget, valveWidgets) {
+  const out = [];
+  const isCtl = (e) => (e.variables || []).some(v => /^(valve_\d+|valve_\d+_(time_)?command|rule\d+(_set|_enable)?)$/.test(v));
+  const own = new Set((sagWidget && sagWidget.data || []).filter(isCtl).map(e => e.origin));
+  const foreign = new Set();
+  for (const w of valveWidgets || []) for (const e of (w && w.data || []))
+    if (e.origin && isCtl(e) && !own.has(e.origin)) foreign.add(e.origin);
+  if (foreign.size)
+    out.push({ level: "CRITICAL", code: "R9", msg: "οι καρτέλες βανών δείχνουν " + foreign.size + " ελεγκτή(ές) που ΔΕΝ είναι του αγρού: " + [...foreign].join(",") });
+  return out;
+}
+
 async function get(p) {
   const r = await fetch(API + p, { headers: { Authorization: TOKEN } });
   const j = await r.json().catch(() => ({}));
@@ -93,17 +110,29 @@ async function get(p) {
       try { const info = await get(`/dashboard/${d.id}`); for (const wid of new Set((info.arrangement || []).map(a => a.widget_id))) jobs.push({ d, wid, tabs: info.tabs }); }
       catch (e) { console.log("ΤΑΜERR|" + d.label + "|" + e.message); }
     });
+    const byDash = new Map();
     await pool(jobs, 10, async ({ d, wid, tabs }) => {
       let w;
       try { w = await get(`/dashboard/${d.id}/widget/${wid}`); } catch (e) { return; }
-      const url = String(w && w.display && w.display.url || "");
-      if (!/storage\/sagMain\/index\.html/.test(url)) return;
-      n++;
-      const f = sagDashRules(w).concat(sagTabRules(tabs));
-      if (!f.length) { clean++; return; }
-      for (const x of f) counts[x.level]++;
-      console.log("ΤΑΜ|" + d.label + " (" + d.id + ")|" + f.map(x => x.level + " " + x.code + ": " + x.msg).join(" ¦ "));
+      if (!byDash.has(d.id)) byDash.set(d.id, { d, tabs, widgets: [] });
+      byDash.get(d.id).widgets.push(w);
     });
+    for (const { d, tabs, widgets } of byDash.values()) {
+      const url = (w) => String(w && w.display && w.display.url || "");
+      const sag = widgets.filter(w => /storage\/sagMain\/index\.html/.test(url(w)));
+      const valves = widgets.filter(w => /valvesControl|valvesRules/.test(url(w)));
+      // ΤΑΜV: ποιους ελεγκτές δείχνουν οι καρτέλες βανών κάθε ταμπλό (για διασταύρωση μεταξύ ταμπλό)
+      const ctlRe = /^(valve_\d+|valve_\d+_(time_)?command|rule\d+(_set|_enable)?)$/;
+      const vctl = [...new Set(valves.flatMap(w => (w.data || []).filter(e => (e.variables || []).some(v => ctlRe.test(v))).map(e => e.origin)))];
+      if (vctl.length) console.log("ΤΑΜV|" + d.label + " (" + d.id + ")|" + vctl.join(","));
+      for (const w of sag) {
+        n++;
+        const f = sagDashRules(w).concat(sagTabRules(tabs), sagValveTabRules(w, valves));
+        if (!f.length) { clean++; continue; }
+        for (const x of f) counts[x.level]++;
+        console.log("ΤΑΜ|" + d.label + " (" + d.id + ")|" + f.map(x => x.level + " " + x.code + ": " + x.msg).join(" ¦ "));
+      }
+    }
   } catch (e) { console.log("ΤΑΜERR|" + e.message); }
   console.log("ΤΑΜΣ|widget sagMain: " + n + " · χωρίς ευρήματα: " + clean + " · CRITICAL " + counts.CRITICAL + " · HIGH " + counts.HIGH + " · MEDIUM " + counts.MEDIUM + " · LOW " + counts.LOW);
   console.log("ΤΑΜ=== ΤΕΛΟΣ ===");
