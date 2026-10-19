@@ -17,6 +17,14 @@
 >   `Fix valve_1_command frame length - Michalis`). Use the suffix of the account you are working from.
 > - **Before touching anything, `git pull`** and review the commits that landed since your last
 >   session, so you always work on top of the team's current state.
+> - **🔴 OPEN SAFETY ISSUE — VALVES / TEMPLATE (2026-10-19, owner: Κώστας).** Before ANY change to the valve tabs
+>   (valvesControl/valvesRules), the template dashboard `68f92649`, `createField`, `UC511_downlink`, `UC511_status_check`,
+>   a dashboard's `analysis_run`, or uc511 controllers: FIRST show the user the full contents of
+>   `analysis/ΕΛΕΓΧΟΣ/ΠΡΟΣ_ΚΩΣΤΑ_ΒΑΝΕΣ_ΠΡΟΤΥΠΟ_2026-10-19.md`. In short, 14 customer dashboards show OTHER customers'
+>   controllers, and the ack checker resends any unacked command to any uc511. Michalis handed this to Κώστας and
+>   made no further changes. Remove this bullet only when Κώστας closes the issue.
+> - **Never remove or reorder dashboard tabs** (even empty hidden ones): sagMain opens tabs by fixed index
+>   (`ys={patho:1,irrig:4,config:3}`).
 
 ## What this project is
 
