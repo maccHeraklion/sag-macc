@@ -124,6 +124,12 @@ async function verifyPublicFile(target, body, contentType) {
         console.log(`${ha === h ? "OK" : "FAIL"}|analysis ${t.id}|μετά=${ha.slice(0, 16)}|αναμενόμενο=${h.slice(0, 16)}|bytes=${liveAfter.length}`);
       } else if (t.kind === "file") {
         const ct = t.contentType || CONTENT_TYPE_BY_EXT[t.target.split(".").pop().toLowerCase()] || "application/octet-stream";
+        // T-FERTIDX-01 (23/10): όπως στα analyses — ΠΡΙΝ το ανέβασμα, το ζωντανό αρχείο πρέπει να είναι το αναμενόμενο.
+        const lr = await fetch(PUBLIC_FILE_BASE + t.target, { redirect: "follow", cache: "no-store" });
+        const liveF = Buffer.from(await lr.arrayBuffer());
+        const hf = sha(normalize(liveF, t.eol));
+        console.log(`LIVE_BEFORE|file ${t.target}|http=${lr.status}|bytes=${liveF.length}|sha256=${hf}`);
+        if (t.expectLiveBefore && hf !== t.expectLiveBefore) { console.log(`STOP|file ${t.target}|το ζωντανό ΔΕΝ είναι το αναμενόμενο (${t.expectLiveBefore.slice(0, 12)}…) — ΔΕΝ ανεβαίνει`); continue; }
         if (DRY_RUN) { console.log(`DRY|file ${t.target}|contentType=${ct}`); continue; }
         const up = await uploadFileMultipart(t.target, body, ct, t.public !== false);
         console.log(`UPLOADED|${t.target}|upload_id=${String(up.uploadID).slice(0, 24)}|${JSON.stringify(up.done).slice(0, 100)}`);
