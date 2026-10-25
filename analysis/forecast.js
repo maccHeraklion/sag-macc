@@ -7,7 +7,7 @@
  *   metadata: full forecast payload (hourly arrays + units), with time stored as epoch seconds
  *
  * Field selection: devices with tag isField=yes
- * Coordinates: device tag "coordinates" = "lat,lon"
+ * Coordinates: configuration form latitude/longitude, else device tag "coordinates" (v10)
  *
  * v9 · 2026-09-18 (SAG, T-BPI-LIGHTEST-01): a SECOND, separate Open-Meteo call fetches the
  * DAILY shortwave radiation sum with past_days=1 and stores it as metadata.radiation
