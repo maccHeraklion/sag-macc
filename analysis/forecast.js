@@ -16,6 +16,13 @@
  * spray window and the kernel's frost/heat warnings keep reading exactly what they read.
  * runPerTich (v50.136+) uses radiation of the previous local day to estimate light for
  * the BPI card on fields WITHOUT a light sensor (flagged as an estimate).
+ *
+ * v10 · 2026-10-25 (SAG, T-FCCOORD-01): the position comes FIRST from the configuration form
+ * (tag "configuration" → latitude/longitude, the same source runPerTich uses), and only then
+ * from the tag "coordinates" — which createField writes once, unvalidated, and the form never
+ * updates. The tag also accepts degrees-minutes-seconds (35°00'33.36"N, 25°38'39.23"E).
+ * Αμμουδάρες got no forecast for 9 days because of a DMS tag while the form was correct.
+ * metadata.coord_source says which source was used.
  */
 
 const axios = require("axios");
@@ -52,11 +59,47 @@ function parseCoordinatesTag(tags, key = "coordinates") {
   const parts = raw.split(",").map((s) => s.trim());
   if (parts.length !== 2) return null;
 
-  const lat = Number(parts[0]);
-  const lon = Number(parts[1]);
+  const lat = parseCoordPart(parts[0]);
+  const lon = parseCoordPart(parts[1]);
 
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  if (!validLatLon(lat, lon)) return null;
   return { lat, lon, raw };
+}
+
+/* v10: decimal ("35.0092314") or degrees-minutes-seconds ("35°00'33.36\"N"); S/W make it negative. */
+function parseCoordPart(s) {
+  const t = String(s).trim();
+  if (t === "") return NaN;
+  const n = Number(t);
+  if (Number.isFinite(n)) return n;
+  const m = t.match(/^(-?\d+(?:\.\d+)?)\s*°\s*(?:(\d+(?:\.\d+)?)\s*['′]\s*)?(?:(\d+(?:\.\d+)?)\s*(?:"|″|''|′′)\s*)?([NSEW])?$/i);
+  if (!m) return NaN;
+  const v = Math.abs(Number(m[1])) + Number(m[2] || 0) / 60 + Number(m[3] || 0) / 3600;
+  const neg = m[1].startsWith("-") || /[SW]/i.test(m[4] || "");
+  return neg ? -v : v;
+}
+
+function validLatLon(lat, lon) {
+  return Number.isFinite(lat) && Number.isFinite(lon) &&
+    Math.abs(lat) <= 90 && Math.abs(lon) <= 180 && !(lat === 0 && lon === 0);
+}
+
+/* v10: configuration form first (same as runPerTich), then the "coordinates" tag. */
+function resolveFieldCoords(tags) {
+  const cfgRaw = tags?.find((t) => t.key === "configuration")?.value;
+  if (cfgRaw && typeof cfgRaw === "string") {
+    try {
+      const cfg = JSON.parse(cfgRaw);
+      const has = (v) => v !== null && v !== undefined && String(v).trim() !== "";
+      if (has(cfg?.latitude) && has(cfg?.longitude)) {
+        const lat = Number(cfg.latitude);
+        const lon = Number(cfg.longitude);
+        if (validLatLon(lat, lon)) return { lat, lon, raw: `${lat}, ${lon}`, source: "configuration" };
+      }
+    } catch (e) { /* broken configuration tag → fall back to the coordinates tag */ }
+  }
+  const c = parseCoordinatesTag(tags, "coordinates");
+  return c ? { ...c, source: "tag coordinates" } : null;
 }
 
 async function fetchOpenMeteo(lat, lon) {
@@ -152,10 +195,10 @@ async function main(context) {
 
   for (const field of fields) {
     try {
-      const coords = parseCoordinatesTag(field.tags, "coordinates");
+      const coords = resolveFieldCoords(field.tags);
       if (!coords) {
         throw new Error(
-          `Missing/invalid tag coordinates. Expected "lat,lon", got: ${
+          `No position: configuration has no latitude/longitude and tag coordinates is missing/invalid. Expected "lat,lon", got: ${
             field.tags?.find((t) => t.key === "coordinates")?.value ?? "(none)"
           }`
         );
@@ -166,7 +209,7 @@ async function main(context) {
       const fieldDevice = new Device({ token: fieldToken });
 
       context.log(
-        `Field ${field.id}: fetching forecast for coordinates="${coords.raw}" (lat=${coords.lat}, lon=${coords.lon})`
+        `Field ${field.id}: fetching forecast for coordinates="${coords.raw}" (lat=${coords.lat}, lon=${coords.lon}, source=${coords.source})`
       );
 
       const resp = await fetchOpenMeteo(coords.lat, coords.lon);
@@ -225,6 +268,7 @@ async function main(context) {
         coordinates: coords.raw,
         lat: coords.lat,
         lon: coords.lon,
+        coord_source: coords.source, // v10: "configuration" | "tag coordinates"
 
         // helpful extras from Open-Meteo
         elevation: resp.elevation,
