@@ -18,6 +18,21 @@ function getNetworkAndConnector(manufacturer, type) {
 
   const S2120_CYRIC_IOT_PARSER = '67adaf5b36089a000a16aa5a';
 
+  // T-DEV-MKF-01 (26/10/2026): Makerfabs AgroSense — the form offered makerfabs but there was no mapping, so the
+  // analysis crashed («Cannot destructure property 'connector'») and nothing was created. Connector ids = the
+  // existing "MACC Parser" connectors used by the 9 makerfabs devices created by hand in 12/2025–01/2026.
+  const MAKERFABS_CONNECTORS = {
+    aglwpp01: '695a41207ed5b0000a496b79',   // Pipe Pressure
+    aglwcd01: '6958f8d9516a0f00095c4b44',   // CO2
+    aglwlm01: '695a3b5fdbdd35000a1b82ef',   // Leaf Moisture
+    aglwl01: '695a3607d5f1ac000a648ca5',    // Light Intensity
+    aglwpw01: '69516a537efb7e000b695547',   // Positioning Water Leak
+    aglwsaep01: '695a4c4999d3ce0009ecaccf', // Soil & Air EC-TH Pro
+    aglwsm02: '6958e1e67efb7e000b19fb47',   // Soil Monitor
+    aglwth01: '6958f33225b926000a49391c',   // Temperature & Humidity
+    agvwflc01: '695a563097536d000a0db090',  // Valve Controller & Flow Meter
+  };
+
 
 
   switch(manufacturer) {
@@ -76,6 +91,15 @@ function getNetworkAndConnector(manufacturer, type) {
             network: NETWORK_LORAWAN_ACTILITY
           };
       }
+      break;
+    case "makerfabs":
+      if (MAKERFABS_CONNECTORS[type]) {
+        return {
+          connector: MAKERFABS_CONNECTORS[type],
+          network: NETWORK_LORAWAN_ACTILITY
+        };
+      }
+      break;
   }
 }
 
@@ -126,6 +150,18 @@ async function validateEUIFromManufacturer(manufacturer, eui, dashboard_device) 
         }
       }
     break;
+    case "makerfabs":
+      // T-DEV-MKF-01: all Makerfabs AgroSense devices in the account have EUI 48e663fffe…
+      if (!eui.startsWith('48e663')){
+        const message = "Δόθηκε λάθος κωδικός EUI: ".concat(eui).concat(" για συσκευή makerfabs! Το EUI των συσκευών makerfabs ξεκινάει με 48e663!");
+        console.log('Error in validateEUIFromManufacturer with message: ', message);
+        await dashboard_device.sendData({ variable: "validation", value: message, metadata: { color: "red" } });
+        return {
+          verified: false,
+          eui
+        }
+      }
+    break;
   }
   return {
     verified: true,
@@ -162,9 +198,23 @@ async function myAnalysis(context, scope) {
   let appkey = scope.find((item) => item.variable === "appkey")?.value;
   console.log('appkey: ', appkey, ' received!');
 
-  const {connector, network} = getNetworkAndConnector(manufacturer, type);
+  // T-DEV-MKF-01: unknown manufacturer/type used to crash the analysis with no message on the form.
+  const networkAndConnector = getNetworkAndConnector(manufacturer, type);
+  if (!networkAndConnector) {
+    message = "Δεν υποστηρίζεται ακόμα αυτόματη καταχώρηση για ".concat(manufacturer).concat(" / ").concat(type).concat(". Η συσκευή ΔΕΝ δημιουργήθηκε.");
+    await dashboard_device.sendData({ variable: "validation", value: message, metadata: { color: "red" } });
+    return;
+  }
+  const {connector, network} = networkAndConnector;
 
-  eui = eui.toString().toLowerCase();
+  eui = eui.toString().trim().toLowerCase();
+
+  // T-DEV-MKF-01: the QR code on Makerfabs AgroSense sensors is a link (https://www.makerfabs.com/), not the EUI.
+  if (eui.includes('http') || eui.includes('www.') || eui.includes('/')) {
+    message = "Ο κωδικός QR έδωσε σύνδεσμο (".concat(eui).concat(") και όχι EUI. Πληκτρολογήστε το DevEUI (16 ψηφία) από την ετικέτα της συσκευής.");
+    await dashboard_device.sendData({ variable: "validation", value: message, metadata: { color: "red" } });
+    return;
+  }
 
   if (eui.length < 16)
   {
