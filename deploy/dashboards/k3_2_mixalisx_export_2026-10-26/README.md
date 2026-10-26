@@ -13,7 +13,9 @@
 - Ξεχωριστή συσκευή φόρμας, ώστε ο ένας πελάτης να μη βλέπει το email/την περίοδο του άλλου (η φόρμα δείχνει `last_value`).
 - Η ανάλυση βρίσκει τον αγρό από το id που στέλνει η φόρμα, άρα δουλεύει για κάθε αγρό χωρίς αλλαγή.
 - Πολιτική `mixalisx1959@gmail.com` (6a424cf8…): ίδιοι κανόνες με του ΙΔΕ (ταμπλό με `access`, συσκευές μέσω ταμπλό) — δεν άλλαξε.
-- Το MCP δεν ορίζει group_by / εικονίδιο / metadata `run` στις ετικέτες. Χρειάζονται από το περιβάλλον του TagoIO:
-  group_by = dashboardGroupGeneral, dashboardGroup, dashboardSubGroup · `run` στις ετικέτες access=mixalisx1959@gmail.com και dashboardSubGroup · εικονίδιο angle-double-up.
+- Το MCP δεν ορίζει group_by / εικονίδιο / metadata `run` στις ετικέτες. Ορίστηκαν 26/10 από το περιβάλλον του TagoIO:
+  Dashboard settings › Tags › «Group dashboard using Tags» = dashboardGroupGeneral, dashboardGroup, dashboardSubGroup, με «Include in Run» μόνο στο 3ο ·
+  εικονίδιο από ⋮ › Edit mode › ⋮ › Customize theme › Dashboard icon = angle-double-up. Η ετικέτα access χωρίς σήμανση `run` (όπως στο ταμπλό εξαγωγής του ΙΔΕ).
+- Δοκιμή 26/10: εξαγωγή 19–26/10 στο tsikalas@katartisi.gr πέτυχε (έδαφος 540 + σταθμός 2.292 γραμμές).
 - Όπως και στο ΙΔΕ, η «Τοποθεσία» δείχνει και τη συσκευή του πελάτη («Μιχάλης Χ») δίπλα στον αγρό· αν επιλεγεί, η ανάλυση απαντά ότι δεν έχει αισθητήρες.
 - Αναστροφή: διαγραφή ταμπλό `6adfa2ed…` και συσκευής `6adfa2da…`. Τίποτε υπάρχον δεν άλλαξε.
