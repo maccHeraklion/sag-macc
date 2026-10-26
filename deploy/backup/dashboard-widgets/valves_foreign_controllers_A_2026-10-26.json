@@ -1,0 +1,23 @@
+{
+  "_note": "Πρόταση Α (σημείωμα Μιχάλη 19/10), 26/10/2026 Κώστας: αντίγραφο ΠΡΙΝ το άδειασμα των καρτελών Άρδευση (valvesControl) / Προγραμματισμός (valvesRules) σε 10 ταμπλό. Σε ΟΛΑ το data ήταν ΙΔΙΟ (κληρονομιά προτύπου 68f92649): μόνο οι ξένοι ελεγκτές uc511_0458 / uc511_0817 / uc511_9864. display (parameters, device_map, url) ΔΕΝ αλλάζει. Επαναφορά: update_widget με το data_before του αντίστοιχου widget. Εκτός: Τσικαλας, Χωράφι CyRIC (αγροί δοκιμών), ΚΟΥΤΣΑΚΗΣ / Ρηγάκης / Τσαγκαράκης / Μεγάλη Ντάμα (εκκρεμεί απόφαση).",
+  "data_before_valvesControl": [
+    {"qty": 500, "bucket": "684c444dcc1cd8000a0f2b21", "origin": "684c444dcc1cd8000a0f2b21", "variables": ["valve_1", "valve_2", "valve_1_command", "valve_2_command", "valve_1_time_command", "valve_2_time_command", "valve_1_pulse", "valve_2_pulse"]},
+    {"qty": 500, "bucket": "67fe9a453b56fa000ac762da", "origin": "67fe9a453b56fa000ac762da", "variables": ["valve_1", "valve_2", "valve_1_command", "valve_2_command", "valve_1_time_command", "valve_2_time_command", "valve_1_pulse", "valve_2_pulse"]}
+  ],
+  "data_before_valvesRules": [
+    {"qty": 500, "bucket": "684c444dcc1cd8000a0f2b21", "origin": "684c444dcc1cd8000a0f2b21", "variables": ["rule1"]},
+    {"qty": 500, "bucket": "67bd98d739006c000ada33ef", "origin": "684c376d508354000ae0bdf2", "variables": ["rule1"]}
+  ],
+  "widgets": [
+    {"dashboard": "68f92649f8b680000ab970ae", "label": "SAG_OpenField_Template (ΠΡΟΤΥΠΟ)", "valvesControl": "68f9451942496b000a9db6ad", "valvesRules": "68f9df3434f800000959bcc6"},
+    {"dashboard": "6a425d5179b84e000b38a677", "label": "ΚΑΜΠΑΝΗΣ ΧΡΗΣΤΟΣ", "valvesControl": "6a425d5179b84e000b38a67d", "valvesRules": "6a425d5179b84e000b38a67c"},
+    {"dashboard": "6a841fdb052bf2000ce06517", "label": "Καμπιτάκης BIO Olive Oil", "valvesControl": "6a841fdb052bf2000ce0651d", "valvesRules": "6a841fdb052bf2000ce0651c"},
+    {"dashboard": "6a424cb4eb6593000ca19fe1", "label": "Μιχάλης Χ", "valvesControl": "6a424cb4eb6593000ca19fe7", "valvesRules": "6a424cb4eb6593000ca19fe6"},
+    {"dashboard": "69e0aa6654a00e000aa67136", "label": "ΓΡΙΝΙΑΡΑΚΗΣ ΓΙΑΝΝΗΣ", "valvesControl": "69e0aa6654a00e000aa6713c", "valvesRules": "69e0aa6654a00e000aa6713b"},
+    {"dashboard": "6a38f8cb4009f5000c364ffd", "label": "Κρασαγάκης Σπύρος (ορφανό, Templates)", "valvesControl": "6a38f8cb4009f5000c365003", "valvesRules": "6a38f8cb4009f5000c365002"},
+    {"dashboard": "6a4b9dac61916f000cbda82e", "label": "ΚΥΔΩΝ (δικός: uc511 69779884…, ΔΕΝ ήταν στις καρτέλες)", "valvesControl": "6a4b9dac61916f000cbda834", "valvesRules": "6a4b9dac61916f000cbda833"},
+    {"dashboard": "6a4d6056bf7c42000c7e8568", "label": "Κουκιά (δικοί: uc511_1095, uc511_8805, ΔΕΝ ήταν στις καρτέλες)", "valvesControl": "6a4d6056bf7c42000c7e856e", "valvesRules": "6a4d6056bf7c42000c7e856d"},
+    {"dashboard": "6a61dfb91965a7000cedba9f", "label": "Μανιδάκης Μιαμού Λέντα (δικός: uc511_5298, ΔΕΝ ήταν στις καρτέλες)", "valvesControl": "6a61dfb91965a7000cedbaa5", "valvesRules": "6a61dfb91965a7000cedbaa4"},
+    {"dashboard": "6a746274f99707000ca5d0a2", "label": "ΠΑΝΕΤΕΚ (δικοί: uc511_0332, uc511_9341, ΔΕΝ ήταν στις καρτέλες)", "valvesControl": "6a746274f99707000ca5d0a8", "valvesRules": "6a746274f99707000ca5d0a7"}
+  ]
+}
