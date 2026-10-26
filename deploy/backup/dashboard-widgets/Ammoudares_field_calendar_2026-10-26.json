@@ -1,0 +1,26 @@
+{
+  "_note": "K3-4β / T-DASH-SRC-03 (26/10/2026, Κώστας): αντίγραφο ΠΡΙΝ την αφαίρεση της δεύτερης δήλωσης field_calendar από την πρώτη πηγή του widget Αρχική (sagMain) των Αμμουδάρων. Επαναφορά: update_widget με το παρακάτω data.",
+  "dashboard": "6ad202ac5a0327000c98a2ad",
+  "widget": "6ad202ac5a0327000c98a2b2",
+  "analysis_run": "68deb0d47a8161000a558867",
+  "data_before": [
+    {"qty": 500, "origin": "6ad202ac174a0b000cf10008", "variables": ["configuration", "field_bundle", "forecast", "field_bundle_2", "field_calendar", "history_request", "history_data"]},
+    {"qty": 500, "origin": "6ad202ac174a0b000cf10008", "variables": ["field_calendar", "spray_declaration", "inspection_declaration", "declaration_undo", "action_log"]},
+    {"qty": 500, "origin": "6a2bd1b3d3f020000c10f7a5", "bucket": "6a2bd1b3d3f020000c10f7a5", "timezone": "Europe/Athens", "variables": ["temperature"]},
+    {"qty": 500, "origin": "6a2bd1b3d3f020000c10f7a5", "bucket": "6a2bd1b3d3f020000c10f7a5", "timezone": "Europe/Athens", "variables": ["humidity"]},
+    {"qty": 500, "origin": "684c293acd7675000a93c981", "bucket": "684c293acd7675000a93c981", "timezone": "Europe/Athens", "variables": ["leaf_temperature"]},
+    {"qty": 500, "origin": "684c293acd7675000a93c981", "bucket": "684c293acd7675000a93c981", "timezone": "Europe/Athens", "variables": ["leaf_moisture"]},
+    {"qty": 500, "origin": "6891d4a12e379b000a0cdf6f", "bucket": "6891d4a12e379b000a0cdf6f", "timezone": "Europe/Athens", "variables": ["soil_moisture1"]},
+    {"qty": 500, "origin": "6891d4a12e379b000a0cdf6f", "bucket": "6891d4a12e379b000a0cdf6f", "timezone": "Europe/Athens", "variables": ["soil_temperature1"]},
+    {"qty": 500, "origin": "6891d4a12e379b000a0cdf6f", "bucket": "6891d4a12e379b000a0cdf6f", "timezone": "Europe/Athens", "variables": ["conduct_soil1"]},
+    {"qty": 500, "origin": "6891d4a12e379b000a0cdf6f", "bucket": "6891d4a12e379b000a0cdf6f", "timezone": "Europe/Athens", "variables": ["fertility_index1"]},
+    {"qty": 500, "origin": "6891d4a12e379b000a0cdf6f", "bucket": "6891d4a12e379b000a0cdf6f", "timezone": "Europe/Athens", "variables": ["soil_moisture2"]},
+    {"qty": 500, "origin": "6891d4a12e379b000a0cdf6f", "bucket": "6891d4a12e379b000a0cdf6f", "timezone": "Europe/Athens", "variables": ["soil_temperature2"]},
+    {"qty": 500, "origin": "6891d4a12e379b000a0cdf6f", "bucket": "6891d4a12e379b000a0cdf6f", "timezone": "Europe/Athens", "variables": ["conduct_soil2"]},
+    {"qty": 500, "origin": "6891d4a12e379b000a0cdf6f", "bucket": "6891d4a12e379b000a0cdf6f", "timezone": "Europe/Athens", "variables": ["fertility_index2"]},
+    {"qty": 500, "origin": "6a7c700f0ad4a1000b4e119f", "bucket": "6a7c700f0ad4a1000b4e119f", "timezone": "Europe/Athens", "variables": ["soil_ph"]},
+    {"qty": 500, "origin": "6a7c700f0ad4a1000b4e119f", "bucket": "6a7c700f0ad4a1000b4e119f", "timezone": "Europe/Athens", "variables": ["temp_soil"]}
+  ],
+  "display_variables_before": "παλιά μορφή origin {id,bucket} με bucket=id για 14 μεταβλητές: temperature, humidity (6a2bd1b3…), leaf_temperature, leaf_moisture (684c293a…), soil_moisture1, soil_temperature1, conduct_soil1, fertility_index1, soil_moisture2, soil_temperature2, conduct_soil2, fertility_index2 (6891d4a1…), soil_ph, temp_soil (6a7c700f…). Γράφεται ως origin:\"<id>\" (ίδιο περιεχόμενο), επειδή το σχήμα του update_widget δεν δέχεται το αντικείμενο.",
+  "change":"Αφαιρείται ΜΟΝΟ το \"field_calendar\" από την 1η πηγή (field_bundle). Μένει στη 2η πηγή (καταγραφές), όπως σε όλα τα άλλα ταμπλό μετά το T-DASH-SRC-01. Τίποτε άλλο δεν αλλάζει."
+}
