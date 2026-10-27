@@ -40,6 +40,8 @@
  **    καλλιέργεια, ο πυρήνας (FIR/PEI, γρ. 4635, 9729) τα διαβάζει ΜΟΝΟ
  **    από τη ρίζα. Μισές/μελλοντικές δηλώσεις αποκλείονται με προειδοποίηση.
  **
+ ** v14 · 27/10/2026 — T-SUBSTRATE-01: 'coir' (υπόστρωμα κοκοφοίνικα) δεκτό στο soil_type. Τίποτα
+ ** άλλο δεν αλλάζει· το soil_texture_class περνούσε ήδη αυτούσιο.
  ** v13 · 19/9/2026 — T-CROPKEYS-03 (έλεγχος 18/9, Κ13): η ανά καλλιέργεια
  ** προβολή σηκώνει ΕΠΙΤΕΛΟΥΣ plants, area_m2, irrig_emitter_spacing_m,
  ** irrig_row_spacing_m, irrig_emitter_lph, cultivation_variety — τα κλειδιά που η
@@ -74,8 +76,9 @@ const { Analysis, Utils, Account, Device } = require("@tago-io/sdk");
    συντηρητικό. Η υπέρβαση αρνείται ΘΟΡΥΒΩΔΩΣ αντί να κόψει σιωπηλά. */
 const TAG_SAFE_LIMIT = 1900;
 
-/* Το λεξιλόγιο εδάφους του πυρήνα (SOIL_PROFILE). */
-const KERNEL_SOIL_TYPES = ["sandy", "loamy", "clay_loamy", "calcareous_clay"];
+/* Το λεξιλόγιο εδάφους του πυρήνα (SOIL_PROFILE) + το υπόστρωμα 'coir' (v14 · T-SUBSTRATE-01,
+   πυρήνας v50.162: SUBSTRATE_PROFILE — όχι έδαφος, χωρίς υπολογισμούς χώματος). */
+const KERNEL_SOIL_TYPES = ["sandy", "loamy", "clay_loamy", "calcareous_clay", "coir"];
 
 /* Ρίζα της προβολής: ό,τι διαβάζει ο πυρήνας + soil_texture_class/elevation_m
    (αποθηκεύονται για μελλοντική χρήση — μικρό κόστος). */

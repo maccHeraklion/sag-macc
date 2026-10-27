@@ -28,8 +28,9 @@ function buildScUpd(text) {
   const body = block.replace(/^const _scUpd = /, "");
   const _scPlaus = (v) => Number.isFinite(v) && v >= 0.5 && v <= 60;
   const _scR2 = (x) => Math.round(x * 100) / 100;
-  const mk = new Function("_scPlaus", "_scR2", "_scDayNum", "return " + body);
-  return { at: (d) => mk(_scPlaus, _scR2, d) };
+  // v50.162 T-SUBSTRATE-01: αγρός χώματος → σημαία υποστρώματος κλειστή (βλ. substrate_check).
+  const mk = new Function("_scPlaus", "_scR2", "_scDayNum", "_SAG_SUBSTRATE_ACTIVE", "return " + body);
+  return { at: (d) => mk(_scPlaus, _scR2, d, null) };
 }
 
 function buildMismatch(text) {
@@ -46,7 +47,7 @@ function run(text) {
   const ok = (cond, msg) => { if (!cond) failures.push(msg); };
 
   // ── Α. καλωδίωση ──
-  ok(text.includes("const SAG_KERNEL_VERSION = 'v50.161 · 2026-10-14';"), "έκδοση v50.154");
+  ok(text.includes("const SAG_KERNEL_VERSION = 'v50.162 · 2026-10-27';"), "έκδοση v50.154");
   ok((text.match(/if \(_cpProf && !fieldConfig\?\.covered_cultivation\) \{/g) || []).length === 1, "πύλη καλύμματος στο _anomDays");
   ok(text.includes("st.e = _wet ? 1 : 0;"), "st.e από _wet");
   ok(text.includes("const _lowSide = !rng || (cur <= rng.mn + 0.35 * (rng.mx - rng.mn));"), "_lowSide");
@@ -130,7 +131,7 @@ const MUT = [
   ["m4 παλιό κριτήριο ασυμφωνίας", "const _mismatch = (_fcE < _refillT)", "const _mismatch = (_fcE < M_wilt + 0.25 * _tawT)"],
   ["m5 χωρίς πύλη καλύμματος", "if (_cpProf && !fieldConfig?.covered_cultivation) {", "if (_cpProf) {"],
   ["m6 κάτω τρίτο -> όλο το εύρος", "0.35 * (rng.mx - rng.mn)", "1.0 * (rng.mx - rng.mn)"],
-  ["m7 παλιά έκδοση", "'v50.161 · 2026-10-14'", "'v50.159 · 2026-10-04'"],
+  ["m7 παλιά έκδοση", "'v50.162 · 2026-10-27'", "'v50.159 · 2026-10-04'"],
   ["m8 στάδιο αγνοείται", "? _omrP.stages[_stP]\n", "? _omrP.default\n"],
   ["m9 μετρητής δειγμάτων παγωμένος", "st.n = (st.n || 0) + 1;", "st.n = (st.n || 0);"],
 ];

@@ -956,7 +956,8 @@ const SOIL_TYPES = {
   sandy:'Αμμώδης Πηλός',
   loamy:'Πηλώδες',
   clay_loamy:'Αργιλώδες Πηλώδες',
-  calcareous_clay:'Ασβεστούχο Άργιλο'
+  calcareous_clay:'Ασβεστούχο Άργιλο',
+  coir:'Υπόστρωμα (όχι έδαφος)'   /* v24 · T-SUBSTRATE-01 */
 };
 
 /* ── Διευρυμένη κοκκομετρία (USDA) ──────────────────────────────────────
@@ -978,10 +979,12 @@ const SOIL_TEXTURES = {
   sandy_clay:       { el:'Αμμοαργιλώδες',                group:'clay_loamy',      hint:'Βαρύ' },
   silty_clay:       { el:'Ιλυοαργιλώδες',                group:'clay_loamy',      hint:'Πολύ βαρύ, κίνδυνος υπερκορεσμού' },
   clay:             { el:'Αργιλώδες',                    group:'clay_loamy',      hint:'Πολύ βαρύ, πολύ αργή στράγγιση' },
-  calcareous_clay:  { el:'Ασβεστούχο Αργιλώδες',         group:'calcareous_clay', hint:'Υψηλό pH — κίνδυνος χλώρωσης σιδήρου' }
+  calcareous_clay:  { el:'Ασβεστούχο Αργιλώδες',         group:'calcareous_clay', hint:'Υψηλό pH — κίνδυνος χλώρωσης σιδήρου' },
+  /* v24 · T-SUBSTRATE-01: ΥΠΟΣΤΡΩΜΑ, όχι έδαφος — ο πυρήνας (v50.162) δεν του εφαρμόζει υπολογισμούς χώματος. */
+  coir:             { el:'Υπόστρωμα κοκοφοίνικα',        group:'coir',            hint:'Slabs/σακιά — μόνο σε θερμοκήπιο' }
 };
 /* Αντιπρόσωπος κάθε ομάδας, για υδροδότηση παλιών αγρών που έχουν μόνο soil_type */
-const SOIL_GROUP_DEFAULT = { sandy:'sandy_loam', loamy:'loam', clay_loamy:'clay_loam', calcareous_clay:'calcareous_clay' };
+const SOIL_GROUP_DEFAULT = { sandy:'sandy_loam', loamy:'loam', clay_loamy:'clay_loam', calcareous_clay:'calcareous_clay', coir:'coir' };   /* v24 · T-SUBSTRATE-01 */
 
 /* ── Ποιότητα νερού με ΚΡΙΤΗΡΙΟ (FAO-29 Ayers & Westcot) ── */
 const WATER_INFO = {
@@ -1792,6 +1795,10 @@ function syncCoverGates(){
     const sel = document.getElementById('covered_cultivation');
     if (!sel) return;
     const covered = String(sel.value) === 'true';
+    /* v24 · T-SUBSTRATE-01: ο κοκοφοίνικας είναι υπόστρωμα θερμοκηπίου — επιλέγεται μόνο σε καλυμμένη.
+       Αν είναι ήδη επιλεγμένος, μένει ορατός· την αποθήκευση τη φράζει το btnSave. */
+    const _coir = document.querySelector('#soil_type option[value="coir"]');
+    if (_coir) _coir.disabled = !covered;
     COVER_GATES.forEach(function(g){
       const wrap = document.getElementById(g.id);
       if (!wrap) return;
@@ -2164,7 +2171,7 @@ function buildPayload(){
        ενημερωθεί και ο φρουρός στο setFieldParametersFromDeviceData. */
     version: 4,
     crops,
-    /* Το soil_type μένει ΠΑΝΤΑ ένας από τους 4 που ξέρει ο πυρήνας.
+    /* Το soil_type μένει ΠΑΝΤΑ ένας από τους 4 που ξέρει ο πυρήνας — ή 'coir' (v24 · T-SUBSTRATE-01).
        Η ακριβής κλάση αποθηκεύεται χωριστά για μελλοντική χρήση. */
     soil_type: _keepPrev((SOIL_TEXTURES[$('soil_type').value] || {}).group || $('soil_type').value || null, prevConf.soil_type),
     soil_texture_class: _keepPrev($('soil_type').value || null,
@@ -2825,6 +2832,12 @@ $('btnSave').onclick = function(){
       showBanner('Τα αποθηκευμένα στοιχεία του αγρού φορτώνονται ακόμη — περιμένετε λίγα δευτερόλεπτα και ξαναπατήστε «Καταχώριση».', 'warn');
       return;
     }
+  }
+  /* v24 · T-SUBSTRATE-01: υπόστρωμα κοκοφοίνικα ΜΟΝΟ σε καλυμμένη καλλιέργεια — ΦΡΑΓΜΟΣ, όχι προειδοποίηση. */
+  if ($('soil_type').value === 'coir' && $('covered_cultivation').value !== 'true'){
+    showBanner('Το υπόστρωμα κοκοφοίνικα επιλέγεται μόνο σε καλυμμένη καλλιέργεια (θερμοκήπιο). '
+      + 'Ορίστε «Καλυμμένη καλλιέργεια: Ναι» ή επιλέξτε τύπο εδάφους. Τίποτα δεν αποθηκεύτηκε.', 'warn');
+    return;
   }
   /* ── Προειδοποιήσεις, ΟΧΙ φραγμός ──
      Ο χρήστης μπορεί να θέλει να σώσει άλλες διορθώσεις χωρίς να ξέρει τα πάντα.

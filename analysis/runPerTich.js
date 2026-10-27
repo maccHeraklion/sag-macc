@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.161 · 2026-10-14';
+const SAG_KERNEL_VERSION = 'v50.162 · 2026-10-27';
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -4930,6 +4930,121 @@ function _sagSoilKeyOf(parameters) {
   return null;
 }
 
+// ═══ T-SUBSTRATE-01 (v50.162 · 27/10/2026, έγκριση Μιχάλη Ε1–Ε6) ════════════════
+// Υπόστρωμα κοκοφοίνικα (slabs/σακιά θερμοκηπίου). ΔΕΝ είναι έδαφος και ΔΕΝ μπαίνει στο
+// SOIL_PROFILE: κάθε καταναλωτής του πίνακα εδαφών παίρνει «άγνωστο» και πάει στην
+// τεκμηριωμένη εφεδρεία του, και η αναζήτηση πλησιέστερης κλάσης (T-SOILCAL-02) δεν βλέπει
+// ποτέ κοκοφοίνικα. ΣΤΑΔΙΟ 1: καμία υδραυλική σταθερά (οι αριθμοί Α1 έρχονται στο Στάδιο 2).
+// ΓΙΑΤΙ: ο Dragino LSE01 σε κοκοφοίνικα δείχνει ~25 % εκεί που η αναφορά δείχνει 50 %, και
+// EC όγκου 261 µS/cm σε διάλυμα 2,5 dS/m (Dragino 2023, «Calibrate LSE01 to use other soil»).
+// Οι τύποι χώματος (Topp, Hilhorst ε0=4,1, ECe/Maas-Hoffman, FAO-56) εδώ δίνουν ψέματα.
+// Σχέδιο: reports/ΣΧΕΔΙΟ_T-SUBSTRATE-01_ΣΤΑΔΙΑ_0-1_2026-10-27.md
+const SUBSTRATE_PROFILE = {
+  coir: { name: 'Υπόστρωμα κοκοφοίνικα', kind: 'substrate' }
+};
+// ΑΚΡΙΒΗΣ σύγκριση συμβολοσειράς: 'constructor', '__proto__' κ.λπ. δεν περνούν ποτέ.
+function _sagSubstrateOf(cfg) {
+  const _c = [cfg?.soil_texture_class, cfg?.soil_type];
+  for (const _k of _c) if (_k === 'coir') return 'coir';
+  return null;
+}
+// Ε1: «μαθημένο» slab = ≥10 ημέρες με δείγμα στραγγισμένου πλατό ΚΑΙ διασπορά των
+// τελευταίων 5 δειγμάτων ≤3 μονάδες (στην κλίμακα του οργάνου).
+const _SAG_SUB_LEARN_N = 10;
+const _SAG_SUB_LEARN_SPREAD = 3;
+// Ε2: αγωγιμότητα «ανεβαίνει/πέφτει» όταν το σημερινό 24ωρο απέχει >10 % από τον μέσο των
+// 7 προηγούμενων ημερών· αλλιώς «σταθερή». Προτεινόμενη τιμή — αναθεωρείται με τον πιλότο.
+const _SAG_SUB_EC_DAYS = 7;
+const _SAG_SUB_EC_TREND = 0.10;
+const _SAG_SUB_TXT_IPSI = 'Σε υπόστρωμα κοκοφοίνικα ο δείκτης δεν υπολογίζεται ακόμη: '
+  + 'ο αισθητήρας δεν είναι βαθμονομημένος στο υπόστρωμα.';
+// Υγρασία/αγωγιμότητα slab: ΚΡΥΒΟΝΤΑΙ από τα μοντέλα της καλλιέργειας (ένα σημείο, όπως η
+// βροχή στο T-COVERED-01). Υγεία οργάνων και μάθηση βλέπουν τις ωμές τιμές.
+const _SAG_SUB_MASK_RE = /^(soil_moisture|soil_humidity|water_soil|conduct_soil)[0-9]*(_avg|_max|_min|_sum)?$/;
+function _sagSubstrateMask(data) {
+  if (!data || typeof data !== 'object') return data;
+  for (const _k of Object.keys(data)) if (_SAG_SUB_MASK_RE.test(_k)) delete data[_k];
+  return data;
+}
+// Κατάσταση μάθησης από το soilcal_state (ρηχό, αλλιώς βαθύ — το slab έχει συνήθως μία σόνδα).
+function _sagSubstrateLearnState(measurements) {
+  let _j = null;
+  try {
+    const _raw = getVal(measurements, 'soilcal_state', null);
+    _j = (typeof _raw === 'string' && _raw) ? JSON.parse(_raw)
+      : ((_raw && typeof _raw === 'object') ? _raw : null);
+  } catch (_e) { _j = null; }
+  const _has = (st) => !!(st && typeof st === 'object'
+    && ((Number(st.n) || 0) > 0 || Number.isFinite(Number(st.r))));
+  const st = _has(_j?.s) ? _j.s : (_has(_j?.d) ? _j.d : null);
+  const n = st ? Math.max(0, Math.floor(Number(st.n) || 0)) : 0;
+  const fs = (st && Array.isArray(st.fs)) ? st.fs.map(Number).filter(Number.isFinite) : [];
+  const spread = fs.length >= 5 ? (Math.max.apply(null, fs) - Math.min.apply(null, fs)) : null;
+  const learned = n >= _SAG_SUB_LEARN_N && spread !== null && spread <= _SAG_SUB_LEARN_SPREAD;
+  return { n, learned, spread,
+    rd: st && st.rd != null ? Number(st.rd) : NaN, r: st && st.r != null ? Number(st.r) : NaN };
+}
+const _sagSubFmt = (x) => (Math.round(x * 10) / 10).toFixed(1).replace('.', ',');
+// Κ7 · κάρτα άρδευσης σε υπόστρωμα: ΠΟΤΕ δόση, ΠΟΤΕ κόκκινο. Γκρι όσο μαθαίνει, μπλε μετά.
+function _sagSubstrateIrrigationMsg(measurements) {
+  const L = _sagSubstrateLearnState(measurements);
+  if (!L.learned) {
+    const _x = Math.min(L.n, _SAG_SUB_LEARN_N);
+    return { variable: 'irrigation_message',
+      value: 'Υπόστρωμα: μαθαίνει (' + _x + '/' + _SAG_SUB_LEARN_N + ')',
+      metadata: { color: 'grey',
+        text: 'Υπόστρωμα κοκοφοίνικα: το σύστημα μαθαίνει το slab (' + _x + ' από '
+          + _SAG_SUB_LEARN_N + ' ημέρες ποτίσματος'
+          + (L.n >= _SAG_SUB_LEARN_N ? ' — η συμπεριφορά του δεν έχει σταθεροποιηθεί ακόμη' : '')
+          + '). Σε υπόστρωμα δεν βγαίνει δόση — ποτίστε με βάση την απορροή.' } };
+  }
+  const _today = (Number.isFinite(L.rd) && Number.isFinite(L.r))
+    ? ('Slab: σήμερα η υγρασία κινήθηκε ' + _sagSubFmt(L.rd) + ' μονάδες, συνήθως ' + _sagSubFmt(L.r) + '. ')
+    : 'Slab: η συμπεριφορά του έχει μαθευτεί. ';
+  return { variable: 'irrigation_message', value: 'Υπόστρωμα κοκοφοίνικα',
+    metadata: { color: 'blue',
+      text: _today + 'Ένδειξη οργάνου, όχι πραγματική υγρασία. Δόση δεν βγαίνει σε υπόστρωμα.' } };
+}
+// Ιστορικό αγωγιμότητας slab: ΜΙΑ τιμή την ημέρα (μέσος 24ώρου, αλλιώς η τελευταία),
+// αναγμένη στους 25 °C με 2 %/°C (ίδιος κανόνας με _sagEcChain). Παράθυρο 8 ημερών
+// (σήμερα + 7 προηγούμενες), βήμα 1 ημέρα. Κενό >3 ημερών: η εβδομάδα ξεκινά από την αρχή.
+function _sagSubstrateEcHist(prev, measurements, dayNum) {
+  const p = (prev && typeof prev === 'object' && Array.isArray(prev.v))
+    ? { k: prev.k, v: prev.v.slice(-(_SAG_SUB_EC_DAYS + 1)) } : { k: null, v: [] };
+  if (p.k === dayNum) return p;
+  const _first = (keys) => {
+    for (const k of keys) { const v = Number(getVal(measurements, k, NaN)); if (Number.isFinite(v)) return v; }
+    return NaN;
+  };
+  const ec = _first(['conduct_soil1_avg', 'conduct_soil_avg', 'conduct_soil1', 'conduct_soil']);
+  if (!Number.isFinite(ec) || ec < _SAG_EC_DEAD_US) return p;   // νεκρό όργανο: δεν μαθαίνουμε σκουπίδια
+  const t = _first(['soil_temperature1_avg', 'temp_soil_avg', 'soil_temperature_avg',
+    'soil_temperature1', 'temp_soil', 'soil_temperature']);
+  const _tf = Number.isFinite(t) ? 1 + 0.02 * (t - 25) : 1;
+  const ec25 = _tf > 0.2 ? ec / _tf : ec;
+  const v = (Number.isFinite(p.k) && dayNum - p.k > 3) ? [] : p.v;
+  return { k: dayNum, v: v.concat([Math.round(ec25)]).slice(-(_SAG_SUB_EC_DAYS + 1)) };
+}
+// Κ7 · κάρτα αγωγιμότητας σε υπόστρωμα: ΤΑΣΗ, όχι αλατότητα. Καμία ECe, κανένα όριο καλλιέργειας.
+function _sagSubstrateEcStatus(eh) {
+  const v = (eh && Array.isArray(eh.v)) ? eh.v.map(Number).filter(Number.isFinite) : [];
+  const _tail = ' Δεν είναι EC διαλύματος — μετρήστε με σύριγγα και απορροή.';
+  if (v.length < _SAG_SUB_EC_DAYS + 1) {
+    const _x = Math.max(0, v.length - 1);
+    return { variable: 'soil_ec_status',
+      value: 'Υπόστρωμα: μαθαίνει (' + _x + '/' + _SAG_SUB_EC_DAYS + ')',
+      metadata: { color: 'grey', text: 'Αγωγιμότητα slab: μαθαίνει τη βάση (' + _x + ' από '
+        + _SAG_SUB_EC_DAYS + ' ημέρες).' + _tail } };
+  }
+  const base = v.slice(0, _SAG_SUB_EC_DAYS).reduce((a, b) => a + b, 0) / _SAG_SUB_EC_DAYS;
+  const now = v[v.length - 1];
+  const rel = base > 0 ? (now - base) / base : 0;
+  const w = rel > _SAG_SUB_EC_TREND ? 'ανεβαίνει' : (rel < -_SAG_SUB_EC_TREND ? 'πέφτει' : 'σταθερή');
+  return { variable: 'soil_ec_status', value: 'Αγωγιμότητα slab: ' + w,
+    metadata: { color: 'blue', text: 'Αγωγιμότητα slab: ' + w
+      + ' σε σχέση με την προηγούμενη εβδομάδα (ένδειξη οργάνου στους 25 °C).' + _tail } };
+}
+
 
 const WATER_PROFILE = {
   excellent: {
@@ -7435,6 +7550,9 @@ function calculate_IrrigationVolume(hourlyTich, measurements, ipsi, parameters) 
   // T-ROOTZONE-WEIGHT-01: ΙΔΙΑ σταθμισμένη τιμή με το IPSI — τα δύο δεν επιτρέπεται
   // να δουν διαφορετική υγρασία. Ο παλιός κώδικας κρατούσε τον ΠΡΩΤΟ υποψήφιο που
   // υπήρχε (πάντα ρηχός) και αγνοούσε τελείως το βάθος 2.
+  // T-SUBSTRATE-01: σε υπόστρωμα δεν βγαίνει δόση FAO-56 (το slab ποτίζεται με παλμούς βάσει
+  // απορροής). Το μήνυμα λέει τι μαθαίνει το σύστημα· τα υπόλοιπα κλειδιά άρδευσης σβήνουν ρητά.
+  if (_SAG_SUBSTRATE_ACTIVE) return emitIrrigationState([_sagSubstrateIrrigationMsg(measurements)]);
   const _rzIrr = _sagRootZoneMoisture(measurements, parameters);
   const _mSoilNow = _rzIrr.ok ? _rzIrr.value : NaN;
   if (!_rzIrr.ok) {
@@ -11907,7 +12025,7 @@ function calculate_IPSI(hourlyTich, measurements, vpd, parameters, vpdError = ""
   // με ΜΟΝΟ βαθύ, ο αγρός παύει να σκοτεινιάζει.
   const _rz = _sagRootZoneMoisture(measurements, parameters);
   let M_soil = _rz.ok ? _rz.value : undefined;
-  if (!Number.isFinite(M_soil)) { return { ipsi: undefined, ipsiError: "δεν υπάρχει έγκυρη μέτρηση υγρασίας εδάφους — ελέγξτε τον αισθητήρα του χωραφιού (μπαταρία, επαφή με το χώμα, καλώδιο)" }; }
+  if (!Number.isFinite(M_soil)) { return { ipsi: undefined, ipsiError: _SAG_SUBSTRATE_ACTIVE ? _SAG_SUB_TXT_IPSI : "δεν υπάρχει έγκυρη μέτρηση υγρασίας εδάφους — ελέγξτε τον αισθητήρα του χωραφιού (μπαταρία, επαφή με το χώμα, καλώδιο)" }; }
 
   // -----------------------------
   // Rainfall (24h sum) if present
@@ -17636,6 +17754,12 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
 // -> η σημαία τίθεται πριν την getMeasurements κάθε αγρού). Σε θερμοκήπιο ο
 // αέρας φτάνει 60 °C+ — το άνω όριο των θερμοκρασιών αέρα/φύλλου γίνεται 65.
 let _SAG_COVERED_ACTIVE = false;
+// T-SUBSTRATE-01: 'coir' ή null για τον αγρό που επεξεργάζεται ΤΩΡΑ (μηδενίζεται σε κάθε αγρό).
+let _SAG_SUBSTRATE_ACTIVE = null;
+// Υγρασία υποστρώματος ώς το εύρος του οργάνου (Dragino LSE01: 0–100 %). Ο κοκοφοίνικας
+// κρατά νόμιμα πολύ περισσότερο νερό από το χώμα· το 60 θα έκοβε υγιείς μετρήσεις ως «βλάβη».
+const _SAG_SUBSTRATE_MOIST_HI = 100;
+const _SAG_SUBSTRATE_MOIST_RE = /^(soil_moisture|soil_humidity|water_soil)$/;
 const _SAG_COVERED_TEMP_HI = 65;
 const _SAG_COVERED_TEMP_RE = /^(air_temperature|temperature|leaf_temperature|canopy_temperature)/;
 
@@ -17776,7 +17900,9 @@ function _sagPlausibilityGate(data, fieldName) {
       // νόμιμα ώς 65 °C — ΜΟΝΟ το άνω όριο, ΜΟΝΟ για αυτά τα κλειδιά.
       const _kBase = key.replace(/_(avg|max|min|sum)$/, '').replace(/[0-9]+$/, '');
       const _hi = (_SAG_COVERED_ACTIVE && _SAG_COVERED_TEMP_RE.test(_kBase))
-        ? Math.max(range[1], _SAG_COVERED_TEMP_HI) : range[1];
+        ? Math.max(range[1], _SAG_COVERED_TEMP_HI)
+        : (_SAG_SUBSTRATE_ACTIVE && _SAG_SUBSTRATE_MOIST_RE.test(_kBase))   // T-SUBSTRATE-01
+          ? Math.max(range[1], _SAG_SUBSTRATE_MOIST_HI) : range[1];
       const v = data[key];
       const checkOne = (raw) => {
         if (raw === null || raw === undefined || raw === '') return false;
@@ -18301,6 +18427,7 @@ module.exports = new Analysis(async (context) => {
     const fieldsWithErrors = [];
     for (let i = 0; i < fields.length; i=i+1)
     {
+      _SAG_SUBSTRATE_ACTIVE = null;   // T-SUBSTRATE-01: ποτέ μεταφορά από τον προηγούμενο αγρό
 
       try {
         // FIX-19: το fieldName διαβάζεται ΠΡΩΤΟ, ώστε τα σφάλματα να αποδίδονται στον σωστό αγρό
@@ -18361,6 +18488,7 @@ module.exports = new Analysis(async (context) => {
         }
         // T-COVERED-01: η σημαία ισχύει για ΟΛΗ την επεξεργασία αυτού του αγρού.
         _SAG_COVERED_ACTIVE = !!fieldConfig.covered_cultivation;
+        _SAG_SUBSTRATE_ACTIVE = _sagSubstrateOf(fieldConfig);   // T-SUBSTRATE-01
         const measurements = await getMeasurements(hourTich, dailyTich, devices, fields[i].id, fieldName);
 
         // T-COVERED-01: σε καλυμμένη καλλιέργεια η βροχή του (γειτονικού)
@@ -18464,7 +18592,7 @@ module.exports = new Analysis(async (context) => {
 
         // T-ECREF-01 (v50.141): ωριαία κατάσταση + ημερήσια εκπομπή soil_ec_ref1/2 —
         // ΠΡΙΝ το T-ECPH-01, ώστε η ημερήσια κρίση (Α4/Α5) να βλέπει τη σημερινή αναφορά.
-        const _ecRefIndicators = _sagEcRefIndicators(measurements, _prevBundleForWash?.shared, dailyTich, new Date().toISOString());
+        const _ecRefIndicators = _SAG_SUBSTRATE_ACTIVE ? [] : _sagEcRefIndicators(measurements, _prevBundleForWash?.shared, dailyTich, new Date().toISOString());
         // ── T-ECPH-01 (v50.12) · Αλατότητα & pH εδάφους από ΜΕΤΡΗΣΕΙΣ ─────
         let _ecphIndicators = [];
         if (dailyTich) {
@@ -18540,7 +18668,10 @@ module.exports = new Analysis(async (context) => {
             // ενός χαλασμένου οργάνου. Η κάρτα ΔΕΝ κρίνει· λέει τι συμβαίνει.
             const _ecDiv = !!(measurements?.data?._sagDivergeEc
               && Object.keys(measurements.data._sagDivergeEc).length);
-            if (_ecDiv) {
+            if (_SAG_SUBSTRATE_ACTIVE) {
+              // T-SUBSTRATE-01: η κάρτα αγωγιμότητας υποστρώματος βγαίνει από τη μάθηση
+              // (T-SOILCAL-01 παρακάτω). Καμία κρίση ECe / Maas-Hoffman σε slab.
+            } else if (_ecDiv) {
               _ecphIndicators.push({ variable: 'soil_ec_status',
                 value: 'Σε αναστολή — τα όργανα διαφωνούν',
                 metadata: { color: 'grey',
@@ -18636,7 +18767,8 @@ module.exports = new Analysis(async (context) => {
             // Το ενδοημερήσιο εύρος υπάρχει ΜΟΝΟ στον δακτύλιο διαγνωστικών
             // (diag_stats__<συσκευή>: min/max/range 24ώρου, ανανέωση στο ημερήσιο
             // tick). Χρησιμοποιούμε ό,τι πραγματικά υπάρχει.
-            const _scPlaus = (v) => Number.isFinite(v) && v >= 0.5 && v <= 60;
+            const _scPlaus = (v) => Number.isFinite(v) && v >= 0.5
+              && v <= (_SAG_SUBSTRATE_ACTIVE ? _SAG_SUBSTRATE_MOIST_HI : 60);   // T-SUBSTRATE-01
             const _scNum = (keys) => { for (const k of keys) {
               const v = Number(getVal(measurements, k, NaN));
               if (_scPlaus(v)) return v; } return NaN; };
@@ -18695,6 +18827,15 @@ module.exports = new Analysis(async (context) => {
               if (st.e === 1 && (_wet ? _lowSide : (cur >= st.w + 0.8))) {
                 st.f = _scR2(Number.isFinite(st.f) ? 0.75 * st.f + 0.25 * cur : cur);
                 st.n = (st.n || 0) + 1;
+                // T-SUBSTRATE-01 (Ε1): τα 5 τελευταία δείγματα πλατό, για τη διασπορά.
+                if (_SAG_SUBSTRATE_ACTIVE) st.fs = (Array.isArray(st.fs) ? st.fs : []).concat([_scR2(cur)]).slice(-5);
+              }
+              // T-SUBSTRATE-01: ημερήσιο εύρος υγρασίας (max−min 24ώρου) — σχετικό μέγεθος,
+              // αξιόπιστο και χωρίς βαθμονόμηση. Παράθυρο 24 ω, βήμα 1 ημέρα.
+              if (_SAG_SUBSTRATE_ACTIVE && rng) {
+                const _rd = _scR2(rng.mx - rng.mn);
+                st.r = _scR2(Number.isFinite(st.r) ? 0.75 * st.r + 0.25 * _rd : _rd);
+                st.rd = _rd;
               }
               st.e = _wet ? 1 : 0;
               st.l = _scR2(cur); st.k = _scDayNum;
@@ -18702,9 +18843,13 @@ module.exports = new Analysis(async (context) => {
             };
             const _scS = _scUpd(_scPrev.s, _scNum(_SAG_SOIL_M_SHALLOW), _scRange(_SAG_SOIL_M_SHALLOW));
             const _scD = _scUpd(_scPrev.d, _scNum(_SAG_SOIL_M_DEEP), _scRange(_SAG_SOIL_M_DEEP));
+            const _scEh = _SAG_SUBSTRATE_ACTIVE   // T-SUBSTRATE-01: ιστορικό αγωγιμότητας slab
+              ? _sagSubstrateEcHist(_scPrev.eh, measurements, _scDayNum) : null;
             _soilcalIndicators.push({ variable: 'soilcal_state',
-              value: JSON.stringify({ s: _scS, d: _scD, u: _scDay }),
+              value: JSON.stringify(_SAG_SUBSTRATE_ACTIVE
+                ? { s: _scS, d: _scD, eh: _scEh, u: _scDay } : { s: _scS, d: _scD, u: _scDay }),
               metadata: { internal: true } });
+            if (_SAG_SUBSTRATE_ACTIVE) _soilcalIndicators.push(_sagSubstrateEcStatus(_scEh));   // T-SUBSTRATE-01
           }
         } catch (_eSC) {
           console.log('[' + fieldName + '] T-SOILCAL-01 σφάλμα (αγνοήθηκε): ' + (_eSC && _eSC.message));
@@ -19129,6 +19274,10 @@ module.exports = new Analysis(async (context) => {
 
           const prevCropIndicators = (prevBundle?.cropsById && crop?.id) ? (prevBundle.cropsById[crop.id] || {}) : {};
           injectPrevIndicators(measurementsForCrop, prevBundle?.shared, prevCropIndicators);
+          // T-SUBSTRATE-01: σε υπόστρωμα τα μοντέλα της καλλιέργειας ΔΕΝ βλέπουν υγρασία/αγωγιμότητα
+          // slab (μη βαθμονομημένες) — περνούν από τη δοκιμασμένη διαδρομή «χωρίς σόνδα εδάφους».
+          // ΜΟΝΟ στο αντίγραφο της καλλιέργειας: υγεία οργάνων και μάθηση βλέπουν τις ωμές τιμές.
+          if (_SAG_SUBSTRATE_ACTIVE) _sagSubstrateMask(measurementsForCrop.data);
 
           // T-INSPECT-KEEP-01 (v50.49, απόφαση χρήστη 27/8 — αντικαθιστά το
           // T-DECL-INSPECT-01): η «καθαρή» επιθεώρηση ΔΕΝ μηδενίζει πλέον τους
@@ -19363,7 +19512,7 @@ module.exports = new Analysis(async (context) => {
 
           // Soil moisture limits (upper/lower) as independent indicators
           const lim = computeSoilMoistureLimits(cropParams, null, measurementsForCrop);
-          const limIndicators = buildSoilMoistureLimitIndicators(lim);
+          const limIndicators = _SAG_SUBSTRATE_ACTIVE ? [] : buildSoilMoistureLimitIndicators(lim);   // T-SUBSTRATE-01
           indicatorsForCrop = [...(indicatorsForCrop ?? []), ...(limIndicators ?? [])];
 
           const irrigationVolume = calculate_IrrigationVolume(hourTich, measurementsForCrop, ipsi, cropParams);
@@ -19604,6 +19753,7 @@ module.exports = new Analysis(async (context) => {
             if (!fieldConfig?.irrigation_system) _gapF.push('σύστημα άρδευσης');
             if (_purposeF === 'agronomy') {
               if (!fieldConfig?.soil_type && !fieldConfig?.soil_texture_class) _gapF.push('τύπος εδάφους');
+              if (_SAG_SUBSTRATE_ACTIVE && !fieldConfig?.covered_cultivation) _gapF.push('υπόστρωμα σε ακάλυπτο αγρό');   // T-SUBSTRATE-01 (Ε5)
               if (!crops.length) _gapF.push('καμία καλλιέργεια');
             }
           }
@@ -19798,9 +19948,9 @@ module.exports = new Analysis(async (context) => {
             // δεν χαρτογραφήθηκε, το βλέπει ΚΑΙ ο αγρότης — όχι μόνο το console.
             ..._sagSensorQualityIndicators(measurements),
             // T-ECFIELD-01: αγωγιμότητα/αλατότητα ΜΙΑ φορά για τον αγρό.
-            ..._sagEcIndicators(measurements, fieldConfig,
-              _sagEcFieldTol(fieldConfig)),
-            ..._sagDivergenceIndicators(measurements?.data),   // T-DIVERGENCE-01
+            ...(_SAG_SUBSTRATE_ACTIVE ? [] : _sagEcIndicators(measurements, fieldConfig,
+              _sagEcFieldTol(fieldConfig))),   // T-SUBSTRATE-01
+            ...(_SAG_SUBSTRATE_ACTIVE ? [] : _sagDivergenceIndicators(measurements?.data)),   // T-DIVERGENCE-01 · T-SUBSTRATE-01
             // T-SENSORFAULT-01: βλάβες οργάνων, συμβουλές που αποσύρθηκαν,
             // ευκαιρίες αναβάθμισης. ΚΑΜΙΑ βαθμολογία αξιοπιστίας.
             ..._sagFaultIndicators(measurements?.data),

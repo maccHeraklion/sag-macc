@@ -70,6 +70,7 @@ function gaps(src, { purpose, cfg, crops }) {
     fields: [{ id: "abc123", tags }], i: 0,
     fieldConfig: cfg, crops: crops || [],
     Number, Array, String, console,
+    _SAG_SUBSTRATE_ACTIVE: null,   // v50.162 T-SUBSTRATE-01: αγρός χώματος (ο ελεγκτής του υποστρώματος είναι το substrate_check)
   };
   vm.createContext(sb);
   vm.runInContext(code, sb);
