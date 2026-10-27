@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Αποθήκη Συσκευών</title>
+<!--
+  T-WH-01 (27/10/2026) · Φάση 1: ΜΟΝΟ προβολή. Αίτημα Κώστα.
+  Διαβάζει warehouse_chunk / warehouse_summary από τη συσκευή «SAG Εποπτεία»
+  (6a98855ca06e41000bfae024), που γράφει το analysis warehouseSnapshot (6ae086fb889f4a000c4e15ff).
+  Δεν στέλνει τίποτα πίσω. Οι ενέργειες (μετονομασία, ανάθεση, απόσυρση) έρχονται στη Φάση 2.
+-->
+<style>
+:root{
+  --bg:#f7f9fc; --ink:#1a2b3c; --muted:#6c7a89; --line:#e8eef3; --card:#fff;
+  --green:#2ecc71; --green-bg:#e9f9f0; --orange:#e67e22; --orange-bg:#fdf1e6;
+  --grey:#95a5a6; --blue:#2f6feb; --blue-bg:#eaf1fe; --radius:14px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; padding:16px; background:var(--bg); color:var(--ink);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  font-size:15px; min-height:100vh; overflow-y:auto;
+}
+.wrap{width:100%; max-width:1300px; margin:0 auto}
+h1{font-size:20px; margin:0 0 4px}
+.sub{color:var(--muted); font-size:13px; margin:0 0 14px}
+.tiles{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px}
+.tile{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 16px; min-width:120px}
+.tile .n{font-size:24px; font-weight:700; line-height:1.1}
+.tile .l{font-size:12px; color:var(--muted); margin-top:2px}
+.tile.free .n{color:#1e9e57} .tile.used .n{color:var(--orange)}
+
+.bar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px}
+.search{flex:1 1 260px; min-width:200px; padding:10px 12px; border:1px solid var(--line); border-radius:10px;
+  font-size:15px; background:#fff; color:var(--ink)}
+.search:focus{outline:2px solid var(--blue-bg); border-color:var(--blue)}
+.seg{display:inline-flex; background:#fff; border:1px solid var(--line); border-radius:10px; overflow:hidden}
+.seg button{border:0; background:transparent; padding:9px 13px; font-size:13.5px; color:var(--muted); cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--blue-bg); color:var(--blue); font-weight:600}
+
+.cat{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:14px; overflow:hidden}
+.cathead{display:flex; align-items:center; gap:10px; padding:12px 14px; cursor:pointer; user-select:none}
+.cathead:hover{background:#fafcfe}
+.cathead .ico{width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex:0 0 auto}
+.cathead .ico svg{width:20px; height:20px}
+.cathead h2{font-size:16px; margin:0; flex:1}
+.cathead .cnt{font-size:13px; color:var(--muted); white-space:nowrap}
+.cathead .chev{color:var(--muted); transition:transform .15s}
+.cat.closed .chev{transform:rotate(-90deg)}
+.cat.closed .catbody{display:none}
+.catbody{padding:0 14px 14px}
+.models{display:flex; gap:6px; flex-wrap:wrap; margin:0 0 10px}
+.chip{font-size:12px; padding:4px 9px; border-radius:999px; background:#f2f5f8; color:var(--ink); border:1px solid transparent; cursor:pointer}
+.chip b{font-weight:700}
+.chip.on{background:var(--blue-bg); color:var(--blue); border-color:#c9dafc}
+
+.grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px}
+.dev{border:1px solid var(--line); border-radius:12px; padding:10px 11px; background:#fff; cursor:pointer;
+  display:flex; flex-direction:column; gap:6px; transition:box-shadow .12s, border-color .12s; text-align:left; font:inherit; color:inherit}
+.dev:hover{border-color:#cfdbe6; box-shadow:0 2px 10px rgba(20,40,60,.07)}
+.dev:focus-visible{outline:2px solid var(--blue)}
+.dev .top{display:flex; align-items:center; gap:9px}
+.dev .di{width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex:0 0 auto}
+.dev .di svg{width:20px; height:20px}
+.dev .nm{font-weight:650; font-size:14px; line-height:1.2; word-break:break-all}
+.dev .md{font-size:12px; color:var(--muted)}
+.dev .eui{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11.5px; color:var(--muted)}
+.dev .st{display:flex; justify-content:space-between; align-items:center; gap:6px; font-size:12px}
+.badge{display:inline-block; padding:2px 8px; border-radius:999px; font-size:11.5px; font-weight:600; white-space:nowrap}
+.badge.free{background:var(--green-bg); color:#1e9e57}
+.badge.used{background:var(--orange-bg); color:#b85f12}
+.badge.off{background:#f0f2f4; color:var(--muted)}
+.seen{color:var(--muted); white-space:nowrap}
+.seen.live::before{content:""; display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--green); margin-right:5px; vertical-align:1px}
+
+.empty{color:var(--muted); text-align:center; padding:40px 10px; background:var(--card); border:1px dashed var(--line); border-radius:var(--radius)}
+.note{font-size:12.5px; color:var(--muted); margin-top:4px}
+
+/* Λεπτομέρειες συσκευής */
+.veil{position:fixed; inset:0; background:rgba(17,24,39,.35); display:flex; align-items:center; justify-content:center; padding:16px; z-index:50}
+.veil[hidden]{display:none}
+.panel{background:#fff; border-radius:16px; width:100%; max-width:460px; max-height:90vh; overflow:auto; box-shadow:0 10px 40px rgba(0,0,0,.2)}
+.panel .ph{display:flex; align-items:center; gap:12px; padding:16px 16px 10px}
+.panel .ph .di{width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center}
+.panel .ph .di svg{width:24px; height:24px}
+.panel .ph h3{margin:0; font-size:17px; word-break:break-all}
+.panel .ph .md{font-size:13px; color:var(--muted)}
+.panel .x{margin-left:auto; border:0; background:#f2f5f8; width:32px; height:32px; border-radius:50%; font-size:18px; cursor:pointer; color:var(--muted); flex:0 0 auto}
+.panel dl{margin:0; padding:4px 16px 8px; display:grid; grid-template-columns:auto 1fr; gap:8px 14px; font-size:14px}
+.panel dt{color:var(--muted)}
+.panel dd{margin:0; word-break:break-word}
+.panel .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:13px}
+.panel .warn{margin:4px 16px 12px; padding:10px 12px; border-radius:10px; background:var(--orange-bg); color:#8a4a0f; font-size:13px; line-height:1.45}
+.panel .acts{display:flex; gap:8px; flex-wrap:wrap; padding:6px 16px 16px; border-top:1px solid var(--line); margin-top:6px; padding-top:12px}
+.btn{border:1px solid var(--line); background:#fff; border-radius:10px; padding:8px 12px; font-size:13.5px; cursor:pointer; color:var(--ink)}
+.btn:hover{background:#f7f9fc}
+.btn[disabled]{opacity:.5; cursor:not-allowed}
+.soon{font-size:12px; color:var(--muted); width:100%}
+
+@media (max-width:520px){
+  body{padding:12px}
+  .grid{grid-template-columns:1fr 1fr}
+  .seg button{padding:8px 9px; font-size:12.5px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Αποθήκη Συσκευών</h1>
+  <p class="sub" id="sub">Φόρτωση…</p>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="bar">
+    <input class="search" id="q" type="search" placeholder="Αναζήτηση με όνομα, EUI ή αγρό…" autocomplete="off" />
+    <div class="seg" id="seg">
+      <button data-f="free" class="on">Ελεύθερες</button>
+      <button data-f="used">Σε αγρό</button>
+      <button data-f="all">Όλες</button>
+    </div>
+  </div>
+
+  <div id="list"></div>
+</div>
+
+<div class="veil" id="veil" hidden>
+  <div class="panel" id="panel" role="dialog" aria-modal="true"></div>
+</div>
+
+<script>
+/* ═══ ΚΑΤΗΓΟΡΙΕΣ & ΜΟΝΤΕΛΑ ═════════════════════════════════════════════════
+   Οι ονομασίες ακολουθούν τα παλιά blueprint dashboards του φακέλου «Αποθήκη». */
+var ICONS = {
+  ctrl:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4M17 12h4"/><rect x="7" y="8" width="10" height="8" rx="2"/><path d="M12 8V4M9 4h6"/></svg>',
+  soil:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13V7"/><path d="M12 9c0-3 2.5-5 6-5 0 3.5-2.5 5-6 5z"/><path d="M12 11C12 8.5 10 7 7 7c0 3 2 4 5 4z"/><path d="M3 17h18M5 20.5h2M11 20.5h2M17 20.5h2"/></svg>',
+  air:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.8V5a2 2 0 1 0-4 0v9.8a4 4 0 1 0 4 0z"/><path d="M12 11v5"/></svg>',
+  leaf:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19c0-8 5-14 15-14 0 10-6 15-14 15"/><path d="M5 19c3-4 6-6.5 10-9"/></svg>',
+  water: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>',
+  wx:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 11a3.5 3.5 0 0 0 1 7z"/><path d="M9 21l1-1.5M13 21l1-1.5"/></svg>',
+  other: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>'
+};
+var CATS = [
+  { id:'ctrl',  name:'Ελεγκτές άρδευσης',        color:'#2f6feb', bg:'#eaf1fe' },
+  { id:'soil',  name:'Αισθητήρες εδάφους',       color:'#8a5a2b', bg:'#f6eee6' },
+  { id:'air',   name:'Αισθητήρες αέρα & φωτός',  color:'#d35400', bg:'#fdf0e6' },
+  { id:'leaf',  name:'Αισθητήρες φύλλου',        color:'#1e9e57', bg:'#e9f9f0' },
+  { id:'water', name:'Νερό & σωλήνες',           color:'#0e8ab3', bg:'#e6f5fb' },
+  { id:'wx',    name:'Μετεωρολογικοί σταθμοί',   color:'#6c5ce7', bg:'#efedfd' },
+  { id:'other', name:'Λοιπά',                    color:'#6c7a89', bg:'#f0f2f4' }
+];
+var MODELS = {
+  uc511:      { cat:'ctrl',  label:'Milesight UC511' },
+  uc501:      { cat:'ctrl',  label:'Milesight UC501/502' },
+  uc502:      { cat:'ctrl',  label:'Milesight UC502' },
+  agvwflc01:  { cat:'ctrl',  label:'Προγραμματιστής ηλεκτροβάνας AGVWFLC01' },
+  lse01:      { cat:'soil',  label:'Dragino LSE01' },
+  lse01_shallow:{ cat:'soil', label:'Dragino LSE01 (ρηχός)' },
+  lse01_deep: { cat:'soil',  label:'Dragino LSE01 (βαθύς)' },
+  lse02:      { cat:'soil',  label:'Dragino LSE02' },
+  se0x:       { cat:'soil',  label:'Dragino SE0X' },
+  sph01:      { cat:'soil',  label:'pH εδάφους Dragino SPH01' },
+  aglwsm02:   { cat:'soil',  label:'Makerfabs AGLWSM02' },
+  aglwsaep01: { cat:'soil',  label:'Εδάφους & αέρα AGLWSAEP01' },
+  em320_th:   { cat:'air',   label:'Milesight EM320' },
+  em320:      { cat:'air',   label:'Milesight EM320' },
+  em300_th:   { cat:'air',   label:'Milesight EM300' },
+  aglwth01:   { cat:'air',   label:'Makerfabs AGLWTH01' },
+  aglwcd01:   { cat:'air',   label:'CO2 AGLWCD01' },
+  aglwl01:    { cat:'air',   label:'Φωτός AGLWL01' },
+  lms01_ls:   { cat:'leaf',  label:'Dragino LMS01' },
+  aglwlm01:   { cat:'leaf',  label:'Makerfabs AGLWLM01' },
+  aglwpw01:   { cat:'water', label:'Διαρροής νερού AGLWPW01' },
+  aglwpp01:   { cat:'water', label:'Πίεσης σωλήνα AGLWPP01' },
+  s2120:      { cat:'wx',    label:'SenseCAP S2120' }
+};
+function modelOf(it){
+  var m = MODELS[it.t];
+  return m || { cat:'other', label:(it.t || 'άγνωστο μοντέλο').toUpperCase() };
+}
+
+/* ═══ ΚΑΤΑΣΤΑΣΗ ════════════════════════════════════════════════════════════ */
+var state = {
+  rows: {},          // id εγγραφής → εγγραφή (για συγχώνευση onStart + realtime)
+  items: [],         // συσκευές της τελευταίας πλήρους εικόνας
+  summary: null,
+  snapTime: null,
+  filter: 'free',
+  q: '',
+  model: {},         // κατηγορία → επιλεγμένο μοντέλο (φίλτρο chip)
+  closed: {}
+};
+try { var sv = JSON.parse(localStorage.getItem('wh_ui') || '{}'); if (sv.filter) state.filter = sv.filter; if (sv.closed) state.closed = sv.closed; } catch (_e) {}
+function saveUi(){ try { localStorage.setItem('wh_ui', JSON.stringify({ filter: state.filter, closed: state.closed })); } catch (_e) {} }
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
+
+/* Η ηλικία σε ανθρώπινη μορφή — ίδια λογική με τον «Στόλο Gateways». */
+function ageTxt(iso){
+  if (!iso) return 'ποτέ';
+  var h = (Date.now() - new Date(iso).getTime()) / 36e5;
+  if (!isFinite(h)) return 'ποτέ';
+  if (h < 1) return 'πριν ' + Math.max(1, Math.round(h * 60)) + '′';
+  if (h < 48) return 'πριν ' + Math.round(h) + 'ω';
+  if (h < 24 * 60) return 'πριν ' + Math.round(h / 24) + 'ημ';
+  return 'πριν ' + Math.round(h / 24 / 30) + ' μήνες';
+}
+function isLive(iso){ return iso && (Date.now() - new Date(iso).getTime()) < 26 * 36e5; }
+function fmtDate(iso){ try { return new Date(iso).toLocaleString('el-GR', { hour12:false, dateStyle:'medium', timeStyle:'short' }); } catch (_e) { return iso; } }
+function shortName(it){
+  /* «milesight_uc511_7352» → «UC511 · 7352»: το τελευταίο κομμάτι είναι τα 4 ψηφία του EUI. */
+  var parts = String(it.n || '').split('_');
+  var tail = parts.length > 1 ? parts[parts.length - 1] : '';
+  return tail ? (String(it.t || parts[1] || '').toUpperCase() + ' · ' + tail) : it.n;
+}
+
+/* ═══ ΕΙΣΑΓΩΓΗ ΔΕΔΟΜΕΝΩΝ ═══════════════════════════════════════════════════
+   Το analysis γράφει μία «ομάδα» (group) ανά εικόνα: N × warehouse_chunk + 1 × warehouse_summary.
+   Κρατάμε την ΝΕΟΤΕΡΗ ομάδα που είναι ΠΛΗΡΗΣ (όλα τα κομμάτια παρόντα) — αλλιώς, αν ένα realtime
+   πακέτο φέρει μόνο μέρος της, θα έδειχνε μισή αποθήκη. */
+function ingest(rows){
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    if (!r || !r.variable) continue;
+    if (r.variable !== 'warehouse_chunk' && r.variable !== 'warehouse_summary') continue;
+    var key = r.id || (r.variable + '|' + r.group + '|' + r.value);
+    state.rows[key] = r;
+  }
+  var groups = {};
+  Object.keys(state.rows).forEach(function(k){
+    var r = state.rows[k], g = String(r.group || '');
+    if (!g) return;
+    var G = groups[g] || (groups[g] = { chunks: {}, summary: null, time: r.time });
+    if (r.variable === 'warehouse_summary') G.summary = r;
+    else G.chunks[Number(r.value)] = r;
+  });
+  var best = null;
+  Object.keys(groups).sort(function(a, b){ return Number(b) - Number(a); }).some(function(g){
+    var G = groups[g];
+    if (!G.summary) return false;
+    var parts = Number(G.summary.metadata && G.summary.metadata.parts) || 0;
+    for (var p = 0; p < parts; p++) if (!G.chunks[p]) return false;
+    best = G; best.parts = parts; return true;
+  });
+  if (!best) return;
+  var items = [];
+  for (var p = 0; p < best.parts; p++) {
+    var md = best.chunks[p].metadata || {};
+    if (Array.isArray(md.items)) items = items.concat(md.items);
+  }
+  state.items = items;
+  state.summary = best.summary.metadata || {};
+  state.snapTime = best.summary.time;
+}
+
+/* ═══ ΑΠΟΔΟΣΗ ══════════════════════════════════════════════════════════════ */
+function matches(it){
+  if (state.filter === 'free' && it.f) return false;
+  if (state.filter === 'used' && !it.f) return false;
+  var q = state.q.trim().toLowerCase();
+  if (!q) return true;
+  var hay = [it.n, it.e, it.t, modelOf(it).label, it.k || ''].concat((it.f || []).map(function(o){ return o.f + ' ' + o.c; })).join(' ').toLowerCase();
+  return q.split(/\s+/).every(function(w){ return hay.indexOf(w) >= 0; });
+}
+
+function render(){
+  var items = state.items;
+  var free = items.filter(function(x){ return !x.f; }).length;
+  var used = items.length - free;
+  var live = items.filter(function(x){ return !x.f && isLive(x.l); }).length;
+
+  $('sub').textContent = items.length
+    ? 'Ενημερώθηκε ' + ageTxt(state.snapTime) + ' · ' + fmtDate(state.snapTime) + '. Ανανεώνεται αυτόματα κάθε 30′.'
+    : 'Περιμένουμε την πρώτη εικόνα της αποθήκης…';
+
+  $('tiles').innerHTML = items.length ? (
+    '<div class="tile free"><div class="n">' + free + '</div><div class="l">ελεύθερες στην αποθήκη</div></div>' +
+    '<div class="tile used"><div class="n">' + used + '</div><div class="l">ήδη σε αγρό</div></div>' +
+    '<div class="tile"><div class="n">' + live + '</div><div class="l">ελεύθερες που εκπέμπουν (24ω)</div></div>' +
+    '<div class="tile"><div class="n">' + items.length + '</div><div class="l">με ετικέτα αποθήκης</div></div>'
+  ) : '';
+
+  var segBtns = $('seg').querySelectorAll('button');
+  for (var b = 0; b < segBtns.length; b++) segBtns[b].classList.toggle('on', segBtns[b].getAttribute('data-f') === state.filter);
+
+  if (!items.length) { $('list').innerHTML = '<div class="empty">Δεν υπάρχουν ακόμη δεδομένα από το analysis «warehouseSnapshot».</div>'; return; }
+
+  var html = '', shown = 0;
+  CATS.forEach(function(cat){
+    var all = items.filter(function(it){ return modelOf(it).cat === cat.id; });
+    var vis = all.filter(matches);
+    if (!vis.length) return;
+
+    /* μοντέλα της κατηγορίας με πλήθος, για τα chips */
+    var counts = {};
+    vis.forEach(function(it){ var l = modelOf(it).label; counts[l] = (counts[l] || 0) + 1; });
+    var labels = Object.keys(counts).sort();
+    var sel = state.model[cat.id];
+    if (sel && !counts[sel]) sel = state.model[cat.id] = null;
+    var list = sel ? vis.filter(function(it){ return modelOf(it).label === sel; }) : vis;
+    shown += list.length;
+
+    var closed = !!state.closed[cat.id] && !state.q;
+    html += '<section class="cat' + (closed ? ' closed' : '') + '" data-cat="' + cat.id + '">'
+      + '<div class="cathead" data-toggle="' + cat.id + '">'
+      +   '<div class="ico" style="background:' + cat.bg + ';color:' + cat.color + '">' + ICONS[cat.id] + '</div>'
+      +   '<h2>' + esc(cat.name) + '</h2>'
+      +   '<span class="cnt">' + vis.length + (vis.length === 1 ? ' συσκευή' : ' συσκευές') + '</span>'
+      +   '<span class="chev">▾</span>'
+      + '</div><div class="catbody">';
+    if (labels.length > 1) {
+      html += '<div class="models">' + labels.map(function(l){
+        return '<span class="chip' + (sel === l ? ' on' : '') + '" data-cat="' + cat.id + '" data-model="' + esc(l) + '">' + esc(l) + ' <b>' + counts[l] + '</b></span>';
+      }).join('') + '</div>';
+    }
+    html += '<div class="grid">' + list.map(function(it){ return card(it, cat); }).join('') + '</div></div></section>';
+  });
+
+  $('list').innerHTML = html || '<div class="empty">Καμία συσκευή δεν ταιριάζει με την αναζήτηση ή το φίλτρο.</div>';
+}
+
+function statusBadge(it){
+  if (it.f) return '<span class="badge used" title="' + esc(it.f.map(function(o){ return o.f; }).join(', ')) + '">Σε αγρό</span>';
+  if (it.x) return '<span class="badge off">Ανενεργή</span>';
+  return '<span class="badge free">Ελεύθερη</span>';
+}
+
+function card(it, cat){
+  return '<button class="dev" data-id="' + esc(it.i) + '">'
+    + '<div class="top"><div class="di" style="background:' + cat.bg + ';color:' + cat.color + '">' + ICONS[cat.id] + '</div>'
+    +   '<div><div class="nm">' + esc(shortName(it)) + '</div><div class="md">' + esc(modelOf(it).label) + '</div></div></div>'
+    + '<div class="eui">' + esc(it.e || '—') + '</div>'
+    + (it.f ? '<div class="md">📍 ' + esc(it.f[0].f) + (it.f.length > 1 ? ' +' + (it.f.length - 1) : '') + '</div>' : '')
+    + '<div class="st">' + statusBadge(it) + '<span class="seen' + (isLive(it.l) ? ' live' : '') + '">' + esc(ageTxt(it.l)) + '</span></div>'
+    + '</button>';
+}
+
+/* ═══ ΛΕΠΤΟΜΕΡΕΙΕΣ ═════════════════════════════════════════════════════════ */
+function openDetails(id){
+  var it = null;
+  for (var i = 0; i < state.items.length; i++) if (state.items[i].i === id) { it = state.items[i]; break; }
+  if (!it) return;
+  var m = modelOf(it), cat = CATS.filter(function(c){ return c.id === m.cat; })[0];
+  var h = '<div class="ph"><div class="di" style="background:' + cat.bg + ';color:' + cat.color + '">' + ICONS[cat.id] + '</div>'
+    + '<div><h3>' + esc(it.n) + '</h3><div class="md">' + esc(m.label) + ' · ' + esc(cat.name) + '</div></div>'
+    + '<button class="x" data-close aria-label="Κλείσιμο">×</button></div>'
+    + '<dl>'
+    + '<dt>Κατάσταση</dt><dd>' + statusBadge(it) + '</dd>'
+    + '<dt>DevEUI</dt><dd class="mono">' + esc(it.e || '—') + '</dd>'
+    + '<dt>Κατασκευαστής</dt><dd>' + esc(it.m || '—') + '</dd>'
+    + '<dt>Τελευταίο σήμα</dt><dd>' + (it.l ? esc(ageTxt(it.l)) + ' · ' + esc(fmtDate(it.l)) : 'Δεν έχει στείλει ποτέ') + '</dd>'
+    + '<dt>Καταχωρήθηκε</dt><dd>' + esc(it.c || '—') + '</dd>'
+    + (it.f ? '<dt>Αγρός</dt><dd>' + it.f.map(function(o){ return esc(o.f) + (o.c ? ' <span style="color:var(--muted)">(' + esc(o.c) + ')</span>' : ''); }).join('<br>') + '</dd>' : '')
+    + (it.k ? '<dt>Σχόλια</dt><dd>' + esc(it.k) + '</dd>' : '')
+    + '<dt>ID TagoIO</dt><dd class="mono">' + esc(it.i) + '</dd>'
+    + '</dl>';
+  if (it.f) {
+    h += '<div class="warn">Η συσκευή <b>δουλεύει ήδη σε αγρό</b>, αλλά έχει ακόμη την ετικέτα αποθήκης '
+      + '(δεν σβήστηκε όταν προστέθηκε στον αγρό). Γι\' αυτό εμφανίζεται εδώ. Οι ενέργειες αποθήκης θα είναι κλειδωμένες γι\' αυτήν.</div>';
+  }
+  h += '<div class="acts">'
+    + '<button class="btn" data-copy="' + esc(it.e || '') + '"' + (it.e ? '' : ' disabled') + '>Αντιγραφή EUI</button>'
+    + '<button class="btn" disabled>Μετονομασία</button>'
+    + '<button class="btn" disabled>Προσθήκη σε αγρό</button>'
+    + '<button class="btn" disabled>Απόσυρση</button>'
+    + '<div class="soon">Οι ενέργειες ενεργοποιούνται στην επόμενη φάση.</div>'
+    + '</div>';
+  $('panel').innerHTML = h;
+  $('veil').hidden = false;
+}
+function closeDetails(){ $('veil').hidden = true; }
+
+/* ═══ ΣΥΜΒΑΝΤΑ ═════════════════════════════════════════════════════════════ */
+$('q').addEventListener('input', function(e){ state.q = e.target.value; render(); });
+$('seg').addEventListener('click', function(e){
+  var f = e.target.getAttribute && e.target.getAttribute('data-f');
+  if (!f) return;
+  state.filter = f; saveUi(); render();
+});
+$('list').addEventListener('click', function(e){
+  var el = e.target;
+  while (el && el !== this) {
+    if (el.hasAttribute('data-id')) { openDetails(el.getAttribute('data-id')); return; }
+    if (el.hasAttribute('data-model')) {
+      var c = el.getAttribute('data-cat'), m = el.getAttribute('data-model');
+      state.model[c] = state.model[c] === m ? null : m; render(); return;
+    }
+    if (el.hasAttribute('data-toggle')) {
+      var t = el.getAttribute('data-toggle');
+      state.closed[t] = !state.closed[t]; saveUi(); render(); return;
+    }
+    el = el.parentNode;
+  }
+});
+$('veil').addEventListener('click', function(e){
+  if (e.target === this || (e.target.hasAttribute && e.target.hasAttribute('data-close'))) { closeDetails(); return; }
+  var cp = e.target.getAttribute && e.target.getAttribute('data-copy');
+  if (cp) {
+    var btn = e.target;
+    var done = function(){ btn.textContent = 'Αντιγράφηκε ✓'; setTimeout(function(){ btn.textContent = 'Αντιγραφή EUI'; }, 1500); };
+    try { navigator.clipboard.writeText(cp).then(done, function(){ fallbackCopy(cp); done(); }); } catch (_e) { fallbackCopy(cp); done(); }
+  }
+});
+function fallbackCopy(t){
+  var ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); } catch (_e) {} document.body.removeChild(ta);
+}
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeDetails(); });
+setInterval(render, 60000);   // οι ηλικίες «πριν Χ′» να μην παγώνουν
+
+/* ═══ ΕΚΚΙΝΗΣΗ ═════════════════════════════════════════════════════════════ */
+render();
+
+function flatten(d){
+  var rows = [];
+  if (Array.isArray(d)) {
+    for (var i = 0; i < d.length; i++) {
+      if (d[i] && Array.isArray(d[i].result)) rows = rows.concat(d[i].result);
+      else if (d[i] && d[i].variable) rows.push(d[i]);
+    }
+  }
+  return rows;
+}
+
+if (window.TagoIO && window.TagoIO.ready) {
+  window.TagoIO.onStart(function (w) {
+    try { if (w && Array.isArray(w.data)) ingest(flatten(w.data)); } catch (_e) {}
+    render();
+  });
+  window.TagoIO.onRealtime(function (d) {
+    try { ingest(flatten(d)); render(); } catch (_e) {}
+  });
+  window.TagoIO.ready();
+} else if (window.WH_MOCK) {
+  ingest(window.WH_MOCK); render();
+} else {
+  $('sub').textContent = 'Η σελίδα δεν τρέχει μέσα στο TagoIO — δεν υπάρχουν δεδομένα.';
+}
+</script>
+</body>
+</html>
