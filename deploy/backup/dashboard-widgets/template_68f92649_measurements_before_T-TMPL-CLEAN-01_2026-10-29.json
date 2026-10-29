@@ -1,0 +1,7 @@
+{
+  "_note": "Αντίγραφο ΠΡΙΝ το T-TMPL-CLEAN-01 (29/10/2026, Michalis: «φρόντισε ... σωστό και χωρίς εμπλοκές template»). Πρότυπο 68f92649f8b680000ab970ae, καρτέλα Μετρήσεις (oou7iKKLVdNb3No6BlERp), widget data_plot 68f9275c6b8a0b000b593145. Η πηγή ήταν ο ΠΡΑΓΜΑΤΙΚΟΣ αισθητήρας dragino_lms01_ls_0673 (67a765ca35b1a7000a49f64d, ενεργός, χωρίς ετικέτα αγρού), που κληρονομούσε ΚΑΘΕ νέος αγρός (το createField προσθέτει συσκευές μόνο στην Αρχική). Επαναφορά: update_widget data με το παρακάτω.",
+  "dashboard_id": "68f92649f8b680000ab970ae",
+  "widget_id": "68f9275c6b8a0b000b593145",
+  "data": [ {"qty": 500, "bucket": "67a765ca35b1a7000a49f64d", "origin": "67a765ca35b1a7000a49f64d", "variables": ["leaf_moisture"]} ],
+  "display": {"header_buttons": [], "help": "", "parameters": [{"key":"dashboard_id","value":"68f92649f8b680000ab970ae"}], "theme": {"color":{"background":null}}, "url": "https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/data_plot.html"}
+}

@@ -23,6 +23,8 @@
 >   `analysis/ΕΛΕΓΧΟΣ/ΠΡΟΣ_ΚΩΣΤΑ_ΒΑΝΕΣ_ΠΡΟΤΥΠΟ_2026-10-19.md`. In short, 14 customer dashboards show OTHER customers'
 >   controllers, and the ack checker resends any unacked command to any uc511. Michalis handed this to Κώστας and
 >   made no further changes. Remove this bullet only when Κώστας closes the issue.
+> - **29/10 (Michalis):** template 68f92649 — non-valve changes only (EC series on «Αρχική», «Μετρήσεις» no longer uses the
+>   foreign lms01_0673). Valve tabs untouched. Κώστας: read `analysis/ΕΛΕΓΧΟΣ/ΠΡΟΣ_ΚΩΣΤΑ_ΚΑΘΑΡΟ_ΠΡΟΤΥΠΟ_2026-10-29.md`.
 > - **Never remove or reorder dashboard tabs** (even empty hidden ones): sagMain opens tabs by fixed index
 >   (`ys={patho:1,irrig:4,config:3}`).
 
