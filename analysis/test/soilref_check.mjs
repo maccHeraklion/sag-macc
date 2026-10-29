@@ -45,7 +45,7 @@ const val = (d, k) => (Array.isArray(d[k]) && d[k][0]) ? d[k][0].value : undefin
 function run(core) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   try {
-    const K = load(core, ["_sagMergeDeviceData", "_sagApplySoilRef", "_sagMultiSensorIndicators", "_sagDivergenceIndicators", "SAG_KERNEL_VERSION"]);
+    const K = load(core, ["_sagMergeDeviceData", "_sagApplySoilRef", "_sagMultiSensorIndicators", "_sagDivergenceIndicators", "_sagRootZoneMoisture", "SAG_KERNEL_VERSION"]);
     const O = load(OLD, ["_sagMergeDeviceData"]);
     const apply = (d, rid) => { K.get("_sagApplySoilRef")(d, rid, "F"); return d; };
     // ── Κ: Καμπιτάκης, 3 σόνδες, καμία δήλωση → ο πιο ξηρός (Pellet, μέσος 24ώρου 12,2 %) ──
@@ -74,8 +74,19 @@ function run(core) {
     const ST1 = { air_temperature: S(20), air_humidity: S(60) }, ST2 = { air_temperature: S(22), air_humidity: S(70) };
     const da = apply(merge(K, [["Σ1", ST1], ["Σ2", ST2], ["Μάρτυρας", MAR], ["Pellet", PEL]]), "");
     ok(val(da, "air_temperature") === 21 && J(da._sagSrc.air_temperature) === J(["Σ1", "Σ2"]), "Κ11 ο αέρας ΔΕΝ αλλάζει (" + val(da, "air_temperature") + ")");
+    // ── Ρ: ΔΥΟ συσκευές, ΜΙΑ ρηχή + ΜΙΑ βαθιά (lse01_shallow → *1, lse01_deep → *2) → η στάθμιση FAO-56 μένει ──
+    const SHAL = { soil_moisture1: S(14), soil_moisture1_avg: S(14.5), soil_temperature1: S(19), conduct_soil1: S(250) };
+    const DEEP = { soil_moisture2: S(24), soil_moisture2_avg: S(23.5), soil_temperature2: S(18), conduct_soil2: S(320) };
+    const dz = apply(merge(K, [["Ρηχή", SHAL], ["Βαθιά", DEEP]]), "");
+    ok(val(dz, "soil_moisture1") === 14 && val(dz, "soil_moisture2") === 24 && !dz._sagSoilRef, "Ρ1 ρηχή + βαθιά: ΚΑΙ τα δύο βάθη μένουν, καμία «επιλογή» (" + J(dz._sagSoilRef) + ")");
+    const PRZ = { cultivation_type_general: "olive", cultivation_type: "koroneiki", stage: "vegetative", sensorShallow_depth_cm: 15, sensor_deep_depth_cm: 40 };
+    const rz = K.get("_sagRootZoneMoisture")({ data: dz }, PRZ);
+    ok(rz && rz.ok && rz.m1 === 14 && rz.m2 === 24 && rz.w1 > 0 && rz.w2 > 0 && Math.abs(rz.value - (14 * rz.w1 + 24 * rz.w2)) < 1e-9 && /Δύο βάθη/.test(rz.basis),
+      "Ρ2 σταθμισμένο ριζόστρωμα από ΔΥΟ βάθη (" + (rz && rz.basis) + " → " + (rz && rz.value) + ")");
+    const rzOld = K.get("_sagRootZoneMoisture")({ data: merge(O, [["Ρηχή", SHAL], ["Βαθιά", DEEP]], false) }, PRZ);
+    ok(rz && rzOld && rz.value === rzOld.value && rz.basis === rzOld.basis, "Ρ3 ίδιο ριζόστρωμα με τον v50.163 (" + (rzOld && rzOld.value) + ")");
     // ── Δ: διαφορικό έναντι v50.163 ──
-    const cases = [[["Μάρτυρας", MAR]], [["Σ1", ST1], ["Σ2", ST2], ["Βιοδιεγέρτης", BIO]], [["pH", PH], ["Pellet", PEL]], [["Σ1", ST1]]];
+    const cases = [[["Μάρτυρας", MAR]], [["Σ1", ST1], ["Σ2", ST2], ["Βιοδιεγέρτης", BIO]], [["pH", PH], ["Pellet", PEL]], [["Σ1", ST1]], [["Ρηχή", SHAL], ["Βαθιά", DEEP]]];
     let diffs = 0;
     for (const cs of cases) { const a = apply(merge(K, cs), ""), b = merge(O, cs, false); if (J(a) !== J(b)) { diffs++; if (process.env.SR_DEBUG) console.log(J(a), "\n", J(b)); } }
     ok(diffs === 0, "Δ1 ένας αισθητήρας εδάφους / αέρας: ΙΔΙΑ έξοδος με τον v50.163 (" + diffs + "/" + cases.length + " διαφορές)");
