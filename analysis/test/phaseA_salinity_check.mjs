@@ -48,9 +48,10 @@ const CHECKS = [
   // ── ΒΗΜΑ 3 · widget ──
   ["widget: η λίστα Ra περιέχει τις νέες σειρές",
     f => /"history_data","soil_ece1","soil_ece2","soil_ec_pore1","soil_ec_pore2"(,"[a-z0-9_]+")*\]/.test(f.widget)],   // W-ECREF-01+: επιτρέπονται επιπλέον σειρές μετά τις pore
-  ["widget: ετικέτες πόρων υπάρχουν (💧 Αγωγιμότητα νερού πόρων Ρηχό/Βαθύ)",
-    f => f.widget.includes('soil_ec_pore1:{label:"💧 Αγωγιμότητα νερού πόρων Ρηχό"')
-      && f.widget.includes('soil_ec_pore2:{label:"💧 Αγωγιμότητα νερού πόρων Βαθύ"')],
+  // W-EC-ROOT-01 (29/10/2026): οι ετικέτες μετονομάστηκαν σε «EC στη ρίζα» (βλ. widget_ec_root_check).
+  ["widget: ετικέτες πόρων υπάρχουν (💧 EC στη ρίζα Ρηχό/Βαθύ)",
+    f => f.widget.includes('soil_ec_pore1:{label:"💧 EC στη ρίζα Ρηχό"')
+      && f.widget.includes('soil_ec_pore2:{label:"💧 EC στη ρίζα Βαθύ"')],
   ["widget: node --check (ως module)", f => nodeCheck(lf(f.widget), ".mjs")],
   // ── ΒΗΜΑ 1 · φόρμα v19 ──
   ["form: 4 πεδία (water_ecw_dsm, water_ecw_measured_on, fert_ecw_dsm, fert_ecw_measured_on)",

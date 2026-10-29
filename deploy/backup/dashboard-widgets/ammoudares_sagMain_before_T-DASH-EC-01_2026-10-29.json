@@ -1,0 +1,34 @@
+{
+  "_note": "Αντίγραφο ΠΡΙΝ το T-DASH-EC-01 (29/10/2026, Michalis). Ταμπλό Αμμουδάρες 6ad202ac5a0327000c98a2ad, widget sagMain 6ad202ac5a0327000c98a2b2. Πηγή: get_widget detailed. Επαναφορά: update_widget με τα data/display.variables παρακάτω.",
+  "dashboard_id": "6ad202ac5a0327000c98a2ad",
+  "widget_id": "6ad202ac5a0327000c98a2b2",
+  "data": [
+    {"qty": 500, "origin": "6ad202ac174a0b000cf10008", "variables": ["configuration","field_bundle","forecast","field_bundle_2","history_request","history_data"]},
+    {"qty": 500, "origin": "6ad202ac174a0b000cf10008", "variables": ["field_calendar","spray_declaration","inspection_declaration","declaration_undo","action_log"]},
+    {"qty": 500, "origin": "6a2bd1b3d3f020000c10f7a5", "variables": ["temperature"], "timezone": "Europe/Athens"},
+    {"qty": 500, "origin": "6a2bd1b3d3f020000c10f7a5", "variables": ["humidity"], "timezone": "Europe/Athens"},
+    {"qty": 500, "origin": "684c293acd7675000a93c981", "variables": ["leaf_temperature"], "timezone": "Europe/Athens"},
+    {"qty": 500, "origin": "684c293acd7675000a93c981", "variables": ["leaf_moisture"], "timezone": "Europe/Athens"},
+    {"qty": 500, "origin": "6891d4a12e379b000a0cdf6f", "variables": ["soil_moisture1"], "timezone": "Europe/Athens"},
+    {"qty": 500, "origin": "6891d4a12e379b000a0cdf6f", "variables": ["soil_temperature1"], "timezone": "Europe/Athens"},
+    {"qty": 500, "origin": "6891d4a12e379b000a0cdf6f", "variables": ["conduct_soil1"], "timezone": "Europe/Athens"},
+    {"qty": 500, "origin": "6891d4a12e379b000a0cdf6f", "variables": ["fertility_index1"], "timezone": "Europe/Athens"},
+    {"qty": 500, "origin": "6891d4a12e379b000a0cdf6f", "variables": ["soil_moisture2"], "timezone": "Europe/Athens"},
+    {"qty": 500, "origin": "6891d4a12e379b000a0cdf6f", "variables": ["soil_temperature2"], "timezone": "Europe/Athens"},
+    {"qty": 500, "origin": "6891d4a12e379b000a0cdf6f", "variables": ["conduct_soil2"], "timezone": "Europe/Athens"},
+    {"qty": 500, "origin": "6891d4a12e379b000a0cdf6f", "variables": ["fertility_index2"], "timezone": "Europe/Athens"},
+    {"qty": 500, "origin": "6a7c700f0ad4a1000b4e119f", "variables": ["soil_ph"], "timezone": "Europe/Athens"},
+    {"qty": 500, "origin": "6a7c700f0ad4a1000b4e119f", "variables": ["temp_soil"], "timezone": "Europe/Athens"}
+  ],
+  "display_variables": [
+    {"variable":"temperature","origin":"6a2bd1b3d3f020000c10f7a5"},{"variable":"humidity","origin":"6a2bd1b3d3f020000c10f7a5"},
+    {"variable":"leaf_temperature","origin":"684c293acd7675000a93c981"},{"variable":"leaf_moisture","origin":"684c293acd7675000a93c981"},
+    {"variable":"soil_moisture1","origin":"6891d4a12e379b000a0cdf6f"},{"variable":"soil_temperature1","origin":"6891d4a12e379b000a0cdf6f"},
+    {"variable":"conduct_soil1","origin":"6891d4a12e379b000a0cdf6f"},{"variable":"fertility_index1","origin":"6891d4a12e379b000a0cdf6f"},
+    {"variable":"soil_moisture2","origin":"6891d4a12e379b000a0cdf6f"},{"variable":"soil_temperature2","origin":"6891d4a12e379b000a0cdf6f"},
+    {"variable":"conduct_soil2","origin":"6891d4a12e379b000a0cdf6f"},{"variable":"fertility_index2","origin":"6891d4a12e379b000a0cdf6f"},
+    {"variable":"soil_ph","origin":"6a7c700f0ad4a1000b4e119f"},{"variable":"temp_soil","origin":"6a7c700f0ad4a1000b4e119f"}
+  ],
+  "display_parameters": [{"key":"dashboard_id","value":"6ad202ac5a0327000c98a2ad"},{"key":"device_map","value":"{\"6a2bd1b3d3f020000c10f7a5\":\"Θ/Υ Αέρα\",\"684c293acd7675000a93c981\":\"Φύλλου\",\"6891d4a12e379b000a0cdf6f\":\"Έδαφος\",\"6a7c700f0ad4a1000b4e119f\":\"PH\"}"}],
+  "analysis_run": "68deb0d47a8161000a558867"
+}
