@@ -1,0 +1,11 @@
+{
+  "_note": "Αντίγραφο ΠΡΙΝ το T-TMPL-SERIES-01 (29/10/2026, Michalis: «2 α»). Πρότυπο SAG_OpenField_Template 68f92649f8b680000ab970ae, widget sagMain 68f92649f8b680000ab970c4. Αλλάζει ΜΟΝΟ η 1η πηγή του Field_Template (686c0f54…). Καρτέλες βανών, analysis_run, άλλα widgets: ΑΝΕΓΓΙΧΤΑ (σημείωμα ΠΡΟΣ_ΚΩΣΤΑ_ΒΑΝΕΣ_ΠΡΟΤΥΠΟ, στάλθηκε στον Μιχάλη 29/10).",
+  "dashboard_id": "68f92649f8b680000ab970ae",
+  "widget_id": "68f92649f8b680000ab970c4",
+  "data": [
+    {"qty": 500, "origin": "686c0f54172d7e000b7191f3", "variables": ["configuration","field_bundle","forecast"]},
+    {"qty": 500, "origin": "686c0f54172d7e000b7191f3", "variables": ["field_calendar","spray_declaration","inspection_declaration","declaration_undo","action_log"]}
+  ],
+  "display": {"header_buttons": [], "help": "", "parameters": [{"key":"dashboard_id","value":"68f92649f8b680000ab970ae"}], "theme": {"color":{"background":""}}, "url": "https://api.tago.io/file/67934c48e8e573000ae5964b/storage/sagMain/index.html"},
+  "analysis_run": "68deb0d47a8161000a558867"
+}
