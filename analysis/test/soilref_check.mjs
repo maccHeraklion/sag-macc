@@ -42,10 +42,10 @@ function merge(K, devs, withId = true) {
 const KAMP = [["Μάρτυρας", MAR], ["Pellet", PEL], ["Βιοδιεγέρτης", BIO]];
 const val = (d, k) => (Array.isArray(d[k]) && d[k][0]) ? d[k][0].value : undefined;
 
-function run(core) {
+async function run(core) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   try {
-    const K = load(core, ["_sagMergeDeviceData", "_sagApplySoilRef", "_sagMultiSensorIndicators", "_sagDivergenceIndicators", "_sagRootZoneMoisture", "SAG_KERNEL_VERSION"]);
+    const K = load(core, ["_sagMergeDeviceData", "_sagApplySoilRef", "_sagMultiSensorIndicators", "_sagDivergenceIndicators", "_sagRootZoneMoisture", "_sagSyncSoilSensors", "SAG_KERNEL_VERSION"]);
     const O = load(OLD, ["_sagMergeDeviceData"]);
     const apply = (d, rid) => { K.get("_sagApplySoilRef")(d, rid, "F"); return d; };
     // ── Κ: Καμπιτάκης, 3 σόνδες, καμία δήλωση → ο πιο ξηρός (Pellet, μέσος 24ώρου 12,2 %) ──
@@ -85,6 +85,24 @@ function run(core) {
       "Ρ2 σταθμισμένο ριζόστρωμα από ΔΥΟ βάθη (" + (rz && rz.basis) + " → " + (rz && rz.value) + ")");
     const rzOld = K.get("_sagRootZoneMoisture")({ data: merge(O, [["Ρηχή", SHAL], ["Βαθιά", DEEP]], false) }, PRZ);
     ok(rz && rzOld && rz.value === rzOld.value && rz.basis === rzOld.basis, "Ρ3 ίδιο ριζόστρωμα με τον v50.163 (" + (rzOld && rzOld.value) + ")");
+    // ── Λ: T-SOILREF-02 — λίστα σονδών για τη φόρμα, ΜΟΝΟ όταν αλλάζει ──
+    ok(J(d._sagSoilCand) === J([["Βιοδιεγέρτης"], ["Μάρτυρας"], ["Pellet"]].map(([n]) => ({ i: IDS[n], n })).sort((x, y) => x.n < y.n ? -1 : 1)), "Λ1 ανταγωνιστές με id (" + J(d._sagSoilCand) + ")");
+    ok(!dz._sagSoilCand && J(dx._sagSoilCand) === J(d._sagSoilCand), "Λ2 ρηχή+βαθιά: κανένας ανταγωνισμός · χωρίς έγκυρη υγρασία: ΙΔΙΑ λίστα (σταθερή)");
+    const fakeDev = (last) => { const w = { reads: 0, sent: [] }; w.getData = async () => { w.reads++; return last ? [last] : []; }; w.sendData = async (x) => { w.sent.push(...x); }; return w; };
+    const sync = async (dev, data, daily) => K.get("_sagSyncSoilSensors")(dev, data, "F", daily);
+    const s1 = fakeDev(null); await sync(s1, d, false);
+    ok(s1.sent.length === 1 && s1.sent[0].variable === "soil_sensors" && s1.sent[0].value === 3 && J(s1.sent[0].metadata.list) === J(d._sagSoilCand), "Λ3 πρώτη φορά: γράφεται η λίστα");
+    const s2 = fakeDev({ metadata: { list: C(d._sagSoilCand) } }); await sync(s2, d, true);
+    ok(s2.reads === 1 && s2.sent.length === 0, "Λ4 ίδια λίστα: ΚΑΜΙΑ εγγραφή");
+    const s3 = fakeDev({ metadata: { list: C(d._sagSoilCand).slice(0, 2) } }); await sync(s3, d, false);
+    ok(s3.sent.length === 1, "Λ5 άλλαξε η λίστα: εγγραφή");
+    const s4 = fakeDev(null); await sync(s4, dz, false); await sync(s4, dz, true);
+    ok(s4.reads === 1 && s4.sent.length === 0, "Λ6 αγρός χωρίς ανταγωνισμό: ανάγνωση μόνο την ημέρα, ΚΑΜΙΑ εγγραφή");
+    const s5 = fakeDev({ metadata: { list: C(d._sagSoilCand) } }); await sync(s5, dz, false); const r5 = s5.sent.length; await sync(s5, dz, true);
+    ok(r5 === 0 && s5.sent.length === 1 && s5.sent[0].value === 0 && J(s5.sent[0].metadata.list) === "[]", "Λ7 αγρός που ΕΧΑΣΕ σόνδα: η λίστα σβήνει στον ημερήσιο έλεγχο");
+    const iB = core.indexOf("await dev_to_send_meas.sendData(packedIndicators);");
+    const iY = core.indexOf("try { await _sagSyncSoilSensors(dev_to_send_meas, measurements?.data, fieldName, dailyTich); } catch (_eSS) {}");
+    ok(iB > 0 && iY > iB && iY - iB < 300, "Λ8 καλείται αμέσως μετά το bundle, σε try");
     // ── Δ: διαφορικό έναντι v50.163 ──
     const cases = [[["Μάρτυρας", MAR]], [["Σ1", ST1], ["Σ2", ST2], ["Βιοδιεγέρτης", BIO]], [["pH", PH], ["Pellet", PEL]], [["Σ1", ST1]], [["Ρηχή", SHAL], ["Βαθιά", DEEP]]];
     let diffs = 0;
@@ -99,11 +117,11 @@ function run(core) {
     ok(/_SAG_SUBSTRATE_ACTIVE = null;[^\n]*\n\s*_SAG_SOIL_REF_ID = '';/.test(core), "Σ3 μηδενισμός δήλωσης σε κάθε αγρό");
     const iS = core.indexOf("_SAG_SOIL_REF_ID = String(fieldConfig?.soil_ref_device || '');"), iG = core.indexOf("const measurements = await getMeasurements(");
     ok(iS > 0 && iS < iG, "Σ4 η δήλωση ορίζεται ΠΡΙΝ τη getMeasurements");
-    ok(K.get("SAG_KERNEL_VERSION") === "v50.164 · 2026-10-29", "Σ5 έκδοση");
+    ok(K.get("SAG_KERNEL_VERSION") === "v50.165 · 2026-10-29", "Σ5 έκδοση");
   } catch (e) { f.push("εκτέλεση: " + (e && e.stack || e)); }
   return f;
 }
-const base = run(CORE);
+const base = await run(CORE);
 if (base.length) { console.log("ΑΠΟΤΥΧΙΑ ΒΑΣΗΣ:\n  " + base.join("\n  ")); process.exit(1); }
 console.log("ΒΑΣΗ: όλοι οι έλεγχοι πέρασαν (Καμπιτάκης 3 σόνδες, δήλωση, μέσος 24ώρου, pH/αέρας, διαφορικό έναντι " + OLD_COMMIT + ")");
 const MUT = [
@@ -119,13 +137,17 @@ const MUT = [
   ["m10 χωρίς μηδενισμό ανά αγρό", "      _SAG_SOIL_REF_ID = '';          // T-SOILREF-01: ποτέ μεταφορά από τον προηγούμενο αγρό", "      // T-SOILREF-01"],
   ["m11 μένει το _sagSoilDev", "    delete data._sagSoilDev;\n", ""],
   ["m12 και ο αέρας", "const _SAG_SOIL_KEY_RE = /^(soil_|conduct_soil|temp_soil|water_soil)/;", "const _SAG_SOIL_KEY_RE = /^(soil_|conduct_soil|temp_soil|water_soil|air_)/;"],
-  ["m13 έκδοση", "'v50.164 · 2026-10-29'", "'v50.163 · 2026-10-29'"],
+  ["m13 έκδοση", "'v50.165 · 2026-10-29'", "'v50.163 · 2026-10-29'"],
+  ["m14 λίστα κάθε ώρα", "  if (p && keyOf(p.metadata && p.metadata.list) === keyOf(cand)) return false;", "  if (false) return false;"],
+  ["m15 λίστα και χωρίς ανταγωνισμό", "  if (!p && !cand.length) return false;", "  if (false) return false;"],
+  ["m16 ανάγνωση κάθε ώρα παντού", "  if (!cand.length && !dailyTich) return false;", "  if (false) return false;"],
+  ["m17 χωρίς κλήση", "try { await _sagSyncSoilSensors(dev_to_send_meas, measurements?.data, fieldName, dailyTich); } catch (_eSS) {}", "{}"],
 ];
 let killed = 0;
 for (const [name, a, b] of MUT) {
   const n = CORE.split(a).length - 1;
   if (n < 1) { console.log("  ΜΗ ΕΦΑΡΜΟΣΙΜΗ " + name + " (βρέθηκε " + n + ")"); continue; }
-  const r = run(CORE.replace(a, b));
+  const r = await run(CORE.replace(a, b));
   if (r.length) { killed++; console.log("  σκοτώθηκε " + name + " <- " + r[0].slice(0, 140)); } else console.log("  ΕΠΕΖΗΣΕ " + name);
 }
 console.log("ΜΕΤΑΛΛΑΞΕΙΣ " + killed + "/" + MUT.length);

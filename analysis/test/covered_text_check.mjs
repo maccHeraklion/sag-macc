@@ -38,7 +38,7 @@ function run(core, wid) {
     ok(/Η βροχή μειώνει τη διάρκεια\.$/.test(wo) && /4 ημέρες ακόμη \(έως 9\/10\/2026\)\./.test(wo), "Κ7 widget ύπαιθρο: με βροχή (" + wo + ")");
     ok(!/βροχ/i.test(wi) && /\(έως 9\/10\/2026\)\.$/.test(wi), "Κ8 widget θερμοκήπιο: χωρίς βροχή (" + wi + ")");
     ok(/sagCoveredBox=\{v:!1\},sagCoveredSet=z=>\{sagCoveredBox\.v=!!z\}/.test(wid) && /sagCoveredSet\(vv\)/.test(wid), "Κ9 widget: η σημαία θερμοκηπίου τροφοδοτείται από τη ρύθμιση");
-    ok(/const SAG_KERNEL_VERSION = 'v50\.164 · 2026-10-29';/.test(core), "Κ10 έκδοση v50.161");
+    ok(/const SAG_KERNEL_VERSION = 'v50\.165 · 2026-10-29';/.test(core), "Κ10 έκδοση v50.161");
   } catch (e) { f.push("εκτέλεση: " + e.message); }
   return f;
 }
@@ -55,7 +55,7 @@ const MUT = [
   ["m6 widget: πάντα βροχή", "wid", '+")."+(sagCoveredBox.v?"":" Η βροχή μειώνει τη διάρκεια.")', '+")."+(" Η βροχή μειώνει τη διάρκεια.")'],
   ["m7 widget: ανεστραμμένο", "wid", '(sagCoveredBox.v?"":" Η βροχή μειώνει τη διάρκεια.")', '(sagCoveredBox.v?" Η βροχή μειώνει τη διάρκεια.":"")'],
   ["m8 widget: η σημαία δεν τροφοδοτείται", "wid", "sagCoveredSet(vv);", "sagCoveredSet(!1);"],
-  ["m9 έκδοση", "core", "'v50.164 · 2026-10-29'", "'v50.159 · 2026-10-04'"],
+  ["m9 έκδοση", "core", "'v50.165 · 2026-10-29'", "'v50.159 · 2026-10-04'"],
 ];
 let killed = 0;
 for (const [name, which, a, b] of MUT) {

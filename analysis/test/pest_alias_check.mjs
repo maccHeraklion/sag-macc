@@ -20,7 +20,7 @@ function build(c) {
 }
 function run(c) {
   const f = []; const ok = (x, m) => { if (!x) f.push(m); };
-  ok(c.includes("const SAG_KERNEL_VERSION = 'v50.164 · 2026-10-29';"), "Ε0 έκδοση v50.161");
+  ok(c.includes("const SAG_KERNEL_VERSION = 'v50.165 · 2026-10-29';"), "Ε0 έκδοση v50.161");
   let X; try { X = build(c); } catch (e) { f.push("εξαγωγή: " + e.message); return f; }
   // πραγματικά ονόματα από τα ημερολόγια 14/10
   const want = [["karate", "lambda_cyhalothrin"], ["Neemazal", "azadirachtin"], ["Azadiraktinh", "azadirachtin"], ["Azadiraktini", "azadirachtin"],
@@ -50,7 +50,7 @@ const base = run(C);
 if (base.length) { console.log("ΑΠΟΤΥΧΙΑ ΒΑΣΗΣ:\n  " + base.join("\n  ")); process.exit(1); }
 console.log("ΒΑΣΗ: όλοι οι έλεγχοι πέρασαν");
 const MUT = [
-  ["m1 παλιά έκδοση", "'v50.164 · 2026-10-29'", "'v50.160 · 2026-10-05'"],
+  ["m1 παλιά έκδοση", "'v50.165 · 2026-10-29'", "'v50.160 · 2026-10-05'"],
   ["m2 χωρίς συνώνυμα στο σκεύασμα", "  const _ak = _sagPestAliasKey(key);   // T-PEST-ALIAS-01\n  if (_ak) { for", "  const _ak = null;\n  if (_ak) { for"],
   ["m3 χωρίς συνώνυμα στο κλειδί", "  const _ak = _sagPestAliasKey(key);   // T-PEST-ALIAS-01\n  if (_ak) return _ak;", "  const _ak = null;\n  if (_ak) return _ak;"],
   ["m4 karate σε λάθος σκεύασμα", "'karate': 'lambda_cyhalothrin',", "'karate': 'deltamethrin',"],

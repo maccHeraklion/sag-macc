@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.164 · 2026-10-29';   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
+const SAG_KERNEL_VERSION = 'v50.165 · 2026-10-29';   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -14592,6 +14592,8 @@ function _sagApplySoilRef(data, refId, fieldName) {
     if (!multi.length) return;
     const names = Object.keys(devs).filter(n => multi.some(k => devs[n][k] !== undefined)).sort();
     if (names.length < 2) return;
+    // T-SOILREF-02: οι «ανταγωνιστές» για τη φόρμα — ανεξάρτητα από την εγκυρότητα αυτής της ώρας.
+    data._sagSoilCand = names.map(n => ({ i: devs[n]._id, n }));
     const score = (d) => {
       for (const re of [/^soil_moisture\d?_avg$/, /^soil_moisture\d?$/, /^(water_soil|soil_humidity)\d?(_avg)?$/]) {
         const xs = Object.keys(d).filter(k => re.test(k)).map(k => _sagMergeNum(d[k])).filter(Number.isFinite);
@@ -14622,6 +14624,22 @@ function _sagApplySoilRef(data, refId, fieldName) {
     console.log('[' + (fieldName || '—') + '] T-SOILREF-01: έδαφος από «' + ref + '» (' + why + ') — '
       + names.length + ' αισθητήρες, ' + multi.length + ' κανάλια χωρίς μέσο όρο');
   } catch (_e) { /* η επιλογή αισθητήρα δεν επιτρέπεται να ρίξει τον αγρό */ }
+}
+
+// T-SOILREF-02 (v50.165): η λίστα των σονδών που μετρούν το ΙΔΙΟ βάθος, για τη φόρμα του αγρού (δήλωση
+// αισθητήρα απόφασης). Γράφεται ΜΟΝΟ όταν αλλάζει — η φόρμα φορτώνει με qty 500 και μια συχνή μεταβλητή
+// θα μπορούσε να σπρώξει τη ρύθμιση έξω από το παράθυρο.
+async function _sagSyncSoilSensors(dev, data, fieldName, dailyTich) {
+  const cand = (data && Array.isArray(data._sagSoilCand)) ? data._sagSoilCand : [];
+  if (!cand.length && !dailyTich) return false;          // χωρίς ανταγωνισμό: έλεγχος μία φορά την ημέρα
+  const keyOf = (l) => (Array.isArray(l) ? l : []).map(c => String(c && c.i) + ':' + String(c && c.n)).join('|');
+  const r = await dev.getData({ variables: ['soil_sensors'], qty: 1 });
+  const p = Array.isArray(r) ? r[0] : null;
+  if (!p && !cand.length) return false;                  // ποτέ ανταγωνισμός: καμία εγγραφή
+  if (p && keyOf(p.metadata && p.metadata.list) === keyOf(cand)) return false;   // ίδια λίστα
+  await dev.sendData([{ variable: 'soil_sensors', value: cand.length, metadata: { list: cand } }]);
+  console.log('[' + (fieldName || '—') + '] T-SOILREF-02: λίστα σονδών για τη φόρμα → ' + (cand.map(c => c.n).join(', ') || '(καμία)'));
+  return true;
 }
 
 // T-LIGHTMERGE-01: ημερήσια ολοκληρώματα φωτός. Για ΑΥΤΑ και μόνο, το μηδέν
@@ -20054,6 +20072,8 @@ module.exports = new Analysis(async (context) => {
         });
 
         await dev_to_send_meas.sendData(packedIndicators);
+        // T-SOILREF-02: λίστα σονδών για τη φόρμα — μόνο όταν αλλάζει· ποτέ δεν ρίχνει τον αγρό.
+        try { await _sagSyncSoilSensors(dev_to_send_meas, measurements?.data, fieldName, dailyTich); } catch (_eSS) {}
         // T-FLEET-HEALTH-01: το bundle ΓΡΑΦΤΗΚΕ — σημειώνεται στη γραμμή του αγρού (ok/bytes/περικοπή).
         try { _sagFleetMark(fieldName, { ok: 1, bb: _SAG_LAST_BUNDLE ? _SAG_LAST_BUNDLE.b : null,
           bt: _SAG_LAST_BUNDLE ? _SAG_LAST_BUNDLE.t : 0 }); } catch (_eMk) {}

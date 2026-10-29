@@ -504,6 +504,12 @@
         <div class="field" style="grid-column:1/-1; margin:0 0 6px 0">
           <div class="muted" id="depthMixNote" style="display:none; font-size:.85rem; padding:8px 10px; border-radius:8px; background:#fff7ed; border:1px solid #fed7aa; color:#8a4b12"></div>
         </div>
+        <!-- v25 · T-SOILREF-02: αισθητήρας απόφασης — φαίνεται ΜΟΝΟ όταν ο αγρός έχει ≥2 σόνδες στο ίδιο βάθος -->
+        <div class="field" id="soilRefWrap" style="grid-column:1/-1; display:none">
+          <label>Αισθητήρας απόφασης εδάφους</label>
+          <select id="soil_ref_device" onchange="this.dataset.touched='1'"><option value="">Αυτόματα — ο πιο ξηρός</option></select>
+          <div class="muted" style="font-size:.85rem; margin-top:4px" id="soilRefNote">—</div>
+        </div>
         <div class="field">
           <label>Βάθος Αισθητήρα (Βαθύ) (cm)</label>
           <input id="sensor_deep_depth_cm" type="number" step="1" placeholder="π.χ. 30" />
@@ -2091,6 +2097,33 @@ setTimeout(refreshHints, 0);
    μπορεί να σβήσει λανθασμένη καταχώριση.
    Όταν διατηρείται παλιά τιμή αντί κενού, το παράθυρο επιβεβαίωσης το ΛΕΕΙ
    (βλ. btnSave) — καμία σιωπηλή διατήρηση. */
+/* v25 · T-SOILREF-02: αισθητήρας απόφασης εδάφους. Τη λίστα των σονδών που μετρούν το ΙΔΙΟ βάθος τη γράφει ο
+   πυρήνας (μεταβλητή soil_sensors, μόνο όταν αλλάζει). Ο πυρήνας ΔΕΝ βγάζει μέσο όρο σονδών (T-SOILREF-01): χωρίς
+   δήλωση αποφασίζει ο πιο ξηρός, ώστε να μη διψάσει κανένα τμήμα. Ονόματα συσκευών μόνο ως textContent. */
+function _sagSoilRefList(){
+  try{
+    const row = state.lastDataMap && state.lastDataMap.soil_sensors;
+    const l = (row && row.metadata && Array.isArray(row.metadata.list)) ? row.metadata.list : [];
+    return l.filter(function(x){ return x && typeof x.i === 'string' && /^[0-9a-f]{24}$/.test(x.i) && x.n != null && String(x.n) !== ''; });
+  }catch(e){ return []; }
+}
+function _sagSoilRefRender(){
+  const wrap = $('soilRefWrap'), sel = $('soil_ref_device'), note = $('soilRefNote');
+  if (!wrap || !sel) return;
+  const list = _sagSoilRefList();
+  if (list.length < 2){ wrap.style.display = 'none'; return; }
+  const want = sel.dataset.touched === '1' ? sel.value : String(state.soilRefConf || '');
+  sel.innerHTML = '';
+  const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Αυτόματα — ο πιο ξηρός'; sel.appendChild(o0);
+  list.forEach(function(x){ const o = document.createElement('option'); o.value = x.i; o.textContent = String(x.n); sel.appendChild(o); });
+  const has = list.some(function(x){ return x.i === want; });
+  sel.value = has ? want : '';
+  if (note) note.textContent = (want && !has)
+    ? 'Ο αισθητήρας που είχε δηλωθεί δεν μετρά πια σε αυτό το βάθος — ισχύει ο πιο ξηρός. Επιλέξτε ξανά και αποθηκεύστε.'
+    : ('Ο αγρός έχει ' + list.length + ' σόνδες στο ίδιο βάθος. Από τον αισθητήρα απόφασης βγαίνουν η συμβουλή άρδευσης '
+       + 'και η αλατότητα· οι άλλοι φαίνονται χωριστά στις μετρήσεις. «Αυτόματα» = ο πιο ξηρός, ώστε να μη διψάσει κανένα τμήμα.');
+  wrap.style.display = '';
+}
 function _keepPrev(v, prev){
   if (v === null || v === undefined || v === '') {
     return (prev === undefined ? null : prev);
@@ -2209,6 +2242,9 @@ function buildPayload(){
     total_plants: intOrNull($('total_plants').value),
     sensor_deep_depth_cm: intOrNull($('sensor_deep_depth_cm').value),
     sensorShallow_depth_cm: intOrNull($('sensorShallow_depth_cm').value),
+    /* v25 · T-SOILREF-02: ορατό πεδίο → η επιλογή (κενό = αυτόματα)· κρυφό → ΚΡΑΤΑ την προηγούμενη δήλωση. */
+    soil_ref_device: ($('soilRefWrap') && $('soilRefWrap').style.display !== 'none')
+      ? ($('soil_ref_device').value || null) : (prevConf.soil_ref_device ?? null),
     /* v5: T-STONE-01 / T-COVER-01. Το transmissivity αποθηκεύεται ως ΚΛΑΣΜΑ
        (0,2–1,0) γιατί έτσι το διαβάζει ο πυρήνας — το πεδίο είναι σε %. */
     stone_fraction_pct: (function(){ const v = intOrNull($('stone_fraction_pct').value);
@@ -2537,6 +2573,7 @@ function applyIncoming(buckets, formLocked){
   /* ── ΔΙΟΡΘΩΣΗ 2 · όσο ο χρήστης γράφει ΔΕΝ ξαναχτίζουμε τα πεδία.
      Η μνήμη (lastDataMap) πιο πάνω και τα μηνύματα πιο κάτω ενημερώνονται ΠΑΝΤΑ. */
   if (!formLocked) {
+  _sagSoilRefRender();   /* v25 · T-SOILREF-02: η λίστα σονδών μπορεί να φτάσει σε οποιοδήποτε πακέτο */
 
   // -------- location (separate variable) --------
   let coordApplied = false;
@@ -2630,6 +2667,7 @@ function applyIncoming(buckets, formLocked){
         if (conf.total_plants!=null) $('total_plants').value = conf.total_plants;
         if (conf.sensor_deep_depth_cm!=null) $('sensor_deep_depth_cm').value = conf.sensor_deep_depth_cm;
         if (conf.sensorShallow_depth_cm!=null) $('sensorShallow_depth_cm').value = conf.sensorShallow_depth_cm;
+        state.soilRefConf = conf.soil_ref_device || ''; _sagSoilRefRender();   /* v25 · T-SOILREF-02 */
         /* v5 */
         if (conf.stone_fraction_pct!=null) $('stone_fraction_pct').value = conf.stone_fraction_pct;
         if (conf.cover_transmissivity!=null) $('cover_transmissivity_pct').value = Math.round(Number(conf.cover_transmissivity) * 100);
@@ -3056,6 +3094,7 @@ if (window.TagoIO && window.TagoIO.ready){
          'water_ecw_measured_on','fert_ecw_dsm','fert_ecw_measured_on',
          'soil_type','irrigation_system','water_quality']
           .forEach(function(id){ const e=$(id); if(e) e.value=''; });
+        state.soilRefConf = ''; { const _sr = $('soil_ref_device'); if (_sr) _sr.dataset.touched = ''; } _sagSoilRefRender();   /* v25 · T-SOILREF-02 */
       }
       state.deviceSig = sig;   /* γύρος 5: καταγράφεται ΠΑΝΤΑ, και η κενή */
     } catch(e){}
