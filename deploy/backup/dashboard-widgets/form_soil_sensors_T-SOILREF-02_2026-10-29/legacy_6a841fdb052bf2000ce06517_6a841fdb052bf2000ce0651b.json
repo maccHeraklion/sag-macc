@@ -1,0 +1,66 @@
+{
+ "label": "Καμπιτάκης BIO",
+ "dashboard_id": "6a841fdb052bf2000ce06517",
+ "widget_id": "6a841fdb052bf2000ce0651b",
+ "type": "iframe",
+ "data": [
+  {
+   "qty": 500,
+   "bucket": "6a841fdbef7327000b112a95",
+   "origin": "6a841fdbef7327000b112a95",
+   "variables": [
+    "cultivation_type_general",
+    "cultivation_type",
+    "soil_type",
+    "irrigation_system",
+    "water_quality",
+    "supply_flow_rate",
+    "area",
+    "total_plants",
+    "sensor_deep_depth_cm",
+    "sensorShallow_depth_cm",
+    "location",
+    "configuration",
+    "validation"
+   ]
+  }
+ ],
+ "display": {
+  "header_buttons": [],
+  "help": "",
+  "parameters": [
+   {
+    "key": "dashboard_id",
+    "value": "6a841fdb052bf2000ce06517"
+   },
+   {
+    "key": "device_map",
+    "value": "{\"6a7c73108b06e3000cb27004\":\"Pellet προβάτου με βιοδεγέρτη\",\"6a7c72b046a750000ce1866e\":\"Pellet προβάτου\",\"6a7c720c23232f000cf5583b\":\"Μάρτυρας\"}"
+   }
+  ],
+  "theme": {
+   "color": {
+    "background": null
+   }
+  },
+  "url": "https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html",
+  "variables": [
+   {
+    "variable": "configuration",
+    "origin": {
+     "id": "6a841fdbef7327000b112a95",
+     "bucket": "6a841fdbef7327000b112a95"
+    }
+   },
+   {
+    "variable": "validation",
+    "origin": {
+     "id": "6a841fdbef7327000b112a95",
+     "bucket": "6a841fdbef7327000b112a95"
+    }
+   }
+  ]
+ },
+ "analysis_run": "68fe925b3607df0010ef833c",
+ "realtime": true
+}

@@ -1,0 +1,66 @@
+{
+ "label": "ΠΑΝΕΤΕΚ",
+ "dashboard_id": "6a746274f99707000ca5d0a2",
+ "widget_id": "6a746274f99707000ca5d0a6",
+ "type": "iframe",
+ "data": [
+  {
+   "qty": 500,
+   "bucket": "6a7462748acfb8000cd40c6e",
+   "origin": "6a7462748acfb8000cd40c6e",
+   "variables": [
+    "cultivation_type_general",
+    "cultivation_type",
+    "soil_type",
+    "irrigation_system",
+    "water_quality",
+    "supply_flow_rate",
+    "area",
+    "total_plants",
+    "sensor_deep_depth_cm",
+    "sensorShallow_depth_cm",
+    "location",
+    "configuration",
+    "validation"
+   ]
+  }
+ ],
+ "display": {
+  "header_buttons": [],
+  "help": "",
+  "parameters": [
+   {
+    "key": "dashboard_id",
+    "value": "6a746274f99707000ca5d0a2"
+   },
+   {
+    "key": "device_map",
+    "value": "{\"6a313a9bb99739000d4aafa9\":\"Μετεωρολογικός σταθμός\",\"69f1c0c03766b6000ba2bdff\":\"PH\",\"69f85c07f79d76000a2baf05\":\"Φύλλο\",\"69f85e0aef3625000f9a9587\":\"Ανατολή\",\"69f85d886b36a6000ab90fa4\":\"Κέντρο\",\"6a7446498acfb8000ccca926\":\"Δύση\",\"6977952a05f6ae0009e7e211\":\"Ελεγκτής 1\"}"
+   }
+  ],
+  "theme": {
+   "color": {
+    "background": null
+   }
+  },
+  "url": "https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html",
+  "variables": [
+   {
+    "variable": "configuration",
+    "origin": {
+     "id": "6a7462748acfb8000cd40c6e",
+     "bucket": "6a7462748acfb8000cd40c6e"
+    }
+   },
+   {
+    "variable": "validation",
+    "origin": {
+     "id": "6a7462748acfb8000cd40c6e",
+     "bucket": "6a7462748acfb8000cd40c6e"
+    }
+   }
+  ]
+ },
+ "analysis_run": "68fe925b3607df0010ef833c",
+ "realtime": true
+}

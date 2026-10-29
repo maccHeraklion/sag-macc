@@ -1,0 +1,66 @@
+{
+ "label": "Χωράφι CyRIC",
+ "dashboard_id": "6a54d1d70b3a8b000df6ec25",
+ "widget_id": "6a54d1d70b3a8b000df6ec29",
+ "type": "iframe",
+ "data": [
+  {
+   "qty": 500,
+   "bucket": "6a54d1d7022c1b000b71f6a0",
+   "origin": "6a54d1d7022c1b000b71f6a0",
+   "variables": [
+    "cultivation_type_general",
+    "cultivation_type",
+    "soil_type",
+    "irrigation_system",
+    "water_quality",
+    "supply_flow_rate",
+    "area",
+    "total_plants",
+    "sensor_deep_depth_cm",
+    "sensorShallow_depth_cm",
+    "location",
+    "configuration",
+    "validation"
+   ]
+  }
+ ],
+ "display": {
+  "header_buttons": [],
+  "help": "",
+  "parameters": [
+   {
+    "key": "dashboard_id",
+    "value": "6a54d1d70b3a8b000df6ec25"
+   },
+   {
+    "key": "device_map",
+    "value": "{\"6a54867531e9b9000c153084\":\"Ελεγκτής TEST\"}"
+   }
+  ],
+  "theme": {
+   "color": {
+    "background": null
+   }
+  },
+  "url": "https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html",
+  "variables": [
+   {
+    "variable": "configuration",
+    "origin": {
+     "id": "6a54d1d7022c1b000b71f6a0",
+     "bucket": "6a54d1d7022c1b000b71f6a0"
+    }
+   },
+   {
+    "variable": "validation",
+    "origin": {
+     "id": "6a54d1d7022c1b000b71f6a0",
+     "bucket": "6a54d1d7022c1b000b71f6a0"
+    }
+   }
+  ]
+ },
+ "analysis_run": "68fe925b3607df0010ef833c",
+ "realtime": true
+}

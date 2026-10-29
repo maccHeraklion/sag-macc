@@ -1,0 +1,66 @@
+{
+ "label": "Τσικαλας",
+ "dashboard_id": "6a842422fb2d40000c3369a3",
+ "widget_id": "6a842422fb2d40000c3369a7",
+ "type": "iframe",
+ "data": [
+  {
+   "qty": 500,
+   "bucket": "6a842421052bf2000ce17d3c",
+   "origin": "6a842421052bf2000ce17d3c",
+   "variables": [
+    "cultivation_type_general",
+    "cultivation_type",
+    "soil_type",
+    "irrigation_system",
+    "water_quality",
+    "supply_flow_rate",
+    "area",
+    "total_plants",
+    "sensor_deep_depth_cm",
+    "sensorShallow_depth_cm",
+    "location",
+    "configuration",
+    "validation"
+   ]
+  }
+ ],
+ "display": {
+  "header_buttons": [],
+  "help": "",
+  "parameters": [
+   {
+    "key": "dashboard_id",
+    "value": "6a842422fb2d40000c3369a3"
+   },
+   {
+    "key": "device_map",
+    "value": "{\"6a7c71cd0ad4a1000b4e78d5\":\"Device 1\",\"68d668ba47d533000a48f00e\":\"Device 2\"}"
+   }
+  ],
+  "theme": {
+   "color": {
+    "background": null
+   }
+  },
+  "url": "https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html",
+  "variables": [
+   {
+    "variable": "configuration",
+    "origin": {
+     "id": "6a842421052bf2000ce17d3c",
+     "bucket": "6a842421052bf2000ce17d3c"
+    }
+   },
+   {
+    "variable": "validation",
+    "origin": {
+     "id": "6a842421052bf2000ce17d3c",
+     "bucket": "6a842421052bf2000ce17d3c"
+    }
+   }
+  ]
+ },
+ "analysis_run": "68fe925b3607df0010ef833c",
+ "realtime": true
+}

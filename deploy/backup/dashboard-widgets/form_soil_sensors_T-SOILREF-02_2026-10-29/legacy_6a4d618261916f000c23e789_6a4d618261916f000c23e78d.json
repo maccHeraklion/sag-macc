@@ -1,0 +1,66 @@
+{
+ "label": "Μεγάλη Ντάμα",
+ "dashboard_id": "6a4d618261916f000c23e789",
+ "widget_id": "6a4d618261916f000c23e78d",
+ "type": "iframe",
+ "data": [
+  {
+   "qty": 500,
+   "bucket": "6a4d6181bf7c42000c7ec6cf",
+   "origin": "6a4d6181bf7c42000c7ec6cf",
+   "variables": [
+    "cultivation_type_general",
+    "cultivation_type",
+    "soil_type",
+    "irrigation_system",
+    "water_quality",
+    "supply_flow_rate",
+    "area",
+    "total_plants",
+    "sensor_deep_depth_cm",
+    "sensorShallow_depth_cm",
+    "location",
+    "configuration",
+    "validation"
+   ]
+  }
+ ],
+ "display": {
+  "header_buttons": [],
+  "help": "",
+  "parameters": [
+   {
+    "key": "dashboard_id",
+    "value": "6a4d618261916f000c23e789"
+   },
+   {
+    "key": "device_map",
+    "value": "{\"67a0fb407a6e1b0009348600\":\"Μετεωρολογικός Σταθμός\",\"685d20154a6e63000a65652e\":\"Εδάφος Κάτω\",\"684c3e89ff3054000a21903a\":\"Ελεγκτής Πάνω\",\"684c444dcc1cd8000a0f2b21\":\"Ελεγκτής Κάτω\",\"6891d4e3f6143d000a55eeac\":\"Έδαφος Πάνω\"}"
+   }
+  ],
+  "theme": {
+   "color": {
+    "background": null
+   }
+  },
+  "url": "https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html",
+  "variables": [
+   {
+    "variable": "configuration",
+    "origin": {
+     "id": "6a4d6181bf7c42000c7ec6cf",
+     "bucket": "6a4d6181bf7c42000c7ec6cf"
+    }
+   },
+   {
+    "variable": "validation",
+    "origin": {
+     "id": "6a4d6181bf7c42000c7ec6cf",
+     "bucket": "6a4d6181bf7c42000c7ec6cf"
+    }
+   }
+  ]
+ },
+ "analysis_run": "68fe925b3607df0010ef833c",
+ "realtime": true
+}

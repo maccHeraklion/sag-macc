@@ -1,0 +1,66 @@
+{
+ "label": "Κουκιά",
+ "dashboard_id": "6a4d6056bf7c42000c7e8568",
+ "widget_id": "6a4d6056bf7c42000c7e856c",
+ "type": "iframe",
+ "data": [
+  {
+   "qty": 500,
+   "bucket": "6a4d6056bf7c42000c7e8552",
+   "origin": "6a4d6056bf7c42000c7e8552",
+   "variables": [
+    "cultivation_type_general",
+    "cultivation_type",
+    "soil_type",
+    "irrigation_system",
+    "water_quality",
+    "supply_flow_rate",
+    "area",
+    "total_plants",
+    "sensor_deep_depth_cm",
+    "sensorShallow_depth_cm",
+    "location",
+    "configuration",
+    "validation"
+   ]
+  }
+ ],
+ "display": {
+  "header_buttons": [],
+  "help": "",
+  "parameters": [
+   {
+    "key": "dashboard_id",
+    "value": "6a4d6056bf7c42000c7e8568"
+   },
+   {
+    "key": "device_map",
+    "value": "{\"67a0fb407a6e1b0009348600\":\"Μετεωρολογικός Σταθμός\",\"6891d4c17caabe000a49c086\":\"Εδάφος Ντομάτες\",\"684c4457508354000ae398a3\":\"Ελεγκτής Κουκιά Πάνω\",\"67bd98d739006c000ada33ef\":\"Ελεγκτής Κουκιά Κάτω\",\"683efef2651b78000a111ec4\":\"Φύλλο\"}"
+   }
+  ],
+  "theme": {
+   "color": {
+    "background": null
+   }
+  },
+  "url": "https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html",
+  "variables": [
+   {
+    "variable": "configuration",
+    "origin": {
+     "id": "6a4d6056bf7c42000c7e8552",
+     "bucket": "6a4d6056bf7c42000c7e8552"
+    }
+   },
+   {
+    "variable": "validation",
+    "origin": {
+     "id": "6a4d6056bf7c42000c7e8552",
+     "bucket": "6a4d6056bf7c42000c7e8552"
+    }
+   }
+  ]
+ },
+ "analysis_run": "68fe925b3607df0010ef833c",
+ "realtime": true
+}
