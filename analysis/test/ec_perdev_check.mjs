@@ -81,6 +81,9 @@ function run(w) {
     const DEAD = JSON.parse(JSON.stringify(KAMP)); DEAD[PEL].conduct_soil2 = pt(10); DEAD[PEL].soil_moisture2 = pt(25);
     const cd = H.sagEceCard("conduct_soil2", DEAD, PEL);
     ok(cd.v === "—" && /ελέγξτε τον αισθητήρα/.test(cd.sub), "Κ9 όργανο ~0 σε υγρό χώμα → «—» (" + JSON.stringify(cd) + ")");
+    const NOM = JSON.parse(JSON.stringify(KAMP)); delete NOM[PEL].soil_moisture2;
+    const cn = H.sagEceCard("conduct_soil2", NOM, PEL);
+    ok(cn && cn.v === "—" && /χωρίς μέτρηση υγρασίας/.test(cn.sub), "Κ9β σόνδα χωρίς υγρασία → «χωρίς μέτρηση», όχι «κάτω από 15 %» (" + JSON.stringify(cn) + ")");
     const NOEC = JSON.parse(JSON.stringify(KAMP)); delete NOEC[MAR].conduct_soil2;
     ok(H.sagEceCard("conduct_soil2", NOEC, MAR) === null, "Κ10 συσκευή χωρίς αγωγιμότητα → καμία αντικατάσταση");
     ok(H.sagEceCard("soil_moisture2", KAMP, MAR) === null, "Κ11 άλλες μεταβλητές ανέγγιχτες");
@@ -135,6 +138,7 @@ const MUT = [
   ["m11 διάγραμμα με μία υγρασία για όλα", "th=_nn8(_mm8.get(String(x.t)))", "th=_nn8((_H8[_mt8[0]]||[{}]).slice(-1)[0].v)"],
   ["m12 ξηρές ώρες ως μηδέν", "return c.p===null?null:{...x", "return c.p===null?{...x,v:0}:{...x"],
   ["m13 χωρίς τιμή → παλιός τίτλος", 'if(e9===null&&p9===null)return{t:"💧 EC στη ρίζα"+d9', "if(e9===null&&p9===null)return{t:null"],
+  ["m15 χωρίς υγρασία ως «κάτω από 15 %»", "/* W-EC-PERDEV-02 */if(!Number.isFinite(th))return", "/* W-EC-PERDEV-02 */if(false)return"],
   ["m14 ECe στην κάρτα αισθητήρα", '"","από αυτόν τον αισθητήρα"]', '"","κλίμακα εργαστηρίου (ECe) 1,6"]'],
 ];
 let killed = 0;

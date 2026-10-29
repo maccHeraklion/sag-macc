@@ -14568,17 +14568,14 @@ function _sagScreenDevice(deviceData, deviceName, fieldName) {
 }
 
 // ═══ T-SOILREF-01 (v50.164 · 29/10/2026, επιλογή «Α» του Μιχάλη) ══════════════════════════
-// ΕΝΑΣ αισθητήρας απόφασης για το έδαφος — ΟΧΙ μέσος όρος. Κάθε τμήμα εδάφους έχει τα δικά
-// του χαρακτηριστικά (Καμπιτάκης BIO: μαλλί προβάτου σε τμήματα του αγρού· οι 3 σόνδες
-// ΦΥΣΙΟΛΟΓΙΚΑ διαφέρουν). Ο μέσος όρος έβγαζε υγρασία/EC που δεν αντιστοιχούσαν σε κανένα
-// τμήμα, και ψευδή «τα όργανα διαφωνούν». Ίδιος κανόνας με τον αέρα (T-MET-REFERENCE-01).
-// ΑΙΣΘΗΤΗΡΑΣ ΑΠΟΦΑΣΗΣ: ο δηλωμένος (fieldConfig.soil_ref_device = id συσκευής), αν δίνει
-// έγκυρη υγρασία· αλλιώς ο ΠΙΟ ΞΗΡΟΣ — μία βάνα ποτίζει όλο τον αγρό, και η απόφαση δεν
-// πρέπει να αφήνει κανένα τμήμα να διψάσει. «Πιο ξηρός» = ο μικρότερος μέσος 24ώρου της
-// υγρασίας του (σταθερός μέσα στη μέρα — όχι εναλλαγή κάθε ώρα)· εφεδρεία η τελευταία τιμή.
-// ΕΜΒΕΛΕΙΑ: ΜΟΝΟ κανάλια εδάφους που έρχονταν από ≥2 συσκευές. Με έναν αισθητήρα, ή κανάλια
-// που μετρά μία μόνο συσκευή (π.χ. pH), ΤΙΠΟΤΑ δεν αλλάζει. Τρέχει ΠΡΙΝ την πύλη
-// ευλογοφάνειας, τις ηλικίες και τις βλάβες — όλα βλέπουν τον αισθητήρα απόφασης.
+// Κάθε τμήμα εδάφους έχει τα δικά του χαρακτηριστικά (Καμπιτάκης BIO: μαλλί προβάτου σε τμήματα του
+// αγρού· οι 3 σόνδες ΦΥΣΙΟΛΟΓΙΚΑ διαφέρουν) — ο μέσος όρος τους δεν είναι κανένα τμήμα.
+// T-SOILREF-04 (v50.165, Michalis 29/10): «ο μέσος όρος μένει ΜΟΝΟ μέχρι να δηλωθεί αισθητήρας απόφασης
+// στη φόρμα». ΚΑΜΙΑ αυτόματη επιλογή: το «ο πιο ξηρός» (v50.164) διάλεξε στον ΚΑΜΠΑΝΗ σόνδα εκτός χώματος
+// (226.589 λίτρα αντί «δεν χρειάζεται») και επεστράφη. Η δηλωμένη σόνδα (fieldConfig.soil_ref_device = id
+// συσκευής) γίνεται δεκτή μόνο αν μετρά σε κοινό βάθος, έδωσε πρόσφατη έγκυρη υγρασία και ΔΕΝ κρίθηκε
+// χαλασμένη — αλλιώς μένει ο μέσος όρος. ΕΜΒΕΛΕΙΑ: ΜΟΝΟ κανάλια εδάφους από ≥2 συσκευές. Τρέχει ΜΕΤΑ την
+// πύλη, τις ηλικίες και τον έλεγχο βλαβών (που βλέπουν ό,τι έβλεπαν πάντα).
 const _SAG_SOIL_KEY_RE = /^(soil_|conduct_soil|temp_soil|water_soil)/;
 // id του αισθητήρα απόφασης για τον αγρό που επεξεργάζεται ΤΩΡΑ (μηδενίζεται σε κάθε αγρό).
 let _SAG_SOIL_REF_ID = '';
@@ -14594,25 +14591,25 @@ function _sagApplySoilRef(data, refId, fieldName) {
     if (names.length < 2) return;
     // T-SOILREF-02: οι «ανταγωνιστές» για τη φόρμα — ανεξάρτητα από την εγκυρότητα αυτής της ώρας.
     data._sagSoilCand = names.map(n => ({ i: devs[n]._id, n }));
-    const score = (d) => {
-      for (const re of [/^soil_moisture\d?_avg$/, /^soil_moisture\d?$/, /^(water_soil|soil_humidity)\d?(_avg)?$/]) {
-        const xs = Object.keys(d).filter(k => re.test(k)).map(k => _sagMergeNum(d[k])).filter(Number.isFinite);
-        if (xs.length) return xs.reduce((a, b) => a + b, 0) / xs.length;
-      }
-      return NaN;
-    };
+    // T-SOILREF-04: ΧΩΡΙΣ δήλωση → ο μέσος όρος, ΑΚΡΙΒΩΣ όπως ίσχυε (v50.163).
     const _rid = String(refId == null ? '' : refId).trim();
-    let ref = null, why = '';
-    if (_rid) {
-      const n = names.find(x => devs[x]._id === _rid);
-      if (n && Number.isFinite(score(devs[n]))) { ref = n; why = 'δηλωμένος'; }
+    if (!_rid) return;
+    const ref = names.find(x => devs[x]._id === _rid) || null;
+    const _lim = (_SAG_AGE_LIMITS.find(g => g.name === 'έδαφος') || {}).limit || 360;
+    const _now = Date.now();
+    const _fresh = (d) => Object.keys(d).some(k => /^(soil_moisture|water_soil|soil_humidity)\d?$/.test(k)
+      && (function (x) { const v = Array.isArray(x) && x[0] && typeof x[0] === 'object' ? x[0].value : undefined;
+        return v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v)); })(d[k]) && (function (a) { return a !== null && a <= _lim; })(_sagAgeMinutes(d[k], _now)));
+    const _killed = (n) => ((data._sagFaults && data._sagFaults.faults) || []).some(f => f && f.kill && f.dev === n);
+    const miss = !ref ? 'η δηλωμένη σόνδα δεν μετρά σε κοινό βάθος με τις άλλες'
+      : (!_fresh(devs[ref]) ? ('η δηλωμένη σόνδα δεν έδωσε έγκυρη υγρασία τις τελευταίες ' + Math.round(_lim / 60) + ' ώρες')
+      : (_killed(ref) ? 'η δηλωμένη σόνδα κρίθηκε χαλασμένη' : ''));
+    if (miss) {
+      data._sagSoilRefMiss = miss;
+      console.log('[' + (fieldName || '—') + '] T-SOILREF-04: ' + miss + ' — μένει ο μέσος όρος');
+      return;
     }
-    if (!ref) {
-      let best = Infinity;
-      for (const n of names) { const v = score(devs[n]); if (Number.isFinite(v) && v < best) { best = v; ref = n; } }
-      if (ref) why = _rid ? 'ο δηλωμένος δεν δίνει έγκυρη υγρασία — ο πιο ξηρός' : 'ο πιο ξηρός';
-    }
-    if (!ref) return;   // κανένας με έγκυρη υγρασία: ό,τι ίσχυε (οι πύλες θα το πουν)
+    const why = 'δηλωμένος';
     for (const k of multi) {
       if (devs[ref][k] !== undefined) { data[k] = devs[ref][k]; src[k] = [ref]; }
       else { delete data[k]; delete src[k]; }
@@ -17797,8 +17794,6 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
     data._sagMetBoth = _hasStation && _hasCanopy;
   }
 
-  // T-SOILREF-01: ΕΝΑΣ αισθητήρας απόφασης για το έδαφος, ΠΡΙΝ από κάθε πύλη και υπολογισμό.
-  _sagApplySoilRef(data, _SAG_SOIL_REF_ID, fieldName);
   _sagPlausibilityGate(data, fieldName);
   // T-MERGE-SCREEN-01: οι απορρίψεις ΑΝΑ ΣΥΣΚΕΥΗ πρέπει να φτάσουν στο ταμπλό μαζί
   // με τις απορρίψεις επιπέδου αγρού — αλλιώς ένας νεκρός αισθητήρας θα φιλτραριζόταν
@@ -17815,6 +17810,8 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
   // έκρινε ως υγιή κανάλια που μόλις απορρίφθηκαν ως αδύνατα. Και ΠΡΙΝ από κάθε
   // υπολογισμό, ώστε η απόσυρση των άκυρων καναλιών να προλάβει να ισχύσει.
   data._sagFaults = _sagSensorFaults(data, fieldName);
+  // T-SOILREF-04: ο ΔΗΛΩΜΕΝΟΣ αισθητήρας απόφασης, ΜΕΤΑ τον έλεγχο βλαβών (χαλασμένη δηλωμένη σόνδα → μέσος όρος).
+  _sagApplySoilRef(data, _SAG_SOIL_REF_ID, fieldName);
   // T-QUOTA-02: το προηγούμενο bundle ταξιδεύει με τις μετρήσεις (βλ. παραπάνω).
   return { data, prevBundle: _ringPrevBundle };
 }
@@ -18846,6 +18843,12 @@ module.exports = new Analysis(async (context) => {
           try { const _s0 = _scU((_prevBundleForWash?.shared || {}).soilcal_state);
             const _j0 = (typeof _s0 === 'string' && _s0) ? JSON.parse(_s0) : null;
             if (_j0 && typeof _j0 === 'object') _scPrev = _j0; } catch (_e0) {}
+          // T-SOILREF-04: άλλαξε η πηγή εδάφους (μέσος όρος ↔ δηλωμένη σόνδα, ή άλλη σόνδα) → η μάθηση ξεκινά από την αρχή.
+          const _scW = (measurements?.data?._sagSoilRef && measurements.data._sagSoilRef.n) ? String(measurements.data._sagSoilRef.n) : '';
+          if (String(_scPrev.w || '') !== _scW) {
+            console.log('[' + fieldName + '] T-SOILREF-04: νέα πηγή εδάφους («' + (_scW || 'μέσος όρος') + '») — η μάθηση T-SOILCAL ξεκινά από την αρχή');
+            _scPrev = {};
+          }
           const _scDay = moment().tz(measurements?.timezone || 'Europe/Athens').format('YYYY-MM-DD');
           if (_scPrev.u !== _scDay) {
             // ΜΟΡΦΗ ΠΑΡΑΓΩΓΗΣ: η υγρασία εδάφους φτάνει ως ΕΝΑ σημείο ανά
@@ -18933,7 +18936,8 @@ module.exports = new Analysis(async (context) => {
               ? _sagSubstrateEcHist(_scPrev.eh, measurements, _scDayNum) : null;
             _soilcalIndicators.push({ variable: 'soilcal_state',
               value: JSON.stringify(_SAG_SUBSTRATE_ACTIVE
-                ? { s: _scS, d: _scD, eh: _scEh, u: _scDay } : { s: _scS, d: _scD, u: _scDay }),
+                ? Object.assign({ s: _scS, d: _scD, eh: _scEh, u: _scDay }, _scW ? { w: _scW } : {})
+                : Object.assign({ s: _scS, d: _scD, u: _scDay }, _scW ? { w: _scW } : {})),
               metadata: { internal: true } });
             if (_SAG_SUBSTRATE_ACTIVE) _soilcalIndicators.push(_sagSubstrateEcStatus(_scEh));   // T-SUBSTRATE-01
           }
@@ -18997,6 +19001,14 @@ module.exports = new Analysis(async (context) => {
         // T-UNDO-01: κλειδιά που ΔΙΑΓΡΑΦΟΝΤΑΙ ρητά από το bundle αυτόν τον κύκλο.
         // Ζει ΕΞΩ από το if (hourTich) γιατί το διαβάζει η packCalculatedIndicators.
         const _purgeShared = [];
+        // T-SOILREF-04: κάρτες εδάφους που ΔΕΝ ισχύουν πια δεν μεταφέρονται από το προηγούμενο bundle (TTL 50ω).
+        try {
+          if (_SAG_SUBSTRATE_ACTIVE || !_sagDivergenceIndicators(measurements?.data).length) _purgeShared.push('sensor_divergence');
+          const _pES = (_prevBundleForWash?.shared || {}).soil_ec_status;
+          const _pESv = (_pES && typeof _pES === 'object' && 'value' in _pES) ? _pES.value : _pES;
+          if (!dailyTich && /^Σε αναστολή/.test(String(_pESv || ''))
+              && !(measurements?.data?._sagDivergeEc && Object.keys(measurements.data._sagDivergeEc).length)) _purgeShared.push('soil_ec_status');
+        } catch (_eSR) {}
         const _undoCase = {};     // παθογόνα των οποίων η υπόθεση επαναφέρεται
         const _declInspected = {};
         const _declSprayed = {};

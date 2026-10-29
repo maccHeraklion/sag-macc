@@ -507,7 +507,7 @@
         <!-- v25 · T-SOILREF-02: αισθητήρας απόφασης — φαίνεται ΜΟΝΟ όταν ο αγρός έχει ≥2 σόνδες στο ίδιο βάθος -->
         <div class="field" id="soilRefWrap" style="grid-column:1/-1; display:none">
           <label>Αισθητήρας απόφασης εδάφους</label>
-          <select id="soil_ref_device" onchange="this.dataset.touched='1'"><option value="">Αυτόματα — ο πιο ξηρός</option></select>
+          <select id="soil_ref_device" onchange="this.dataset.touched='1'"><option value="">Δεν έχει δηλωθεί — μέσος όρος όλων</option></select>
           <div class="muted" style="font-size:.85rem; margin-top:4px" id="soilRefNote">—</div>
         </div>
         <div class="field">
@@ -2098,8 +2098,8 @@ setTimeout(refreshHints, 0);
    Όταν διατηρείται παλιά τιμή αντί κενού, το παράθυρο επιβεβαίωσης το ΛΕΕΙ
    (βλ. btnSave) — καμία σιωπηλή διατήρηση. */
 /* v25 · T-SOILREF-02: αισθητήρας απόφασης εδάφους. Τη λίστα των σονδών που μετρούν το ΙΔΙΟ βάθος τη γράφει ο
-   πυρήνας (μεταβλητή soil_sensors, μόνο όταν αλλάζει). Ο πυρήνας ΔΕΝ βγάζει μέσο όρο σονδών (T-SOILREF-01): χωρίς
-   δήλωση αποφασίζει ο πιο ξηρός, ώστε να μη διψάσει κανένα τμήμα. Ονόματα συσκευών μόνο ως textContent. */
+   πυρήνας (μεταβλητή soil_sensors, μόνο όταν αλλάζει). T-SOILREF-04: χωρίς δήλωση ο πυρήνας κρατά τον μέσο όρο των
+   σονδών· με δήλωση αποφασίζει η δηλωμένη (αν είναι υγιής και πρόσφατη). Ονόματα συσκευών μόνο ως textContent. */
 function _sagSoilRefList(){
   try{
     const row = state.lastDataMap && state.lastDataMap.soil_sensors;
@@ -2114,14 +2114,15 @@ function _sagSoilRefRender(){
   if (list.length < 2){ wrap.style.display = 'none'; return; }
   const want = sel.dataset.touched === '1' ? sel.value : String(state.soilRefConf || '');
   sel.innerHTML = '';
-  const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Αυτόματα — ο πιο ξηρός'; sel.appendChild(o0);
+  const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Δεν έχει δηλωθεί — μέσος όρος όλων'; sel.appendChild(o0);
   list.forEach(function(x){ const o = document.createElement('option'); o.value = x.i; o.textContent = String(x.n); sel.appendChild(o); });
   const has = list.some(function(x){ return x.i === want; });
   sel.value = has ? want : '';
   if (note) note.textContent = (want && !has)
-    ? 'Ο αισθητήρας που είχε δηλωθεί δεν μετρά πια σε αυτό το βάθος — ισχύει ο πιο ξηρός. Επιλέξτε ξανά και αποθηκεύστε.'
+    ? 'Ο αισθητήρας που είχε δηλωθεί δεν μετρά πια σε αυτό το βάθος — ισχύει ο μέσος όρος. Επιλέξτε ξανά και αποθηκεύστε.'
     : ('Ο αγρός έχει ' + list.length + ' σόνδες στο ίδιο βάθος. Από τον αισθητήρα απόφασης βγαίνουν η συμβουλή άρδευσης '
-       + 'και η αλατότητα· οι άλλοι φαίνονται χωριστά στις μετρήσεις. «Αυτόματα» = ο πιο ξηρός, ώστε να μη διψάσει κανένα τμήμα.');
+       + 'και η αλατότητα· οι άλλοι φαίνονται χωριστά στις μετρήσεις. Χωρίς δήλωση χρησιμοποιείται ο μέσος όρος όλων· αν η '
+       + 'δηλωμένη σόνδα δεν δώσει πρόσφατη μέτρηση ή κριθεί χαλασμένη, το σύστημα γυρίζει προσωρινά στον μέσο όρο.');
   wrap.style.display = '';
 }
 function _keepPrev(v, prev){

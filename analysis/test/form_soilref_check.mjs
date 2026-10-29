@@ -34,12 +34,13 @@ function run(form, sync) {
     ok(D.els.soilRefWrap.style.display === "none", "Α2 μία σόνδα: κρυφό");
     st = { lastDataMap: { soil_sensors: { metadata: { list: LIST } } }, soilRefConf: ID.M }; ({ D, R } = mk(st)); R._sagSoilRefRender();
     const s = D.els.soil_ref_device;
-    ok(D.els.soilRefWrap.style.display === "" && s.opts.length === 4 && s.opts[0].value === "" && /Αυτόματα — ο πιο ξηρός/.test(s.opts[0].textContent), "Α3 τρεις σόνδες: ορατό με «Αυτόματα» + 3 (" + s.opts.length + ")");
+    ok(D.els.soilRefWrap.style.display === "" && s.opts.length === 4 && s.opts[0].value === "" && /Δεν έχει δηλωθεί — μέσος όρος όλων/.test(s.opts[0].textContent), "Α3 τρεις σόνδες: ορατό με «Δεν έχει δηλωθεί — μέσος όρος» + 3 (" + s.opts.length + ")");
     ok(s.value === ID.M, "Α4 δείχνει τη δηλωμένη (" + s.value + ")");
     ok(s.opts[3].textContent === "Pellet <b>x</b>", "Α5 όνομα ως κείμενο (καμία HTML)");
     ok(/3 σόνδες στο ίδιο βάθος/.test(D.els.soilRefNote.textContent), "Α6 σημείωμα με πλήθος");
     st.soilRefConf = "000000000000000000000000"; R._sagSoilRefRender();
-    ok(s.value === "" && /δεν μετρά πια/.test(D.els.soilRefNote.textContent), "Α7 δηλωμένη που λείπει → «Αυτόματα» + προειδοποίηση");
+    ok(s.value === "" && /δεν μετρά πια[^]*ισχύει ο μέσος όρος/.test(D.els.soilRefNote.textContent), "Α7 δηλωμένη που λείπει → μέσος όρος + προειδοποίηση");
+    ok(!/πιο ξηρός/.test(D.els.soilRefNote.textContent + s.opts.map(o => o.textContent).join("|")), "Α7β πουθενά «ο πιο ξηρός» (T-SOILREF-04)");
     s.value = ID.P; s.dataset.touched = "1"; st.soilRefConf = ID.M; R._sagSoilRefRender();
     ok(s.value === ID.P, "Α8 η επιλογή του χρήστη δεν χάνεται σε νέο πακέτο");
     st = { lastDataMap: { soil_sensors: { metadata: { list: [{ i: "κακό", n: "x" }, { i: ID.M, n: "" }, { i: ID.P, n: "P" }] } } }, soilRefConf: "" }; ({ D, R } = mk(st)); R._sagSoilRefRender();
