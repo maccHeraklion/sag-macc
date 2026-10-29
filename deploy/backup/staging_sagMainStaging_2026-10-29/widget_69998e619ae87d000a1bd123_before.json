@@ -1,0 +1,13 @@
+{
+  "_note": "Staging (KEK - Αγρός) 69998e619ae87d000a1bd11c, widget sagMainStaging 69998e619ae87d000a1bd123 — data ΠΡΙΝ το W-EC-ROOT-01 preview (29/10/2026). Μόνο η 1η πηγή (Field_KEK) αλλάζει.",
+  "data": [
+    {"qty":10000,"bucket":"69277948c4e6a4000afcd3b4","origin":"69277948c4e6a4000afcd3b4","timezone":"Europe/Athens","variables":["configuration","forecast","field_bundle","field_calendar","subscription_until"]},
+    {"qty":10000,"bucket":"6797832265ba050009c7d668","origin":"6797832265ba050009c7d668","timezone":"Europe/Athens","variables":["air_humidity","air_temperature","wind_chill","wind_direction_sensor","wind_speed_kmh","dew_point","rain_height","barometric_pressure_hpa","uv_index","light_intensity","rain_height_hourly","rain_height_daily","rain_height_weekly","rain_height_monthly","current_rain_height_daily","current_rain_height_weekly","current_rain_height_monthly","current_rain_height_yearly"]},
+    {"qty":10000,"bucket":"68d668ba47d533000a48f00e","origin":"68d668ba47d533000a48f00e","timezone":"Europe/Athens","variables":["conduct_soil1","conduct_soil2","soil_moisture1","soil_moisture2","soil_temperature1","soil_temperature2"]},
+    {"qty":10000,"bucket":"684c2c4ddf4dd2000a10106a","origin":"684c2c4ddf4dd2000a10106a","timezone":"Europe/Athens","variables":["leaf_moisture","leaf_temperature"]},
+    {"qty":10000,"bucket":"684c3de5675005000abcae24","origin":"684c3de5675005000abcae24","variables":["valve_1","valve_1_pulse","valve_2","valve_2_pulse","batterypct","hw_version","valve_1_command","valve_2_command","rule1","rule1_set","rule1_enable","rule2","rule2_enable","rule2_set","rule3","rule3_enable","rule3_set","rule4","rule4_set"]},
+    {"qty":10000,"bucket":"69b282167686c70009115dab","origin":"69b282167686c70009115dab","variables":["conduct_soil"]},
+    {"qty":10000,"bucket":"69277948c4e6a4000afcd3b4","origin":"69277948c4e6a4000afcd3b4","timezone":"Europe/Athens","variables":["configuration","forecast","spray_declaration","field_calendar","subscription_until"]},
+    {"qty":10000,"bucket":"69277948c4e6a4000afcd3b4","origin":"69277948c4e6a4000afcd3b4","timezone":"Europe/Athens","variables":["configuration","forecast","inspection_declaration","field_calendar","subscription_until"]}
+  ]
+}
