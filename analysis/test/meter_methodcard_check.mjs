@@ -41,7 +41,7 @@ function run(w, f, c) {
   ok(Object.keys(R({})).length === 0, "Α5 χωρίς κάρτα: τίποτα");
   ok(!w.includes("Μέθοδος (ημερήσια κάρτα)") && w.includes('if(mode===3)return PL(t||MC[x.k]||"");'), "widget: καμία ωμή γραμμή μεθόδου· το κείμενο μπαίνει μόνο όπου χρειάζεται");
   // ── πυρήνας ──
-  ok(c.includes("const SAG_KERNEL_VERSION = 'v50.162 · 2026-10-27';"), "πυρήνας v50.154");
+  ok(c.includes("const SAG_KERNEL_VERSION = 'v50.163 · 2026-10-29';"), "πυρήνας v50.154");
   ok(c.includes("_daily.push({ variable: 'field_bundle_2', value: _SAG_METHOD_CARD.n,") && c.includes("shared: { field_method_card: { value: _SAG_METHOD_CARD.n,"), "πυρήνας: field_bundle_2 → shared.field_method_card");
   ok(!/field_bundle_2'[\s\S]{0,300}compression/.test(c), "πυρήνας: το field_bundle_2 γράφεται ΧΩΡΙΣ συμπίεση (το widget το περνά αυτούσιο)");
   const i1 = c.indexOf("_daily.push({ variable: 'field_method_card'"), i2 = c.indexOf("_daily.push({ variable: 'field_bundle_2'");
@@ -60,7 +60,7 @@ const MUT = [
   ["W6 το κείμενο μεθόδου δεν χρησιμοποιείται", 'if(mode===3)return PL(t||MC[x.k]||"");', "if(mode===3)return PL(t);", "w"],
   ["F1 φόρμα δεν αποθηκεύει", "    has_water_meter: $('has_water_meter').value === 'true',   /* v20 · T-METER-FORM-01 */\n", "", "f"],
   ["F2 φόρμα προεπιλογή ΝΑΙ", "String(conf.has_water_meter) === 'true' ? 'true' : 'false';", "String(conf.has_water_meter) === 'false' ? 'false' : 'true';", "f"],
-  ["C1 παλιά έκδοση", "'v50.162 · 2026-10-27'", "'v50.159 · 2026-10-04'", "c"],
+  ["C1 παλιά έκδοση", "'v50.163 · 2026-10-29'", "'v50.159 · 2026-10-04'", "c"],
   ["C2 bundle_2 δεν γράφεται", "              _daily.push({ variable: 'field_bundle_2', value: _SAG_METHOD_CARD.n, metadata:", "              if (false) _daily.push({ variable: 'field_bundle_2x', value: _SAG_METHOD_CARD.n, metadata:", "c"],
 ];
 let k = 0;

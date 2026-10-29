@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.162 · 2026-10-27';
+const SAG_KERNEL_VERSION = 'v50.163 · 2026-10-29';   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -11350,7 +11350,7 @@ function _sagEcRefIndicators(measurements, prevShared, dailyTich, nowIso) {
         if (p && best) {
           out.push({ variable: 'soil_ec_ref' + c.n, value: Number(Number(best.sw).toFixed(2)),
             metadata: { unit: 'dS/m', color: 'grey', theta: best.th, temp: best.t, at: best.ts,
-              text: 'Νερό πόρων (' + c.el + ') στο ξηρότερο δείγμα του 24ώρου: '
+              text: 'EC στη ρίζα (' + c.el + ') στο ξηρότερο δείγμα του 24ώρου: '
                 + Number(best.sw).toLocaleString('el-GR', { maximumFractionDigits: 2 }) + ' dS/m σε υγρασία '
                 + Number(best.th).toLocaleString('el-GR', { maximumFractionDigits: 1 }) + ' %.' } });
         }
@@ -11413,7 +11413,7 @@ function _sagEcDailyVerdict(a) {
   const guard = hasRef && ((Number.isFinite(lo) && refF < 0.7 * lo) || (Number.isFinite(hi) && refF > 2.0 * hi));
   if (guard) {
     out.push({ variable: 'soil_ec_ratio', value: null,
-      metadata: { color: 'orange', text: 'Ελέγξτε τις δηλώσεις EC νερού/λιπάσματος: το νερό των πόρων (' + f(refF, 2)
+      metadata: { color: 'orange', text: 'Ελέγξτε τις δηλώσεις EC νερού/λιπάσματος: η EC στη ρίζα (' + f(refF, 2)
         + ' dS/m) είναι έξω από το φυσικά δυνατό εύρος (0,7× έως 2× των δηλώσεων).' } });
   } else if (hasRef) {
     if (Number.isFinite(a.fert)) out.push({ variable: 'soil_ec_ratio', value: Number((refF / a.fert).toFixed(2)),
@@ -11425,17 +11425,17 @@ function _sagEcDailyVerdict(a) {
   let st;
   if (!hasRef) {
     st = { v: 'Αναμονή αναφοράς', c: 'grey',
-      t: 'Η ημερήσια κρίση χρειάζεται την προ-αρδευτική αναφορά νερού πόρων (ξηρότερο δείγμα 24ώρου) — βγαίνει από το επόμενο ημερήσιο tick. ' + (a.valTxt || '') + '.' };
+      t: 'Η ημερήσια κρίση χρειάζεται την προ-αρδευτική EC στη ρίζα (ξηρότερο δείγμα 24ώρου) — βγαίνει από το επόμενο ημερήσιο tick. ' + (a.valTxt || '') + '.' };
   } else if (guard) {
     st = { v: 'Ελέγξτε τις δηλώσεις EC', c: 'orange',
-      t: 'Νερό ρίζας ' + f(refF, 2) + ' dS/m (προ-αρδευτικά) — ασύμβατο με τις δηλώσεις νερού ' + (Number.isFinite(a.ecw) ? f(a.ecw, 2) : '—')
+      t: 'EC στη ρίζα ' + f(refF, 2) + ' dS/m (προ-αρδευτικά) — ασύμβατο με τις δηλώσεις νερού ' + (Number.isFinite(a.ecw) ? f(a.ecw, 2) : '—')
         + ' / λιπάσματος ' + (Number.isFinite(a.fert) ? f(a.fert, 2) : '—') + ' dS/m. Διορθώστε τις δηλώσεις στη φόρμα.' };
   } else if (!Number.isFinite(a.fert)) {
     st = { v: 'Χωρίς δήλωση λίπανσης', c: 'grey',
-      t: 'Νερό ρίζας ' + f(refF, 2) + ' dS/m (προ-αρδευτικά). Δηλώστε την EC του μείγματος λίπανσης για να κριθεί η συσσώρευση.' + trendTxt };
+      t: 'EC στη ρίζα ' + f(refF, 2) + ' dS/m (προ-αρδευτικά). Δηλώστε την EC του μείγματος λίπανσης για να κριθεί η συσσώρευση.' + trendTxt };
   } else {
     const R = refF / a.fert;
-    const rt = 'Νερό ρίζας ' + f(refF, 2) + ' dS/m (προ-αρδευτικά), λίπασμα ' + f(a.fert, 2) + ' dS/m → λόγος ' + f(R, 2) + '.';
+    const rt = 'EC στη ρίζα ' + f(refF, 2) + ' dS/m (προ-αρδευτικά), λίπασμα ' + f(a.fert, 2) + ' dS/m → λόγος ' + f(R, 2) + '.';
     if (R < 0.7) st = { v: 'Χωρίς συσσώρευση', c: 'green', t: rt + ' Κάτω από 0,7× το λίπασμα — τα θρεπτικά ξεπλένονται· μειώστε την έκπλυση.' + trendTxt };
     else if (R < 1.5) st = { v: 'Χωρίς συσσώρευση', c: 'green', t: rt + ' Κοντά στο λίπασμα — δεν χρειάζεται επιπλέον έκπλυση για τα άλατα.' + trendTxt };
     else if (R < 2) st = { v: 'Παρακολούθηση', c: 'orange', t: rt + ' Πάνω από το λίπασμα· αν η τάση συνεχίσει, αυξήστε τα ποτίσματα με σκέτο νερό.' + trendTxt };
@@ -11551,7 +11551,7 @@ function _sagEcIndicators(measurements, parameters, tolOverride) {
           ...(Number.isFinite(tol) && tol > 0
               ? { tol: parseFloat(Number(tol).toFixed(2)) } : {}),
           text: _head
-            + 'Νερό ρίζας ' + _fmt(r.pore, 2) + '. Σε εκχύλισμα κορεσμού '
+            + 'EC στη ρίζα ' + _fmt(r.pore, 2) + '. Σε εκχύλισμα κορεσμού '
             + _fmt(r.ece, 2) + ' dS/m'
             + (Number.isFinite(tol) ? (', όριο ' + _fmt(tol, 1)) : '')
             + ' (στιγμιαίο — η κρίση γίνεται μία φορά την ημέρα στην «Κατάσταση αλατότητας»).' } });
@@ -11573,7 +11573,7 @@ function _sagEcIndicators(measurements, parameters, tolOverride) {
             + (Number.isFinite(tol) ? (', όριο ' + _fmt(tol, 1) + ' — Maas & Hoffman 1977.') : '.')
             // T-ECRAW-01: ΕΔΩ, μία φορά, ο οδηγός βαθμονόμησης. Χωρίς αυτόν ο
             // τεχνικός συγκρίνει ανόμοιες ποσότητες και «διορθώνει» σωστό όργανο.
-            + ' ΒΑΘΜΟΝΟΜΗΣΗ: «Ένδειξη οργάνου» ↔ φορητό ΣΤΟ ΧΩΜΑ · «Νερό πόρων» '
+            + ' ΒΑΘΜΟΝΟΜΗΣΗ: «Ένδειξη οργάνου» ↔ φορητό ΣΤΟ ΧΩΜΑ · «EC στη ρίζα» '
             + '↔ όργανο σε ΥΓΡΟ (στράγγισμα) · «Αλατότητα» ↔ εκχύλισμα κορεσμού.' } });
     }
   } catch (_eEc) { /* καμία κάρτα δεν αξίζει σπασμένο κύκλο */ }
