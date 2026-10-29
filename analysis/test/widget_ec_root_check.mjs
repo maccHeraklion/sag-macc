@@ -36,7 +36,7 @@ function run(w) {
     ok(c4 && c4.t === "🧂 Αλατότητα εδάφους Ρηχό" && c4.v === "1,7 dS/m", "Π8 χωρίς EC ρίζας: πίσω στην ECe (" + JSON.stringify(c4) + ")");
     H.sagEceSet({ soil_ece1: { value: null, metadata: { text: "Χωρίς συγκρίσιμη τιμή: υγρασία κάτω από 15 %." } } });
     const c5 = H.sagEceCard("conduct_soil1");
-    ok(c5 && c5.t === null && /υγρασία κάτω από 15/.test(c5.sub), "Π9 χωρίς τιμή: αιτία (" + JSON.stringify(c5) + ")");
+    ok(c5 && c5.t === "💧 EC στη ρίζα Ρηχό" && c5.v === "—" && /υγρασία κάτω από 15/.test(c5.sub), "Π9 χωρίς τιμή: ΙΔΙΟΣ τίτλος, «—» και αιτία — W-EC-PERDEV-01 (" + JSON.stringify(c5) + ")");
     ok(H.sagEceCard("soil_moisture1") === null, "Π10 άλλες μεταβλητές ανέγγιχτες");
     // ── διάγραμμα ──
     const body = cut(w, "/* W-EC-ROOT-01 */const _q9=", "fe(!1);p(!0);return}if(_eS9.length)", "κλάδος διαγράμματος", false)
