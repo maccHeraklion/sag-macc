@@ -1,0 +1,4 @@
+{"label":"Α4 - Λειτουργάκης","dashboard_id":"692786ebcb5edf000ab7e2ed","widget_id":"692786ebcb5edf000ab7e2f3",
+"data":[{"qty":10000,"bucket":"68769b0212627500090ec35c","origin":"68769b0212627500090ec35c","timezone":"Europe/Athens","variables":["configuration","validation","location"]}],
+"display":{"header_buttons":[],"help":"","parameters":[{"key":"dashboard_id","value":"692786ebcb5edf000ab7e2ed"},{"key":"device_map","value":"{\"681861542efa76000b9a73d0\":\"dragino_lms01_ls_3ac6\",\"67ada90636089a000a15e72e\":\"dragino_lse02_7884\",\"681862058ee17b000abfac56\":\"milesight_uc511_8308\",\"681c8f3d4f9c59000a0e267a\":\"sensecap_s2120_0425\"}"}],"theme":{"color":{"background":null}},"url":"https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html"},
+"analysis_run":"68fe925b3607df0010ef833c","realtime":true}

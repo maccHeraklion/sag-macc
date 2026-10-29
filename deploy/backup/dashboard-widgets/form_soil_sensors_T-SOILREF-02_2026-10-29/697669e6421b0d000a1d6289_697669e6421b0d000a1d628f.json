@@ -1,0 +1,4 @@
+{"label":"Γουμένισσα - Γρίβα","dashboard_id":"697669e6421b0d000a1d6289","widget_id":"697669e6421b0d000a1d628f",
+"data":[{"qty":500,"bucket":"6848387a0f99be000a4dda07","origin":"6848387a0f99be000a4dda07","timezone":"Europe/Athens","variables":["configuration","validation","location"]}],
+"display":{"header_buttons":[],"help":"","parameters":[{"key":"dashboard_id","value":"697669e6421b0d000a1d6289"}],"theme":{"color":{"background":null}},"url":"https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html"},
+"analysis_run":"68fe925b3607df0010ef833c","realtime":true}

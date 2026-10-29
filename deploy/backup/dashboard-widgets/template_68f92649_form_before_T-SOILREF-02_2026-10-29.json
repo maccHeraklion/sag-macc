@@ -1,0 +1,8 @@
+{
+  "_note": "Αντίγραφο ΠΡΙΝ το T-SOILREF-02 (29/10/2026, Michalis: «φόρμα» — δήλωση αισθητήρα απόφασης εδάφους). Πρότυπο 68f92649f8b680000ab970ae, καρτέλα Παραμετροποίηση (XpOV787fvpT8I0gKHfM3H), widget φόρμας (iframe configuration.html) 68f9f523cd6522000b4afbb4. Αλλαγή: + «soil_sensors» στο τέλος των μεταβλητών του Field_Template (λίστα σονδών που γράφει ο πυρήνας v50.165 μόνο όταν αλλάζει). Επαναφορά: update_widget data με το παρακάτω.",
+  "dashboard_id": "68f92649f8b680000ab970ae",
+  "widget_id": "68f9f523cd6522000b4afbb4",
+  "data": [ {"qty": 500, "bucket": "686c0f54172d7e000b7191f3", "origin": "686c0f54172d7e000b7191f3", "variables": ["cultivation_type_general","cultivation_type","soil_type","irrigation_system","water_quality","supply_flow_rate","area","total_plants","sensor_deep_depth_cm","sensorShallow_depth_cm","location","configuration","validation"]} ],
+  "display": {"header_buttons": [], "help": "", "parameters": [{"key":"dashboard_id","value":"68f92649f8b680000ab970ae"}], "theme": {"color":{"background":null}}, "url": "https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html"},
+  "type": "iframe", "realtime": true, "analysis_run": null
+}

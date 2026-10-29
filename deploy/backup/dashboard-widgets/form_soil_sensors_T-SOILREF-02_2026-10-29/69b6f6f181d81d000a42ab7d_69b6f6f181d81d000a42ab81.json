@@ -1,0 +1,4 @@
+{"label":"Βενζινάδικο","dashboard_id":"69b6f6f181d81d000a42ab7d","widget_id":"69b6f6f181d81d000a42ab81",
+"data":[{"qty":500,"bucket":"69b6f6f0fce2b5000a72e8eb","origin":"69b6f6f0fce2b5000a72e8eb","variables":["configuration","validation","location"]}],
+"display":{"header_buttons":[],"help":"","parameters":[{"key":"dashboard_id","value":"69b6f6f181d81d000a42ab7d"},{"key":"device_map","value":"{\"6891d4907caabe000a49bc52\":\"dragino_se0x_3aae\",\"6891d5133884e5000a211541\":\"dragino_se0x_8e68\",\"684c376d508354000ae0bdf2\":\"milesight_uc511_9864\",\"684c27630de23f000a594f7e\":\"milesight_uc511_9208\",\"67a0fb407a6e1b0009348600\":\"sensecap_s2120_03F1\",\"684c0ec3372edb000a4cc50d\":\"milesight_em300_th_8491\"}"}],"theme":{"color":{"background":null}},"url":"https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html"},
+"analysis_run":"68fe925b3607df0010ef833c","realtime":true}

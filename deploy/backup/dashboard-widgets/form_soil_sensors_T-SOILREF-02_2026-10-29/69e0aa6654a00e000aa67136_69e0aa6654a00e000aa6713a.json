@@ -1,0 +1,4 @@
+{"label":"ΓΡΙΝΙΑΡΑΚΗΣ ΓΙΑΝΝΗΣ","dashboard_id":"69e0aa6654a00e000aa67136","widget_id":"69e0aa6654a00e000aa6713a",
+"data":[{"qty":500,"bucket":"69e0aa6554a00e000aa67124","origin":"69e0aa6554a00e000aa67124","variables":["validation","location","configuration"]}],
+"display":{"header_buttons":[],"help":"","parameters":[{"key":"dashboard_id","value":"69e0aa6654a00e000aa67136"},{"key":"device_map","value":"{\"69aed3c9962d2c00097b621f\":\"sensecap_s2120_00c5\",\"684c0ed2df4dd2000a0a08f7\":\"milesight_em300_th_7127\",\"6891d4806af6cd000aed7bcf\":\"dragino_se0x_3aad\",\"688cd0e4fbe87e000a219941\":\"dragino_se0x_3ab4\",\"69779797803f37000a21342e\":\"dragino_se0x_5ea7\"}"}],"theme":{"color":{"background":null}},"url":"https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html"},
+"analysis_run":"68fe925b3607df0010ef833c","realtime":true}

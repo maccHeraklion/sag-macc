@@ -1,0 +1,4 @@
+{"label":"Γκαζόν V8","dashboard_id":"69a142c0e02f54000a2ae1fc","widget_id":"69a142c0e02f54000a2ae200",
+"data":[{"qty":500,"bucket":"69a142c044e7890009c04796","origin":"69a142c044e7890009c04796","timezone":"Europe/Athens","variables":["configuration","validation","location"]}],
+"display":{"header_buttons":[],"help":"","parameters":[{"key":"dashboard_id","value":"69a142c0e02f54000a2ae1fc"},{"key":"device_map","value":"{\"6971054abb3d630010741e09\":\"sensecap_s2120_00d8\",\"697792b983514a000bc7a222\":\"dragino_lse01_8e2a\",\"69779455093f0f000bb760b0\":\"milesight_uc511_2120\"}"}],"theme":{"color":{"background":null}},"url":"https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html"},
+"analysis_run":"68fe925b3607df0010ef833c","realtime":true}

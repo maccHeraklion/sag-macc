@@ -1,0 +1,4 @@
+{"label":"Βραχόκηπος (Reception)","dashboard_id":"69a143b6e02f54000a2af87b","widget_id":"69a143b6e02f54000a2af87f",
+"data":[{"qty":500,"bucket":"69a143b59693b9000a888333","origin":"69a143b59693b9000a888333","timezone":"Europe/Athens","variables":["configuration","validation","location"]}],
+"display":{"header_buttons":[],"help":"","parameters":[{"key":"dashboard_id","value":"69a143b6e02f54000a2af87b"},{"key":"device_map","value":"{\"6971054abb3d630010741e09\":\"sensecap_s2120_00d8\",\"6977938e05f6ae0009e7b783\":\"milesight_uc511_1544\",\"6977929f83514a000bc77ac4\":\"dragino_lse01_8e2b\"}"}],"theme":{"color":{"background":null}},"url":"https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html"},
+"analysis_run":"68fe925b3607df0010ef833c","realtime":true}

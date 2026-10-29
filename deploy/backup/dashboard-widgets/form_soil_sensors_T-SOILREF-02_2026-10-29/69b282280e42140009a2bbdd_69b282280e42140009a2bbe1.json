@@ -1,0 +1,4 @@
+{"label":"Ρηγάκης Αντώνης","dashboard_id":"69b282280e42140009a2bbdd","widget_id":"69b282280e42140009a2bbe1",
+"data":[{"qty":500,"bucket":"69b28228439c11000a7fb3aa","origin":"69b28228439c11000a7fb3aa","timezone":"Europe/Athens","variables":["configuration","validation","location"]}],
+"display":{"header_buttons":[],"help":"","parameters":[{"key":"dashboard_id","value":"69b282280e42140009a2bbdd"},{"key":"device_map","value":"{\"67fe993feff26b000a8143a9\":\"milesight_uc511_7461\",\"684c0e90df4dd2000a09fb43\":\"milesight_em300_th_7104\",\"69b282167686c70009115dab\":\"dragino_lse01_80c6\",\"679791f44c1a960009574564\":\"dragino_lms01_ls_0677\"}"}],"theme":{"color":{"background":null}},"url":"https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html"},
+"analysis_run":"68fe925b3607df0010ef833c","realtime":true}

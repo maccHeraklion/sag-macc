@@ -1,0 +1,5 @@
+{"label":"Κρασαγάκης Σπύρος","dashboard_id":"6a38f8cb4009f5000c364ffd","widget_id":"6a38f8cb4009f5000c365001",
+"_note":"data_names.origins was [] when read (field device 6a38f8ca7a1bff000c231b77 did not resolve to a name)",
+"data":[{"qty":500,"bucket":"6a38f8ca7a1bff000c231b77","origin":"6a38f8ca7a1bff000c231b77","variables":["cultivation_type_general","cultivation_type","soil_type","irrigation_system","water_quality","supply_flow_rate","area","total_plants","sensor_deep_depth_cm","sensorShallow_depth_cm","location","configuration","validation"]}],
+"display":{"header_buttons":[],"help":"","parameters":[{"key":"dashboard_id","value":"6a38f8cb4009f5000c364ffd"},{"key":"device_map","value":"{}"}],"theme":{"color":{"background":null}},"url":"https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html"},
+"analysis_run":null,"realtime":true}

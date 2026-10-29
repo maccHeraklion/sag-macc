@@ -1,0 +1,4 @@
+{"label":"Μπότζης","dashboard_id":"691b630b9a653f000a9e60bf","widget_id":"691b630b9a653f000a9e60c1",
+"data":[{"qty":500,"bucket":"68feaa80b92ceb000af181d2","origin":"68feaa80b92ceb000af181d2","timezone":"Europe/Athens","variables":["configuration","location","validation"]}],
+"display":{"header_buttons":[],"help":"","parameters":[{"key":"dashboard_id","value":"691b630b9a653f000a9e60bf"}],"theme":{"color":{"background":null}},"url":"https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html"},
+"analysis_run":null,"realtime":true}

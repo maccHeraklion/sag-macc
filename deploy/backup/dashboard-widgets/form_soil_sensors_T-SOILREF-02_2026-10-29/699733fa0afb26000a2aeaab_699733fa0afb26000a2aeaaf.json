@@ -1,0 +1,4 @@
+{"label":"ΚΟΥΤΣΑΚΗΣ ΜΙΧΑΛΗΣ","dashboard_id":"699733fa0afb26000a2aeaab","widget_id":"699733fa0afb26000a2aeaaf",
+"data":[{"qty":500,"bucket":"699733fae43c8b000aafec9f","origin":"699733fae43c8b000aafec9f","timezone":"Europe/Athens","variables":["configuration","location","validation"]}],
+"display":{"header_buttons":[],"help":"","parameters":[{"key":"dashboard_id","value":"699733fa0afb26000a2aeaab"},{"key":"device_map","value":"{\"67fe9a453b56fa000ac762da\":\"milesight_uc511_0817\",\"67fe9ae85fccdd000a4bdd42\":\"dragino_lms01_ls_7857\",\"688b7dcb11758d000906fa22\":\"dragino_se0x_3ab0\",\"69779a27a6e2fb0011490969\":\"milesight_em320_th_8499\"}"}],"theme":{"color":{"background":null}},"url":"https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html"},
+"analysis_run":null,"realtime":true}

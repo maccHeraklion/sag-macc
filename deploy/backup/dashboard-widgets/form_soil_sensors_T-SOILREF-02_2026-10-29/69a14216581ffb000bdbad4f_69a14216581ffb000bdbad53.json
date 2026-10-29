@@ -1,0 +1,4 @@
+{"label":"Γκαζόν V9","dashboard_id":"69a14216581ffb000bdbad4f","widget_id":"69a14216581ffb000bdbad53",
+"data":[{"qty":500,"bucket":"69a142169693b9000a885ba6","origin":"69a142169693b9000a885ba6","timezone":"Europe/Athens","variables":["configuration","validation","location"]}],
+"display":{"header_buttons":[],"help":"","parameters":[{"key":"dashboard_id","value":"69a14216581ffb000bdbad4f"},{"key":"device_map","value":"{\"6971054abb3d630010741e09\":\"sensecap_s2120_00d8\",\"6977944b093f0f000bb75f90\":\"milesight_uc511_7899\"}"}],"theme":{"color":{"background":null}},"url":"https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html"},
+"analysis_run":"68fe925b3607df0010ef833c","realtime":true}

@@ -1,0 +1,4 @@
+{"label":"Β2 - Κοτσύφης","dashboard_id":"69278ab3e450f3000a3f8686","widget_id":"69278ab3e450f3000a3f8689",
+"data":[{"qty":10000,"bucket":"687676b0515b60000a809815","origin":"687676b0515b60000a809815","timezone":"Europe/Athens","variables":["configuration","location","validation"]}],
+"display":{"header_buttons":[],"help":"","parameters":[{"key":"dashboard_id","value":"69278ab3e450f3000a3f8686"},{"key":"device_map","value":"{\"68186154ed779e000aa93d14\":\"dragino_lms01_ls_3ac6\",\"67ada90636089a000a15e72d\":\"dragino_lse02_7884\",\"68186205ed779e000aa95199\":\"milesight_uc511_8308\",\"681c8f9c4f9c59000a0e3368\":\"sensecap_s2120_0425\"}"}],"theme":{"color":{"background":null}},"url":"https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html"},
+"analysis_run":"68fe925b3607df0010ef833c","realtime":true}

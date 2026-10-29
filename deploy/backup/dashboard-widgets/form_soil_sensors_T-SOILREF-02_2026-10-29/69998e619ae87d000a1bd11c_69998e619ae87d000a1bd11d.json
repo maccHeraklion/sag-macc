@@ -1,0 +1,23 @@
+{
+  "label": "Staging (KEK - Αγρός)",
+  "dashboard_id": "69998e619ae87d000a1bd11c",
+  "widget_id": "69998e619ae87d000a1bd11d",
+  "data": [
+    {
+      "qty": 500,
+      "bucket": "69277948c4e6a4000afcd3b4",
+      "origin": "69277948c4e6a4000afcd3b4",
+      "timezone": "Europe/Athens",
+      "variables": ["cultivation_type_general","cultivation_type","soil_type","irrigation_system","water_quality","supply_flow_rate","area","total_plants","sensor_deep_depth_cm","sensorShallow_depth_cm","location","configuration","validation"]
+    }
+  ],
+  "display": {
+    "header_buttons": [],
+    "help": "",
+    "parameters": [{"key":"dashboard_id","value":"692779499f02df000a198f9c"},{"key":"device_map","value":"{\"684c2c4ddf4dd2000a10106a\":\"dragino_lms01_ls_3ac6\",\"68d668ba47d533000a48f00e\":\"dragino_lse02_7884\",\"684c42522cbc3d000a4faae9\":\"milesight_uc511_8308\",\"6797832265ba050009c7d668\":\"sensecap_s2120_0425\"}"}],
+    "theme": {"color":{"background":null}},
+    "url": "https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html"
+  },
+  "analysis_run": "68fe925b3607df0010ef833c",
+  "realtime": true
+}

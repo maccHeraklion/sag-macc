@@ -1,0 +1,7 @@
+{"label":"Σκοτίνα Πάνω","dashboard_id":"69766a55a16354000a03c834","widget_id":"69766a55a16354000a03c83a",
+"data":[
+{"qty":500,"bucket":"68529ad70de23f000ab85f2a","origin":"68529ad70de23f000ab85f2a","timezone":"Europe/Athens","variables":["cultivation_type_general","cultivation_type","soil_type","irrigation_system","water_quality","supply_flow_rate","area","total_plants","sensor_deep_depth_cm","sensorShallow_depth_cm","location","validation","configuration"]},
+{"qty":500,"bucket":"67f3ec9f30b56a00090d20d6","origin":"67f3ec9f30b56a00090d20d6","timezone":"Europe/Athens","variables":["air_humidity","air_temperature","wind_chill","wind_direction_sensor","wind_speed_kmh"]},
+{"qty":500,"bucket":"67f3ec04a4ccc0000a1349bd","origin":"67f3ec04a4ccc0000a1349bd","timezone":"Europe/Athens","variables":["battery","conduct_soil1","conduct_soil2","soil_moisture1","soil_moisture2","soil_temperature1","soil_temperature2"]}],
+"display":{"header_buttons":[],"help":"","parameters":[{"key":"dashboard_id","value":"69766a55a16354000a03c834"}],"theme":{"color":{"background":null}},"url":"https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html"},
+"analysis_run":"68fe925b3607df0010ef833c","realtime":true}

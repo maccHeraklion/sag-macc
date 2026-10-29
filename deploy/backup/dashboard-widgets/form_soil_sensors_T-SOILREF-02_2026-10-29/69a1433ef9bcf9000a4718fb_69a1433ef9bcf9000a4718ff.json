@@ -1,0 +1,4 @@
+{"label":"Ανατολικός Δρόμος","dashboard_id":"69a1433ef9bcf9000a4718fb","widget_id":"69a1433ef9bcf9000a4718ff",
+"data":[{"qty":500,"bucket":"69a1433e21b2cf000a8ef979","origin":"69a1433e21b2cf000a8ef979","timezone":"Europe/Athens","variables":["configuration","validation","location"]}],
+"display":{"header_buttons":[],"help":"","parameters":[{"key":"dashboard_id","value":"69a1433ef9bcf9000a4718fb"},{"key":"device_map","value":"{\"6971054abb3d630010741e09\":\"sensecap_s2120_00d8\",\"69779379803f37000a20c645\":\"milesight_uc511_9984\",\"697786b4ad8ef1000ae1f555\":\"dragino_lse01_8e4c\"}"}],"theme":{"color":{"background":null}},"url":"https://api.tago.io/file/67934c48e8e573000ae5964b/html_files/configuration.html"},
+"analysis_run":"68fe925b3607df0010ef833c","realtime":true}
