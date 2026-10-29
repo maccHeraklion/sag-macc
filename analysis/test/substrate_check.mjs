@@ -167,7 +167,7 @@ function run(core) {
     ok(core.includes("_sagFaultIndicators(measurements?.data)") && !/_sagSubstrateMask\(measurements\.data\)/.test(core), "Σ11 η υγεία οργάνων βλέπει ωμές τιμές");
     ok(core.includes("if (_SAG_SUBSTRATE_ACTIVE && !fieldConfig?.covered_cultivation) _gapF.push('υπόστρωμα σε ακάλυπτο αγρό');"), "Σ12 σημείωση: υπόστρωμα σε ακάλυπτο αγρό");
     ok(!/SOIL_PROFILE\.coir|\bcoir:\s*\{\s*name:[^}]*hydraulics/.test(core), "Σ13 ο κοκοφοίνικας ΔΕΝ μπαίνει στο SOIL_PROFILE");
-    ok(/const SAG_KERNEL_VERSION = 'v50.163 · 2026-10-29';/.test(core) && /const SAG_KERNEL_VERSION = 'v50\.161 · 2026-10-14';/.test(OLD), "Σ14 εκδόσεις v50.161 → v50.163");
+    ok(/const SAG_KERNEL_VERSION = 'v50.164 · 2026-10-29';/.test(core) && /const SAG_KERNEL_VERSION = 'v50\.161 · 2026-10-14';/.test(OLD), "Σ14 εκδόσεις v50.161 → v50.163");
   } catch (e) { f.push("εκτέλεση: " + (e && e.stack || e)); }
   return f;
 }
@@ -193,7 +193,7 @@ const MUT = [
   ["m15 χωρίς παράλειψη ορίων υγρασίας", "const limIndicators = _SAG_SUBSTRATE_ACTIVE ? [] : buildSoilMoistureLimitIndicators(lim);", "const limIndicators = buildSoilMoistureLimitIndicators(lim);"],
   ["m16 μάθηση χωρίς πύλη (fs και για χώμα)", "if (_SAG_SUBSTRATE_ACTIVE) st.fs = ", "if (true) st.fs = "],
   ["m17 χωρίς αναγωγή 25 °C", "const ec25 = _tf > 0.2 ? ec / _tf : ec;", "const ec25 = ec;"],
-  ["m18 έκδοση", "'v50.163 · 2026-10-29'", "'v50.161 · 2026-10-14'"],
+  ["m18 έκδοση", "'v50.164 · 2026-10-29'", "'v50.161 · 2026-10-14'"],
 ];
 let killed = 0;
 for (const [name, a, b] of MUT) {

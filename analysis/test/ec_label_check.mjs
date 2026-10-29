@@ -61,7 +61,7 @@ function run(core) {
       ok(Buffer.byteLength(a) <= Buffer.byteLength(b), lab + ": μεγαλύτερο σε bytes (" + Buffer.byteLength(a) + " > " + Buffer.byteLength(b) + ")");
     }
     ok(realOld === CASES.length, "Δ το διαφορικό ΒΛΕΠΕΙ τις παλιές λέξεις σε κάθε σενάριο (" + realOld + "/" + CASES.length + ")");
-    ok(K.get("SAG_KERNEL_VERSION") === "v50.163 · 2026-10-29" && O.get("SAG_KERNEL_VERSION") === "v50.162 · 2026-10-27", "Ε εκδόσεις");
+    ok(K.get("SAG_KERNEL_VERSION") === "v50.164 · 2026-10-29" && O.get("SAG_KERNEL_VERSION") === "v50.162 · 2026-10-27", "Ε εκδόσεις");
   } catch (e) { f.push("εκτέλεση: " + (e && e.stack || e)); }
   return f;
 }
@@ -78,7 +78,7 @@ const MUT = [
   ["m7 Λ7", "+ 'EC στη ρίζα ' + _fmt(r.pore, 2)", "+ 'Νερό ρίζας ' + _fmt(r.pore, 2)"],
   ["m8 Λ8", "ΣΤΟ ΧΩΜΑ · «EC στη ρίζα» '", "ΣΤΟ ΧΩΜΑ · «Νερό πόρων» '"],
   ["m9 αλλαγή τιμής (όχι μόνο λέξης)", "const rt = 'EC στη ρίζα ' + f(refF, 2)", "const rt = 'EC στη ρίζα ' + f(refF, 1)"],
-  ["m10 έκδοση", "'v50.163 · 2026-10-29'", "'v50.162 · 2026-10-27'"],
+  ["m10 έκδοση", "'v50.164 · 2026-10-29'", "'v50.162 · 2026-10-27'"],
 ];
 let killed = 0;
 for (const [name, a, b] of MUT) {

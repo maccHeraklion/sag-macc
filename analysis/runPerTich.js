@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.163 · 2026-10-29';   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
+const SAG_KERNEL_VERSION = 'v50.164 · 2026-10-29';   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -14567,17 +14567,81 @@ function _sagScreenDevice(deviceData, deviceName, fieldName) {
   } catch (_e) { return []; }
 }
 
+// ═══ T-SOILREF-01 (v50.164 · 29/10/2026, επιλογή «Α» του Μιχάλη) ══════════════════════════
+// ΕΝΑΣ αισθητήρας απόφασης για το έδαφος — ΟΧΙ μέσος όρος. Κάθε τμήμα εδάφους έχει τα δικά
+// του χαρακτηριστικά (Καμπιτάκης BIO: μαλλί προβάτου σε τμήματα του αγρού· οι 3 σόνδες
+// ΦΥΣΙΟΛΟΓΙΚΑ διαφέρουν). Ο μέσος όρος έβγαζε υγρασία/EC που δεν αντιστοιχούσαν σε κανένα
+// τμήμα, και ψευδή «τα όργανα διαφωνούν». Ίδιος κανόνας με τον αέρα (T-MET-REFERENCE-01).
+// ΑΙΣΘΗΤΗΡΑΣ ΑΠΟΦΑΣΗΣ: ο δηλωμένος (fieldConfig.soil_ref_device = id συσκευής), αν δίνει
+// έγκυρη υγρασία· αλλιώς ο ΠΙΟ ΞΗΡΟΣ — μία βάνα ποτίζει όλο τον αγρό, και η απόφαση δεν
+// πρέπει να αφήνει κανένα τμήμα να διψάσει. «Πιο ξηρός» = ο μικρότερος μέσος 24ώρου της
+// υγρασίας του (σταθερός μέσα στη μέρα — όχι εναλλαγή κάθε ώρα)· εφεδρεία η τελευταία τιμή.
+// ΕΜΒΕΛΕΙΑ: ΜΟΝΟ κανάλια εδάφους που έρχονταν από ≥2 συσκευές. Με έναν αισθητήρα, ή κανάλια
+// που μετρά μία μόνο συσκευή (π.χ. pH), ΤΙΠΟΤΑ δεν αλλάζει. Τρέχει ΠΡΙΝ την πύλη
+// ευλογοφάνειας, τις ηλικίες και τις βλάβες — όλα βλέπουν τον αισθητήρα απόφασης.
+const _SAG_SOIL_KEY_RE = /^(soil_|conduct_soil|temp_soil|water_soil)/;
+// id του αισθητήρα απόφασης για τον αγρό που επεξεργάζεται ΤΩΡΑ (μηδενίζεται σε κάθε αγρό).
+let _SAG_SOIL_REF_ID = '';
+function _sagApplySoilRef(data, refId, fieldName) {
+  try {
+    if (!data || typeof data !== 'object') return;
+    const devs = data._sagSoilDev || {};
+    delete data._sagSoilDev;
+    const src = data._sagSrc || {};
+    const multi = Object.keys(src).filter(k => _SAG_SOIL_KEY_RE.test(k) && Array.isArray(src[k]) && src[k].length > 1);
+    if (!multi.length) return;
+    const names = Object.keys(devs).filter(n => multi.some(k => devs[n][k] !== undefined)).sort();
+    if (names.length < 2) return;
+    const score = (d) => {
+      for (const re of [/^soil_moisture\d?_avg$/, /^soil_moisture\d?$/, /^(water_soil|soil_humidity)\d?(_avg)?$/]) {
+        const xs = Object.keys(d).filter(k => re.test(k)).map(k => _sagMergeNum(d[k])).filter(Number.isFinite);
+        if (xs.length) return xs.reduce((a, b) => a + b, 0) / xs.length;
+      }
+      return NaN;
+    };
+    const _rid = String(refId == null ? '' : refId).trim();
+    let ref = null, why = '';
+    if (_rid) {
+      const n = names.find(x => devs[x]._id === _rid);
+      if (n && Number.isFinite(score(devs[n]))) { ref = n; why = 'δηλωμένος'; }
+    }
+    if (!ref) {
+      let best = Infinity;
+      for (const n of names) { const v = score(devs[n]); if (Number.isFinite(v) && v < best) { best = v; ref = n; } }
+      if (ref) why = _rid ? 'ο δηλωμένος δεν δίνει έγκυρη υγρασία — ο πιο ξηρός' : 'ο πιο ξηρός';
+    }
+    if (!ref) return;   // κανένας με έγκυρη υγρασία: ό,τι ίσχυε (οι πύλες θα το πουν)
+    for (const k of multi) {
+      if (devs[ref][k] !== undefined) { data[k] = devs[ref][k]; src[k] = [ref]; }
+      else { delete data[k]; delete src[k]; }
+      if (data._sagDiverge) delete data._sagDiverge[k];
+      if (data._sagDivergeEc) delete data._sagDivergeEc[k];
+    }
+    for (const o of ['_sagDiverge', '_sagDivergeEc']) if (data[o] && !Object.keys(data[o]).length) delete data[o];
+    data._sagSoilRef = { n: ref, w: why, c: names.length };
+    console.log('[' + (fieldName || '—') + '] T-SOILREF-01: έδαφος από «' + ref + '» (' + why + ') — '
+      + names.length + ' αισθητήρες, ' + multi.length + ' κανάλια χωρίς μέσο όρο');
+  } catch (_e) { /* η επιλογή αισθητήρα δεν επιτρέπεται να ρίξει τον αγρό */ }
+}
+
 // T-LIGHTMERGE-01: ημερήσια ολοκληρώματα φωτός. Για ΑΥΤΑ και μόνο, το μηδέν
 // σημαίνει «καμία μέτρηση». Σταθμός που λειτουργεί δεν δίνει ποτέ ακριβώς 0
 // σε 24ωρο ολοκλήρωμα· δίνει 0 μόνο όταν δεν κατέβηκε καμία εγγραφή.
 const _SAG_LIGHT_DAILY_KEYS = ['dli_mol_m2_day', 'rs_mj_m2_day', 'light_coverage_pct',
   'light_samples_24h', 'light_daylight_complete', 'light_intensity_sum'];
 
-function _sagMergeDeviceData(data, deviceData, deviceName, fieldName) {
+function _sagMergeDeviceData(data, deviceData, deviceName, fieldName, deviceId) {
   data._sagSrc = data._sagSrc || {};
   for (const key of Object.keys(deviceData)) {
     if (key.startsWith('_sag')) { data[key] = deviceData[key]; continue; }
     const incoming = deviceData[key];
+    // T-SOILREF-01: οι τιμές εδάφους ΚΑΘΕ συσκευής κρατιούνται χωριστά — ο μέσος όρος παρακάτω
+    // αντικαθίσταται από τον αισθητήρα απόφασης (_sagApplySoilRef) πριν φτάσει σε υπολογισμό.
+    if (_SAG_SOIL_KEY_RE.test(key)) {
+      data._sagSoilDev = data._sagSoilDev || {};
+      const _sd = data._sagSoilDev[deviceName] || (data._sagSoilDev[deviceName] = { _id: String(deviceId == null ? '' : deviceId) });
+      _sd[key] = incoming;
+    }
     const srcs = data._sagSrc[key];
     // T-REMERGE-01: το μπλοκ «s2120» δεν έχει `continue`, οπότε ΚΑΘΕ μετεωρολογικός
     // σταθμός περνά ΔΥΟ φορές από εδώ. Η «ίδια συσκευή ξαναγράφει -> αντικατάσταση»
@@ -17443,7 +17507,7 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
 
         // Save and skip generic logic for this device
         _devRejects.push(..._sagScreenDevice(deviceData, info?.name || value, fieldName));
-        data = _sagMergeDeviceData(data, deviceData, info?.name || value, fieldName);
+        data = _sagMergeDeviceData(data, deviceData, info?.name || value, fieldName, value);
       }
 
       // If NO ticks, we still keep the stats above,
@@ -17497,7 +17561,7 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
       }
 
       _devRejects.push(..._sagScreenDevice(deviceData, info?.name || value, fieldName));
-      data = _sagMergeDeviceData(data, deviceData, info?.name || value, fieldName);
+      data = _sagMergeDeviceData(data, deviceData, info?.name || value, fieldName, value);
     }
 
     // ─────────────────────────────────────────────
@@ -17559,7 +17623,7 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
       }
 
       _devRejects.push(..._sagScreenDevice(deviceData, info?.name || value, fieldName));
-      data = _sagMergeDeviceData(data, deviceData, info?.name || value, fieldName);
+      data = _sagMergeDeviceData(data, deviceData, info?.name || value, fieldName, value);
     }
 
     // ─────────────────────────────────────────────
@@ -17660,7 +17724,7 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
       };
 
       _devRejects.push(..._sagScreenDevice(deviceData, info?.name || value, fieldName));
-      data = _sagMergeDeviceData(data, deviceData, info?.name || value, fieldName);
+      data = _sagMergeDeviceData(data, deviceData, info?.name || value, fieldName, value);
       continue;
     }
   }
@@ -17715,6 +17779,8 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
     data._sagMetBoth = _hasStation && _hasCanopy;
   }
 
+  // T-SOILREF-01: ΕΝΑΣ αισθητήρας απόφασης για το έδαφος, ΠΡΙΝ από κάθε πύλη και υπολογισμό.
+  _sagApplySoilRef(data, _SAG_SOIL_REF_ID, fieldName);
   _sagPlausibilityGate(data, fieldName);
   // T-MERGE-SCREEN-01: οι απορρίψεις ΑΝΑ ΣΥΣΚΕΥΗ πρέπει να φτάσουν στο ταμπλό μαζί
   // με τις απορρίψεις επιπέδου αγρού — αλλιώς ένας νεκρός αισθητήρας θα φιλτραριζόταν
@@ -18428,6 +18494,7 @@ module.exports = new Analysis(async (context) => {
     for (let i = 0; i < fields.length; i=i+1)
     {
       _SAG_SUBSTRATE_ACTIVE = null;   // T-SUBSTRATE-01: ποτέ μεταφορά από τον προηγούμενο αγρό
+      _SAG_SOIL_REF_ID = '';          // T-SOILREF-01: ποτέ μεταφορά από τον προηγούμενο αγρό
 
       try {
         // FIX-19: το fieldName διαβάζεται ΠΡΩΤΟ, ώστε τα σφάλματα να αποδίδονται στον σωστό αγρό
@@ -18489,6 +18556,7 @@ module.exports = new Analysis(async (context) => {
         // T-COVERED-01: η σημαία ισχύει για ΟΛΗ την επεξεργασία αυτού του αγρού.
         _SAG_COVERED_ACTIVE = !!fieldConfig.covered_cultivation;
         _SAG_SUBSTRATE_ACTIVE = _sagSubstrateOf(fieldConfig);   // T-SUBSTRATE-01
+        _SAG_SOIL_REF_ID = String(fieldConfig?.soil_ref_device || '');   // T-SOILREF-01
         const measurements = await getMeasurements(hourTich, dailyTich, devices, fields[i].id, fieldName);
 
         // T-COVERED-01: σε καλυμμένη καλλιέργεια η βροχή του (γειτονικού)
