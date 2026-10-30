@@ -142,3 +142,37 @@
 **Makerfabs «0677»:**
 - Και στο ThingPark το DevEUI `…0979` λέγεται `makerfabs_aglwlm01_0677`, άρα τα δύο συστήματα **συμφωνούν**.
 - Το «0677» είναι λάθος όνομα και στα δύο, όχι λάθος σύνδεση. Η συσκευή σιωπά και στο ThingPark από 24/7.
+
+## 7. Ενιαία ονόματα στο ThingPark (T-TPNAME-01, 30/10 ~16:05–16:12 UTC)
+
+**Εντολή Michalis:** «θέλω ενιαία ονόματα, να διορθωθούν στο ThingPark αλλά να μην προκαλέσουμε ζημιά».
+
+**Γιατί είναι ακίνδυνο (ΕΠΙΒΕΒΑΙΩΜΕΝΟ):** κανένας κώδικας δεν χρησιμοποιεί το όνομα του ThingPark.
+- **TagoIO:** η δρομολόγηση γίνεται με DevEUI (§1).
+- **SAGDSS_GH:** το `server/src/services/ingest.ts` (`unwrapThingPark`) κρατά μόνο `DevEUI`, `payload_hex`, `FPort`, `FCntUp`, `LrrRSSI`, `LrrSNR`, `Time` και `Lrrid`. Το `name` εμφανίζεται μόνο στο PWA.
+- **Αποθετήριο sag-macc:** κανένα analysis ή parser δεν αναφέρει ονόματα συσκευών του ThingPark.
+
+**Πώς έγινε:**
+- **Πρώτα δοκιμή από τη σελίδα** σε σιωπηλή συσκευή (`dragino_lms01_3acb` → `dragino_lms01_ls_3acb`).
+  - Η σελίδα στέλνει `PUT …/subscriptions/mine/devices/<id>` με σώμα μόνο `{name, occContext}`.
+  - Η επαλήθευση έδειξε ότι η σύνδεση `tagoio_actility_macc`, το μοντέλο και η ενεργοποίηση έμειναν ίδια.
+- **Μετά οι υπόλοιπες 46** με το ίδιο ακριβώς σώμα: 46 × HTTP 200.
+
+**Επαλήθευση με νέα ανάγνωση των 329:**
+- Τα 46 ονόματα είναι σωστά.
+- Σε **καμία** από τις 329 συσκευές δεν άλλαξε σύνδεση (appServers), μοντέλο, ενεργοποίηση, connectivity plan ή domain.
+
+**Κατεύθυνση:** το ThingPark πήρε το όνομα του TagoIO, που φτιάχνεται αυτόματα με σταθερό κανόνα. Παραδείγματα:
+- `dragino_se0x-5ea7` → `dragino_se0x_5ea7`;
+- `dragino_se0x_lb2_5EAA` → `dragino_se0x_5eaa`;
+- `milesight_em320_0DDE` → `milesight_em320_th_0dde`;
+- `em300_27768` → `milesight_em300_th_7768`;
+- `o1310_11a1` → `talkpool_oy1320_11A1`;
+- τα δύο ανώνυμα `dragino_lse01` → `dragino_lse01_6b6c` / `_8e32`.
+
+**Δεν άλλαξαν:**
+- `milesight_uc511_` (8950, ημιτελές όνομα στο ThingPark): ελεγκτής βάνας, θέμα Κώστα.
+- `SoilMoisture_GreenProjects_0025_PANO / _003B_MESAIO / _1c43_KATO`: το όνομα στο ThingPark κρατά τη θέση του αισθητήρα, που το TagoIO δεν έχει. Εκκρεμεί απόφαση: είτε να πάρει και το TagoIO το όνομα με τη θέση, είτε να μείνουν έτσι.
+- Οι 87 συσκευές που υπάρχουν μόνο στο ThingPark (American Farm School και 13 του MACC-Crete) δεν έχουν όνομα TagoIO για σύγκριση. Τα ονόματά τους δεν άγγιξα.
+
+**Ροή δεδομένων μετά τις μετονομασίες:** η μετονομασμένη `milesight_am107_1895` έστειλε στο TagoIO στις 16:12:28 UTC.
