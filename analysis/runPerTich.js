@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.165 · 2026-10-29';   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
+const SAG_KERNEL_VERSION = 'v50.166 · 2026-10-31';   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -8896,6 +8896,7 @@ function _sagRunReset() {
   _SAG_RUN_CACHE.miss = 0;
   _SAG_RUN_CACHE.recSaved = 0;
   _SAG_FLEET.length = 0;   // T-FLEET-REPORT-01
+  _SAG_SHADOW.length = 0;  // T-SHADOW-HOUR-01
   _SAG_LAST_BUNDLE = null;  // T-FLEET-HEALTH-01
   _SAG_METHOD_CARD = null;  // T-METHODCARD-01
   _SAG_SEASON_WARNED.clear();   // T-CROPSEASON-01: διαγνωστικό ΑΝΑ ΕΚΤΕΛΕΣΗ
@@ -16764,6 +16765,61 @@ const _sagTechImpact = (t) => _SAG_TECH_IMPACT[t] || '';
 // containers της TagoIO επαναχρησιμοποιούνται — ΠΟΤΕ κατάσταση εκτέλεσης
 // σε module scope χωρίς μηδενισμό ανά τρέξιμο).
 const _SAG_FLEET = [];
+// ── T-SHADOW-HOUR-01 (v50.166 · 31/10/2026) · ΣΚΙΩΔΗΣ: «ΤΕΛΕΥΤΑΙΑ ΤΙΜΗ» ΕΝΑΝΤΙ «ΩΡΙΑΙΟΥ ΜΕΣΟΥ ΑΝΑ ΠΑΚΕΤΟ» ──
+// Michalis 31/10: «αν λαμβάνουμε σήμα κάθε 20 λεπτά και υπολογίζουμε ανά ώρα … μήπως πρέπει να πάρουμε τους μέσους όρους
+// 3 μετρήσεων ανά ώρα … σε κάθε περίπτωση το αποτέλεσμα πρέπει να είναι διαφανές και να εξηγείται».
+// Σήμερα ο ωριαίος κύκλος παίρνει ΜΟΝΟ το τελευταίο πακέτο (last_item) — έως ~20΄ παλιό, χωρίς να το λέει. Εδώ ΜΕΤΡΑΜΕ,
+// χωρίς να αλλάζουμε τίποτα, πόσο θα διέφερε ο ωριαίος μέσος. Κανόνας: ο υπολογισμός γίνεται ΑΝΑ ΠΑΚΕΤΟ (θ, σ, T του
+// ΙΔΙΟΥ πακέτου — ο τύπος Hilhorst δεν είναι γραμμικός και το πότισμα ανακατεύει βρεγμένη και στεγνή φάση) και ΜΕΤΑ ο μέσος.
+// [τελευταία, μέσος, n, ελάχιστο, μέγιστο] ανά κανάλι · a = ηλικία του τελευταίου πακέτου σε λεπτά τη στιγμή του κύκλου.
+const _SAG_SHADOW_UNTIL = Date.parse('2026-11-08T00:00:00Z');   // 7 ημέρες, μετά σβήνει μόνο του
+const _SAG_SHADOW = [];
+function _sagShadowStats(arr) {
+  const ok = (arr || []).filter(x => x && Number.isFinite(x.v)).sort((a, b) => a.t - b.t);
+  if (!ok.length) return null;
+  let sum = 0, mn = Infinity, mx = -Infinity;
+  for (const x of ok) { sum += x.v; if (x.v < mn) mn = x.v; if (x.v > mx) mx = x.v; }
+  const r3 = (v) => Math.round(v * 1000) / 1000;
+  return [r3(ok[ok.length - 1].v), r3(sum / ok.length), ok.length, r3(mn), r3(mx)];
+}
+async function _sagShadowRead(device, fieldName, devName, nowIso) {
+  try {
+    const end = Date.parse(String(nowIso || ''));
+    if (!Number.isFinite(end) || end >= _SAG_SHADOW_UNTIL) return;
+    const rows = await device.getData({
+      variables: ['soil_moisture1', 'soil_moisture2', 'conduct_soil1', 'conduct_soil2',
+                  'soil_temperature1', 'soil_temperature2'],
+      start_date: new Date(end - 3600000).toISOString(), end_date: new Date(end).toISOString(), qty: 60 });
+    const by = new Map();
+    for (const r of (rows || [])) {
+      const t = Date.parse(String(r && r.time || ''));
+      const v = Number(r && r.value);
+      if (!Number.isFinite(t) || !Number.isFinite(v)) continue;
+      if (!by.has(t)) by.set(t, {});
+      by.get(t)[r.variable] = v;
+    }
+    const ts = [...by.keys()].sort((a, b) => a - b);
+    if (!ts.length) return;
+    const out = { f: String(fieldName || '').slice(0, 40), d: String(devName || '').slice(-24),
+      a: Math.round((end - ts[ts.length - 1]) / 60000) };
+    for (const n of ['1', '2']) {
+      const th = [], ec = [];
+      for (const t of ts) {
+        const p = by.get(t), m = p['soil_moisture' + n], c = p['conduct_soil' + n];
+        if (Number.isFinite(m)) th.push({ t, v: m });
+        if (Number.isFinite(m) && Number.isFinite(c) && !(m > _SAG_EC_MIN_VWC * 100 && c < _SAG_EC_DEAD_US)) {
+          const k = _sagEcChain(c, m, p['soil_temperature' + n], NaN);
+          if (k.pore !== null) ec.push({ t, v: k.pore });
+        }
+      }
+      const sm = _sagShadowStats(th), se = _sagShadowStats(ec);
+      if (sm) out['m' + n] = sm;
+      if (se) out['e' + n] = se;
+    }
+    if (out.m1 || out.m2 || out.e1 || out.e2) _SAG_SHADOW.push(out);
+  } catch (_eSh) { /* σκιώδες: ποτέ δεν επηρεάζει τον κύκλο */ }
+}
+// ── End T-SHADOW-HOUR-01 ─────────────────────────────────────────────────
 
 /* ══ T-PROFILE-01 (3/3) · Ο ΣΚΟΠΟΣ ΤΗΣ ΕΓΚΑΤΑΣΤΑΣΗΣ ══════════════════════
    ΤΟ ΕΥΡΗΜΑ (19/9): η μηχανή δεν είχε καθόλου έννοια σκοπού. Κάθε συσκευή
@@ -17575,6 +17631,8 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
         }
       }
 
+      // T-SHADOW-HOUR-01: σκιώδης μέτρηση (μόνο ανάγνωση, μόνο στον ωριαίο κύκλο, έως 8/11).
+      if (hourTich) await _sagShadowRead(device, fieldName, info?.name || value, now);
       _devRejects.push(..._sagScreenDevice(deviceData, info?.name || value, fieldName));
       data = _sagMergeDeviceData(data, deviceData, info?.name || value, fieldName, value);
     }
@@ -20220,6 +20278,19 @@ module.exports = new Analysis(async (context) => {
           files: _fbFiles, files_bad: _fbFiles.filter(x => !x.c).length,
           an: _fbAn,
           text: 'Παλμός ' + new Date().toISOString() } });
+      // T-SHADOW-HOUR-01: ΜΙΑ συμπιεσμένη εγγραφή/ώρα για όλο τον στόλο (τμήματα των 25) — όχι στο field_bundle.
+      if (hourTich && _SAG_SHADOW.length) {
+        try {
+          const _shT = new Date().toISOString();
+          for (let _i = 0, _k = Math.ceil(_SAG_SHADOW.length / 25); _i < _k; _i++) {
+            const _part = _SAG_SHADOW.slice(_i * 25, _i * 25 + 25);
+            const _z = zlib.deflateRawSync(Buffer.from(JSON.stringify({ v: 1, t: _shT, k: SAG_KERNEL_VERSION,
+              p: _i + 1, of: _k, r: _part }), 'utf8')).toString('base64');
+            _rows.push({ variable: 'sag_shadow_hourly', value: _part.length,
+              metadata: { z: _z, part: _i + 1, of: _k, t: _shT } });
+          }
+        } catch (_eSh) { console.log('[T-SHADOW-HOUR-01] δεν γράφτηκε: ' + (_eSh && _eSh.message)); }
+      }
       await _fbDev.sendData(_rows);
       if (_fbFiles.some(x => !x.c)) {
         console.log('[T-FLEET-HEALTH-01] ΑΡΧΕΙΑ WIDGET ΜΕ ΠΡΟΒΛΗΜΑ: ' + _fbFiles.filter(x => !x.c)

@@ -1,0 +1,31 @@
+# -*- coding: utf-8 -*-
+"""W-EC-INSTANT-01 (31/10, Michalis: «το tagoio πρέπει να δείχνει κάτι που να αντικατοπτρίζει την πραγματικότητα …
+σε κάθε περίπτωση το αποτέλεσμα πρέπει να είναι διαφανές και να εξηγείται» · «ναι προχώρα με τη Φάση 1»).
+
+Η κάρτα «EC στη ρίζα» έδειχνε την ΩΡΑ του τελευταίου πακέτου αλλά την ΤΙΜΗ του ωριαίου κύκλου του πυρήνα (άλλο πακέτο,
+έως ~80΄ παλιότερο) με ένα δεκαδικό (2,95 → «3,0»). Τώρα:
+  • υπολογίζεται ΑΝΑ ΠΑΚΕΤΟ (ίδιος τύπος Hilhorst με τον πυρήνα: sagEceChain9) από θ/T ΤΟΥ ΙΔΙΟΥ πακέτου (±2΄),
+  • ο μεγάλος αριθμός = το τελευταίο πακέτο, 2 δεκαδικά, «στιγμιαία · μέτρηση ΩΩ:ΛΛ»,
+  • από κάτω: οι τιμές της τελευταίας ώρας (58΄ πριν από το τελευταίο πακέτο, ώστε ο αισθητήρας ανά 20΄ να δίνει
+    ΤΡΙΑΔΑ και όχι 3 ή 4 ανάλογα με ±1΄΄ χρονισμό) → μέσος (n μετρήσεων) · αν n<2 «όχι μέσος»,
+  • η ECe (θέλει κορεσμό εδάφους — μόνο ο πυρήνας) μένει από τον πυρήνα ΜΕ ετικέτα «ωριαίος υπολογισμός ΩΩ:ΛΛ»,
+  • αν το ιστορικό δεν έχει υγρασία στο ίδιο πακέτο → η παλιά διαδρομή, με δηλωμένη προέλευση.
+count==1, LF, node --check."""
+import io, sys, subprocess, hashlib, os, tempfile
+sys.stdout.reconfigure(encoding="utf-8")
+P = "_dist-sagMain/index-7cbd9a4e.js"
+raw = io.open(P, "rb").read(); s = raw.decode("utf-8"); assert "\r\n" not in s
+print("ΠΡΙΝ", hashlib.sha256(raw).hexdigest())
+assert "W-EC-INSTANT-01" not in s, "ήδη εφαρμοσμένο"
+
+OLD = r'''sagEceCard=(vn,DV,dv)=>{try{const M=/^conduct_soil([1-4]?)$/.exec(String(vn||""));if(!M)return null;if(DV&&dv&&sagEceMulti9(DV,M[0]))return sagEceDev9(M[1]||"",DV,dv);const R=sagEceBox.v;if(!R)return null;const q=M[1]||"",ec=R["soil_ece"+q];if(!ec)return null;const e9=sagEceN9(ec),p9=sagEceN9(R["soil_ec_pore"+q]),d9=sagEceD9(q);if(e9===null&&p9===null)return{t:"💧 EC στη ρίζα"+d9,v:"—",sub:sagEceWhy9(ec.metadata)};/* W-EC-ROOT-01 */const fz9=sagFertBox.v,tl9=Number(ec.metadata&&ec.metadata.tol),l9=e9===null?"":"κλίμακα εργαστηρίου (ECe) "+sagEceF9(e9,1)+(Number.isFinite(tl9)&&tl9>0?" · όριο καλλιέργειας "+sagEceF9(tl9,1):"");if(p9===null)return{t:"🧂 Αλατότητα εδάφους"+d9,v:sagEceF9(e9,1)+" dS/m",sub:l9};const s9=[fz9!==null?"ρίχνετε "+sagEceF9(fz9,1)+" → στη ρίζα "+Math.round(p9/fz9*100)+" %":"",l9].filter(Boolean).join(" · ");return{t:"💧 EC στη ρίζα"+d9,v:sagEceF9(p9,1)+" mS/cm",sub:s9}}catch{return null}},'''
+
+NEW = r'''/* W-EC-INSTANT-01 */sagHM9=t=>{try{return new Intl.DateTimeFormat("el-GR",{hour:"2-digit",minute:"2-digit",hour12:!1}).format(new Date(t))}catch{return""}},sagEceHour9=(q,DV,dv)=>{const d=DV&&DV[dv];if(!d)return null;const ra=d["conduct_soil"+q];if(!ra||!ra.length)return null;const mt=sagEceMT9(q),ma=d[mt[0]]||[],ta=d[mt[1]]||[];if(!ma.length)return null;const tt=x=>{const u=x&&x.t;return typeof u==="number"?u:Date.parse(String(u))},nr=(a,t)=>{let b=null,bd=1/0;for(const x of a){const z=Math.abs(tt(x)-t);if(z<bd){bd=z;b=x}}const v=b&&bd<=12e4?Number(b.v):NaN;return Number.isFinite(v)?v:NaN};const P=[];for(const r of ra){const t=tt(r),raw=Number(r&&r.v);if(!Number.isFinite(t)||!Number.isFinite(raw))continue;const th=nr(ma,t),tc=nr(ta,t);let c;if(!Number.isFinite(th))c={p:null,why:"χωρίς μέτρηση υγρασίας στο ίδιο πακέτο"};else if(th>15&&raw<30)c={p:null,why:"το όργανο δίνει σχεδόν μηδέν σε υγρό χώμα — ελέγξτε τον αισθητήρα"};else c=sagEceChain9(raw,th,tc);P.push({t:t,p:c.p,why:c.why})}if(!P.length)return null;P.sort((a,b)=>a.t-b.t);const L=P[P.length-1],W=P.filter(x=>x.t>L.t-348e4&&x.p!==null);return{L:L,W:W}},sagEceHourTxt9=W=>{if(!W.length)return"τελευταία ώρα: καμία έγκυρη μέτρηση";if(W.length<2)return"τελευταία ώρα: 1 μέτρηση — όχι μέσος";const m=W.reduce((a,x)=>a+x.p,0)/W.length;return"τελευταία ώρα ("+sagHM9(W[0].t)+"–"+sagHM9(W[W.length-1].t)+"): "+W.map(x=>sagEceF9(x.p,2)).join(" · ")+" → μέσος "+sagEceF9(m,2)+" ("+W.length+" μετρήσεις)"},sagEceCard=(vn,DV,dv)=>{try{const M=/^conduct_soil([1-4]?)$/.exec(String(vn||""));if(!M)return null;const q0=M[1]||"",multi0=!!(DV&&dv&&sagEceMulti9(DV,M[0])),H=DV&&dv?sagEceHour9(q0,DV,dv):null;if(H){const L=H.L,d0=sagEceD9(q0),t0="💧 EC στη ρίζα"+d0,fz0=sagFertBox.v,R0=sagEceBox.v,ec0=!multi0&&R0?R0["soil_ece"+q0]:null,e0=ec0?sagEceN9(ec0):null,tl0=Number(ec0&&ec0.metadata&&ec0.metadata.tol),tk0=ec0&&ec0.time?Date.parse(ec0.time):NaN,l0=e0===null?"":"κλίμακα εργαστηρίου (ECe) "+sagEceF9(e0,1)+(Number.isFinite(tl0)&&tl0>0?" · όριο καλλιέργειας "+sagEceF9(tl0,1):"")+" — ωριαίος υπολογισμός"+(Number.isFinite(tk0)?" "+sagHM9(tk0):""),h0=sagEceHourTxt9(H.W);if(L.p===null)return{t:t0,v:"—",sub:[L.why+" (μέτρηση "+sagHM9(L.t)+")",h0,l0].filter(Boolean).join(" · ")};return{t:t0,v:sagEceF9(L.p,2)+" mS/cm",sub:["στιγμιαία · μέτρηση "+sagHM9(L.t)+(multi0?" · από αυτόν τον αισθητήρα":""),h0,fz0!==null?"ρίχνετε "+sagEceF9(fz0,1)+" → στη ρίζα "+Math.round(L.p/fz0*100)+" %":"",l0].filter(Boolean).join(" · ")}}if(multi0)return sagEceDev9(q0,DV,dv);const R=sagEceBox.v;if(!R)return null;const q=q0,ec=R["soil_ece"+q];if(!ec)return null;const e9=sagEceN9(ec),p9=sagEceN9(R["soil_ec_pore"+q]),d9=sagEceD9(q);if(e9===null&&p9===null)return{t:"💧 EC στη ρίζα"+d9,v:"—",sub:sagEceWhy9(ec.metadata)};/* W-EC-ROOT-01 */const fz9=sagFertBox.v,tl9=Number(ec.metadata&&ec.metadata.tol),l9=e9===null?"":"κλίμακα εργαστηρίου (ECe) "+sagEceF9(e9,1)+(Number.isFinite(tl9)&&tl9>0?" · όριο καλλιέργειας "+sagEceF9(tl9,1):""),tk9=ec.time?Date.parse(ec.time):NaN,o9="ωριαίος υπολογισμός"+(Number.isFinite(tk9)?" "+sagHM9(tk9):"")+" από την τελευταία μέτρηση πριν από αυτόν";if(p9===null)return{t:"🧂 Αλατότητα εδάφους"+d9,v:sagEceF9(e9,1)+" dS/m",sub:[o9,l9].filter(Boolean).join(" · ")};const s9=[o9,fz9!==null?"ρίχνετε "+sagEceF9(fz9,1)+" → στη ρίζα "+Math.round(p9/fz9*100)+" %":"",l9].filter(Boolean).join(" · ");return{t:"💧 EC στη ρίζα"+d9,v:sagEceF9(p9,2)+" mS/cm",sub:s9}}catch{return null}},'''
+
+c = s.count(OLD); assert c == 1, f"sagEceCard: βρέθηκε {c} φορές"
+s = s.replace(OLD, NEW)
+fd, tmp = tempfile.mkstemp(suffix=".js"); os.write(fd, s.encode("utf-8")); os.close(fd)
+r = subprocess.run(["node", "--check", tmp], capture_output=True, text=True); os.unlink(tmp)
+assert r.returncode == 0, "node --check: " + r.stderr[:400]
+out = s.encode("utf-8"); io.open(P, "wb").write(out)
+print("ΜΕΤΑ", hashlib.sha256(out).hexdigest(), len(out))

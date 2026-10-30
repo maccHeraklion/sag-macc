@@ -22,13 +22,13 @@ function run(w) {
     const H = new Function("let " + helpers + ";\nreturn {sagEceSet, sagFertSet, sagEceCard, sagEceF9, sagEceBox, sagFertBox};")();
     H.sagEceSet(RAMM); H.sagFertSet(3.3);
     const c1 = H.sagEceCard("conduct_soil1"), c2 = H.sagEceCard("conduct_soil2");
-    ok(c1 && c1.t === "💧 EC στη ρίζα Ρηχό" && c1.v === "3,1 mS/cm", "Π1 τίτλος/τιμή ρηχό: " + JSON.stringify(c1));
-    ok(c1 && c1.sub === "ρίχνετε 3,3 → στη ρίζα 95 % · κλίμακα εργαστηρίου (ECe) 1,7 · όριο καλλιέργειας 2,5", "Π2 υπότιτλος ρηχό: " + (c1 && c1.sub));
-    ok(c2 && c2.v === "2,8 mS/cm" && /στη ρίζα 84 %/.test(c2.sub) && /\(ECe\) 1,3/.test(c2.sub), "Π3 βαθύ: " + JSON.stringify(c2));
+    ok(c1 && c1.t === "💧 EC στη ρίζα Ρηχό" && c1.v === "3,14 mS/cm", "Π1 τίτλος/τιμή ρηχό (W-EC-INSTANT-01: 2 δεκαδικά): " + JSON.stringify(c1));
+    ok(c1 && c1.sub === "ωριαίος υπολογισμός από την τελευταία μέτρηση πριν από αυτόν · ρίχνετε 3,3 → στη ρίζα 95 % · κλίμακα εργαστηρίου (ECe) 1,7 · όριο καλλιέργειας 2,5", "Π2 υπότιτλος ρηχό, με δηλωμένη προέλευση: " + (c1 && c1.sub));
+    ok(c2 && c2.v === "2,78 mS/cm" && /στη ρίζα 84 %/.test(c2.sub) && /\(ECe\) 1,3/.test(c2.sub), "Π3 βαθύ: " + JSON.stringify(c2));
     ok(!/νερό ρίζας|όργανο|µS\/cm/.test(JSON.stringify([c1, c2])), "Π4 χωρίς «νερό ρίζας» και χωρίς ένδειξη οργάνου στο πλακίδιο");
     H.sagFertSet(null);
     const c3 = H.sagEceCard("conduct_soil1");
-    ok(c3 && c3.sub === "κλίμακα εργαστηρίου (ECe) 1,7 · όριο καλλιέργειας 2,5", "Π5 χωρίς δηλωμένο λίπασμα: " + (c3 && c3.sub));
+    ok(c3 && c3.sub === "ωριαίος υπολογισμός από την τελευταία μέτρηση πριν από αυτόν · κλίμακα εργαστηρίου (ECe) 1,7 · όριο καλλιέργειας 2,5", "Π5 χωρίς δηλωμένο λίπασμα: " + (c3 && c3.sub));
     for (const bad of ["", "0", -1, "abc", undefined]) { H.sagFertSet(bad); if (H.sagFertBox.v !== null) f.push("Π6 άκυρο λίπασμα δεκτό: " + bad); }
     H.sagFertSet("3.3"); ok(H.sagFertBox.v === 3.3, "Π7 λίπασμα ως κείμενο");
     H.sagEceSet({ soil_ece1: { value: 1.71, metadata: { tol: 2.5 } } });
@@ -83,8 +83,8 @@ if (base.length) { console.log("ΑΠΟΤΥΧΙΑ ΒΑΣΗΣ:\n  " + base.join("\
 console.log("ΒΑΣΗ: όλοι οι έλεγχοι πέρασαν");
 const MUT = [
   ["m1 ποσοστό ανάποδα", "Math.round(p9/fz9*100)", "Math.round(fz9/p9*100)"],
-  ["m2 τιμή ECe στο πλακίδιο", 'v:sagEceF9(p9,1)+" mS/cm"', 'v:sagEceF9(e9,1)+" mS/cm"'],
-  ["m3 δύο δεκαδικά", 'v:sagEceF9(p9,1)+" mS/cm"', 'v:sagEceF9(p9,2)+" mS/cm"'],
+  ["m2 τιμή ECe στο πλακίδιο", 'v:sagEceF9(p9,2)+" mS/cm"', 'v:sagEceF9(e9,2)+" mS/cm"'],
+  ["m3 ένα δεκαδικό (W-EC-INSTANT-01: δύο)", 'v:sagEceF9(p9,2)+" mS/cm"', 'v:sagEceF9(p9,1)+" mS/cm"'],
   ["m4 χωρίς όριο καλλιέργειας", '" · όριο καλλιέργειας "+sagEceF9(tl9,1)', '""'],
   ["m5 λίπασμα δεν τροφοδοτείται", "sagFertSet(o&&o.fert_ecw_dsm);return vv", "return vv"],
   ["m6 λίπασμα 0 δεκτό", "Number.isFinite(n)&&n>0)?n:null}", "Number.isFinite(n))?n:null}"],

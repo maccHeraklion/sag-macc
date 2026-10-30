@@ -121,7 +121,7 @@ async function run(core) {
     const iB = core.indexOf("await dev_to_send_meas.sendData(packedIndicators);"), iY = core.indexOf("try { await _sagSyncSoilSensors(dev_to_send_meas, measurements?.data, fieldName, dailyTich); } catch (_eSS) {}");
     ok(iB > 0 && iY > iB && iY - iB < 300, "Σ6 η λίστα γράφεται αμέσως μετά το bundle, σε try");
     ok(!/ο πιο ξηρός/.test(core.slice(core.indexOf("function _sagApplySoilRef"), core.indexOf("async function _sagSyncSoilSensors"))), "Σ7 καμία αυτόματη επιλογή «πιο ξηρός»");
-    ok(K.get("SAG_KERNEL_VERSION") === "v50.165 · 2026-10-29", "Σ8 έκδοση");
+    ok(K.get("SAG_KERNEL_VERSION") === "v50.166 · 2026-10-31", "Σ8 έκδοση");
   } catch (e) { f.push("εκτέλεση: " + (e && e.stack || e)); }
   return f;
 }
@@ -141,7 +141,7 @@ const MUT = [
   ["m10 χωρίς μηδενισμό ανά αγρό", "      _SAG_SOIL_REF_ID = '';          // T-SOILREF-01: ποτέ μεταφορά από τον προηγούμενο αγρό", "      // T-SOILREF-01"],
   ["m11 μένει το _sagSoilDev", "    delete data._sagSoilDev;\n", ""],
   ["m12 και ο αέρας", "const _SAG_SOIL_KEY_RE = /^(soil_|conduct_soil|temp_soil|water_soil)/;", "const _SAG_SOIL_KEY_RE = /^(soil_|conduct_soil|temp_soil|water_soil|air_)/;"],
-  ["m13 έκδοση", "'v50.165 · 2026-10-29'", "'v50.164 · 2026-10-29'"],
+  ["m13 έκδοση", "'v50.166 · 2026-10-31'", "'v50.164 · 2026-10-29'"],
   ["m14 λίστα κάθε ώρα", "  if (p && keyOf(p.metadata && p.metadata.list) === keyOf(cand)) return false;", "  if (false) return false;"],
   ["m15 λίστα και χωρίς ανταγωνισμό", "  if (!p && !cand.length) return false;", "  if (false) return false;"],
   ["m16 ανάγνωση κάθε ώρα παντού", "  if (!cand.length && !dailyTich) return false;", "  if (false) return false;"],
