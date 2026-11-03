@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.170 · 2026-11-03';   // T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
+const SAG_KERNEL_VERSION = 'v50.171 · 2026-11-03';   // T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -14669,7 +14669,8 @@ async function _sagSyncSoilSensors(dev, data, fieldName, dailyTich) {
   const _all = Object.keys(_D).filter(n => _D[n] && Object.keys(_D[n]).some(k => /^(soil_moisture|soil_humidity|water_soil)\d?$/.test(k)))
     .sort().map(n => ({ i: String(_D[n]._id), n, c: _cn.has(n) ? 1 : 0 }));
   const cand = _all.length ? _all : cand0.map(c => ({ i: c.i, n: c.n, c: 1 }));
-  if (!cand.length && !dailyTich) return false;          // χωρίς σόνδες: έλεγχος μία φορά την ημέρα
+  // T-ZONES-01b (v50.171): η πλήρης λίστα μία φορά την ημέρα· κάθε ώρα μόνο όπου υπάρχουν σόνδες στο ίδιο βάθος (+3–5 s/κύκλο αλλιώς).
+  if (!cand0.length && !dailyTich) return false;
   const keyOf = (l) => (Array.isArray(l) ? l : []).map(c => String(c && c.i) + ':' + String(c && c.n) + ':' + (c && c.c ? 1 : 0)).join('|');
   const r = await dev.getData({ variables: ['soil_sensors'], qty: 1 });
   const p = Array.isArray(r) ? r[0] : null;

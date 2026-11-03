@@ -110,10 +110,11 @@ async function run(core) {
     const dZ = apply(merge(K, [["Ρηχή", SHAL], ["Βαθιά", DEEP]]), "");
     const s4 = { reads: 0, sent: [], last: null };   // συσκευή που ΘΥΜΑΤΑΙ την τελευταία εγγραφή
     s4.getData = async () => { s4.reads++; return s4.last ? [s4.last] : []; }; s4.sendData = async (x) => { s4.sent.push(...x); s4.last = x[0]; };
-    await sync(s4, dZ, false); await sync(s4, dZ, true);
-    ok(s4.reads === 2 && s4.sent.length === 1 && s4.sent[0].value === 2 && s4.sent[0].metadata.list.every((x) => x.c === 0), "Λ4 χωρίς ανταγωνισμό: όλες οι σόνδες με c:0 (για τις ζώνες), μία εγγραφή");
-    const s5 = fakeDev({ metadata: { list: C(L3) } }); await sync(s5, dZ, false);
-    ok(s5.sent.length === 1 && s5.sent[0].value === 2, "Λ5 αγρός που άλλαξε σόνδες: η λίστα ενημερώνεται");
+    await sync(s4, dZ, false); const r4 = s4.reads; await sync(s4, dZ, true); await sync(s4, dZ, true);
+    // T-ZONES-01b (v50.171): χωρίς ανταγωνισμό η πλήρης λίστα ΜΟΝΟ στον ημερήσιο κύκλο (η ωριαία ανάγνωση κόστιζε +3–5 s/κύκλο).
+    ok(r4 === 0 && s4.reads === 2 && s4.sent.length === 1 && s4.sent[0].value === 2 && s4.sent[0].metadata.list.every((x) => x.c === 0), "Λ4 χωρίς ανταγωνισμό: καμία ανάγνωση την ώρα· στον ημερήσιο όλες οι σόνδες με c:0, μία εγγραφή");
+    const s5 = fakeDev({ metadata: { list: C(L3) } }); await sync(s5, dZ, false); const r5 = s5.sent.length; await sync(s5, dZ, true);
+    ok(r5 === 0 && s5.sent.length === 1 && s5.sent[0].value === 2, "Λ5 αγρός που άλλαξε σόνδες: η λίστα ενημερώνεται στον ημερήσιο");
     const dN = apply(merge(K, [["Σ1", ST1]]), "");   // αγρός ΧΩΡΙΣ σόνδες εδάφους
     const s6 = fakeDev(null); await sync(s6, dN, false); const r6 = s6.reads; await sync(s6, dN, true);
     ok(r6 === 0 && s6.reads === 1 && s6.sent.length === 0, "Λ6 χωρίς σόνδες: ανάγνωση μόνο την ημέρα, καμία κενή εγγραφή");
@@ -132,7 +133,7 @@ async function run(core) {
     const iB = core.indexOf("await dev_to_send_meas.sendData(packedIndicators);"), iY = core.indexOf("try { await _sagSyncSoilSensors(dev_to_send_meas, measurements?.data, fieldName, dailyTich); } catch (_eSS) {}");
     ok(iB > 0 && iY > iB && iY - iB < 300, "Σ6 η λίστα γράφεται αμέσως μετά το bundle, σε try");
     ok(!/ο πιο ξηρός/.test(core.slice(core.indexOf("function _sagApplySoilRef"), core.indexOf("async function _sagSyncSoilSensors"))), "Σ7 καμία αυτόματη επιλογή «πιο ξηρός»");
-    ok(K.get("SAG_KERNEL_VERSION") === "v50.170 · 2026-11-03", "Σ8 έκδοση");
+    ok(K.get("SAG_KERNEL_VERSION") === "v50.171 · 2026-11-03", "Σ8 έκδοση");
   } catch (e) { f.push("εκτέλεση: " + (e && e.stack || e)); }
   return f;
 }
@@ -152,10 +153,10 @@ const MUT = [
   ["m10 χωρίς μηδενισμό ανά αγρό", "      _SAG_SOIL_REF_ID = '';          // T-SOILREF-01: ποτέ μεταφορά από τον προηγούμενο αγρό", "      // T-SOILREF-01"],
   ["m11 μένει το _sagSoilDev", "    delete data._sagSoilDev;\n", ""],
   ["m12 και ο αέρας", "const _SAG_SOIL_KEY_RE = /^(soil_|conduct_soil|temp_soil|water_soil)/;", "const _SAG_SOIL_KEY_RE = /^(soil_|conduct_soil|temp_soil|water_soil|air_)/;"],
-  ["m13 έκδοση", "'v50.170 · 2026-11-03'", "'v50.164 · 2026-10-29'"],
+  ["m13 έκδοση", "'v50.171 · 2026-11-03'", "'v50.164 · 2026-10-29'"],
   ["m14 λίστα κάθε ώρα", "  if (p && keyOf(p.metadata && p.metadata.list) === keyOf(cand)) return false;", "  if (false) return false;"],
   ["m15 λίστα και χωρίς ανταγωνισμό", "  if (!p && !cand.length) return false;", "  if (false) return false;"],
-  ["m16 ανάγνωση κάθε ώρα παντού", "  if (!cand.length && !dailyTich) return false;", "  if (false) return false;"],
+  ["m16 ανάγνωση κάθε ώρα παντού", "  if (!cand0.length && !dailyTich) return false;", "  if (false) return false;"],
   ["m17 χωρίς επανεκκίνηση μάθησης", "            _scPrev = {};\n", ""],
   ["m18 χωρίς πηγή στη μάθηση", "Object.assign({ s: _scS, d: _scD, u: _scDay }, _scW ? { w: _scW } : {})", "Object.assign({ s: _scS, d: _scD, u: _scDay }, {})"],
   ["m19 μένει η παλιά διαφωνία", "if (_SAG_SUBSTRATE_ACTIVE || !_sagDivergenceIndicators(measurements?.data).length) _purgeShared.push('sensor_divergence');", "if (false) _purgeShared.push('sensor_divergence');"],
