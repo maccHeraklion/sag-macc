@@ -71,7 +71,7 @@ function run(w) {
     const gs = w.indexOf("const Gs=({open:t,variable:s,label:a,series:r,unit:i,refLines:p,");
     const nb = w.indexOf('find(x=>x&&x.label==="_ec10")');
     ok(gs > 0 && nb > gs && (w.indexOf("=({open:", gs + 20) < 0 || nb < w.indexOf("=({open:", gs + 20)), "Σ1 το κουτί εξήγησης αποδίδεται μέσα στο παράθυρο διαγράμματος");
-    ok(w.includes('sagFertSet(o&&o.fert_ecw_dsm);sagDepthSet(o&&o.soil_depth_count,o&&o.soil_depth_port);return vv}catch(_e){sagCoveredSet(!1);sagFertSet(null);sagDepthSet(2,1);return!1}'), "Σ2 το λίπασμα έρχεται από τη ρύθμιση του αγρού");
+    ok(w.includes('sagFertSet(o&&o.fert_ecw_dsm);sagDepthSet(o&&o.soil_depth_count,o&&o.soil_depth_port);sagSubSet(!!o&&(o.soil_type==="coir"||o.soil_texture_class==="coir"));return vv}catch(_e){sagCoveredSet(!1);sagFertSet(null);sagDepthSet(2,1);sagSubSet(!1);return!1}'), "Σ2 το λίπασμα έρχεται από τη ρύθμιση του αγρού");
     ok(w.includes('soil_ec_pore1:{label:"💧 EC στη ρίζα Ρηχό"') && w.includes('soil_ec_pore2:{label:"💧 EC στη ρίζα Βαθύ"'), "Σ3 ετικέτες");
     ok(!w.includes("νερό ρίζας") && !w.includes("Αγωγιμότητα νερού πόρων"), "Σ4 χωρίς παλιές ετικέτες");
     ok(!/\r/.test(w), "Σ5 LF");

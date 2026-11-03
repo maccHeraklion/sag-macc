@@ -219,7 +219,7 @@ function run(core, form, sync, wid) {
     ok(W.sagEceD9("1") === " σημείο 1" && W.sagEceD9("2") === " σημείο 2", "W13 δύο σημεία: τίτλοι «σημείο 1 / 2»");
     W.sagDepthSet(null, null);
     ok(!W.sagDepthHide("soil_moisture2", { soil_moisture1: [1] }) && !W.sagDepthHide("soil_moisture1", { soil_moisture2: [1] }) && W.sagEceD9("1") === " Ρηχό", "W7 χωρίς δήλωση: όπως πριν");
-    ok(wid.includes("sagDepthSet(o&&o.soil_depth_count,o&&o.soil_depth_port);return vv") && wid.includes("sagDepthSet(2,1);return!1}"), "W8 πλήθος + θύρα από τη ρύθμιση");
+    ok(wid.includes("sagDepthSet(o&&o.soil_depth_count,o&&o.soil_depth_port);sagSubSet(") && wid.includes("sagDepthSet(2,1);sagSubSet(!1);return!1}"), "W8 πλήθος + θύρα από τη ρύθμιση");
     ok(wid.includes("sagRainHide.has(v)||sagDepthHide(v,j))return!1;") && wid.includes("sagRainHide.has(d)||sagDepthHide(d,N))return!1;"), "W9 και στις δύο λίστες μετρήσεων");
     ok(wid.includes('sagDepthBox.p===1&&/^(soil_moisture') && wid.includes('s={...s,label:s.label.replace(" Ρηχό"," σημείο 1")}') && wid.includes('s={...s,label:s.label.replace(" Βαθύ","")}'), "W10 ετικέτες ανά θύρα");
     ok(wid.includes('_dp8=_q8==="2"?(sagDepthBox.v===1&&sagDepthBox.p===2?"εδάφους":sagDepthBox.v===1&&sagDepthBox.p===3?"σημείο 2":"Βαθύ")') && wid.includes('_dp9=_q9==="2"?(sagDepthBox.v===1&&sagDepthBox.p===2?"εδάφους":sagDepthBox.v===1&&sagDepthBox.p===3?"σημείο 2":"Βαθύ")'), "W11 τίτλοι διαγραμμάτων");

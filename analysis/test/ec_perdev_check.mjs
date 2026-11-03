@@ -152,7 +152,7 @@ function run(w) {
     // ── Σ: καλωδίωση ──
     ok(w.includes("_E9=sagEceCard(j,r,s)"), "Σ1 παράθυρο συσκευής περνά δεδομένα + συσκευή");
     ok(w.includes("_E9=sagEceCard(N,r,D)"), "Σ2 «Όλες οι μετρήσεις» περνά δεδομένα + συσκευή");
-    ok(w.includes('if(_sagEc9&&h&&sagEceMulti9(t.history,n)){/* W-EC-PERDEV-01 */') && w.includes('else if(_sagEc9&&h){/* W-EC-ROOT-01 */'), "Σ3 διάγραμμα: κλάδος πολλών αισθητήρων πριν από τον κλάδο αγρού");
+    ok(w.includes('if(_sagEc9&&h&&!sagSubBox.v&&sagEceMulti9(t.history,n)){/* W-EC-PERDEV-01 */') && w.includes('else if(_sagEc9&&h&&!sagSubBox.v){/* W-EC-ROOT-01 */'), "Σ3 διάγραμμα: κλάδος πολλών αισθητήρων πριν από τον κλάδο αγρού");
     ok(w.includes('b("soil_ec_pore"+_q8);B("💧 EC στη ρίζα "+_dp8+" — "+it(ue));w(ue);j(_S8);$("mS/cm");P(_l8)'), "Σ4 διάγραμμα: σειρά/τίτλος/συσκευή του αισθητήρα");
   } catch (e) { f.push("εκτέλεση: " + (e && e.stack || e)); }
   return f;
