@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.167 · 2026-11-03';   // T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
+const SAG_KERNEL_VERSION = 'v50.168 · 2026-11-03';   // T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -11168,7 +11168,15 @@ function _sagSensorDepthCm(parameters, which) {
     ? ['sensor_deep_depth_cm', 'soil_sensor_depth_2_cm', 'sensor_depth_2_cm', 'soil_depth_2_cm']
     : ['sensorShallow_depth_cm', 'soil_sensor_depth_1_cm', 'sensor_depth_1_cm', 'soil_depth_1_cm'];
   // T-DEPTH1-01: με ένα βάθος, το βάθος της φόρμας ισχύει για ΟΠΟΙΑΔΗΠΟΤΕ θέση (και για σόνδα στο κανάλι 2).
-  if (_sagDepth1Of(parameters) && which === 2) return _sagSensorDepthCm(parameters, 1);
+  // T-DEPTH1-02: με ένα βάθος ισχύει το πεδίο «Βάθος αισθητήρα» (ρηχό)· αν είναι κενό, το βάθος που γράφτηκε στο «βαθύ».
+  if (_sagDepth1Of(parameters)) {
+    for (const k of ['sensorShallow_depth_cm', 'soil_sensor_depth_1_cm', 'sensor_depth_1_cm', 'soil_depth_1_cm',
+      'sensor_deep_depth_cm', 'soil_sensor_depth_2_cm', 'sensor_depth_2_cm', 'soil_depth_2_cm']) {
+      const n = Number(parameters?.[k]);
+      if (Number.isFinite(n) && n > 0 && n <= 300) return n;
+    }
+    return 20;
+  }
   for (const k of keys) {
     const n = Number(parameters?.[k]);
     if (Number.isFinite(n) && n > 0 && n <= 300) return n;
@@ -11178,9 +11186,11 @@ function _sagSensorDepthCm(parameters, which) {
 
 // Επιστρέφει τη σταθμισμένη υγρασία ριζοστρώματος + πλήρη διαφάνεια για το ταμπλό.
 function _sagRootZoneMoisture(measurements, parameters) {
-  const s = _sagNumFrom(measurements, _SAG_SOIL_M_SHALLOW);
-  // T-DEPTH1-01: με δηλωμένο ένα βάθος, το κανάλι 2 δεν μετέχει όταν υπάρχει ρηχό (δεύτερη άμυνα μετά τη μάσκα).
-  const d = (_sagDepth1Of(parameters) && s) ? null : _sagNumFrom(measurements, _SAG_SOIL_M_DEEP);
+  // T-DEPTH1-01/02: με δηλωμένο ένα βάθος μετέχει ΜΟΝΟ η δηλωμένη θύρα όταν μετρά (δεύτερη άμυνα μετά τη μάσκα).
+  const _d1p = _sagDepth1Of(parameters) ? _sagDepth1PortOf(parameters) : 0;
+  const _s0 = _sagNumFrom(measurements, _SAG_SOIL_M_SHALLOW), _dd0 = _sagNumFrom(measurements, _SAG_SOIL_M_DEEP);
+  const s = (_d1p === 2 && _dd0) ? null : _s0;
+  const d = (_d1p === 1 && _s0) ? null : _dd0;
   if (!s && !d) return { ok: false };
 
   const d1 = _sagSensorDepthCm(parameters, 1);
@@ -11205,7 +11215,7 @@ function _sagRootZoneMoisture(measurements, parameters) {
   const divergenceSigned = (s && d) ? (s.value - d.value) : null;
   const basis = (s && d)
     ? ('Δύο βάθη: ' + d1 + ' cm (' + Math.round(w1 * 100) + ' %) + ' + d2 + ' cm (' + Math.round(w2 * 100) + ' %)')
-    : (s ? ('Ένα βάθος: ' + d1 + ' cm') : ('Ένα βάθος: ' + d2 + ' cm (βαθύς)'));
+    : (s ? ('Ένα βάθος: ' + d1 + ' cm') : ('Ένα βάθος: ' + d2 + ' cm' + (_d1p ? '' : ' (βαθύς)')));   // T-DEPTH1-02
 
   return { ok: Number.isFinite(value), value, w1, w2, d1, d2, rootCm,
            m1: s ? s.value : null, m2: d ? d.value : null,
@@ -11592,11 +11602,15 @@ function _sagRootZoneIndicators(rz) {
       metadata: { color: 'grey', unit: '% κ.ό.',
         text: 'Σταθμισμένη κατά FAO-56. ' + rz.basis + '. Ρίζα: ' + Math.round(rz.rootCm) + ' cm.' } },
     { variable: 'soil_depth_basis', value: rz.basis,
-      metadata: { color: ((rz.m1 !== null && rz.m2 !== null) || _SAG_DEPTH1_ACTIVE) ? 'green' : 'blue',
+      metadata: { color: (_SAG_DEPTH1_ACTIVE && _SAG_D1_HINTS.length) ? 'orange'   // T-DEPTH1-02
+        : (((rz.m1 !== null && rz.m2 !== null) || _SAG_DEPTH1_ACTIVE) ? 'green' : 'blue'),
         text: (rz.m1 !== null && rz.m2 !== null)
           ? 'Χρησιμοποιούνται και τα δύο βάθη.'
           : (_SAG_DEPTH1_ACTIVE   // T-DEPTH1-01
-            ? 'Ο αγρός έχει δηλωμένο ένα βάθος αισθητήρα εδάφους· η δόση βγαίνει από αυτό.'
+            ? ('Ο αγρός έχει δηλωμένο ένα βάθος αισθητήρα εδάφους' + (_SAG_DEPTH1_PORT === 2 ? ' (θύρα 2 του αισθητήρα)' : '')
+              + '· η δόση βγαίνει από αυτό.' + (_SAG_D1_HINTS.length   // T-DEPTH1-02
+              ? ' ΠΡΟΣΟΧΗ: στο «' + _SAG_D1_HINTS.join('», «') + '» η δηλωμένη θύρα δεν δίνει μέτρηση ενώ η άλλη δίνει — '
+                + 'ελέγξτε στη φόρμα ποια θύρα είναι στο έδαφος.' : ''))
             : 'Ένα μόνο βάθος. Δεύτερος αισθητήρας βαθύτερα θα ακρίβαινε τη δόση.') } },
   ];
   // T-DEPTH1-01: η σύγκριση βαθών είναι κλειδί ΚΑΛΛΙΕΡΓΕΙΑΣ (μεταφέρεται 50 ω) — ταφόπλακα, όχι σιωπή.
@@ -11693,8 +11707,10 @@ function computeSoilMoistureLimits(parameters, cropOverride, measurements) {
       const _calOk = (st) => st && Number.isFinite(st.f) && (st.n || 0) >= 3
         && st.f >= 3 && st.f <= 55;
       // T-DEPTH1-01: με ένα βάθος η βαθιά βαθμονόμηση (παλιά, από τις ημέρες των δύο βαθών) αγνοείται όσο μαθαίνει το ρηχό.
-      const _sOK = _calOk(_cs.s), _dOK = _calOk(_cs.d)
-        && !(_sagDepth1Of(parameters) && _cs.s && (Number(_cs.s.n) || 0) > 0);
+      // T-DEPTH1-02: με θύρα 2 αγνοείται η παλιά ρηχή βαθμονόμηση όσο μαθαίνει η θύρα 2.
+      const _p2c = _sagDepth1Of(parameters) && _sagDepth1PortOf(parameters) === 2;
+      const _sOK = _calOk(_cs.s) && !(_p2c && _cs.d && (Number(_cs.d.n) || 0) > 0), _dOK = _calOk(_cs.d)
+        && !(_sagDepth1Of(parameters) && !_p2c && _cs.s && (Number(_cs.s.n) || 0) > 0);
       let _fcE = NaN, _floorE = NaN, _nE = 0;
       if (_sOK && _dOK) {
         const _rzW = _sagRootZoneMoisture(measurements, parameters);
@@ -14572,7 +14588,7 @@ function _sagWithValue(shape, n) {
 function _sagScreenDevice(deviceData, deviceName, fieldName) {
   try {
     // T-DEPTH1-01: ΠΡΩΤΑ η μάσκα — πύλη, συγχώνευση, ηλικίες, βλάβες δεν βλέπουν ποτέ το κανάλι 2.
-    _sagDepth1Mask(deviceData);
+    _sagDepth1Mask(deviceData, deviceName);
     const r = _sagPlausibilityGate(deviceData, fieldName + ' / ' + deviceName);
     const list = (r && Array.isArray(r.rejected)) ? r.rejected : [];
     // τα πεδία αναφοράς είναι επιπέδου αγρού — δεν τα κουβαλάμε στο deviceData
@@ -17131,7 +17147,7 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
     // το εύρος θερμοκρασίας εδάφους απαιτούν την ΚΑΤΑΝΟΜΗ, όχι μια στατιστική.
     // T-DIAG-DAILY-01: ΜΙΑ πλήρης ανάγνωση την ημέρα, όχι μία την ώρα.
     const _diagVars = typeName ? ((_SAG_DEPTH1_ACTIVE && (typeName === 'se0x' || typeName === 'lse02'))   // T-DEPTH1-01
-      ? _SAG_DIAG_VARS[typeName].filter(v => !/2$/.test(v)) : _SAG_DIAG_VARS[typeName]) : null;
+      ? _SAG_DIAG_VARS[typeName].filter(v => !(_SAG_DEPTH1_PORT === 2 ? /1$/ : /2$/).test(v)) : _SAG_DIAG_VARS[typeName]) : null;   // T-DEPTH1-02
     if (_diagVars && _diagVars.length) {
       const _dKey = _sagDiagKey(String(value));
       const _dPrev = _sagDiagLoad(_ringShared, _dKey);
@@ -17624,7 +17640,7 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
       //
       // Οι τέσσερις κλήσεις τρέχουν ΠΑΡΑΛΛΗΛΑ (ήταν δύο ΣΕΙΡΙΑΚΕΣ) με απομόνωση
       // σφαλμάτων ανά ερώτημα.
-      const _SOIL_AVG_CH = _SAG_DEPTH1_ACTIVE ? ['soil_moisture1', 'soil_temperature1']   // T-DEPTH1-01
+      const _SOIL_AVG_CH = _SAG_DEPTH1_ACTIVE ? (_SAG_DEPTH1_PORT === 2 ? ['soil_moisture2', 'soil_temperature2'] : ['soil_moisture1', 'soil_temperature1'])   // T-DEPTH1-01/02
         : ['soil_moisture1', 'soil_temperature1', 'soil_moisture2', 'soil_temperature2'];
       const _soilAvgRes = await _sagSettleAll(
         _SOIL_AVG_CH.map((_ch) => device.getData({
@@ -17915,39 +17931,57 @@ let _SAG_SUBSTRATE_ACTIVE = null;
 // στην παραμετροποίηση». fieldConfig.soil_depth_count = 1 → ο αγρός έχει ΕΝΑ βάθος· ΑΠΟΝ ή 2 → όπως πάντα.
 // Συσκευή δύο καναλιών με μία σόνδα στέλνει στο κανάλι 2 κενό ή σκουπίδια: εδώ το κανάλι 2 ΔΕΝ υπάρχει για τον αγρό.
 let _SAG_DEPTH1_ACTIVE = false;
+// T-DEPTH1-02 (v50.168): σε συσκευή δύο θυρών ο ρόλος ορίζεται από τη ΘΥΡΑ (1 = ρηχό, 2 = βαθύ), όχι από το EUI.
+// Με ένα βάθος η φόρμα δηλώνει ποια θύρα είναι στο έδαφος (soil_depth_port 1 | 2· απόν = 1).
+let _SAG_DEPTH1_PORT = 1;
+let _SAG_D1_HINTS = [];   // συσκευές όπου η δηλωμένη θύρα δεν μετρά ενώ η άλλη μετρά
+const _SAG_D1_M2_RE = /^(soil_moisture|soil_humidity|water_soil)2(_avg)?$/;
+const _SAG_D1_CH1ALL_RE = /^(soil_moisture|soil_humidity|water_soil|soil_temperature|conduct_soil)1(_avg|_max|_min|_sum)?$|^(soil_moisture|soil_humidity|water_soil|temp_soil|conduct_soil)(_avg|_max|_min|_sum)?$/;
+function _sagDepth1PortOf(cfg) { return Number(cfg && cfg.soil_depth_port) === 2 ? 2 : 1; }
 const _SAG_D1_CH1_RE = /^(soil_moisture|soil_humidity|water_soil)1?(_avg)?$/;
 const _SAG_D1_CH2_RE = /^(soil_moisture|soil_humidity|water_soil|soil_temperature|temp_soil|conduct_soil)2(_avg|_max|_min|_sum)?$/;
 function _sagDepth1Of(cfg) { return Number(cfg && cfg.soil_depth_count) === 1; }
 // Μάσκα ΑΝΑ ΣΥΣΚΕΥΗ: μόνο όταν η ίδια συσκευή δίνει και κανάλι 1 / γυμνά ονόματα (lse01_deep μένει ανέγγιχτο).
-function _sagDepth1Mask(deviceData) {
+function _sagDepth1Mask(deviceData, deviceName) {
   if (!_SAG_DEPTH1_ACTIVE || !deviceData || typeof deviceData !== 'object') return 0;
   const ks = Object.keys(deviceData);
-  if (!ks.some(k => _SAG_D1_CH1_RE.test(k))) return 0;
+  const p2 = _SAG_DEPTH1_PORT === 2;   // T-DEPTH1-02
+  const keepRe = p2 ? _SAG_D1_M2_RE : _SAG_D1_CH1_RE, dropRe = p2 ? _SAG_D1_CH1ALL_RE : _SAG_D1_CH2_RE;
+  if (!ks.some(k => keepRe.test(k))) return 0;
+  // T-DEPTH1-02 φρουρός: η δηλωμένη θύρα χωρίς έγκυρη υγρασία ενώ η άλλη έχει → προειδοποίηση (όχι αυτόματη αλλαγή).
+  const _v = (k) => { const a = deviceData[k]; const x = Array.isArray(a) && a[0] && typeof a[0] === 'object' ? Number(a[0].value) : NaN; return x; };
+  const _ok = (re) => ks.some(k => re.test(k) && !/_avg$/.test(k) && Number.isFinite(_v(k)) && _v(k) > 0);
+  if (!_ok(keepRe) && _ok(p2 ? _SAG_D1_CH1_RE : _SAG_D1_M2_RE)) {
+    const nm = String(deviceName || '—');
+    if (_SAG_D1_HINTS.indexOf(nm) < 0) _SAG_D1_HINTS.push(nm);
+  }
   let n = 0;
-  for (const k of ks) if (_SAG_D1_CH2_RE.test(k)) { delete deviceData[k]; n++; }
+  for (const k of ks) if (dropRe.test(k)) { delete deviceData[k]; n++; }
   return n;
 }
 // Το κανάλι 2 κόπηκε σε αυτόν τον αγρό; (ναι = υπάρχει ρηχό/γυμνό και η δήλωση είναι «ένα βάθος»)
 function _sagD1Masked(measurements) {
-  return _SAG_DEPTH1_ACTIVE && !!_sagNumFrom(measurements, _SAG_SOIL_M_SHALLOW);
+  return _SAG_DEPTH1_ACTIVE && !!_sagNumFrom(measurements, _SAG_DEPTH1_PORT === 2 ? _SAG_SOIL_M_DEEP : _SAG_SOIL_M_SHALLOW);
 }
 // Αναμενόμενα κανάλια οργάνου: σε se0x/lse02 με ένα βάθος, χωρίς «βαθέος».
 function _sagDevExpect(t) {
   const e = _SAG_DEV_EXPECT[t];
   if (!e || !_SAG_DEPTH1_ACTIVE || (t !== 'se0x' && t !== 'lse02')) return e;
-  return e.filter(ch => !ch.a.every(k => /2(_avg)?$/.test(k)));
+  const re = _SAG_DEPTH1_PORT === 2 ? /1(_avg)?$/ : /2(_avg)?$/;   // T-DEPTH1-02: αναμένεται η ΚΡΑΤΗΜΕΝΗ θύρα
+  return e.filter(ch => !ch.a.every(k => re.test(k)));
 }
 function _sagDevStatsD1(dev) {
   const st = (dev && dev.stats) || {};
   if (!_SAG_DEPTH1_ACTIVE || !dev || (dev.t !== 'se0x' && dev.t !== 'lse02')) return st;
   const o = {};
-  for (const k of Object.keys(st)) if (!/2(_avg)?$/.test(k)) o[k] = st[k];
+  const re = _SAG_DEPTH1_PORT === 2 ? /1(_avg)?$/ : /2(_avg)?$/;   // T-DEPTH1-02
+  for (const k of Object.keys(st)) if (!re.test(k)) o[k] = st[k];
   return o;
 }
 // Κανάλια αγωγιμότητας: με ένα βάθος, μόνο το 1 και με ετικέτα «έδαφος».
 function _sagEcChansD1(measurements) {
   if (!_sagD1Masked(measurements)) return _SAG_EC_CHANNELS;
-  return [Object.assign({}, _SAG_EC_CHANNELS[0], { el: 'έδαφος' })];
+  return [Object.assign({}, _SAG_EC_CHANNELS[_SAG_DEPTH1_PORT === 2 ? 1 : 0], { el: 'έδαφος' })];   // T-DEPTH1-02
 }
 // ── End T-DEPTH1-01 helpers ───────────────────────────────────────────────
 
@@ -18351,7 +18385,7 @@ async function _sagDiagFieldForm(account) {
     }
 
     L('  ── ΠΡΟΑΙΡΕΤΙΚΑ ΚΛΕΙΔΙΑ v33 ──');
-    for (const k of ['soil_depth_count', 'sensorShallow_depth_cm', 'sensor_deep_depth_cm',
+    for (const k of ['soil_depth_count', 'soil_depth_port', 'sensorShallow_depth_cm', 'sensor_deep_depth_cm',
                      'soil_sensor_depth_1_cm', 'soil_sensor_depth_2_cm', 'stone_fraction_pct']) {
       L('    ' + (cfg[k] !== undefined ? '✓' : '·') + ' ' + _sagDiagPad(k, 24)
         + '= ' + JSON.stringify(cfg[k]) + (cfg[k] === undefined ? '   (θα χρησιμοποιηθεί προεπιλογή)' : ''));
@@ -18624,6 +18658,7 @@ module.exports = new Analysis(async (context) => {
     {
       _SAG_SUBSTRATE_ACTIVE = null;   // T-SUBSTRATE-01: ποτέ μεταφορά από τον προηγούμενο αγρό
       _SAG_DEPTH1_ACTIVE = false;     // T-DEPTH1-01: ποτέ μεταφορά από τον προηγούμενο αγρό
+      _SAG_DEPTH1_PORT = 1; _SAG_D1_HINTS = [];   // T-DEPTH1-02
       _SAG_SOIL_REF_ID = '';          // T-SOILREF-01: ποτέ μεταφορά από τον προηγούμενο αγρό
 
       try {
@@ -18687,6 +18722,7 @@ module.exports = new Analysis(async (context) => {
         _SAG_COVERED_ACTIVE = !!fieldConfig.covered_cultivation;
         _SAG_SUBSTRATE_ACTIVE = _sagSubstrateOf(fieldConfig);   // T-SUBSTRATE-01
         _SAG_DEPTH1_ACTIVE = _sagDepth1Of(fieldConfig);          // T-DEPTH1-01
+        _SAG_DEPTH1_PORT = _sagDepth1PortOf(fieldConfig);        // T-DEPTH1-02
         _SAG_SOIL_REF_ID = String(fieldConfig?.soil_ref_device || '');   // T-SOILREF-01
         const measurements = await getMeasurements(hourTich, dailyTich, devices, fields[i].id, fieldName);
 
@@ -19046,9 +19082,11 @@ module.exports = new Analysis(async (context) => {
               st.l = _scR2(cur); st.k = _scDayNum;
               return st;
             };
-            const _scS = _scUpd(_scPrev.s, _scNum(_SAG_SOIL_M_SHALLOW), _scRange(_SAG_SOIL_M_SHALLOW));
+            // T-DEPTH1-02: με θύρα 2 μαθαίνει μόνο το d· το s δεν κρατιέται.
+            const _scS = (_SAG_DEPTH1_ACTIVE && _SAG_DEPTH1_PORT === 2 && Number.isFinite(_scNum(_SAG_SOIL_M_DEEP))) ? {}
+              : _scUpd(_scPrev.s, _scNum(_SAG_SOIL_M_SHALLOW), _scRange(_SAG_SOIL_M_SHALLOW));
             // T-DEPTH1-01: με ένα βάθος και ρηχή μέτρηση, το d ΔΕΝ κρατιέται (το _scUpd χωρίς μέτρηση το κρατούσε για πάντα).
-            const _scD = (_SAG_DEPTH1_ACTIVE && Number.isFinite(_scNum(_SAG_SOIL_M_SHALLOW))) ? {}
+            const _scD = (_SAG_DEPTH1_ACTIVE && _SAG_DEPTH1_PORT !== 2 && Number.isFinite(_scNum(_SAG_SOIL_M_SHALLOW))) ? {}
               : _scUpd(_scPrev.d, _scNum(_SAG_SOIL_M_DEEP), _scRange(_SAG_SOIL_M_DEEP));
             const _scEh = _SAG_SUBSTRATE_ACTIVE   // T-SUBSTRATE-01: ιστορικό αγωγιμότητας slab
               ? _sagSubstrateEcHist(_scPrev.eh, measurements, _scDayNum) : null;
@@ -19123,7 +19161,8 @@ module.exports = new Analysis(async (context) => {
         try {
           if (_SAG_SUBSTRATE_ACTIVE || !_sagDivergenceIndicators(measurements?.data).length) _purgeShared.push('sensor_divergence');
           // T-DEPTH1-01: κάρτες καναλιού 2 δεν μεταφέρονται (50 ω) ούτε γράφονται σε σειρές όταν ο αγρός έχει ένα βάθος.
-          if (_sagD1Masked(measurements)) _purgeShared.push('soil_ece2', 'soil_ec_pore2', 'soil_ec_raw2', 'soil_ec_ref2');
+          if (_sagD1Masked(measurements)) _purgeShared.push(...(_SAG_DEPTH1_PORT === 2   // T-DEPTH1-02
+            ? ['soil_ece1', 'soil_ec_pore1', 'soil_ec_raw1', 'soil_ec_ref1'] : ['soil_ece2', 'soil_ec_pore2', 'soil_ec_raw2', 'soil_ec_ref2']));
           const _pES = (_prevBundleForWash?.shared || {}).soil_ec_status;
           const _pESv = (_pES && typeof _pES === 'object' && 'value' in _pES) ? _pES.value : _pES;
           if (!dailyTich && /^Σε αναστολή/.test(String(_pESv || ''))

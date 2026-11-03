@@ -44,7 +44,7 @@ function run(w) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   try {
     // W-DEPTH1-01: οι βοηθοί EC διαβάζουν το sagDepthBox (ορίζεται ακριβώς πριν)· χωρίς ρύθμιση = δύο βάθη.
-    const helpers = cut(w, "/* W-DEPTH1-01 */sagDepthBox={v:2},", ",sagPendKey=", "βοηθοί", false);
+    const helpers = cut(w, "/* W-DEPTH1-01 */sagDepthBox={v:2,p:1},", ",sagPendKey=", "βοηθοί", false);
     const H = new Function("let " + helpers + ";\nreturn {sagEceSet, sagFertSet, sagEceCard, sagEceF9, sagEceChain9, sagEceMulti9};")();
     // ── Δ: διαφορικό τύπου widget ↔ πυρήνα ──
     let cmp = 0, num = 0, bad = 0, ex = "";
@@ -136,7 +136,8 @@ function run(w) {
     ok(g6 && !/ECe/.test(g6.sub), "Ω8 σε βάθος με πολλούς αισθητήρες η ECe του ΑΓΡΟΥ δεν μπαίνει στην κάρτα του αισθητήρα (" + (g6 && g6.sub) + ")");
     // ── Γ: διάγραμμα αισθητήρα (σειρά από τον ΔΙΚΟ του αισθητήρα) ──
     const decl = cut(w, "const _q8=_sagEc9[1],", ";if(_S8.length)", "διάγραμμα", false);
-    const G = new Function("n", "t", "ue", "_sagEc9", "sagEceMT9", "sagEceChain9", "sagFertBox", decl + ";return {_S8,_cnt8};");
+    // W-DEPTH1-01/02: ο τίτλος διαβάζει το sagDepthBox — χωρίς ρύθμιση = δύο βάθη.
+    const G = new Function("n", "t", "ue", "_sagEc9", "sagEceMT9", "sagEceChain9", "sagFertBox", "let sagDepthBox={v:2,p:1};" + decl + ";return {_S8,_cnt8};");
     const MT9 = (q) => q === "" ? ["soil_moisture", "temp_soil"] : ["soil_moisture" + q, "soil_temperature" + q];
     const T0 = "2026-10-29T10:00:00Z", T1 = "2026-10-29T11:00:00Z", T2 = "2026-10-29T12:00:00Z";
     const HIST = { [FIELD]: { soil_ec_pore2: [{ v: 4.3, t: T2 }] },

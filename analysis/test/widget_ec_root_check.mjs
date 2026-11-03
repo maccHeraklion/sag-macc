@@ -19,7 +19,7 @@ function run(w) {
   try {
     // ── πλακίδιο ──
     // W-DEPTH1-01: οι βοηθοί EC διαβάζουν το sagDepthBox (ορίζεται ακριβώς πριν)· χωρίς ρύθμιση = δύο βάθη.
-    const helpers = cut(w, "/* W-DEPTH1-01 */sagDepthBox={v:2},", ",sagPendKey=", "βοηθοί", false);
+    const helpers = cut(w, "/* W-DEPTH1-01 */sagDepthBox={v:2,p:1},", ",sagPendKey=", "βοηθοί", false);
     const H = new Function("let " + helpers + ";\nreturn {sagEceSet, sagFertSet, sagEceCard, sagEceF9, sagEceBox, sagFertBox, sagDepthBox};")();
     H.sagEceSet(RAMM); H.sagFertSet(3.3);
     const c1 = H.sagEceCard("conduct_soil1"), c2 = H.sagEceCard("conduct_soil2");
@@ -71,7 +71,7 @@ function run(w) {
     const gs = w.indexOf("const Gs=({open:t,variable:s,label:a,series:r,unit:i,refLines:p,");
     const nb = w.indexOf('find(x=>x&&x.label==="_ec10")');
     ok(gs > 0 && nb > gs && (w.indexOf("=({open:", gs + 20) < 0 || nb < w.indexOf("=({open:", gs + 20)), "Σ1 το κουτί εξήγησης αποδίδεται μέσα στο παράθυρο διαγράμματος");
-    ok(w.includes('sagFertSet(o&&o.fert_ecw_dsm);sagDepthSet(o&&o.soil_depth_count);return vv}catch(_e){sagCoveredSet(!1);sagFertSet(null);sagDepthSet(2);return!1}'), "Σ2 το λίπασμα έρχεται από τη ρύθμιση του αγρού");
+    ok(w.includes('sagFertSet(o&&o.fert_ecw_dsm);sagDepthSet(o&&o.soil_depth_count,o&&o.soil_depth_port);return vv}catch(_e){sagCoveredSet(!1);sagFertSet(null);sagDepthSet(2,1);return!1}'), "Σ2 το λίπασμα έρχεται από τη ρύθμιση του αγρού");
     ok(w.includes('soil_ec_pore1:{label:"💧 EC στη ρίζα Ρηχό"') && w.includes('soil_ec_pore2:{label:"💧 EC στη ρίζα Βαθύ"'), "Σ3 ετικέτες");
     ok(!w.includes("νερό ρίζας") && !w.includes("Αγωγιμότητα νερού πόρων"), "Σ4 χωρίς παλιές ετικέτες");
     ok(!/\r/.test(w), "Σ5 LF");
