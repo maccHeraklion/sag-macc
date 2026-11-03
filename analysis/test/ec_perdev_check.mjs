@@ -43,7 +43,8 @@ const AMM = { F: { field_bundle: pt(1) }, S: { conduct_soil1: pt(316), soil_mois
 function run(w) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   try {
-    const helpers = cut(w, "sagEceBox={v:null}", ",sagPendKey=", "βοηθοί", false);
+    // W-DEPTH1-01: οι βοηθοί EC διαβάζουν το sagDepthBox (ορίζεται ακριβώς πριν)· χωρίς ρύθμιση = δύο βάθη.
+    const helpers = cut(w, "/* W-DEPTH1-01 */sagDepthBox={v:2},", ",sagPendKey=", "βοηθοί", false);
     const H = new Function("let " + helpers + ";\nreturn {sagEceSet, sagFertSet, sagEceCard, sagEceF9, sagEceChain9, sagEceMulti9};")();
     // ── Δ: διαφορικό τύπου widget ↔ πυρήνα ──
     let cmp = 0, num = 0, bad = 0, ex = "";

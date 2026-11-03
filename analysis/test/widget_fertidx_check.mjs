@@ -6,8 +6,11 @@ import { createHash } from "node:crypto";
 import vm from "node:vm";
 const ROOT = new URL("../../", import.meta.url);
 const P = "_dist-sagMain/index-7cbd9a4e.js";
-const NEW = readFileSync(new URL(P, ROOT), "utf8");
-const OLD = execSync(`git show HEAD:${P}`, { cwd: ROOT, encoding: "utf8", maxBuffer: 1e8 });
+// 3/11/2026 (T-DEPTH1-01): η σύγκριση «μόνο η αφαίρεση» καρφώθηκε στο commit της αλλαγής (e2509be^ → e2509be)· με HEAD
+// αποτύγχανε σε ΚΑΘΕ μεταγενέστερη αλλαγή widget. Το τρέχον αρχείο ελέγχεται για τα αμετάβλητα (κανένα ίχνος, σύνταξη).
+const CUR = readFileSync(new URL(P, ROOT), "utf8");
+const NEW = execSync(`git show e2509be:${P}`, { cwd: ROOT, encoding: "utf8", maxBuffer: 1e8 });
+const OLD = execSync(`git show e2509be^:${P}`, { cwd: ROOT, encoding: "utf8", maxBuffer: 1e8 });
 const REMOVED = [
   'fertility_index1:{label:"🌾 Παλιός δείκτης parser Ρηχό (αποσύρεται)",...H.conductivity},',
   'fertility_index2:{label:"🌾 Παλιός δείκτης parser Βαθύ (αποσύρεται)",...H.conductivity},',
@@ -18,11 +21,15 @@ const SWAP = [
   [String.raw`const w=new Set(N.flatMap(v=>{const x=v.match(/^fertility_index(\d+)$/);return x?[x[1]]:[]})),k=N.filter(`, "const k=N.filter("],
   [String.raw`const k=new Set(w.flatMap(d=>{const m=d.match(/^fertility_index(\d+)$/);return m?[m[1]]:[]})),$=w.filter(`, "const $=w.filter("],
 ];
-function check(src) {
+function inv(src) {
   const bad = [];
   if (src.includes("fertility_index")) bad.push("έμεινε fertility_index");
   if (src.includes("Παλιός δείκτης parser")) bad.push("έμεινε η ετικέτα «Παλιός δείκτης parser»");
   try { new vm.Script(src.replace(/^import[^;]*;/gm, "").replace(/\bexport\b/g, "")); } catch (e) { if (!/import|export|Cannot use/.test(e.message)) bad.push("σύνταξη: " + e.message); }
+  return bad;
+}
+function check(src) {
+  const bad = inv(src);
   for (const keep of ['conduct_soil1:{label:', 'soil_ece1:{label:"🧂 Αλατότητα εδάφους Ρηχό"', 'soil_ec_pore1:{label:',
     'k=N.filter(v=>{if(!Object.prototype.hasOwnProperty.call(St,v)||sagRainHide.has(v))return!1;return!0})',
     '$=w.filter(d=>{if(!Object.prototype.hasOwnProperty.call(St,d)||sagRainHide.has(d))return!1;return!0})',
@@ -35,7 +42,7 @@ function check(src) {
   return bad;
 }
 const sha = (s) => createHash("sha256").update(s, "utf8").digest("hex").slice(0, 16);
-const base = check(NEW);
+const base = check(NEW).concat(inv(CUR).map(x => "τρέχον: " + x));
 console.log(`παλιό ${sha(OLD)} → νέο ${sha(NEW)} · ${Buffer.byteLength(OLD) - Buffer.byteLength(NEW)} bytes λιγότερα`);
 console.log(base.length ? "✗ " + base.join("\n✗ ") : "ΒΑΣΗ ✓");
 const MUT = [

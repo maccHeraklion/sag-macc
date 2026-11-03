@@ -18,8 +18,9 @@ function run(w) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   try {
     // ── πλακίδιο ──
-    const helpers = cut(w, "sagEceBox={v:null}", ",sagPendKey=", "βοηθοί", false);
-    const H = new Function("let " + helpers + ";\nreturn {sagEceSet, sagFertSet, sagEceCard, sagEceF9, sagEceBox, sagFertBox};")();
+    // W-DEPTH1-01: οι βοηθοί EC διαβάζουν το sagDepthBox (ορίζεται ακριβώς πριν)· χωρίς ρύθμιση = δύο βάθη.
+    const helpers = cut(w, "/* W-DEPTH1-01 */sagDepthBox={v:2},", ",sagPendKey=", "βοηθοί", false);
+    const H = new Function("let " + helpers + ";\nreturn {sagEceSet, sagFertSet, sagEceCard, sagEceF9, sagEceBox, sagFertBox, sagDepthBox};")();
     H.sagEceSet(RAMM); H.sagFertSet(3.3);
     const c1 = H.sagEceCard("conduct_soil1"), c2 = H.sagEceCard("conduct_soil2");
     ok(c1 && c1.t === "💧 EC στη ρίζα Ρηχό" && c1.v === "3,14 mS/cm", "Π1 τίτλος/τιμή ρηχό (W-EC-INSTANT-01: 2 δεκαδικά): " + JSON.stringify(c1));
@@ -44,11 +45,11 @@ function run(w) {
     const chart = (hist, fert) => {
       H.sagEceSet(RAMM); H.sagFertSet(fert);
       const calls = {};
-      const fn = new Function("_sagEc9", "t", "h", "re", "ue", "it", "b", "B", "w", "j", "$", "P", "fe", "p", "sagEceBox", "sagFertBox", "sagEceF9",
+      const fn = new Function("_sagEc9", "t", "h", "re", "ue", "it", "b", "B", "w", "j", "$", "P", "fe", "p", "sagEceBox", "sagFertBox", "sagEceF9", "sagDepthBox",
         body + "\nreturn 'πτώση';");
       const r = fn(["conduct_soil1", "1"], { history: { FIELD: hist } }, "FIELD", RAMM, "SENSOR", () => "Έδαφος",
         (x) => { calls.v = x; }, (x) => { calls.t = x; }, (x) => { calls.d = x; }, (x) => { calls.s = x; }, (x) => { calls.u = x; },
-        (x) => { calls.refs = x; }, () => {}, () => {}, H.sagEceBox, H.sagFertBox, H.sagEceF9);
+        (x) => { calls.refs = x; }, () => {}, () => {}, H.sagEceBox, H.sagFertBox, H.sagEceF9, H.sagDepthBox);
       return { r, calls };
     };
     const A = chart({ soil_ec_pore1: [{ t: 1, v: 3.1 }], soil_ece1: [{ t: 1, v: 1.7 }] }, 3.3);
@@ -70,7 +71,7 @@ function run(w) {
     const gs = w.indexOf("const Gs=({open:t,variable:s,label:a,series:r,unit:i,refLines:p,");
     const nb = w.indexOf('find(x=>x&&x.label==="_ec10")');
     ok(gs > 0 && nb > gs && (w.indexOf("=({open:", gs + 20) < 0 || nb < w.indexOf("=({open:", gs + 20)), "Σ1 το κουτί εξήγησης αποδίδεται μέσα στο παράθυρο διαγράμματος");
-    ok(w.includes('sagFertSet(o&&o.fert_ecw_dsm);return vv}catch(_e){sagCoveredSet(!1);sagFertSet(null);return!1}'), "Σ2 το λίπασμα έρχεται από τη ρύθμιση του αγρού");
+    ok(w.includes('sagFertSet(o&&o.fert_ecw_dsm);sagDepthSet(o&&o.soil_depth_count);return vv}catch(_e){sagCoveredSet(!1);sagFertSet(null);sagDepthSet(2);return!1}'), "Σ2 το λίπασμα έρχεται από τη ρύθμιση του αγρού");
     ok(w.includes('soil_ec_pore1:{label:"💧 EC στη ρίζα Ρηχό"') && w.includes('soil_ec_pore2:{label:"💧 EC στη ρίζα Βαθύ"'), "Σ3 ετικέτες");
     ok(!w.includes("νερό ρίζας") && !w.includes("Αγωγιμότητα νερού πόρων"), "Σ4 χωρίς παλιές ετικέτες");
     ok(!/\r/.test(w), "Σ5 LF");
@@ -86,7 +87,7 @@ const MUT = [
   ["m2 τιμή ECe στο πλακίδιο", 'v:sagEceF9(p9,2)+" mS/cm"', 'v:sagEceF9(e9,2)+" mS/cm"'],
   ["m3 ένα δεκαδικό (W-EC-INSTANT-01: δύο)", 'v:sagEceF9(p9,2)+" mS/cm"', 'v:sagEceF9(p9,1)+" mS/cm"'],
   ["m4 χωρίς όριο καλλιέργειας", '" · όριο καλλιέργειας "+sagEceF9(tl9,1)', '""'],
-  ["m5 λίπασμα δεν τροφοδοτείται", "sagFertSet(o&&o.fert_ecw_dsm);return vv", "return vv"],
+  ["m5 λίπασμα δεν τροφοδοτείται", "sagFertSet(o&&o.fert_ecw_dsm);sagDepthSet(", "sagDepthSet("],
   ["m6 λίπασμα 0 δεκτό", "Number.isFinite(n)&&n>0)?n:null}", "Number.isFinite(n))?n:null}"],
   ["m7 διάγραμμα πάντα ECe", "if(_pS9.length){", "if(false){"],
   ["m8 χωρίς γραμμή λιπάσματος", '_fz9!==null&&_l9.push({value:_fz9,label:"Διάλυμα που ρίχνετε",dashed:!0});', ""],

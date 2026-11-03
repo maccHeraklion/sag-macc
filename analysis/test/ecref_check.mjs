@@ -19,9 +19,11 @@ function build(core) {
     /const _SAG_EC_EPS0 = [^\n]+/, /const _SAG_EC_MIN_VWC = [^\n]+/, /const _SAG_EC_DEAD_US = [^\n]+/,
   ].map(re => (core.match(re) || [null])[0]);
   const chans = slice(core, "const _SAG_EC_CHANNELS = [", "];") + "];";
-  const fns = ["_sagEcWaterPermittivity", "_sagEcToppPermittivity", "_sagEcChain", "_sagEcRefIndicators"].map(n => fn(core, n));
+  // T-DEPTH1-01 (v50.167): τα κανάλια περνούν από το _sagEcChansD1· εδώ χωρίς δήλωση «ένα βάθος» (σημαία false).
+  const fns = ["_sagEcWaterPermittivity", "_sagEcToppPermittivity", "_sagEcChain", "_sagD1Masked", "_sagEcChansD1", "_sagEcRefIndicators"].map(n => fn(core, n));
   if (parts.some(p => !p) || fns.some(f => !f) || !chans) return null;
-  const src = `const getVal = (m, k, d) => (m && m.data && Number.isFinite(Number(m.data[k]))) ? Number(m.data[k]) : d;
+  const src = `let _SAG_DEPTH1_ACTIVE = false; const _SAG_SOIL_M_SHALLOW = []; const _sagNumFrom = () => null;
+    const getVal = (m, k, d) => (m && m.data && Number.isFinite(Number(m.data[k]))) ? Number(m.data[k]) : d;
     const console = { log: () => {} };
     ${parts.join("\n")}\n${chans}\n${fns.join("\n")}\nreturn _sagEcRefIndicators;`;
   return new Function(src)();

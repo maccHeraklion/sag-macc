@@ -510,12 +510,21 @@
           <select id="soil_ref_device" onchange="this.dataset.touched='1'"><option value="">Δεν έχει δηλωθεί — μέσος όρος όλων</option></select>
           <div class="muted" style="font-size:.85rem; margin-top:4px" id="soilRefNote">—</div>
         </div>
+        <!-- v26 · T-DEPTH1-01: ένα ή δύο βάθη αισθητήρα εδάφους -->
         <div class="field">
+          <label>Αισθητήρες εδάφους σε</label>
+          <select id="soil_depth_count" onchange="_sagDepthUi()">
+            <option value="2">Δύο βάθη (ρηχό και βαθύ)</option>
+            <option value="1">Ένα βάθος</option>
+          </select>
+          <div class="muted" style="font-size:.85rem; margin-top:4px" id="depthCountNote">Πόσα βάθη μετρά ο αισθητήρας εδάφους του αγρού.</div>
+        </div>
+        <div class="field" id="deepDepthWrap">
           <label>Βάθος Αισθητήρα (Βαθύ) (cm)</label>
           <input id="sensor_deep_depth_cm" type="number" step="1" placeholder="π.χ. 30" />
         </div>
         <div class="field">
-          <label>Βάθος Αισθητήρα (Ρηχό) (cm)</label>
+          <label id="shallowDepthLabel">Βάθος Αισθητήρα (Ρηχό) (cm)</label>
           <input id="sensorShallow_depth_cm" type="number" step="1" placeholder="π.χ. 10" />
         </div>
         <div class="field">
@@ -2125,6 +2134,19 @@ function _sagSoilRefRender(){
        + 'δηλωμένη σόνδα δεν δώσει πρόσφατη μέτρηση ή κριθεί χαλασμένη, το σύστημα γυρίζει προσωρινά στον μέσο όρο.');
   wrap.style.display = '';
 }
+/* v26 · T-DEPTH1-01: «Ένα βάθος» κρύβει το βαθύ (η τιμή του ΜΕΝΕΙ — ο πυρήνας v50.167 την αγνοεί). */
+function _sagDepthUi(){
+  try{
+    const sel = $('soil_depth_count'); if (!sel) return;
+    const one = sel.value === '1';
+    const w = $('deepDepthWrap'); if (w) w.style.display = one ? 'none' : '';
+    const l = $('shallowDepthLabel'); if (l) l.textContent = one ? 'Βάθος αισθητήρα (cm)' : 'Βάθος Αισθητήρα (Ρηχό) (cm)';
+    const n = $('depthCountNote');
+    if (n) n.textContent = one
+      ? 'Ένα βάθος: η άρδευση, η αλατότητα και ο έλεγχος οργάνων χρησιμοποιούν μόνο αυτό· το δεύτερο κανάλι του αισθητήρα (αν υπάρχει) αγνοείται και δεν βγάζει ψευδείς βλάβες.'
+      : 'Δύο βάθη: η υγρασία ριζοστρώματος σταθμίζεται ανάμεσα στο ρηχό και στο βαθύ ανάλογα με το βάθος της ρίζας.';
+  }catch(e){}
+}
 function _keepPrev(v, prev){
   if (v === null || v === undefined || v === '') {
     return (prev === undefined ? null : prev);
@@ -2242,6 +2264,7 @@ function buildPayload(){
     area: _keepPrev(numOrNull($('area').value), prevConf.area),
     total_plants: intOrNull($('total_plants').value),
     sensor_deep_depth_cm: intOrNull($('sensor_deep_depth_cm').value),
+    soil_depth_count: ($('soil_depth_count') && $('soil_depth_count').value === '1') ? 1 : 2,   /* v26 · T-DEPTH1-01 */
     sensorShallow_depth_cm: intOrNull($('sensorShallow_depth_cm').value),
     /* v25 · T-SOILREF-02: ορατό πεδίο → η επιλογή (κενό = αυτόματα)· κρυφό → ΚΡΑΤΑ την προηγούμενη δήλωση. */
     soil_ref_device: ($('soilRefWrap') && $('soilRefWrap').style.display !== 'none')
@@ -2668,6 +2691,7 @@ function applyIncoming(buckets, formLocked){
         if (conf.total_plants!=null) $('total_plants').value = conf.total_plants;
         if (conf.sensor_deep_depth_cm!=null) $('sensor_deep_depth_cm').value = conf.sensor_deep_depth_cm;
         if (conf.sensorShallow_depth_cm!=null) $('sensorShallow_depth_cm').value = conf.sensorShallow_depth_cm;
+        $('soil_depth_count').value = String(conf.soil_depth_count) === '1' ? '1' : '2'; _sagDepthUi();   /* v26 · T-DEPTH1-01 */
         state.soilRefConf = conf.soil_ref_device || ''; _sagSoilRefRender();   /* v25 · T-SOILREF-02 */
         /* v5 */
         if (conf.stone_fraction_pct!=null) $('stone_fraction_pct').value = conf.stone_fraction_pct;
@@ -2911,13 +2935,14 @@ $('btnSave').onclick = function(){
      κείμενο ΦΑΙΝΕΤΑΙ στο .value. Ο έλεγχος καλύπτει και τις δύο περιπτώσεις:
      badInput Ή (μη κενή τιμή που δεν διαβάζεται ως αριθμός). */
   [['total_plants','αριθμός φυτών'],
-   ['sensor_deep_depth_cm','βάθος βαθιού αισθητήρα'],['sensorShallow_depth_cm','βάθος ρηχού αισθητήρα'],
+   ['sensor_deep_depth_cm','βάθος βαθιού αισθητήρα'],['sensorShallow_depth_cm','βάθος αισθητήρα'],
    ['stone_fraction_pct','ποσοστό πετρών'],['cover_transmissivity_pct','διαπερατότητα καλύμματος'],
    ['irrig_emitter_lph','παροχή σταλακτήρα'],['irrig_emitter_spacing_m','απόσταση σταλακτήρων'],
    ['irrig_row_spacing_m','απόσταση γραμμών'],['irrig_fw_pct','ποσοστό διαβροχής'],
    ['irrig_efficiency_pct','απόδοση δικτύου'],
    ['water_ecw_dsm','EC νερού άρδευσης'],['fert_ecw_dsm','EC μείγματος λίπανσης']]
   .forEach(function(pair){
+    if (pair[0] === 'sensor_deep_depth_cm' && $('soil_depth_count') && $('soil_depth_count').value === '1') return;   /* v26 · T-DEPTH1-01 */
     var e = $(pair[0]);
     if (!e) return;
     var bad = (e.validity && e.validity.badInput)
@@ -3096,6 +3121,7 @@ if (window.TagoIO && window.TagoIO.ready){
          'soil_type','irrigation_system','water_quality']
           .forEach(function(id){ const e=$(id); if(e) e.value=''; });
         state.soilRefConf = ''; { const _sr = $('soil_ref_device'); if (_sr) _sr.dataset.touched = ''; } _sagSoilRefRender();   /* v25 · T-SOILREF-02 */
+        { const _dc = $('soil_depth_count'); if (_dc) _dc.value = '2'; } _sagDepthUi();   /* v26 · T-DEPTH1-01 */
       }
       state.deviceSig = sig;   /* γύρος 5: καταγράφεται ΠΑΝΤΑ, και η κενή */
     } catch(e){}

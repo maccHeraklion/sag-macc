@@ -41,7 +41,7 @@ const CHECKS = [
     f => /if \(_rv === null \|\| _rv === undefined \|\| _rv === ''\) continue;/.test(f.core)],
   ["core: soil_ec_pore εκπέμπεται στο shared (γρ. ~10971) και δεν διαβάζεται από υπολογισμό",
     f => /out\.push\(\{ variable: 'soil_ec_pore' \+ c\.n,/.test(f.core)
-      && (f.core.match(/soil_ec_pore/g) || []).length === 4 /* 10971, 13245 regex, σχόλιο+λίστα 13623 */],
+      && (f.core.match(/soil_ec_pore/g) || []).length === 5 /* 10971, 13245 regex, σχόλιο+λίστα 13623, purge καναλιού 2 T-DEPTH1-01 */],
   ["core: χωρίς BOM", f => !f.core.startsWith("﻿")],
   ["core: καθαρό CRLF (0 γυμνά LF)", f => (f.core.match(/\n/g) || []).length === (f.core.match(/\r\n/g) || []).length],
   ["core: node --check", f => nodeCheck(f.core, ".js")],
