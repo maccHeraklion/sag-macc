@@ -1,6 +1,6 @@
-// SAG — PROBE ΑΝΑΓΝΩΣΗΣ (ΜΟΝΟ ΑΝΑΓΝΩΣΗ) · Επαλήθευση v50.167 (T-DEPTH1-01) μετά τον πρώτο ωριαίο κύκλο (3/11/2026 11:21 UTC).
+// SAG — PROBE ΑΝΑΓΝΩΣΗΣ (ΜΟΝΟ ΑΝΑΓΝΩΣΗ) · Επαλήθευση v50.167/v50.168 (T-DEPTH1-01/02) μετά τον ωριαίο κύκλο.
 // (1) fleet_summary: έκδοση, πόσοι αγροί υπολογίστηκαν, σφάλματα · (2) field_bundle κάθε αγρού: φρεσκάδα, έκδοση, μέγεθος,
-// πόσοι έχουν «δηλωμένο ένα βάθος» (αναμένεται 0 μέχρι να δηλωθεί στη φόρμα). Πολιτική 6aa2e0cf. Δεν γράφει τίποτα.
+// πόσοι έχουν «δηλωμένο ένα βάθος». Πολιτική 6aa2e0cf. Δεν γράφει τίποτα.
 const zlib = require("zlib");
 const TOKEN = process.env.T_ANALYSIS_TOKEN; const API = "https://api.us-e1.tago.io";
 const FLEET = "6a98855ca06e41000bfae024";
@@ -10,7 +10,7 @@ async function get(path) {
   if (!j.status) throw new Error(JSON.stringify(j.message || j).slice(0, 140));
   return j.result;
 }
-const P = "V167|";
+const P = "V168|";
 (async () => {
   console.log(P + "=== " + new Date().toISOString() + " ===");
   try {
@@ -35,12 +35,12 @@ const P = "V167|";
         const s = JSON.stringify(o); const m = s.match(/v50\.\d+ · \d{4}-\d\d-\d\d/); const v = m ? m[0] : "?"; ver[v] = (ver[v] || 0) + 1;
         if (s.includes("δηλωμένο ένα βάθος")) {
           d1++;
-          const i = s.indexOf("soil_moisture_rootzone"), j = s.indexOf("soil_depth_basis");
-          console.log(P + "DEPTH1|" + d.name + "|ηλικία=" + Math.round(age) + "΄|" + s.slice(i, i + 260) + " ‖ " + s.slice(j, j + 260));
+          const j = s.indexOf("soil_depth_basis");
+          console.log(P + "DEPTH1|" + d.name + "|" + s.slice(j, j + 300));
         }
       } catch (_e) {}
     }
-    console.log(P + "FIELDS|αγροί=" + devs.length + "|φρέσκα=" + fresh + "|μπαγιάτικα=" + stale + "|χωρίς bundle=" + none + "|εκδόσεις=" + JSON.stringify(ver) + "|μέγιστο bundle=" + maxB + "|ένα βάθος=" + d1);
+    console.log(P + "FIELDS|αγροί=" + devs.length + "|φρέσκα=" + fresh + "|μπαγιάτικα=" + stale + "|χωρίς bundle=" + none + "|εκδόσεις=" + JSON.stringify(ver).replace(/"/g, "") + "|μέγιστο bundle=" + maxB + "|ένα βάθος=" + d1);
   } catch (e) { console.log(P + "ERR fields|" + e.message); }
   console.log(P + "=== ΤΕΛΟΣ ===");
 })();
