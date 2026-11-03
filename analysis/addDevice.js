@@ -193,10 +193,10 @@ async function myAnalysis(context, scope) {
   console.log('EUI: ', eui, ' received!');
 
   let appeui = scope.find((item) => item.variable === "appeui")?.value;
-  console.log('appeui: ', appeui, ' received!');
+  console.log('appeui received: ', !!appeui);   // T-DEV-LOG-01 (3/11/2026): the value stays out of the console
 
   let appkey = scope.find((item) => item.variable === "appkey")?.value;
-  console.log('appkey: ', appkey, ' received!');
+  console.log('appkey received: ', !!appkey);
 
   // T-DEV-MKF-01: unknown manufacturer/type used to crash the analysis with no message on the form.
   const networkAndConnector = getNetworkAndConnector(manufacturer, type);
