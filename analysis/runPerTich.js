@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.171 · 2026-11-03';   // T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
+const SAG_KERNEL_VERSION = 'v50.172 · 2026-11-03';   // T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -8018,7 +8018,8 @@ if (effectiveRainfall_mm >= 5 && _rainStillArriving) {
     { variable: 'irrigationDurationHours', value: 0 },
     { variable: 'irrigation_inhibited_by_rain', value: true },
     { variable: 'effective_rainfall_mm', value: parseFloat(effectiveRainfall_mm.toFixed(1)) },
-    { variable: 'irrigation_message', value: `Δεν απαιτείται πότισμα — βροχή ${rainfall_24h_irr.toFixed(1)}mm (ωφέλιμη: ${effectiveRainfall_mm.toFixed(1)}mm)` }
+    { variable: 'irrigation_message', value: `Δεν απαιτείται πότισμα — βροχή ${rainfall_24h_irr.toFixed(1)}mm (ωφέλιμη: ${effectiveRainfall_mm.toFixed(1)}mm)`,
+      metadata: { color: 'green', text: 'Η βροχή καλύπτει την ανάγκη σε νερό. Η ανάγκη ξανακρίνεται στον επόμενο υπολογισμό.' } }
   ]);
 }
 // ── End D1 ──────────────────────────────────────────────────────────────
@@ -15297,6 +15298,7 @@ const _SAG_DEV_KIND_EL = {
 function _sagDevKindEl(t) { return _SAG_DEV_KIND_EL[t] || ''; }
 
 const _SAG_SOIL_TYPES = ['lse01', 'lse01_shallow', 'lse01_deep', 'lse02', 'se0x'];
+const _SAG_SOIL_RANGE_MAX = 18;   // T-WAVE1-01: όριο ημερήσιου εύρους (°C) για «σόνδα εκτός εδάφους»· το ίδιο στον έλεγχο και στο κείμενο
 const _SAG_AIR_TYPES = ['s2120', 'em300_th', 'em320_th'];
 
 // ── Στατιστικά διαγνωστικής σειράς ─────────────────────────────────────────
@@ -15490,15 +15492,15 @@ function _sagDetectFaults(dev, data, ctx) {
   // ΦΥΣΙΚΗ: το ημερήσιο θερμικό κύμα αποσβένεται εκθετικά με το βάθος,
   // A(z) = A0·exp(−z/d), με βάθος απόσβεσης d ≈ 10–15 cm σε τυπικά εδάφη.
   // Στα 10 cm το εύρος πέφτει στο ~37 % του ατμοσφαιρικού, στα 20 cm στο ~14 %.
-  // Ημερήσιο εύρος αέρα 20 °C ⇒ αναμενόμενο εύρος εδάφους 3–7 °C. Εύρος >12 °C
-  // σημαίνει ότι η σόνδα ΔΕΝ βρίσκεται μέσα στο χώμα.
+  // Ημερήσιο εύρος αέρα 20 °C ⇒ αναμενόμενο εύρος εδάφους 3–7 °C. Εύρος πάνω από
+  // το _SAG_SOIL_RANGE_MAX σημαίνει ότι η σόνδα ΔΕΝ βρίσκεται μέσα στο χώμα.
   if (_SAG_SOIL_TYPES.indexOf(t) >= 0) {
     let worst = null;
     for (const key of Object.keys(st)) {
       if (!/temp|temperature/.test(key)) continue;
       const s = st[key];
       if (!s || s.n < 12 || s.spanH < 12) continue;
-      if (s.range > 18 && (worst === null || s.range > worst.range)) worst = { key, range: s.range, min: s.min, max: s.max };
+      if (s.range > _SAG_SOIL_RANGE_MAX && (worst === null || s.range > worst.range)) worst = { key, range: s.range, min: s.min, max: s.max };
     }
     // ΕΠΙΒΕΒΑΙΩΣΗ. Το εύρος ΜΟΝΟ του δεν αρκεί: μαύρο πλαστικό εδαφοκάλυψης,
     // γλάστρα, ή πότισμα με νερό γεώτρησης 17 °C σε χώμα 32 °C δίνουν νόμιμα
@@ -15513,7 +15515,7 @@ function _sagDetectFaults(dev, data, ctx) {
     if (worst) {
       out.push({ dev: nm, kill: false, title: 'Ο αισθητήρας μάλλον δεν είναι μέσα στο χώμα',
         what: 'Ημερήσιο εύρος θερμοκρασίας εδάφους ' + worst.range.toFixed(1) + ' °C ('
-          + worst.min.toFixed(1) + '–' + worst.max.toFixed(1) + ')· θαμμένος αισθητήρας: ≤12 °C.'
+          + worst.min.toFixed(1) + '–' + worst.max.toFixed(1) + ')· όριο για θαμμένο αισθητήρα: ' + _SAG_SOIL_RANGE_MAX + ' °C.'
           + (_corrob ? ' Υγρασία/αγωγιμότητα ~0 — επιβεβαιωμένη έλλειψη επαφής.' : ''),
         act: 'Επανατοποθέτηση στο ίδιο βάθος/θέση, συμπίεση με το χέρι (όχι πόδι), πότισμα του σημείου.'
           + (_corrob ? '' : ' Εξαιρέσεις με φυσιολογικό μεγάλο εύρος: μαύρο πλαστικό, γλάστρα, κρύο νερό γεώτρησης — οπτικός έλεγχος πρώτα.') });

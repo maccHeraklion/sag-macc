@@ -55,7 +55,7 @@ const CHECKS = [
     const L = g._SAG_FLEET_FILES; return ["storage/sagMain/index.html", "storage/sagMain/index-7cbd9a4e.js", "storage/sagMain/sag-fleet.html", "html_files/configuration.html"].every(p => L.includes(p)); }],
   ["_sagHeadFile: ακολουθεί 3xx (Location) έως 3 άλματα — το api.tago.io δίνει 302 ΚΑΙ για ανύπαρκτα", f => f.core.includes("if (r.statusCode >= 300 && r.statusCode < 400 && loc && hops < 3) {")],
   ["catch αγρού: σημειώνει e στη γραμμή ή προσθέτει ελάχιστη γραμμή με e", f => f.core.includes("if (!_sagFleetMark(fieldName, { e: _eTxt })) {") && f.core.includes("d: [], k: [], v: [], a: [], z: [], g: [], e: _eTxt });")],
-  ["αγρός χωρίς ρύθμιση: γραμμή nc: 1 (ΓΡΑΦΕΙΟ) ΠΡΙΝ το continue", f => { const i = f.core.indexOf("g: ['ρύθμιση αγρού από τη φόρμα (καμία)'], nc: 1 });"); const j = f.core.indexOf("          continue;\n        }", i); return i > 0 && j > i && j - i < 200; }],
+  ["αγρός χωρίς ρύθμιση: γραμμή nc: 1 (ΓΡΑΦΕΙΟ) ΠΡΙΝ το continue", f => { const i = f.core.indexOf("p: _ncPurpose, nc: 1 });"); const j = f.core.indexOf("          continue;\n        }", i); return i > 0 && j > i && j - i < 200; }],
   ["bundle: _SAG_LAST_BUNDLE από τον φρουρό μεγέθους, σημείωση ok/bb/bt μετά το sendData, μηδενισμός ανά αγρό", f =>
     f.core.includes("_SAG_LAST_BUNDLE = { b: compressedData.length, t: _fitBefore > _SAG_BUNDLE_MAX_B64 ? 1 : 0 };") && f.core.includes("try { _sagFleetMark(fieldName, { ok: 1, bb: _SAG_LAST_BUNDLE ? _SAG_LAST_BUNDLE.b : null,") && f.core.includes("_SAG_LAST_BUNDLE = null;   // T-FLEET-HEALTH-01: θα γεμίσει")],
   ["πρόγνωση: _sagForecastAt από τη γραμμή forecast και fc (ώρες) στη γραμμή του αγρού", f => f.core.includes("measurements.data._sagForecastAt = _fcRow.time;") && f.core.includes("_sagForecastAt || ''));\n              return Number.isFinite(_t) ? Math.round((_nowMsF - _t) / 36000) / 100 : null; })(),")],
@@ -72,7 +72,7 @@ const MUTATIONS = [
   ["_sagFileOk αγνοεί content-type του html", c => c.replace("if (/\\.html?$/.test(p)) return t === 'text/html' ? 1 : 0;", "if (/\\.html?$/.test(p)) return 1;")],
   ["_sagHeadFile δεν ακολουθεί ανακατευθύνσεις", c => c.replace("&& loc && hops < 3) {", "&& loc && hops < 0) {")],
   ["catch αγρού δεν προσθέτει γραμμή", c => c.replace("d: [], k: [], v: [], a: [], z: [], g: [], e: _eTxt });", "d: [], k: [], v: [], a: [], z: [], g: [] });")],
-  ["αγρός χωρίς ρύθμιση μένει αόρατος", c => c.replace("g: ['ρύθμιση αγρού από τη φόρμα (καμία)'], nc: 1 });", "g: [], nc: 0 });")],
+  ["αγρός χωρίς ρύθμιση μένει αόρατος", c => c.replace("p: _ncPurpose, nc: 1 });", "p: _ncPurpose, nc: 0 });")],
   ["το bundle δεν σημειώνεται ως γραμμένο", c => c.replace("try { _sagFleetMark(fieldName, { ok: 1, bb:", "try { _sagFleetMark(fieldName, { ok: 0, bb:")],
   ["files_bad πάντα 0", c => c.replace("files: _fbFiles, files_bad: _fbFiles.filter(x => !x.c).length,", "files: _fbFiles, files_bad: 0,")],
   ["_sagFleetFiles θεωρεί όλα τα αρχεία εντάξει", c => c.replace("return { p, h: r ? r.h : 0, t: r ? r.t : 'timeout', c: _sagFileOk(p, r) };", "return { p, h: r ? r.h : 0, t: r ? r.t : 'timeout', c: 1 };")],
