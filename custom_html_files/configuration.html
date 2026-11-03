@@ -525,8 +525,9 @@
           <select id="soil_depth_port">
             <option value="1">Θύρα 1</option>
             <option value="2">Θύρα 2</option>
+            <option value="3">Και οι δύο — δύο σημεία στο ίδιο βάθος (μέσος όρος)</option>   <!-- v28 · T-DEPTH1-03 -->
           </select>
-          <div class="muted" style="font-size:.85rem; margin-top:4px">Μόνο για αισθητήρες με δύο θύρες (Dragino SE0X / LSE02). Αισθητήρας μίας σόνδας (LSE01) αναγνωρίζεται αυτόματα.</div>
+          <div class="muted" style="font-size:.85rem; margin-top:4px">Μόνο για αισθητήρες με δύο θύρες (Dragino SE0X / LSE02). Αισθητήρας μίας σόνδας (LSE01) αναγνωρίζεται αυτόματα. «Και οι δύο»: οι δύο σόνδες είναι στο ίδιο βάθος σε διαφορετικά σημεία· η άρδευση βγαίνει από τον μέσο όρο και κάθε σημείο φαίνεται χωριστά. Πολλοί αισθητήρες μίας σόνδας στο ίδιο βάθος δίνουν ήδη μέσο όρο.</div>
         </div>
         <div class="field" id="deepDepthWrap">
           <label>Βάθος Αισθητήρα (Βαθύ) (cm)</label>
@@ -2278,7 +2279,7 @@ function buildPayload(){
     total_plants: intOrNull($('total_plants').value),
     sensor_deep_depth_cm: intOrNull($('sensor_deep_depth_cm').value),
     soil_depth_count: ($('soil_depth_count') && $('soil_depth_count').value === '1') ? 1 : 2,   /* v26 · T-DEPTH1-01 */
-    soil_depth_port: ($('soil_depth_count') && $('soil_depth_count').value === '1' && $('soil_depth_port') && $('soil_depth_port').value === '2') ? 2 : 1,   /* v27 · T-DEPTH1-02 */
+    soil_depth_port: ($('soil_depth_count') && $('soil_depth_count').value === '1' && $('soil_depth_port')) ? ({ '2': 2, '3': 3 }[$('soil_depth_port').value] || 1) : 1,   /* v27/v28 · T-DEPTH1-02/03 */
     sensorShallow_depth_cm: intOrNull($('sensorShallow_depth_cm').value),
     /* v25 · T-SOILREF-02: ορατό πεδίο → η επιλογή (κενό = αυτόματα)· κρυφό → ΚΡΑΤΑ την προηγούμενη δήλωση. */
     soil_ref_device: ($('soilRefWrap') && $('soilRefWrap').style.display !== 'none')
@@ -2706,7 +2707,7 @@ function applyIncoming(buckets, formLocked){
         if (conf.sensor_deep_depth_cm!=null) $('sensor_deep_depth_cm').value = conf.sensor_deep_depth_cm;
         if (conf.sensorShallow_depth_cm!=null) $('sensorShallow_depth_cm').value = conf.sensorShallow_depth_cm;
         $('soil_depth_count').value = String(conf.soil_depth_count) === '1' ? '1' : '2';
-        $('soil_depth_port').value = String(conf.soil_depth_port) === '2' ? '2' : '1'; _sagDepthUi();   /* v26/v27 · T-DEPTH1-01/02 */
+        $('soil_depth_port').value = ['2', '3'].indexOf(String(conf.soil_depth_port)) >= 0 ? String(conf.soil_depth_port) : '1'; _sagDepthUi();   /* v26/v27 · T-DEPTH1-01/02 */
         state.soilRefConf = conf.soil_ref_device || ''; _sagSoilRefRender();   /* v25 · T-SOILREF-02 */
         /* v5 */
         if (conf.stone_fraction_pct!=null) $('stone_fraction_pct').value = conf.stone_fraction_pct;

@@ -1,5 +1,5 @@
-// Ελεγκτής T-DEPTH1-01/02 (3/11/2026): «ένα βάθος αισθητήρα εδάφους» με δήλωση στη φόρμα ΚΑΙ δήλωση θύρας — πυρήνας
-// v50.168, φόρμα v27, sync v17, widget W-DEPTH1-02. Φορτώνει τον ΠΡΑΓΜΑΤΙΚΟ πυρήνα και τον v50.166 από το git (ΔΙΑΦΟΡΙΚΟ:
+// Ελεγκτής T-DEPTH1-01/02/03 (3/11/2026): «ένα βάθος αισθητήρα εδάφους» με δήλωση στη φόρμα, δήλωση θύρας και «δύο σημεία
+// στο ίδιο βάθος» — πυρήνας v50.169, φόρμα v28, sync v17, widget W-DEPTH1-03. Διαφορικό και με τον v50.168 (θύρες 1/2). Φορτώνει τον ΠΡΑΓΜΑΤΙΚΟ πυρήνα και τον v50.166 από το git (ΔΙΑΦΟΡΙΚΟ:
 // χωρίς δήλωση «ένα βάθος» ΤΑΥΤΟΣΗΜΑ, ακόμη κι αν υπάρχει soil_depth_port) και τον v50.167 (ένα βάθος, θύρα 1, βάθος
 // ρηχού γραμμένο: ΤΑΥΤΟΣΗΜΑ). Εκτελεί τον ΠΡΑΓΜΑΤΙΚΟ κώδικα φόρμας/widget με ψεύτικο DOM. Μεταλλάξεις σκοτώνονται.
 import fs from "node:fs"; import path from "node:path"; import { fileURLToPath } from "node:url";
@@ -10,6 +10,7 @@ const CORE0 = fs.readFileSync(KPATH, "utf8").replace(/\r\n/g, "\n");
 const gshow = (c) => execSync("git show " + c + ":analysis/runPerTich.js", { cwd: root, maxBuffer: 64 << 20 }).toString("utf8").replace(/\r\n/g, "\n");
 const OLD = gshow("1b33dc36c26a1e52cb4eb2b69994bb8cdabf1af7");   // v50.166
 const V167 = gshow("068c4c43f2ef6ef9c12a85e74a5789ca65853d66");  // v50.167
+const V168 = gshow("5257087697cde15cf14deb7c6b3c5e9e5ab917cf");  // v50.168
 const FORM0 = fs.readFileSync(path.join(root, "custom_html_files", "configuration.html"), "utf8").replace(/\r\n/g, "\n");
 const SYNC0 = fs.readFileSync(path.join(here, "..", "setFieldParametersFromDeviceData.js"), "utf8").replace(/\r\n/g, "\n");
 const WID0 = fs.readFileSync(path.join(root, "_dist-sagMain", "index-7cbd9a4e.js"), "utf8");
@@ -34,17 +35,17 @@ const BASE = { cultivation_type_general: "vegetableCrops", cultivation_type: "to
 function run(core, form, sync, wid) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   try {
-    const K = load(core, COMMON + ", _sagDepth1Mask, _sagDevExpect, _sagDevStatsD1, _sagEcChansD1, _sagDepth1Of, _sagDepth1PortOf, _SAG_DEV_EXPECT, _SAG_EC_CHANNELS,"
+    const K = load(core, COMMON + ", _sagDepth1Mask, _sagDevExpect, _sagDevStatsD1, _sagEcChansD1, _sagDepth1Of, _sagDepth1PortOf, _sagSplitPoints, _sagMergeDeviceData, _SAG_DEV_EXPECT, _SAG_EC_CHANNELS,"
       + " _setD1: (v, p) => { _SAG_DEPTH1_ACTIVE = v; _SAG_DEPTH1_PORT = p || 1; _SAG_D1_HINTS = []; }, _hints: () => _SAG_D1_HINTS");
-    const O = load(OLD, COMMON), V = load(V167, COMMON);
-    ok(K.SAG_KERNEL_VERSION === "v50.168 · 2026-11-03", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    const O = load(OLD, COMMON), V = load(V167, COMMON), V8 = load(V168, COMMON);
+    ok(K.SAG_KERNEL_VERSION === "v50.169 · 2026-11-03", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     // ── Δ: ΔΙΑΦΟΡΙΚΑ ──
     const DD = [{}, { sensorShallow_depth_cm: 15 }, { sensorShallow_depth_cm: 15, sensor_deep_depth_cm: 40 }, { sensor_deep_depth_cm: 60 }];
     const MV = [{}, { soil_moisture1: 22 }, { soil_moisture2: 30 }, { soil_moisture1: 22, soil_moisture2: 30 }, { soil_moisture: 18 }, { soil_moisture1: 9, soil_moisture2: 41, rain_height_daily: 3 }];
     const triple = (X, p) => J([X._sagRootZoneMoisture(M(p.__m), p), X._sagSensorDepthCm(p, 1), X._sagSensorDepthCm(p, 2)]);
     let cmp = 0, bad = 0, ex = "";
     K._setD1(false);
-    for (const cfg of [{}, { soil_depth_count: 2 }, { soil_depth_count: "2" }, { soil_depth_count: 0 }, { soil_depth_count: "x" }, { soil_depth_port: 2 }, { soil_depth_count: 2, soil_depth_port: 2 }])
+    for (const cfg of [{}, { soil_depth_count: 2 }, { soil_depth_count: "2" }, { soil_depth_count: 0 }, { soil_depth_count: "x" }, { soil_depth_port: 2 }, { soil_depth_count: 2, soil_depth_port: 2 }, { soil_depth_port: 3 }])
       for (const dd of DD) for (const st of ["initial", "full_canopy"]) for (const mv of MV) {
         const p = Object.assign({ stage: st, __m: mv }, BASE, cfg, dd);
         const a = triple(K, p), b = triple(O, p); cmp++;
@@ -52,7 +53,7 @@ function run(core, form, sync, wid) {
         const rz = O._sagRootZoneMoisture(M(mv), p);
         if (J(K._sagRootZoneIndicators(rz)) !== J(O._sagRootZoneIndicators(rz))) { bad++; ex = ex || "ενδείξεις ριζοστρώματος"; }
       }
-    ok(bad === 0 && cmp === 336, "Δ1 χωρίς «ένα βάθος» ΤΑΥΤΟΣΗΜΑ με v50.166 σε " + cmp + " περιπτώσεις (διαφορές " + bad + ": " + ex + ")");
+    ok(bad === 0 && cmp === 384, "Δ1 χωρίς «ένα βάθος» ΤΑΥΤΟΣΗΜΑ με v50.166 σε " + cmp + " περιπτώσεις (διαφορές " + bad + ": " + ex + ")");
     cmp = 0; bad = 0; ex = "";
     for (const cfg of [{ soil_depth_count: 1 }, { soil_depth_count: 1, soil_depth_port: 1 }])
       for (const dd of [{ sensorShallow_depth_cm: 15 }, { sensorShallow_depth_cm: 15, sensor_deep_depth_cm: 40 }])
@@ -62,6 +63,14 @@ function run(core, form, sync, wid) {
           if (a !== b) { bad++; ex = ex || a.slice(0, 160) + " ≠ " + b.slice(0, 160); }
         }
     ok(bad === 0 && cmp === 16, "Δ2 ένα βάθος, θύρα 1, βάθος γραμμένο: ΤΑΥΤΟΣΗΜΑ με v50.167 (" + bad + ": " + ex + ")");
+    cmp = 0; bad = 0; ex = "";
+    for (const cfg of [{ soil_depth_count: 1 }, { soil_depth_count: 1, soil_depth_port: 2 }, { soil_depth_count: 1, soil_depth_port: 1 }])
+      for (const dd of DD) for (const mv of MV) {
+        const p = Object.assign({ stage: "full_canopy", __m: mv }, BASE, cfg, dd);
+        const a = triple(K, p), b = triple(V8, p); cmp++;
+        if (a !== b) { bad++; ex = ex || a.slice(0, 160) + " ≠ " + b.slice(0, 160); }
+      }
+    ok(bad === 0 && cmp === 72, "Δ3 θύρες 1/2: ΤΑΥΤΟΣΗΜΑ με v50.168 (" + bad + ": " + ex + ")");
     // ── Ρ: ριζόστρωμα / βάθος ──
     const p1 = Object.assign({ stage: "full_canopy", soil_depth_count: 1, sensorShallow_depth_cm: 15, sensor_deep_depth_cm: 40 }, BASE);
     const p2 = Object.assign({}, p1, { soil_depth_port: 2 });
@@ -104,6 +113,28 @@ function run(core, form, sync, wid) {
     const ind2 = K._sagRootZoneIndicators(r2), b2 = ind2.find((x) => x.variable === "soil_depth_basis"), t2 = ind2.find((x) => x.variable === "soil_depth_divergence");
     ok(b2 && b2.metadata.color === "green" && /δηλωμένο ένα βάθος αισθητήρα εδάφους \(θύρα 2 του αισθητήρα\)/.test(b2.metadata.text), "Φ5 θύρα 2 αναφέρεται, πράσινο");
     ok(t2 && t2.value === null && t2.metadata.color === "grey", "Φ6 ταφόπλακα σύγκρισης βαθών");
+    // ── Π: δύο σημεία στο ίδιο βάθος (θύρα 3) ──
+    ok(K._sagDepth1PortOf({ soil_depth_port: 3 }) === 3 && K._sagDepth1PortOf({ soil_depth_port: "3" }) === 3, "Π0 ανάγνωση «και οι δύο»");
+    K._setD1(true, 3); dv = all(); const pt2 = K._sagSplitPoints(dv);
+    ok(pt2 && J(Object.keys(pt2).sort()) === J(["conduct_soil1", "soil_moisture1", "soil_moisture1_avg", "soil_temperature1"]) && pt2.soil_moisture1[0].value === 30
+      && pt2.conduct_soil1[0].value === 250 && pt2.soil_moisture1_avg[0].value === 29, "Π1 η θύρα 2 γίνεται σημείο 2 στο κανάλι 1 (" + J(pt2) + ")");
+    ok(J(Object.keys(dv).sort()) === J(["battery", "conduct_soil1", "soil_moisture1", "soil_moisture1_avg", "soil_temperature1"]) && dv.soil_moisture1[0].value === 20, "Π2 το σημείο 1 κρατά τη θύρα 1");
+    ok(K._sagDepth1Mask(dv, "Α") === 0 && K._hints().length === 0, "Π3 μάσκα: τίποτα δεν κόβεται");
+    ok(K._sagSplitPoints(D({ soil_moisture: 18 })) === null && K._sagSplitPoints(D({ soil_moisture2: 30 })) === null, "Π4 σόνδα μίας θύρας: κανένας διαχωρισμός");
+    K._setD1(true, 1); ok(K._sagSplitPoints(all()) === null, "Π5 θύρα 1: κανένας διαχωρισμός");
+    K._setD1(false); ok(K._sagSplitPoints(all()) === null, "Π6 χωρίς δήλωση: κανένας διαχωρισμός");
+    K._setD1(true, 3); let dt = {}; const d1x = all(); const d2x = K._sagSplitPoints(d1x);
+    dt = K._sagMergeDeviceData(dt, d1x, "SE0X", "Αγρός", "id1"); dt = K._sagMergeDeviceData(dt, d2x, "SE0X · θύρα 2", "Αγρός", "id1:2");
+    ok(Number(dt.soil_moisture1[0].value) === 25 && J(dt._sagSrc.soil_moisture1) === J(["SE0X", "SE0X · θύρα 2"]) && !dt.soil_moisture2, "Π7 συγχώνευση: μέσος όρος 25 από δύο σημεία, κανένα βαθύ");
+    ok(dt._sagDiverge && dt._sagDiverge.soil_moisture1 && dt._sagSoilDev && dt._sagSoilDev["SE0X · θύρα 2"]._id === "id1:2", "Π8 διαφωνία (20↔30) + σημεία διαθέσιμα ως αισθητήρες απόφασης");
+    const p3 = Object.assign({}, p1, { soil_depth_port: 3 });
+    const r5 = K._sagRootZoneMoisture(M({ soil_moisture1: 25, soil_moisture2: 40 }), p3);
+    ok(r5.ok && r5.value === 25 && r5.m2 === null && r5.basis === "Ένα βάθος: 15 cm", "Π9 ριζόστρωμα = μέσος όρος σημείων, κανένα βαθύ (" + J(r5) + ")");
+    const b3 = K._sagRootZoneIndicators(r5).find((x) => x.variable === "soil_depth_basis");
+    ok(b3 && b3.metadata.color === "green" && /ένα βάθος αισθητήρα εδάφους σε δύο σημεία \(μέσος όρος\)/.test(b3.metadata.text), "Π10 κείμενο «δύο σημεία»");
+    ok(K._sagDevStatsD1({ t: "se0x", stats: { soil_moisture1: 1, soil_moisture2: 2 } }).soil_moisture2 === 2, "Π11 στατιστικά: και οι δύο θύρες");
+    ok(core.split("= _sagSplitPoints(deviceData);   // T-DEPTH1-03").length - 1 === 4 && core.split("(info?.name || value) + ' · θύρα 2', fieldName, String(value) + ':2');").length - 1 === 4, "Π12 και τα 4 σημεία συγχώνευσης");
+    ok(core.includes("(_SAG_DEPTH1_ACTIVE && _SAG_DEPTH1_PORT !== 3 && (typeName === 'se0x'") && core.includes("const _SOIL_AVG_CH = (_SAG_DEPTH1_ACTIVE && _SAG_DEPTH1_PORT !== 3) ?"), "Π13 διάγνωση/μέσοι 24ώρου και των δύο θυρών");
     // ── Β: βλάβες / στατιστικά ──
     K._setD1(true, 1);
     ok(K._sagDevExpect("se0x").length === 2 && !K._sagDevExpect("se0x").some((c) => /βαθέος/.test(c.k)), "Β1 θύρα 1: χωρίς «βαθέος»");
@@ -135,14 +166,14 @@ function run(core, form, sync, wid) {
     ok(core.includes("? ['soil_ece1', 'soil_ec_pore1', 'soil_ec_raw1', 'soil_ec_ref1'] : ['soil_ece2', 'soil_ec_pore2', 'soil_ec_raw2', 'soil_ec_ref2']));"), "Σ4 purge της κομμένης θύρας");
     ok(core.includes("const _scS = (_SAG_DEPTH1_ACTIVE && _SAG_DEPTH1_PORT === 2 && Number.isFinite(_scNum(_SAG_SOIL_M_DEEP))) ? {}")
       && core.includes("const _scD = (_SAG_DEPTH1_ACTIVE && _SAG_DEPTH1_PORT !== 2 && Number.isFinite(_scNum(_SAG_SOIL_M_SHALLOW))) ? {}"), "Σ5 βαθμονόμηση της κρατημένης θύρας");
-    ok(core.includes("const _SOIL_AVG_CH = _SAG_DEPTH1_ACTIVE ? (_SAG_DEPTH1_PORT === 2 ? ['soil_moisture2', 'soil_temperature2'] : ['soil_moisture1', 'soil_temperature1'])"), "Σ6 μέσοι 24ώρου της κρατημένης θύρας");
+    ok(core.includes("const _SOIL_AVG_CH = (_SAG_DEPTH1_ACTIVE && _SAG_DEPTH1_PORT !== 3) ? (_SAG_DEPTH1_PORT === 2 ? ['soil_moisture2', 'soil_temperature2'] : ['soil_moisture1', 'soil_temperature1'])"), "Σ6 μέσοι 24ώρου της κρατημένης θύρας");
     ok(core.split("const chans = _numbered ? _sagEcChansD1(measurements)").length - 1 === 2, "Σ7 αναφορά ημέρας + δείκτες EC");
     ok(core.includes("if (soil && !soil2 && !_SAG_DEPTH1_ACTIVE) {"), "Σ8 καμία πρόταση «ΔΕΥΤΕΡΟ ΒΑΘΟΣ»");
     ok(core.includes("const _sOK = _calOk(_cs.s) && !(_p2c && _cs.d && (Number(_cs.d.n) || 0) > 0), _dOK = _calOk(_cs.d)\n        && !(_sagDepth1Of(parameters) && !_p2c && _cs.s && (Number(_cs.s.n) || 0) > 0);"), "Σ9 όρια: η βαθμονόμηση της άλλης θύρας αγνοείται");
     ok(core.includes("filter(v => !(_SAG_DEPTH1_PORT === 2 ? /1$/ : /2$/).test(v))"), "Σ10 ημερήσια διάγνωση της κρατημένης θύρας");
     // ── Φ: φόρμα ──
     ok(/<select id="soil_depth_count" onchange="_sagDepthUi\(\)">\s*<option value="2">Δύο βάθη \(ρηχό και βαθύ\)<\/option>\s*<option value="1">Ένα βάθος<\/option>/.test(form), "ΦΡ1 πεδίο, προεπιλογή «Δύο βάθη»");
-    ok(/<div class="field" id="depthPortWrap" style="display:none">[\s\S]{0,120}<select id="soil_depth_port">\s*<option value="1">Θύρα 1<\/option>\s*<option value="2">Θύρα 2<\/option>/.test(form), "ΦΡ2 πεδίο θύρας, κρυφό, προεπιλογή θύρα 1");
+    ok(/<div class="field" id="depthPortWrap" style="display:none">[\s\S]{0,120}<select id="soil_depth_port">\s*<option value="1">Θύρα 1<\/option>\s*<option value="2">Θύρα 2<\/option>\s*<option value="3">Και οι δύο — δύο σημεία στο ίδιο βάθος \(μέσος όρος\)<\/option>/.test(form), "ΦΡ2 πεδίο θύρας (1 | 2 | και οι δύο), κρυφό, προεπιλογή θύρα 1");
     const uiSrc = cut(form, "function _sagDepthUi(){", "function _keepPrev(v, prev){", "Φ εμφάνιση");
     const els = { soil_depth_count: { value: "1" }, deepDepthWrap: { style: { display: "" } }, depthPortWrap: { style: { display: "none" } }, shallowDepthLabel: { textContent: "" },
       depthCountNote: { textContent: "" }, sensorShallow_depth_cm: { value: "" }, sensor_deep_depth_cm: { value: "30" } };
@@ -155,11 +186,11 @@ function run(core, form, sync, wid) {
       && /θύρα 1 είναι το ρηχό και η 2 το βαθύ/.test(els.depthCountNote.textContent), "ΦΡ6 «Δύο βάθη»: όπως πριν + εξήγηση αντιστοίχισης");
     const val = (id) => ({ soil_depth_count: { value: "1" }, soil_depth_port: { value: id } });
     const svC = cut(form, "    soil_depth_count: ", ",   /* v26 · T-DEPTH1-01 */", "Φ αποθ.").replace("    soil_depth_count: ", "");
-    const svP = cut(form, "    soil_depth_port: ", ",   /* v27 · T-DEPTH1-02 */", "Φ αποθ. θύρας").replace("    soil_depth_port: ", "");
+    const svP = cut(form, "    soil_depth_port: ", ",   /* v27/v28 · T-DEPTH1-02/03 */", "Φ αποθ. θύρας").replace("    soil_depth_port: ", "");
     const ev = (src, map) => new Function("$", "return " + src + ";")((id) => map[id] || null);
     ok(ev(svC, { soil_depth_count: { value: "1" } }) === 1 && ev(svC, { soil_depth_count: { value: "2" } }) === 2, "ΦΡ7 αποθήκευση πλήθους");
-    ok(ev(svP, val("2")) === 2 && ev(svP, val("1")) === 1 && ev(svP, { soil_depth_count: { value: "2" }, soil_depth_port: { value: "2" } }) === 1, "ΦΡ8 αποθήκευση θύρας (μόνο με ένα βάθος)");
-    ok(form.includes("$('soil_depth_port').value = String(conf.soil_depth_port) === '2' ? '2' : '1'; _sagDepthUi();"), "ΦΡ9 φόρτωση θύρας");
+    ok(ev(svP, val("2")) === 2 && ev(svP, val("1")) === 1 && ev(svP, val("3")) === 3 && ev(svP, { soil_depth_count: { value: "2" }, soil_depth_port: { value: "2" } }) === 1, "ΦΡ8 αποθήκευση θύρας (μόνο με ένα βάθος)");
+    ok(form.includes("$('soil_depth_port').value = ['2', '3'].indexOf(String(conf.soil_depth_port)) >= 0 ? String(conf.soil_depth_port) : '1'; _sagDepthUi();"), "ΦΡ9 φόρτωση θύρας 1 | 2 | 3");
     ok(form.includes("const _dpo = $('soil_depth_port'); if (_dpo) _dpo.value = '1'; } _sagDepthUi();"), "ΦΡ10 αλλαγή αγρού: επαναφορά θύρας");
     const wSrc = cut(form, "  /* v27 · T-DEPTH1-02: δύο βάθη", "  /* γύρος 4: μισοσυμπληρωμένη", "Φ προειδοποίηση");
     const warn = (cnt, sh, dp) => { const msgs = []; new Function("$", "numOrNull", "msgs", wSrc)((id) => ({ soil_depth_count: { value: cnt }, sensorShallow_depth_cm: { value: sh }, sensor_deep_depth_cm: { value: dp } })[id],
@@ -183,12 +214,15 @@ function run(core, form, sync, wid) {
       && !W.sagDepthHide("soil_moisture2", { soil_moisture1: [1], soil_moisture2: [1] }), "W4 θύρα 2: κρύβεται η θύρα 1, φαίνεται η 2");
     ok(!W.sagDepthHide("soil_moisture", { soil_moisture: [1] }) && !W.sagDepthHide("air_temperature", { soil_moisture2: [1] }), "W5 θύρα 2, LSE01 / άλλες μεταβλητές: ορατά");
     ok(W.sagEceD9("2") === "" && W.sagEceD9("1") === " Ρηχό", "W6 θύρα 2: τίτλος EC χωρίς «Βαθύ»");
+    W.sagDepthSet("1", "3");
+    ok(!W.sagDepthHide("soil_moisture1", { soil_moisture1: [1], soil_moisture2: [1] }) && !W.sagDepthHide("soil_moisture2", { soil_moisture1: [1], soil_moisture2: [1] }), "W12 δύο σημεία: τίποτα κρυφό");
+    ok(W.sagEceD9("1") === " σημείο 1" && W.sagEceD9("2") === " σημείο 2", "W13 δύο σημεία: τίτλοι «σημείο 1 / 2»");
     W.sagDepthSet(null, null);
     ok(!W.sagDepthHide("soil_moisture2", { soil_moisture1: [1] }) && !W.sagDepthHide("soil_moisture1", { soil_moisture2: [1] }) && W.sagEceD9("1") === " Ρηχό", "W7 χωρίς δήλωση: όπως πριν");
     ok(wid.includes("sagDepthSet(o&&o.soil_depth_count,o&&o.soil_depth_port);return vv") && wid.includes("sagDepthSet(2,1);return!1}"), "W8 πλήθος + θύρα από τη ρύθμιση");
     ok(wid.includes("sagRainHide.has(v)||sagDepthHide(v,j))return!1;") && wid.includes("sagRainHide.has(d)||sagDepthHide(d,N))return!1;"), "W9 και στις δύο λίστες μετρήσεων");
-    ok(wid.includes('sagDepthBox.p!==2&&/^(soil_moisture') && wid.includes('s={...s,label:s.label.replace(" Βαθύ","")}'), "W10 ετικέτες ανά θύρα");
-    ok(wid.includes('_dp8=_q8==="2"?(sagDepthBox.v===1&&sagDepthBox.p===2?"εδάφους":"Βαθύ")') && wid.includes('_dp9=_q9==="2"?(sagDepthBox.v===1&&sagDepthBox.p===2?"εδάφους":"Βαθύ")'), "W11 τίτλοι διαγραμμάτων");
+    ok(wid.includes('sagDepthBox.p===1&&/^(soil_moisture') && wid.includes('s={...s,label:s.label.replace(" Ρηχό"," σημείο 1")}') && wid.includes('s={...s,label:s.label.replace(" Βαθύ","")}'), "W10 ετικέτες ανά θύρα");
+    ok(wid.includes('_dp8=_q8==="2"?(sagDepthBox.v===1&&sagDepthBox.p===2?"εδάφους":sagDepthBox.v===1&&sagDepthBox.p===3?"σημείο 2":"Βαθύ")') && wid.includes('_dp9=_q9==="2"?(sagDepthBox.v===1&&sagDepthBox.p===2?"εδάφους":sagDepthBox.v===1&&sagDepthBox.p===3?"σημείο 2":"Βαθύ")'), "W11 τίτλοι διαγραμμάτων");
   } catch (e) { f.push("εκτέλεση: " + (e && e.stack || e)); }
   return f;
 }
@@ -203,14 +237,20 @@ const MUT = [
   ["μ5 αναμενόμενα: πάντα θύρα 1", "  const re = _SAG_DEPTH1_PORT === 2 ? /1(_avg)?$/ : /2(_avg)?$/;   // T-DEPTH1-02: αναμένεται", "  const re = /2(_avg)?$/;   // T-DEPTH1-02: αναμένεται", "k"],
   ["μ6 χωρίς φρουρό", "    if (_SAG_D1_HINTS.indexOf(nm) < 0) _SAG_D1_HINTS.push(nm);\n", "", "k"],
   ["μ7 χωρίς ταφόπλακα", "  if (_SAG_DEPTH1_ACTIVE && rz.divergence === null) {", "  if (false) {", "k"],
-  ["μ8 θύρα από λάθος τιμή", "function _sagDepth1PortOf(cfg) { return Number(cfg && cfg.soil_depth_port) === 2 ? 2 : 1; }", "function _sagDepth1PortOf(cfg) { return Number(cfg && cfg.soil_depth_port) >= 1 ? 2 : 1; }", "k"],
+  ["μ8 θύρα από λάθος τιμή", "return (v === 2 || v === 3) ? v : 1; }", "return v >= 1 ? 2 : 1; }", "k"],
   ["μ9 purge πάντα θύρας 2", "? ['soil_ece1', 'soil_ec_pore1', 'soil_ec_raw1', 'soil_ec_ref1'] : ['soil_ece2'", "? ['soil_ece2', 'soil_ec_pore2', 'soil_ec_raw2', 'soil_ec_ref2'] : ['soil_ece2'", "k"],
   ["μ10 EC πάντα κανάλι 1", "_SAG_EC_CHANNELS[_SAG_DEPTH1_PORT === 2 ? 1 : 0]", "_SAG_EC_CHANNELS[0]", "k"],
   ["μ11 φόρμα: θύρα πάντα κρυφή", "const pw = $('depthPortWrap'); if (pw) pw.style.display = one ? '' : 'none';", "const pw = $('depthPortWrap'); if (pw) pw.style.display = 'none';", "f"],
-  ["μ12 φόρμα: θύρα πάντα 1", "$('soil_depth_port').value === '2') ? 2 : 1,", "false) ? 2 : 1,", "f"],
+  ["μ12 φόρμα: θύρα πάντα 1", "({ '2': 2, '3': 3 }[$('soil_depth_port').value] || 1) : 1,", "1 : 1,", "f"],
   ["μ13 φόρμα: χωρίς μεταφορά βάθους", "sh.value = dp.value;\n", "\n", "f"],
   ["μ14 sync κόβει τη θύρα", '  "soil_depth_port",\n', "", "s"],
-  ["μ15 widget: θύρα 2 αγνοείται", 'sagDepthBox.p=String(p)==="2"?2:1}', 'sagDepthBox.p=1}', "w"],
+  ["μ15 widget: θύρα 2 αγνοείται", 'sagDepthBox.p=String(p)==="2"?2:String(p)==="3"?3:1}', 'sagDepthBox.p=String(p)==="3"?3:1}', "w"],
+  ["μ18 χωρίς διαχωρισμό σημείων", "  if (!_SAG_DEPTH1_ACTIVE || _SAG_DEPTH1_PORT !== 3 || !deviceData", "  if (true || !deviceData", "k"],
+  ["μ19 ένα σημείο συγχώνευσης χωρίς διαχωρισμό", "const _pt2b = _sagSplitPoints(deviceData);", "const _pt2b = null;", "k"],
+  ["μ20 δύο σημεία: ριζόστρωμα με βαθύ", "((_d1p === 1 || _d1p === 3) && _s0)", "((_d1p === 1) && _s0)", "k"],
+  ["μ21 δύο σημεία: στατιστικά μόνο θύρας 1", "|| _SAG_DEPTH1_PORT === 3 || !dev ||", "|| !dev ||", "k"],
+  ["μ22 φόρμα: «και οι δύο» δεν αποθηκεύεται", "({ '2': 2, '3': 3 }[", "({ '2': 2 }[", "f"],
+  ["μ23 widget: δύο σημεία κρύβουν θύρα", "if(sagDepthBox.v!==1||sagDepthBox.p===3)return!1;", "if(sagDepthBox.v!==1)return!1;", "w"],
   ["μ16 widget: θύρα 2 κρύβει και σόνδα μίας θύρας", "&&!!(o.soil_moisture2||o.soil_temperature2||o.conduct_soil2);", ";", "w"],
   ["μ17 widget αγνοεί τη θύρα της ρύθμισης", "sagDepthSet(o&&o.soil_depth_count,o&&o.soil_depth_port);", "sagDepthSet(o&&o.soil_depth_count);", "w"],
 ];

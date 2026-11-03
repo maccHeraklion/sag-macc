@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.168 · 2026-11-03';   // T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
+const SAG_KERNEL_VERSION = 'v50.169 · 2026-11-03';   // T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -11190,7 +11190,7 @@ function _sagRootZoneMoisture(measurements, parameters) {
   const _d1p = _sagDepth1Of(parameters) ? _sagDepth1PortOf(parameters) : 0;
   const _s0 = _sagNumFrom(measurements, _SAG_SOIL_M_SHALLOW), _dd0 = _sagNumFrom(measurements, _SAG_SOIL_M_DEEP);
   const s = (_d1p === 2 && _dd0) ? null : _s0;
-  const d = (_d1p === 1 && _s0) ? null : _dd0;
+  const d = ((_d1p === 1 || _d1p === 3) && _s0) ? null : _dd0;   // T-DEPTH1-03: δύο σημεία = κανένα βαθύ
   if (!s && !d) return { ok: false };
 
   const d1 = _sagSensorDepthCm(parameters, 1);
@@ -11607,7 +11607,8 @@ function _sagRootZoneIndicators(rz) {
         text: (rz.m1 !== null && rz.m2 !== null)
           ? 'Χρησιμοποιούνται και τα δύο βάθη.'
           : (_SAG_DEPTH1_ACTIVE   // T-DEPTH1-01
-            ? ('Ο αγρός έχει δηλωμένο ένα βάθος αισθητήρα εδάφους' + (_SAG_DEPTH1_PORT === 2 ? ' (θύρα 2 του αισθητήρα)' : '')
+            ? ('Ο αγρός έχει δηλωμένο ένα βάθος αισθητήρα εδάφους' + (_SAG_DEPTH1_PORT === 2 ? ' (θύρα 2 του αισθητήρα)'
+              : (_SAG_DEPTH1_PORT === 3 ? ' σε δύο σημεία (μέσος όρος)' : ''))   // T-DEPTH1-03
               + '· η δόση βγαίνει από αυτό.' + (_SAG_D1_HINTS.length   // T-DEPTH1-02
               ? ' ΠΡΟΣΟΧΗ: στο «' + _SAG_D1_HINTS.join('», «') + '» η δηλωμένη θύρα δεν δίνει μέτρηση ενώ η άλλη δίνει — '
                 + 'ελέγξτε στη φόρμα ποια θύρα είναι στο έδαφος.' : ''))
@@ -17146,7 +17147,7 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
     // Οι συγκεντρωτικές τιμές (avg/max/min) ΔΕΝ αρκούν: η κολλημένη ένδειξη και
     // το εύρος θερμοκρασίας εδάφους απαιτούν την ΚΑΤΑΝΟΜΗ, όχι μια στατιστική.
     // T-DIAG-DAILY-01: ΜΙΑ πλήρης ανάγνωση την ημέρα, όχι μία την ώρα.
-    const _diagVars = typeName ? ((_SAG_DEPTH1_ACTIVE && (typeName === 'se0x' || typeName === 'lse02'))   // T-DEPTH1-01
+    const _diagVars = typeName ? ((_SAG_DEPTH1_ACTIVE && _SAG_DEPTH1_PORT !== 3 && (typeName === 'se0x' || typeName === 'lse02'))   // T-DEPTH1-01
       ? _SAG_DIAG_VARS[typeName].filter(v => !(_SAG_DEPTH1_PORT === 2 ? /1$/ : /2$/).test(v)) : _SAG_DIAG_VARS[typeName]) : null;   // T-DEPTH1-02
     if (_diagVars && _diagVars.length) {
       const _dKey = _sagDiagKey(String(value));
@@ -17608,8 +17609,13 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
         }
 
         // Save and skip generic logic for this device
+        const _pt2a = _sagSplitPoints(deviceData);   // T-DEPTH1-03: θύρα 2 = δεύτερο σημείο στο ίδιο βάθος
         _devRejects.push(..._sagScreenDevice(deviceData, info?.name || value, fieldName));
         data = _sagMergeDeviceData(data, deviceData, info?.name || value, fieldName, value);
+        if (_pt2a) {
+          _devRejects.push(..._sagScreenDevice(_pt2a, (info?.name || value) + ' · θύρα 2', fieldName));
+          data = _sagMergeDeviceData(data, _pt2a, (info?.name || value) + ' · θύρα 2', fieldName, String(value) + ':2');
+        }
       }
 
       // If NO ticks, we still keep the stats above,
@@ -17640,7 +17646,7 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
       //
       // Οι τέσσερις κλήσεις τρέχουν ΠΑΡΑΛΛΗΛΑ (ήταν δύο ΣΕΙΡΙΑΚΕΣ) με απομόνωση
       // σφαλμάτων ανά ερώτημα.
-      const _SOIL_AVG_CH = _SAG_DEPTH1_ACTIVE ? (_SAG_DEPTH1_PORT === 2 ? ['soil_moisture2', 'soil_temperature2'] : ['soil_moisture1', 'soil_temperature1'])   // T-DEPTH1-01/02
+      const _SOIL_AVG_CH = (_SAG_DEPTH1_ACTIVE && _SAG_DEPTH1_PORT !== 3) ? (_SAG_DEPTH1_PORT === 2 ? ['soil_moisture2', 'soil_temperature2'] : ['soil_moisture1', 'soil_temperature1'])   // T-DEPTH1-01/02
         : ['soil_moisture1', 'soil_temperature1', 'soil_moisture2', 'soil_temperature2'];
       const _soilAvgRes = await _sagSettleAll(
         _SOIL_AVG_CH.map((_ch) => device.getData({
@@ -17664,8 +17670,13 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
 
       // T-SHADOW-HOUR-01: σκιώδης μέτρηση (μόνο ανάγνωση, μόνο στον ωριαίο κύκλο, έως 8/11).
       if (hourTich) await _sagShadowRead(device, fieldName, info?.name || value, now);
+      const _pt2b = _sagSplitPoints(deviceData);   // T-DEPTH1-03: θύρα 2 = δεύτερο σημείο στο ίδιο βάθος
       _devRejects.push(..._sagScreenDevice(deviceData, info?.name || value, fieldName));
       data = _sagMergeDeviceData(data, deviceData, info?.name || value, fieldName, value);
+      if (_pt2b) {
+        _devRejects.push(..._sagScreenDevice(_pt2b, (info?.name || value) + ' · θύρα 2', fieldName));
+        data = _sagMergeDeviceData(data, _pt2b, (info?.name || value) + ' · θύρα 2', fieldName, String(value) + ':2');
+      }
     }
 
     // ─────────────────────────────────────────────
@@ -17726,8 +17737,13 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
         deviceData.temp_soil_avg = temp_soil_avg;
       }
 
+      const _pt2c = _sagSplitPoints(deviceData);   // T-DEPTH1-03: θύρα 2 = δεύτερο σημείο στο ίδιο βάθος
       _devRejects.push(..._sagScreenDevice(deviceData, info?.name || value, fieldName));
       data = _sagMergeDeviceData(data, deviceData, info?.name || value, fieldName, value);
+      if (_pt2c) {
+        _devRejects.push(..._sagScreenDevice(_pt2c, (info?.name || value) + ' · θύρα 2', fieldName));
+        data = _sagMergeDeviceData(data, _pt2c, (info?.name || value) + ' · θύρα 2', fieldName, String(value) + ':2');
+      }
     }
 
     // ─────────────────────────────────────────────
@@ -17827,8 +17843,13 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
         ...grouped,
       };
 
+      const _pt2d = _sagSplitPoints(deviceData);   // T-DEPTH1-03: θύρα 2 = δεύτερο σημείο στο ίδιο βάθος
       _devRejects.push(..._sagScreenDevice(deviceData, info?.name || value, fieldName));
       data = _sagMergeDeviceData(data, deviceData, info?.name || value, fieldName, value);
+      if (_pt2d) {
+        _devRejects.push(..._sagScreenDevice(_pt2d, (info?.name || value) + ' · θύρα 2', fieldName));
+        data = _sagMergeDeviceData(data, _pt2d, (info?.name || value) + ' · θύρα 2', fieldName, String(value) + ':2');
+      }
       continue;
     }
   }
@@ -17937,13 +17958,31 @@ let _SAG_DEPTH1_PORT = 1;
 let _SAG_D1_HINTS = [];   // συσκευές όπου η δηλωμένη θύρα δεν μετρά ενώ η άλλη μετρά
 const _SAG_D1_M2_RE = /^(soil_moisture|soil_humidity|water_soil)2(_avg)?$/;
 const _SAG_D1_CH1ALL_RE = /^(soil_moisture|soil_humidity|water_soil|soil_temperature|conduct_soil)1(_avg|_max|_min|_sum)?$|^(soil_moisture|soil_humidity|water_soil|temp_soil|conduct_soil)(_avg|_max|_min|_sum)?$/;
-function _sagDepth1PortOf(cfg) { return Number(cfg && cfg.soil_depth_port) === 2 ? 2 : 1; }
+// T-DEPTH1-03: 3 = «Και οι δύο θύρες» — δύο σημεία στο ίδιο βάθος (μέσος όρος, κάθε σημείο ορατό χωριστά).
+function _sagDepth1PortOf(cfg) { const v = Number(cfg && cfg.soil_depth_port); return (v === 2 || v === 3) ? v : 1; }
+// T-DEPTH1-03: η θύρα 2 γίνεται ΔΕΥΤΕΡΟ ΣΗΜΕΙΟ (εικονική συσκευή) με τα κλειδιά της στο κανάλι 1· επιστρέφει τα δεδομένα
+// του σημείου 2 (και τα αφαιρεί από τη συσκευή) ή null. Μέσος όρος / διαφωνία / αισθητήρας απόφασης: οι υπάρχοντες μηχανισμοί.
+function _sagSplitPoints(deviceData) {
+  if (!_SAG_DEPTH1_ACTIVE || _SAG_DEPTH1_PORT !== 3 || !deviceData || typeof deviceData !== 'object') return null;
+  const ks = Object.keys(deviceData);
+  if (!ks.some(k => _SAG_D1_M2_RE.test(k)) || !ks.some(k => _SAG_D1_CH1_RE.test(k))) return null;
+  const p2 = {};
+  for (const k of ks) {
+    if (!_SAG_D1_CH2_RE.test(k)) continue;
+    const nk = k.replace(/2((?:_avg|_max|_min|_sum)?)$/, '1$1');
+    const v = deviceData[k];
+    p2[nk] = Array.isArray(v) ? v.map(x => (x && typeof x === 'object' && x.variable) ? Object.assign({}, x, { variable: nk }) : x) : v;
+    delete deviceData[k];
+  }
+  return p2;
+}
 const _SAG_D1_CH1_RE = /^(soil_moisture|soil_humidity|water_soil)1?(_avg)?$/;
 const _SAG_D1_CH2_RE = /^(soil_moisture|soil_humidity|water_soil|soil_temperature|temp_soil|conduct_soil)2(_avg|_max|_min|_sum)?$/;
 function _sagDepth1Of(cfg) { return Number(cfg && cfg.soil_depth_count) === 1; }
 // Μάσκα ΑΝΑ ΣΥΣΚΕΥΗ: μόνο όταν η ίδια συσκευή δίνει και κανάλι 1 / γυμνά ονόματα (lse01_deep μένει ανέγγιχτο).
 function _sagDepth1Mask(deviceData, deviceName) {
   if (!_SAG_DEPTH1_ACTIVE || !deviceData || typeof deviceData !== 'object') return 0;
+  if (_SAG_DEPTH1_PORT === 3) return 0;   // T-DEPTH1-03: η θύρα 2 έγινε ήδη δεύτερο σημείο
   const ks = Object.keys(deviceData);
   const p2 = _SAG_DEPTH1_PORT === 2;   // T-DEPTH1-02
   const keepRe = p2 ? _SAG_D1_M2_RE : _SAG_D1_CH1_RE, dropRe = p2 ? _SAG_D1_CH1ALL_RE : _SAG_D1_CH2_RE;
@@ -17972,7 +18011,7 @@ function _sagDevExpect(t) {
 }
 function _sagDevStatsD1(dev) {
   const st = (dev && dev.stats) || {};
-  if (!_SAG_DEPTH1_ACTIVE || !dev || (dev.t !== 'se0x' && dev.t !== 'lse02')) return st;
+  if (!_SAG_DEPTH1_ACTIVE || _SAG_DEPTH1_PORT === 3 || !dev || (dev.t !== 'se0x' && dev.t !== 'lse02')) return st;   // T-DEPTH1-03: και οι δύο θύρες
   const o = {};
   const re = _SAG_DEPTH1_PORT === 2 ? /1(_avg)?$/ : /2(_avg)?$/;   // T-DEPTH1-02
   for (const k of Object.keys(st)) if (!re.test(k)) o[k] = st[k];
