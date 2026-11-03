@@ -40,6 +40,7 @@
  **    καλλιέργεια, ο πυρήνας (FIR/PEI, γρ. 4635, 9729) τα διαβάζει ΜΟΝΟ
  **    από τη ρίζα. Μισές/μελλοντικές δηλώσεις αποκλείονται με προειδοποίηση.
  **
+ ** v18 · 3/11/2026 — T-ZONES-01: ζώνες άρδευσης σε δικό τους tag «irrigation_zones» (φόρμα v29· πυρήνας v50.170).
  ** v17 · 3/11/2026 — T-DEPTH1-02: +soil_depth_port (φόρμα v27: «ποια θύρα είναι στο έδαφος»· πυρήνας v50.168).
  ** v16 · 3/11/2026 — T-DEPTH1-01: +soil_depth_count (φόρμα v26: «ένα βάθος αισθητήρα»· πυρήνας v50.167).
  ** v15 · 29/10/2026 — T-SOILREF-02: +soil_ref_device (id σόνδας «αισθητήρα απόφασης» από τη φόρμα v25· ο πυρήνας
@@ -318,6 +319,25 @@ function validatePeriodsForCrop(crop) {
    ΠΡΩΤΑ, γι' αυτό είναι σε δική τους λίστα. */
 const _CROP_EXTRA_NUM = ["plants", "area_m2", "irrig_emitter_spacing_m", "irrig_row_spacing_m", "irrig_emitter_lph"];
 const _CROP_EXTRA_KEYS = [..._CROP_EXTRA_NUM, "cultivation_variety"];
+/* v18 · T-ZONES-01: ζώνες άρδευσης → συμπαγής, καθαρισμένη μορφή (ίδιοι κανόνες με τον πυρήνα _sagZonesParse). */
+function compactZones(list) {
+  const out = [];
+  for (const z of (Array.isArray(list) ? list : []).slice(0, 20)) {
+    if (!z || typeof z !== "object") continue;
+    const n = String(z.n == null ? "" : z.n).trim().slice(0, 40);
+    if (!n) continue;
+    const sn = (Array.isArray(z.s) ? z.s : []).map(String).filter((x) => /^[0-9a-f]{24}(:2)?$/.test(x)).slice(0, 10);
+    const c = [];
+    for (const x of (Array.isArray(z.c) ? z.c : []).slice(0, 20)) {
+      if (!Array.isArray(x) || x[0] == null || String(x[0]) === "") continue;
+      const a = Number(x[1]);
+      c.push(Number.isFinite(a) && a > 0 ? [String(x[0]), Math.round(a * 10) / 10] : [String(x[0])]);
+    }
+    if (!c.length) continue;
+    out.push({ n, s: sn, c });
+  }
+  return out;
+}
 function stripCropExtras(crops) {
   return (Array.isArray(crops) ? crops : []).map((c) => {
     const d = Object.assign({}, c);
@@ -799,8 +819,22 @@ async function runSync(context, scope, shared) {
      αντικατασταθεί: η προβολή αφαιρεί κλειδιά που έγραφε η v1, και αυτό το
      ίχνος είναι ο μόνος δρόμος επαναφοράς αν φανεί ότι κάτι άλλο τα διάβαζε. */
   context.log("ΠΡΟΗΓΟΥΜΕΝΟ tag configuration [" + device_id + "]: " + (prevTagRaw?.value || "—"));
-  const newTags = existingTags.filter((item) => item && item.key && item.key !== "configuration");
+  /* v18 · T-ZONES-01: undefined = άθικτο, null = διαγραφή, string = νέα τιμή. */
+  let zonesTag;
+  if (packed && Array.isArray(packed.irrigation_zones)) {
+    const _zs = compactZones(packed.irrigation_zones);
+    zonesTag = _zs.length ? JSON.stringify(_zs) : null;
+    if (typeof zonesTag === "string" && zonesTag.length > TAG_SAFE_LIMIT) {
+      warnings.push("οι ζώνες άρδευσης δεν χώρεσαν στο όριο αποθήκευσης (" + zonesTag.length + " > " + TAG_SAFE_LIMIT
+        + " χαρακτήρες) και ΔΕΝ αποθηκεύτηκαν — συντομέψτε τα ονόματα ή αφαιρέστε ζώνες.");
+      zonesTag = undefined;
+    }
+    if (zonesTag !== undefined) context.log("T-ZONES-01: ζώνες [" + device_id + "]: " + (zonesTag || "— (διαγραφή)"));
+  }
+  const newTags = existingTags.filter((item) => item && item.key && item.key !== "configuration"
+    && (zonesTag === undefined || item.key !== "irrigation_zones"));
   newTags.push({ key: "configuration", value: serialized });
+  if (typeof zonesTag === "string") newTags.push({ key: "irrigation_zones", value: zonesTag });
   await account.devices.edit(device_id, { tags: newTags });
 
   return { warnings: [...new Set(warnings)], notes: [...new Set(notes)], tagLength: serialized.length };

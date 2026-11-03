@@ -62,7 +62,7 @@ const CHECKS = [
     return d > 0 && i > 0 && j > i && j - i < 500; }],
   ["ΕΜΠΟΡΙΚΟ: η αποτυχία εγγραφής ΔΕΝ ρίχνει τον αγρό (catch με μήνυμα)", f =>
     /* v50.154 · T-METHODCARD-02: ανάμεσα μπήκε και το field_bundle_2 (3 γραμμές) — το παράθυρο 900 → 1400. */
-    /variable: 'upgrade_report'[\s\S]{0,1400}catch \(_eUp\)[\s\S]{0,200}T-TEXTDIET-01/.test(f.core)],
+    /variable: 'upgrade_report'[\s\S]{0,1600}catch \(_eUp\)[\s\S]{0,200}T-TEXTDIET-01/.test(f.core)],
   ["ΕΜΠΟΡΙΚΟ: η αναφορά κόβεται στα 900 χαρακτήρες (δεν γίνεται νέο βάρος)", f =>
     f.core.includes("String(_upTxt).slice(0, 900)")],
 

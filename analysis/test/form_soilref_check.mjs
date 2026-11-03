@@ -80,7 +80,7 @@ const MUT = [
   ["f", "m2 κρυφό σβήνει τη δήλωση", " : (prevConf.soil_ref_device ?? null)", " : (null)"],
   ["f", "m3 «Αυτόματα» δεν σβήνει", "? ($('soil_ref_device').value || null)", "? ($('soil_ref_device').value || prevConf.soil_ref_device || null)"],
   ["f", "m4 όνομα ως HTML", "o.textContent = String(x.n); sel.appendChild(o);", "o.textContent = String(x.n).replace(/<[^>]*>/g, ''); sel.appendChild(o);"],
-  ["f", "m5 χωρίς φίλτρο id", "/^[0-9a-f]{24}$/.test(x.i)", "true"],
+  ["f", "m5 χωρίς φίλτρο id", "/^[0-9a-f]{24}(:2)?$/.test(x.i) && x.n != null && String(x.n) !== '' && (!_hasC", "true && (!_hasC"],
   ["f", "m6 αγνοεί τη δηλωμένη", "String(state.soilRefConf || '')", "''"],
   ["f", "m7 χάνει την επιλογή του χρήστη", "sel.dataset.touched === '1' ? sel.value : ", ""],
   ["f", "m8 χωρίς απόδοση σε πακέτο", "  _sagSoilRefRender();   /* v25 · T-SOILREF-02: η λίστα σονδών μπορεί να φτάσει σε οποιοδήποτε πακέτο */\n", ""],

@@ -311,6 +311,15 @@
           <button id="btnAddCrop" class="btn ghost" type="button">+ Προσθήκη καλλιέργειας</button>
         </div>
       </div>
+      <!-- v29 · T-ZONES-01: ζώνες άρδευσης (φάση 1, χωρίς βάνες) -->
+      <div class="field">
+        <label>Ζώνες άρδευσης (προαιρετικό)</label>
+        <div class="muted" style="font-size:.85rem; margin-bottom:6px">Ζώνη είναι ό,τι ποτίζεται μαζί (μία βάνα ή γραμμή). Μπορεί να έχει μία ή περισσότερες καλλιέργειες και δικούς της αισθητήρες εδάφους. Για κάθε ζώνη το σύστημα υπολογίζει υγρασία και λίτρα με τους αισθητήρες της και τα m² κάθε καλλιέργειας μέσα της. Χωρίς ζώνες όλα μένουν όπως είναι.</div>
+        <div id="zonesList" style="display:flex; flex-direction:column; gap:10px;"></div>
+        <div class="map-actions" style="margin-top:10px">
+          <button id="btnAddZone" class="btn ghost" type="button" onclick="_sagZoneAdd()">+ Προσθήκη ζώνης</button>
+        </div>
+      </div>
 
       <!-- Legacy primary crop selects (kept for backward compatibility, auto-synced with 1st crop) -->
       <div class="field" style="display:none">
@@ -2051,6 +2060,10 @@ function syncLegacyFromFirstCrop(){
   if (first.cultivation_type) $('cultivation_type').value = first.cultivation_type;
 }
 
+/* v29 · T-ZONES-01: οι ζώνες ακολουθούν τις καλλιέργειες (προσθήκη/αφαίρεση/αλλαγή είδους). */
+$('cropsList').addEventListener('change', function(){ setTimeout(_sagZonesMaybeRefresh, 0); });
+$('cropsList').addEventListener('click', function(){ setTimeout(_sagZonesMaybeRefresh, 0); });
+$('btnAddCrop').addEventListener('click', function(){ setTimeout(_sagZonesMaybeRefresh, 0); });
 $('btnAddCrop').onclick = ()=> { state.dirty = true; addCropRow({ cultivation_type_general:$('cultivation_type_general').value || 'olive', cultivation_type:'', periods:{} }); };
 
 /* T-CFG-LOADGATE-01: η προ-σπορά «ελιά/Κορωνέικη» γινόταν εδώ με setTimeout(0),
@@ -2119,11 +2132,92 @@ setTimeout(refreshHints, 0);
 /* v25 · T-SOILREF-02: αισθητήρας απόφασης εδάφους. Τη λίστα των σονδών που μετρούν το ΙΔΙΟ βάθος τη γράφει ο
    πυρήνας (μεταβλητή soil_sensors, μόνο όταν αλλάζει). T-SOILREF-04: χωρίς δήλωση ο πυρήνας κρατά τον μέσο όρο των
    σονδών· με δήλωση αποφασίζει η δηλωμένη (αν είναι υγιής και πρόσφατη). Ονόματα συσκευών μόνο ως textContent. */
+/* v29 · T-ZONES-01: ζώνες άρδευσης (φάση 1, χωρίς βάνες). Κατάσταση στη μνήμη: state.zones = [{n, s:[id], c:{cropId: m²}}].
+   Ονόματα χρηστών/συσκευών ΜΟΝΟ ως textContent/value. */
+function _sagZonePoints(){
+  try{
+    const row = state.lastDataMap && state.lastDataMap.soil_sensors;
+    const l = (row && row.metadata && Array.isArray(row.metadata.list)) ? row.metadata.list : [];
+    return l.filter(function(x){ return x && typeof x.i === 'string' && /^[0-9a-f]{24}(:2)?$/.test(x.i) && x.n != null && String(x.n) !== ''; });
+  }catch(e){ return []; }
+}
+function _sagZoneCrops(){
+  try{
+    return readCropsFromUI().map(function(c, i){
+      const gen = c.cultivation_type_general, t = c.cultivation_variety || c.cultivation_type;
+      const nm = (CULTIVATION_TYPES[gen] || {})[t] || (CULTIVATION_TYPES[gen] || {})[c.cultivation_type] || t || '';
+      return { id: c.id, ok: !!c.cultivation_type, label: '#' + (i + 1) + ' ' + nm };
+    }).filter(function(c){ return c.ok; });
+  }catch(e){ return []; }
+}
+function _sagZonesFromConf(list){
+  return (Array.isArray(list) ? list : []).slice(0, 20).map(function(z){
+    const c = {};
+    (Array.isArray(z && z.c) ? z.c : []).forEach(function(x){ if (Array.isArray(x) && x[0] != null) c[String(x[0])] = (x[1] != null ? String(x[1]) : ''); });
+    return { n: String((z && z.n) || ''), s: (Array.isArray(z && z.s) ? z.s : []).map(String), c: c };
+  });
+}
+function readZonesFromUI(){
+  const ids = {}; _sagZoneCrops().forEach(function(c){ ids[c.id] = 1; });
+  return (Array.isArray(state.zones) ? state.zones : []).map(function(z){
+    return { n: String(z.n || '').trim().slice(0, 40), s: (z.s || []).slice(0, 10),
+      c: Object.keys(z.c || {}).filter(function(id){ return ids[id]; }).map(function(id){
+        const a = numOrNull(z.c[id]); return (a !== null && a > 0) ? [id, a] : [id]; }) };
+  }).filter(function(z){ return z.n && z.c.length; });
+}
+function _sagZonesKey(){ return JSON.stringify([_sagZonePoints().map(function(p){ return p.i + p.n; }), _sagZoneCrops().map(function(c){ return c.id + c.label; })]); }
+function _sagZonesMaybeRefresh(){ try{ const k = _sagZonesKey(); if (k !== state._zonesKey) _sagZonesRender(); }catch(e){} }
+function _sagZoneAdd(){
+  state.zones = Array.isArray(state.zones) ? state.zones : [];
+  if (state.zones.length >= 20) return;
+  state.zones.push({ n: '', s: [], c: {} }); state.dirty = true; _sagZonesRender();
+}
+function _sagZonesRender(){
+  const wrap = $('zonesList'); if (!wrap) return;
+  try{
+    state.zones = Array.isArray(state.zones) ? state.zones : [];
+    const pts = _sagZonePoints(), crops = _sagZoneCrops();
+    state._zonesKey = _sagZonesKey();
+    wrap.innerHTML = '';
+    const el = function(tag, txt, css){ const e = document.createElement(tag); if (txt != null) e.textContent = txt; if (css) e.style.cssText = css; return e; };
+    state.zones.forEach(function(z, zi){
+      const box = el('div', null, 'border:1px solid #dbe8f7; border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:6px');
+      const nm = document.createElement('input'); nm.type = 'text'; nm.maxLength = 40; nm.placeholder = 'Όνομα ζώνης (π.χ. Γκαζόν βόρειο)';
+      nm.value = z.n || ''; nm.oninput = function(){ z.n = nm.value; state.dirty = true; };
+      box.appendChild(nm);
+      box.appendChild(el('div', 'Αισθητήρες εδάφους της ζώνης', 'font-weight:600; font-size:.9rem; margin-top:4px'));
+      if (!pts.length) box.appendChild(el('div', 'Η λίστα των αισθητήρων του αγρού εμφανίζεται μετά τον επόμενο ωριαίο υπολογισμό. Χωρίς αισθητήρα η ζώνη παίρνει τον μέσο όρο του αγρού.', 'font-size:.85rem; color:#64748b'));
+      pts.forEach(function(p){
+        const lb = el('label', null, 'display:flex; gap:6px; align-items:center; font-size:.9rem');
+        const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = z.s.indexOf(p.i) >= 0;
+        cb.onchange = function(){ const k = z.s.indexOf(p.i); if (cb.checked && k < 0) z.s.push(p.i); if (!cb.checked && k >= 0) z.s.splice(k, 1); state.dirty = true; };
+        lb.appendChild(cb); lb.appendChild(el('span', String(p.n))); box.appendChild(lb);
+      });
+      box.appendChild(el('div', 'Καλλιέργειες της ζώνης και m² μέσα στη ζώνη', 'font-weight:600; font-size:.9rem; margin-top:4px'));
+      if (!crops.length) box.appendChild(el('div', 'Προσθέστε πρώτα καλλιέργειες στον αγρό.', 'font-size:.85rem; color:#64748b'));
+      crops.forEach(function(c){
+        const lb = el('div', null, 'display:flex; gap:6px; align-items:center; font-size:.9rem');
+        const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = Object.prototype.hasOwnProperty.call(z.c, c.id);
+        const ar = document.createElement('input'); ar.type = 'text'; ar.setAttribute('inputmode', 'decimal'); ar.placeholder = 'm²'; ar.style.width = '90px';
+        ar.value = cb.checked ? String(z.c[c.id] || '') : ''; ar.disabled = !cb.checked;
+        cb.onchange = function(){ if (cb.checked) z.c[c.id] = ar.value || ''; else delete z.c[c.id]; ar.disabled = !cb.checked; state.dirty = true; };
+        ar.oninput = function(){ if (cb.checked) z.c[c.id] = ar.value; state.dirty = true; };
+        lb.appendChild(cb); lb.appendChild(el('span', c.label, 'flex:1')); lb.appendChild(ar); box.appendChild(lb);
+      });
+      const rm = document.createElement('button'); rm.type = 'button'; rm.className = 'btn ghost'; rm.textContent = 'Αφαίρεση ζώνης';
+      rm.onclick = function(){ state.zones.splice(zi, 1); state.dirty = true; _sagZonesRender(); };
+      box.appendChild(rm);
+      wrap.appendChild(box);
+    });
+  }catch(e){ console.warn('[zones] render', e); }
+}
 function _sagSoilRefList(){
   try{
     const row = state.lastDataMap && state.lastDataMap.soil_sensors;
     const l = (row && row.metadata && Array.isArray(row.metadata.list)) ? row.metadata.list : [];
-    return l.filter(function(x){ return x && typeof x.i === 'string' && /^[0-9a-f]{24}$/.test(x.i) && x.n != null && String(x.n) !== ''; });
+    /* v29 · T-ZONES-01: η λίστα έχει πλέον ΟΛΕΣ τις σόνδες· αισθητήρας απόφασης = μόνο όσες μετρούν στο ίδιο βάθος (c:1). */
+    const _hasC = l.some(function(x){ return x && Object.prototype.hasOwnProperty.call(x, 'c'); });
+    return l.filter(function(x){ return x && typeof x.i === 'string' && /^[0-9a-f]{24}(:2)?$/.test(x.i) && x.n != null && String(x.n) !== '' && (!_hasC || x.c === 1); });
   }catch(e){ return []; }
 }
 function _sagSoilRefRender(){
@@ -2241,6 +2335,7 @@ function buildPayload(){
        ενημερωθεί και ο φρουρός στο setFieldParametersFromDeviceData. */
     version: 4,
     crops,
+    irrigation_zones: readZonesFromUI(),   /* v29 · T-ZONES-01 */
     /* Το soil_type μένει ΠΑΝΤΑ ένας από τους 4 που ξέρει ο πυρήνας — ή 'coir' (v24 · T-SUBSTRATE-01).
        Η ακριβής κλάση αποθηκεύεται χωριστά για μελλοντική χρήση. */
     soil_type: _keepPrev((SOIL_TEXTURES[$('soil_type').value] || {}).group || $('soil_type').value || null, prevConf.soil_type),
@@ -2613,6 +2708,7 @@ function applyIncoming(buckets, formLocked){
      Η μνήμη (lastDataMap) πιο πάνω και τα μηνύματα πιο κάτω ενημερώνονται ΠΑΝΤΑ. */
   if (!formLocked) {
   _sagSoilRefRender();   /* v25 · T-SOILREF-02: η λίστα σονδών μπορεί να φτάσει σε οποιοδήποτε πακέτο */
+  _sagZonesMaybeRefresh();   /* v29 · T-ZONES-01: μόνο αν άλλαξαν σόνδες/καλλιέργειες */
 
   // -------- location (separate variable) --------
   let coordApplied = false;
@@ -2709,6 +2805,7 @@ function applyIncoming(buckets, formLocked){
         $('soil_depth_count').value = String(conf.soil_depth_count) === '1' ? '1' : '2';
         $('soil_depth_port').value = ['2', '3'].indexOf(String(conf.soil_depth_port)) >= 0 ? String(conf.soil_depth_port) : '1'; _sagDepthUi();   /* v26/v27 · T-DEPTH1-01/02 */
         state.soilRefConf = conf.soil_ref_device || ''; _sagSoilRefRender();   /* v25 · T-SOILREF-02 */
+        state.zones = _sagZonesFromConf(conf.irrigation_zones); _sagZonesRender();   /* v29 · T-ZONES-01 */
         /* v5 */
         if (conf.stone_fraction_pct!=null) $('stone_fraction_pct').value = conf.stone_fraction_pct;
         if (conf.cover_transmissivity!=null) $('cover_transmissivity_pct').value = Math.round(Number(conf.cover_transmissivity) * 100);
@@ -2967,6 +3064,23 @@ $('btnSave').onclick = function(){
       msgs.push('Η τιμή στο πεδίο <b>' + pair[1] + '</b> δεν είναι έγκυρος αριθμός — το πεδίο θα αποθηκευτεί ΚΕΝΟ.');
     }
   });
+  /* v29 · T-ZONES-01: ζώνες — προειδοποιήσεις, όχι φραγμός. */
+  (function(){
+    const zs = Array.isArray(state.zones) ? state.zones : [];
+    const ids = {}; _sagZoneCrops().forEach(function(c){ ids[c.id] = c.label; });
+    const cnt = {};
+    zs.forEach(function(z){
+      const n = String(z.n || '').trim(), cs = Object.keys(z.c || {}).filter(function(id){ return ids[id]; });
+      if ((n || (z.s || []).length || cs.length) && (!n || !cs.length))
+        msgs.push('Η ζώνη <b>' + (n ? n.replace(/[<>&]/g, '') : '(χωρίς όνομα)') + '</b> χρειάζεται όνομα και τουλάχιστον μία καλλιέργεια — αλλιώς δεν αποθηκεύεται.');
+      cs.forEach(function(id){ cnt[id] = (cnt[id] || 0) + 1; });
+    });
+    Object.keys(cnt).forEach(function(id){
+      if (cnt[id] < 2) return;
+      const miss = zs.some(function(z){ return z.c && Object.prototype.hasOwnProperty.call(z.c, id) && !(numOrNull(z.c[id]) > 0); });
+      if (miss) msgs.push('Η καλλιέργεια <b>' + String(ids[id]).replace(/[<>&]/g, '') + '</b> είναι σε ' + cnt[id] + ' ζώνες: δηλώστε τα m² της σε κάθε ζώνη, αλλιώς δεν βγαίνουν λίτρα ανά ζώνη.');
+    });
+  })();
   /* v27 · T-DEPTH1-02: δύο βάθη → το βαθύ πρέπει να είναι βαθύτερα από το ρηχό (αλλιώς η στάθμιση ριζοστρώματος
      αντιστρέφεται). Προειδοποίηση, όπως όλοι οι έλεγχοι εδώ. */
   (function(){
@@ -3146,6 +3260,7 @@ if (window.TagoIO && window.TagoIO.ready){
          'soil_type','irrigation_system','water_quality']
           .forEach(function(id){ const e=$(id); if(e) e.value=''; });
         state.soilRefConf = ''; { const _sr = $('soil_ref_device'); if (_sr) _sr.dataset.touched = ''; } _sagSoilRefRender();   /* v25 · T-SOILREF-02 */
+        state.zones = []; _sagZonesRender();   /* v29 · T-ZONES-01 */
         { const _dc = $('soil_depth_count'); if (_dc) _dc.value = '2'; const _dpo = $('soil_depth_port'); if (_dpo) _dpo.value = '1'; } _sagDepthUi();   /* v26/v27 · T-DEPTH1-01/02 */
       }
       state.deviceSig = sig;   /* γύρος 5: καταγράφεται ΠΑΝΤΑ, και η κενή */

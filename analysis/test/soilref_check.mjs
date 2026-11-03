@@ -96,16 +96,27 @@ async function run(core) {
     // ── Λ: λίστα σονδών για τη φόρμα, ΜΟΝΟ όταν αλλάζει ──
     const fakeDev = (last) => { const w = { reads: 0, sent: [] }; w.getData = async () => { w.reads++; return last ? [last] : []; }; w.sendData = async (x) => { w.sent.push(...x); }; return w; };
     const sync = async (dev, data, daily) => K.get("_sagSyncSoilSensors")(dev, data, "F", daily);
-    const s1 = fakeDev(null); await sync(s1, d0, false);
-    ok(s1.sent.length === 1 && s1.sent[0].variable === "soil_sensors" && s1.sent[0].value === 3, "Λ1 πρώτη φορά: γράφεται η λίστα");
-    const s2 = fakeDev({ metadata: { list: C(d0._sagSoilCand) } }); await sync(s2, d0, true);
+    // T-ZONES-01 (v50.170): η λίστα έχει ΟΛΕΣ τις σόνδες του αγρού (για τις ζώνες) με c:1 = ίδιο βάθος με άλλη.
+    const dK = apply(merge(K, KAMP), "");
+    const L3 = C(dK._sagSoilCand).map((x) => ({ i: x.i, n: x.n, c: 1 }));
+    const s1 = fakeDev(null); await sync(s1, dK, false);
+    ok(s1.sent.length === 1 && s1.sent[0].variable === "soil_sensors" && s1.sent[0].value === 3 && J(s1.sent[0].metadata.list) === J(L3), "Λ1 πρώτη φορά: γράφεται η λίστα (" + J(s1.sent[0] && s1.sent[0].metadata) + ")");
+    const s2 = fakeDev({ metadata: { list: C(L3) } }); await sync(s2, dK, true);
     ok(s2.reads === 1 && s2.sent.length === 0, "Λ2 ίδια λίστα: ΚΑΜΙΑ εγγραφή");
-    const s3 = fakeDev({ metadata: { list: C(d0._sagSoilCand).slice(0, 2) } }); await sync(s3, d0, false);
+    const s3 = fakeDev({ metadata: { list: C(L3).slice(0, 2) } }); await sync(s3, dK, false);
     ok(s3.sent.length === 1, "Λ3 άλλαξε η λίστα: εγγραφή");
-    const s4 = fakeDev(null); await sync(s4, dz, false); await sync(s4, dz, true);
-    ok(s4.reads === 1 && s4.sent.length === 0, "Λ4 χωρίς ανταγωνισμό: ανάγνωση μόνο την ημέρα, ΚΑΜΙΑ εγγραφή");
-    const s5 = fakeDev({ metadata: { list: C(d0._sagSoilCand) } }); await sync(s5, dz, false); const r5 = s5.sent.length; await sync(s5, dz, true);
-    ok(r5 === 0 && s5.sent.length === 1 && s5.sent[0].value === 0, "Λ5 αγρός που ΕΧΑΣΕ σόνδα: η λίστα σβήνει στον ημερήσιο");
+    const s2b = fakeDev({ metadata: { list: C(dK._sagSoilCand) } }); await sync(s2b, dK, false);
+    ok(s2b.sent.length === 1, "Λ3β παλιά μορφή (χωρίς c): ξαναγράφεται μία φορά");
+    const dZ = apply(merge(K, [["Ρηχή", SHAL], ["Βαθιά", DEEP]]), "");
+    const s4 = { reads: 0, sent: [], last: null };   // συσκευή που ΘΥΜΑΤΑΙ την τελευταία εγγραφή
+    s4.getData = async () => { s4.reads++; return s4.last ? [s4.last] : []; }; s4.sendData = async (x) => { s4.sent.push(...x); s4.last = x[0]; };
+    await sync(s4, dZ, false); await sync(s4, dZ, true);
+    ok(s4.reads === 2 && s4.sent.length === 1 && s4.sent[0].value === 2 && s4.sent[0].metadata.list.every((x) => x.c === 0), "Λ4 χωρίς ανταγωνισμό: όλες οι σόνδες με c:0 (για τις ζώνες), μία εγγραφή");
+    const s5 = fakeDev({ metadata: { list: C(L3) } }); await sync(s5, dZ, false);
+    ok(s5.sent.length === 1 && s5.sent[0].value === 2, "Λ5 αγρός που άλλαξε σόνδες: η λίστα ενημερώνεται");
+    const dN = apply(merge(K, [["Σ1", ST1]]), "");   // αγρός ΧΩΡΙΣ σόνδες εδάφους
+    const s6 = fakeDev(null); await sync(s6, dN, false); const r6 = s6.reads; await sync(s6, dN, true);
+    ok(r6 === 0 && s6.reads === 1 && s6.sent.length === 0, "Λ6 χωρίς σόνδες: ανάγνωση μόνο την ημέρα, καμία κενή εγγραφή");
     // ── Σ: καλωδίωση ──
     const iF = core.indexOf("  data._sagFaults = _sagSensorFaults(data, fieldName);\n");
     const iA = core.indexOf("  _sagApplySoilRef(data, _SAG_SOIL_REF_ID, fieldName);\n");
@@ -113,7 +124,7 @@ async function run(core) {
     const iR = core.indexOf("  return { data, prevBundle: _ringPrevBundle };", iA);
     ok(iG > 0 && iF > iG && iA > iF && iR > iA && core.split("_sagApplySoilRef(data, _SAG_SOIL_REF_ID, fieldName);").length === 2, "Σ1 η επιλογή τρέχει ΜΕΤΑ την πύλη και τον έλεγχο βλαβών, μία φορά");
     ok(core.split("data = _sagMergeDeviceData(data, deviceData, info?.name || value, fieldName, value);").length - 1 === 4, "Σ2 και οι 4 κλήσεις συγχώνευσης περνούν το id");
-    ok(/_SAG_SUBSTRATE_ACTIVE = null;[^\n]*\n(\s*_SAG_DEPTH1_[^\n]*\n)*\s*_SAG_SOIL_REF_ID = '';/.test(core) && core.indexOf("_SAG_SOIL_REF_ID = String(fieldConfig?.soil_ref_device || '');") < core.indexOf("const measurements = await getMeasurements("), "Σ3 δήλωση ανά αγρό, μηδενισμός");
+    ok(/_SAG_SUBSTRATE_ACTIVE = null;[^\n]*\n(\s*_SAG_(DEPTH1_|SOIL_DEV_LAST)[^\n]*\n)*\s*_SAG_SOIL_REF_ID = '';/.test(core) && core.indexOf("_SAG_SOIL_REF_ID = String(fieldConfig?.soil_ref_device || '');") < core.indexOf("const measurements = await getMeasurements("), "Σ3 δήλωση ανά αγρό, μηδενισμός");
     ok(core.includes("if (String(_scPrev.w || '') !== _scW) {") && core.includes("            _scPrev = {};\n")
       && core.split("_scW ? { w: _scW } : {}").length - 1 === 2, "Σ4 μάθηση: επανεκκίνηση σε αλλαγή πηγής + πηγή στην κατάσταση (μόνο με δήλωση)");
     ok(core.includes("if (_SAG_SUBSTRATE_ACTIVE || !_sagDivergenceIndicators(measurements?.data).length) _purgeShared.push('sensor_divergence');")
@@ -121,7 +132,7 @@ async function run(core) {
     const iB = core.indexOf("await dev_to_send_meas.sendData(packedIndicators);"), iY = core.indexOf("try { await _sagSyncSoilSensors(dev_to_send_meas, measurements?.data, fieldName, dailyTich); } catch (_eSS) {}");
     ok(iB > 0 && iY > iB && iY - iB < 300, "Σ6 η λίστα γράφεται αμέσως μετά το bundle, σε try");
     ok(!/ο πιο ξηρός/.test(core.slice(core.indexOf("function _sagApplySoilRef"), core.indexOf("async function _sagSyncSoilSensors"))), "Σ7 καμία αυτόματη επιλογή «πιο ξηρός»");
-    ok(K.get("SAG_KERNEL_VERSION") === "v50.169 · 2026-11-03", "Σ8 έκδοση");
+    ok(K.get("SAG_KERNEL_VERSION") === "v50.170 · 2026-11-03", "Σ8 έκδοση");
   } catch (e) { f.push("εκτέλεση: " + (e && e.stack || e)); }
   return f;
 }
@@ -141,7 +152,7 @@ const MUT = [
   ["m10 χωρίς μηδενισμό ανά αγρό", "      _SAG_SOIL_REF_ID = '';          // T-SOILREF-01: ποτέ μεταφορά από τον προηγούμενο αγρό", "      // T-SOILREF-01"],
   ["m11 μένει το _sagSoilDev", "    delete data._sagSoilDev;\n", ""],
   ["m12 και ο αέρας", "const _SAG_SOIL_KEY_RE = /^(soil_|conduct_soil|temp_soil|water_soil)/;", "const _SAG_SOIL_KEY_RE = /^(soil_|conduct_soil|temp_soil|water_soil|air_)/;"],
-  ["m13 έκδοση", "'v50.169 · 2026-11-03'", "'v50.164 · 2026-10-29'"],
+  ["m13 έκδοση", "'v50.170 · 2026-11-03'", "'v50.164 · 2026-10-29'"],
   ["m14 λίστα κάθε ώρα", "  if (p && keyOf(p.metadata && p.metadata.list) === keyOf(cand)) return false;", "  if (false) return false;"],
   ["m15 λίστα και χωρίς ανταγωνισμό", "  if (!p && !cand.length) return false;", "  if (false) return false;"],
   ["m16 ανάγνωση κάθε ώρα παντού", "  if (!cand.length && !dailyTich) return false;", "  if (false) return false;"],
