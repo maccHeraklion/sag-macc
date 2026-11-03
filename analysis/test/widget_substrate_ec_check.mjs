@@ -26,6 +26,29 @@ function run(w) {
     ok(w.includes('sagSubSet(!!o&&(o.soil_type==="coir"||o.soil_texture_class==="coir"));return vv}') && w.includes("sagDepthSet(2,1);sagSubSet(!1);return!1}"), "Α3 σημαία από τη ρύθμιση (κανόνας πυρήνα _sagSubstrateOf)");
     ok(w.includes("if(_sagEc9&&h&&!sagSubBox.v&&sagEceMulti9(t.history,n)){") && w.includes("}else if(_sagEc9&&h&&!sagSubBox.v){/* W-EC-ROOT-01 */"), "Α4 διαγράμματα «EC στη ρίζα» κλειστά σε υπόστρωμα");
     ok(/if\(s&&sagSubBox\.v&&\/\^conduct_soil\\d\?\$\/\.test\(String\(t\)\)\)s=\{\.\.\.s,label:s\.label\.replace\("Αγωγιμότητα εδάφους","Αγωγιμότητα υποστρώματος \(όργανο\)"\)\};/.test(w), "Α5 ετικέτα «Αγωγιμότητα υποστρώματος (όργανο)»");
+    // ── W-CONFIG-STUB-01: η ΠΡΑΓΜΑΤΙΚΗ διαδρομή της ρύθμισης (εδώ έπεσε ο έλεγχος Α2, που έθετε τη σημαία με το χέρι) ──
+    const cvd = cut(w, "CVD=l.useMemo(()=>{", "},[re,t.config])", "μνήμη ρύθμισης").replace("CVD=l.useMemo(()=>{", "");
+    const lat = cut(w, "LATV=l.useMemo(()=>{", "},[re,t.config])", "μνήμη πλάτους").replace("LATV=l.useMemo(()=>{", "");
+    const H2 = new Function("let " + helpers + ";" + "const sagCoveredSet=()=>{},sagMeterSet=z=>{mb.v=!!z},mb={v:!1},sagLatOf=c=>c&&c.latitude!=null?Number(c.latitude):null;"
+      + "return {mb,sagSubBox,sagFertBox,sagDepthBox,sagEceCard,sagEceSet,cvd:(re,t)=>{" + cvd + "},lat:(re,t)=>{" + lat + "}};")();
+    const STUB = { configuration: { value: JSON.stringify({ covered_cultivation: "true" }) } };
+    const coir = { soil_type: "coir", soil_texture_class: "coir", covered_cultivation: true, soil_depth_count: 2, latitude: 35.3 };
+    H2.sagEceSet({ soil_ec_pore2: { value: 4.9 } });
+    const cv1 = H2.cvd(STUB, { config: coir });
+    ok(H2.sagSubBox.v === true && H2.sagEceCard("conduct_soil2", DV, "SE0X") === null, "Β1 καλυμμένος coir με στέλεχος στο bundle: καμία κάρτα «EC στη ρίζα»");
+    ok(cv1 === true, "Β2 το covered μένει αληθές");
+    H2.cvd(STUB, { config: { soil_type: "clay_loamy", covered_cultivation: true, fert_ecw_dsm: 3.3, soil_depth_count: 1, soil_depth_port: 2, has_water_meter: true } });
+    ok(H2.sagSubBox.v === false && H2.sagFertBox.v === 3.3 && H2.sagDepthBox.v === 1 && H2.sagDepthBox.p === 2 && H2.mb.v === true, "Β3 καλυμμένος χώμα με στέλεχος: ECw, βάθη, θύρα, υδρόμετρο από την πλήρη ρύθμιση");
+    ok(H2.sagEceCard("conduct_soil2", DV, "SE0X") !== null, "Β3β χώμα με στέλεχος: η κάρτα μένει");
+    ok(H2.lat(STUB, { config: coir }) === 35.3, "Β4 πλάτος από την πλήρη ρύθμιση παρά το στέλεχος");
+    ok(H2.cvd(STUB, { config: { covered_cultivation: false } }) === true, "Β5 το στέλεχος του πυρήνα υπερισχύει στο covered (ετικέτα covered_cultivation)");
+    const open = { soil_type: "clay_loamy", covered_cultivation: false, fert_ecw_dsm: 2 };
+    const v6 = H2.cvd({ configuration: { value: JSON.stringify(open) } }, { config: open });
+    ok(v6 === false && H2.sagSubBox.v === false && H2.sagFertBox.v === 2, "Β6 ανοιχτός αγρός χωρίς στέλεχος: όπως πριν");
+    H2.cvd({}, { config: null });
+    ok(H2.sagSubBox.v === false && H2.sagFertBox.v === null && H2.sagDepthBox.v === 2, "Β7 χωρίς ρύθμιση: προεπιλογές");
+    H2.cvd({ configuration: { value: "{σπασμένο" } }, { config: coir });
+    ok(H2.sagSubBox.v === true, "Β8 άκυρο στέλεχος: μένει η πλήρης ρύθμιση");
     // ── διάγραμμα ──
     const body = cut(w, ",V=l.useMemo(()=>{/* W-CHART-GAP-01 */", ",[E,m,s])", "διάγραμμα").replace(",V=l.useMemo(()=>{/* W-CHART-GAP-01 */", "").replace(/\}$/, "");
     const V = (s, E) => new Function("E", "m", "s", body + "")(E, (x) => Number(x) / 1000, s);
@@ -50,6 +73,10 @@ const MUT = [
   ["μ4 μηδενικά σχεδιάζονται", "if(_z&&Number(g.v)===0)continue;", ""],
   ["μ5 κενά γεφυρώνονται", "_o.push([Math.min(_t,_pt)+1,\"-\"]);", ""],
   ["μ6 ετικέτα χώματος", "\"Αγωγιμότητα υποστρώματος (όργανο)\"", "\"Αγωγιμότητα εδάφους\""],
+  ["μ7 σημαίες μόνο από το bundle (το σφάλμα της 3/11)", "CVD=l.useMemo(()=>{try{const o=sagCfgOf(t.config,re);const vv=", "CVD=l.useMemo(()=>{try{const c=re.configuration&&re.configuration.value;const o=typeof c==\"string\"?JSON.parse(c):c;const vv="],
+  ["μ8 πλάτος μόνο από το bundle", "return sagLatOf(sagCfgOf(t.config,re))", "return sagLatOf(re.configuration&&re.configuration.value)"],
+  ["μ9 η ρύθμιση σκεπάζει το στέλεχος", "return a||b?{...(a||{}),...(b||{})}:null}", "return a||b?{...(b||{}),...(a||{})}:null}"],
+  ["μ10 χωρίς την πλήρη ρύθμιση", "const a=full&&typeof full==\"object\"?full:null,b=x", "const a=null,b=x"],
 ];
 let killed = 0;
 for (const [name, a, b] of MUT) {
