@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.173 · 2026-11-03';   // T-COVERED-WX-01 (κείμενα παγετού/καύσωνα σε θερμοκήπιο) · T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
+const SAG_KERNEL_VERSION = 'v50.174 · 2026-11-04';   // T-ECE-NOFALLBACK-01 (χωρίς εφεδρεία ×2,5) · T-COVERED-WX-01 (κείμενα παγετού/καύσωνα σε θερμοκήπιο) · T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -11397,6 +11397,13 @@ function _sagEcZoneR(r) {
   for (const [lim, name] of _SAG_ECR_ZONES) if (r < lim) return name;
   return 'συσσώρευση';
 }
+// T-ECE-NOFALLBACK-01: γιατί δεν βγαίνει ECe σήμερα, με λόγια αγρότη.
+function _sagEceNoWhy(ec, vwc, sat) {
+  if (vwc === null || vwc === undefined) return { v: 'Λείπει η υγρασία', t: 'Η αλατότητα υπολογίζεται από την αγωγιμότητα μαζί με την υγρασία του εδάφους, και σήμερα δεν υπάρχει μέτρηση υγρασίας.' };
+  if (!(Number(sat) > 0)) return { v: 'Δηλώστε τύπο εδάφους', t: 'Η αλατότητα χρειάζεται τον τύπο εδάφους. Δηλώστε τον στη φόρμα παραμετροποίησης.' };
+  return { v: 'Πολύ ξερό για μέτρηση σήμερα', t: 'Σε τόσο ξερό έδαφος η αγωγιμότητα δεν δίνει αξιόπιστη αλατότητα. Θα ξαναϋπολογιστεί όταν το έδαφος υγρανθεί.' };
+}
+
 function _sagEcDailyVerdict(a) {
   const out = [];
   const f = (v, d) => Number(v).toLocaleString('el-GR', { maximumFractionDigits: d });
@@ -11440,7 +11447,9 @@ function _sagEcDailyVerdict(a) {
   }
   // Α5(β)
   let st;
-  if (!hasRef) {
+  if (!hasRef && a.noEce) {
+    st = { v: 'Δεν υπολογίζεται σήμερα', c: 'grey', t: a.noEce.v + '. ' + a.noEce.t };   // T-ECE-NOFALLBACK-01
+  } else if (!hasRef) {
     st = { v: 'Αναμονή αναφοράς', c: 'grey',
       t: 'Η ημερήσια κρίση χρειάζεται την προ-αρδευτική EC στη ρίζα (ξηρότερο δείγμα 24ώρου) — βγαίνει από το επόμενο ημερήσιο tick. ' + (a.valTxt || '') + '.' };
   } else if (guard) {
@@ -19044,26 +19053,13 @@ module.exports = new Analysis(async (context) => {
             const _ecTmpE = _nE(_ecNum1 ? 'soil_temperature1' : 'temp_soil');
             const _eceChain = (e1 === null) ? null
               : _sagEcChain(e1, _ecVwcE, _ecTmpE, _ecSatE).ece;
-            // ΕΦΕΔΡΕΙΑ: χωρίς μέτρηση υγρασίας (ή κάτω από το όριο ισχύος του
-            // Hilhorst) δεν υπάρχει τρόπος να γίνει σωστά. Το ×2,5 μένει ΜΟΝΟ
-            // τότε, χαρακτηρισμένο ρητά ως ενδεικτικό — δεν σβήνεται, γιατί
-            // χωρίς αυτό ο αγρός θα έμενε ΧΩΡΙΣ καμία εκτίμηση αλατότητας.
-            const _eceFromChain = _eceChain !== null;
-            const _eceEst = (uS) => {
-              // Ο πυρήνας καλεί ΠΑΝΤΑ με το e1. Ο έλεγχος υπάρχει ώστε
-              // μελλοντική κλήση με ΑΛΛΟ κανάλι να μην πάρει σιωπηλά την
-              // αλυσίδα του e1 και να νομίζει ότι είναι δική της.
-              if (_eceFromChain && Number(uS) === Number(e1)) return _eceChain;
-              return (uS / 1000) * 2.5;
-            };
-            const _eceHow = _eceFromChain
-              ? ' (από μετρημένη υγρασία, Hilhorst 2000)'
-              : ' (ενδεικτικά ×2,5 — λείπει μέτρηση υγρασίας)';
+            // T-ECE-NOFALLBACK-01: χωρίς αλυσίδα δεν υπάρχει ECe. Το παλιό ×2,5 δεν είχε πηγή και μπορούσε να δώσει ψευδές πράσινο.
+            const _eceNoWhy = _sagEceNoWhy(e1 !== null ? e1 : e2, e1 !== null ? _ecVwcE : _nE('soil_moisture2'), _ecSatE);
             // T-ECWORST-01 (v50.155, εντολή Μιχάλη 24/9): η ημερήσια κρίση από το ΧΕΙΡΟΤΕΡΟ βάθος — όπως ήδη το νερό ρίζας (refF = max). Ως τώρα το βαθύ ECe δεν έμπαινε σε καμία κρίση (Κουτσάκης: ρηχό 1,2 / βαθύ 2,0, όριο 2,5).
             const _eceChain2 = (e2 === null || !_ecNum1) ? null : _sagEcChain(e2, _nE('soil_moisture2'), _nE('soil_temperature2'), _ecSatE).ece;
             const _eceW = (_eceChain2 !== null && (_eceChain === null || _eceChain2 > _eceChain)) ? { v: _eceChain2, el: 'βαθύ', how: ' (βαθύ, από μετρημένη υγρασία, Hilhorst 2000)' }
               : (_eceChain !== null ? { v: _eceChain, el: 'ρηχό', how: ' (ρηχό, από μετρημένη υγρασία, Hilhorst 2000)' }
-              : { v: (e1 !== null ? _eceEst(e1) : NaN), el: 'ρηχό', how: _eceHow });
+              : { v: NaN, el: 'ρηχό', how: '' });
             const _trendPct = (sel) => {
               const xs = _hist.map(sel).filter(v => Number.isFinite(v));
               if (xs.length < 4) return null;
@@ -19105,13 +19101,17 @@ module.exports = new Analysis(async (context) => {
               _ecphIndicators.push(..._sagEcDailyVerdict({
                 e1, e2, ref1: _refOfE('1'), ref2: _refOfE('2'),
                 fert: _numInE(fieldConfig?.fert_ecw_dsm, 0.05, 15), ecw: _numInE(fieldConfig?.water_ecw_dsm, 0.05, 15),
-                eceMax: _eceMax, eceEst: _eceW.v, eceHow: _eceW.how,   // T-ECWORST-01
+                eceMax: _eceMax, eceEst: _eceW.v, eceHow: _eceW.how, noEce: Number.isFinite(_eceW.v) ? null : _eceNoWhy,   // T-ECWORST-01 · T-ECE-NOFALLBACK-01
                 dead: _deadDaily, refHist: _refHistE, today: _todayE, valTxt: _valTxt }));
 
               // T-SALT-KS-01: Maas-Hoffman / FAO-56 εξ.83 — μόνο με μέτρηση EC
               // και γνωστό όριο καλλιέργειας. Κλίση b: αντιπροσωπευτική τιμή
               // της κατηγορίας ανοχής FAO-29.
-              if (Number.isFinite(_eceMax) && e1 !== null && !_deadDaily) {   // T-ECVERDICT-01 (Κ5): χωρίς Ks από νεκρό όργανο
+              if (Number.isFinite(_eceMax) && e1 !== null && !_deadDaily && !Number.isFinite(_eceW.v)) {   // T-ECE-NOFALLBACK-01: χωρίς ECe, κανένα Ks
+                _ecphIndicators.push({ variable: 'salinity_ks', value: null, metadata: { internal: true } });
+                _ecphIndicators.push({ variable: 'salinity_stress', value: 'Μη διαθέσιμο',
+                  metadata: { color: 'grey', text: _eceNoWhy.v + '. Σήμερα δεν εκτιμάται οσμωτική καταπόνηση.' } });
+              } else if (Number.isFinite(_eceMax) && e1 !== null && !_deadDaily) {   // T-ECVERDICT-01 (Κ5): χωρίς Ks από νεκρό όργανο
                 const _bSlope = _eceMax < 1.5 ? 14 : _eceMax < 3 ? 10 : _eceMax < 6 ? 7 : 4;
                 const _eceNow = _eceW.v;   // T-ECWORST-01: χειρότερο βάθος
                 let _ks = _eceNow > _eceMax ? 1 - (_bSlope * (_eceNow - _eceMax)) / 100 : 1;

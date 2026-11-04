@@ -9,7 +9,7 @@ function load(core) {
   const shim = (m) => { if (m === "@tago-io/sdk") { class S { constructor() {} } return { Analysis: S, Resources: S, Account: S, Services: S, Device: S, Utils: { getTokenByName: async () => "" } }; } return req(m); };
   const quiet = { log() {}, warn() {}, error() {}, info() {}, debug() {} };
   return new Function("require", "module", "exports", "process", "console", "__dirname", "__filename", core
-    + "\n;return { calculate_IrrigationVolume, _sagDetectFaults, _sagDevExpect, _sagFrostIndicators, _sagHeatIndicators, SAG_KERNEL_VERSION, _cov: (v) => { _SAG_COVERED_ACTIVE = v; } };")(
+    + "\n;return { calculate_IrrigationVolume, _sagDetectFaults, _sagDevExpect, _sagFrostIndicators, _sagHeatIndicators, _sagEcDailyVerdict, _sagEceNoWhy, SAG_KERNEL_VERSION, _cov: (v) => { _SAG_COVERED_ACTIVE = v; } };")(
     shim, { exports: {} }, {}, { env: {}, on() {}, exit() {} }, quiet, path.dirname(KPATH), KPATH);
 }
 const T = new Date(Date.now() - 6e5).toISOString();
@@ -23,7 +23,7 @@ function run(core) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   try {
     const K = load(core);
-    ok(K.SAG_KERNEL_VERSION === "v50.173 · 2026-11-03", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.174 · 2026-11-04", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     const faults = (range) => {
       const data = {}; for (const ch of K._sagDevExpect("se0x")) for (const a of [].concat(ch.a)) data[a] = [{ value: 20, time: T, device: "Δ" }];
       const dev = { n: "Δ", t: "se0x", qerr: 0, stats: { soil_temperature1: { n: 30, spanH: 24, range, min: 10, max: 10 + range } } };
@@ -56,6 +56,30 @@ function run(core) {
     ok(fg && fo && fg.value === fo.value && fg.metadata.color === fo.metadata.color && hg && ho && hg.value === ho.value && hg.metadata.color === ho.metadata.color, "Γ5 βαθμίδα και χρώμα ίδια με τον ανοιχτό αγρό");
     ok(K._sagFrostIndicators(fc([8, 9, 10])).length === 0 && K._sagHeatIndicators(fc([20, 21, 22]), crop).length === 0, "Γ6 κάτω από τα όρια κανένας συναγερμός και σε θερμοκήπιο");
     K._cov(false);
+    // ── Δ: T-ECE-NOFALLBACK-01 χωρίς ×2,5: πραγματική κρίση και πραγματικό μπλοκ Ks ──
+    const V = (o) => K._sagEcDailyVerdict({ e1: 800, e2: null, ref1: null, ref2: null, fert: null, ecw: null, eceMax: 1, eceEst: NaN, eceHow: "", dead: false, refHist: [], today: "2026-11-04", valTxt: "ρηχό 800 µS/cm", ...o });
+    const S = (r) => r.find((x) => x.variable === "soil_ec_status");
+    const whyDry = K._sagEceNoWhy(800, 12, 45);
+    const d1 = S(V({ noEce: whyDry }));
+    ok(d1 && d1.value === "Δεν υπολογίζεται σήμερα" && d1.metadata.color === "grey" && /Πολύ ξερό/.test(d1.metadata.text), "Δ1 ξερό: γκρι με αιτία (" + JSON.stringify(d1) + ")");
+    ok(K._sagEceNoWhy(800, null, 45).v === "Λείπει η υγρασία" && K._sagEceNoWhy(800, 30, NaN).v === "Δηλώστε τύπο εδάφους", "Δ2 σωστή αιτία ανά περίπτωση");
+    const d3 = S(V({ eceEst: 2, noEce: null }));
+    ok(d3 && d3.metadata.color === "red" && /Πάνω από το όριο/.test(d3.value), "Δ3 με ECe από αλυσίδα: η κρίση ορίου ισχύει όπως πριν");
+    const d4 = S(V({ ref1: 2.9, fert: 3.3, noEce: whyDry }));
+    ok(d4 && d4.value === "Χωρίς συσσώρευση", "Δ4 με αναφορά: η κρίση λόγου μένει (" + (d4 && d4.value) + ")");
+    const d5 = S(V({ noEce: null }));
+    ok(d5 && d5.value === "Αναμονή αναφοράς", "Δ5 χωρίς αιτία: αναμονή αναφοράς όπως πριν");
+    const ks0 = core.indexOf("if (Number.isFinite(_eceMax) && e1 !== null && !_deadDaily");
+    const ks1 = core.indexOf("\n            }\n            if (phv !== null) {", ks0);
+    const KS = new Function("_eceMax", "e1", "_deadDaily", "_eceW", "_ecphIndicators", "_eceNoWhy", core.slice(ks0 < 0 ? 0 : ks0, ks1));
+    const r1 = []; KS(2.5, 800, false, { v: NaN, el: "ρηχό", how: "" }, r1, whyDry);
+    const ksv = (r, v) => r.find((x) => x.variable === v);
+    ok(ksv(r1, "salinity_ks") && ksv(r1, "salinity_ks").value === null && ksv(r1, "salinity_stress").value === "Μη διαθέσιμο" && ksv(r1, "salinity_stress").metadata.color === "grey", "Δ6 χωρίς ECe: κανένα Ks, «Μη διαθέσιμο» (" + JSON.stringify(r1).slice(0, 160) + ")");
+    const r2 = []; KS(2.5, 800, false, { v: 6.2, el: "ρηχό", how: " (ρηχό)" }, r2, whyDry);
+    ok(ksv(r2, "salinity_ks").value < 1 && /εκτίμηση/.test(ksv(r2, "salinity_stress").value), "Δ7 με ECe: Ks όπως πριν");
+    const c0 = core.indexOf("            const _eceChain2 = "), c1 = core.indexOf("\n", core.indexOf("how: '' });", c0));
+    const EW = new Function("e1", "e2", "_ecNum1", "_eceChain", "_sagEcChain", "_nE", "_ecSatE", core.slice(c0, c1) + "\n;return _eceW;");
+    ok(Number.isNaN(EW(800, null, true, null, () => ({ ece: null }), () => null, 45).v), "Δ8 χωρίς αλυσίδα: καμία τιμή, ούτε ×2,5");
   } catch (e) { f.push("εκτέλεση: " + (e && e.stack || e)); }
   return f;
 }
@@ -70,6 +94,10 @@ const MUT = [
   ["μ6 παγετός σβήνει σε θερμοκήπιο", "    if (mn > _SAG_FROST_WARN_C) return [];", "    if (mn > _SAG_FROST_WARN_C || _SAG_COVERED_ACTIVE) return [];"],
   ["μ7 καύσωνας με κείμενο ανοιχτού παντού", "        text: _SAG_COVERED_ACTIVE\n          ? 'Η πρόγνωση δίνει έως '", "        text: false\n          ? 'Η πρόγνωση δίνει έως '"],
   ["μ8 παγετός με κείμενο θερμοκηπίου παντού", "        text: _SAG_COVERED_ACTIVE\n          ? 'Η πρόγνωση δίνει ' + v1", "        text: true\n          ? 'Η πρόγνωση δίνει ' + v1"],
+  ["μ9 επιστροφή του ×2,5", "{ v: NaN, el: 'ρηχό', how: '' });", "{ v: (e1 !== null ? e1 / 1000 * 2.5 : NaN), el: 'ρηχό', how: '' });"],
+  ["μ10 Ks χωρίς φρουρό", " && !Number.isFinite(_eceW.v)) {   // T-ECE-NOFALLBACK-01", " && false) {   // T-ECE-NOFALLBACK-01"],
+  ["μ11 κάρτα χωρίς αιτία", "if (!hasRef && a.noEce) {", "if (false) {"],
+  ["μ12 αιτία πάντα ξερό", "if (vwc === null || vwc === undefined) return", "if (false) return"],
   ["μ5 αναστολή με λίτρα", "{ variable: 'grossIrrigationLiters', value: 0 },\n    { variable: 'irrigationDurationHours', value: 0 },\n    { variable: 'irrigation_inhibited_by_rain', value: true },", "{ variable: 'grossIrrigationLiters', value: 1 },\n    { variable: 'irrigationDurationHours', value: 0 },\n    { variable: 'irrigation_inhibited_by_rain', value: true },"],
 ];
 let killed = 0;

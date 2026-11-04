@@ -22,7 +22,7 @@ function buildCore(c) {
   return new Function(src)();
 }
 function buildEce(c) {
-  const a = c.indexOf("            const _eceChain2 = "); const b = c.indexOf("\n", c.indexOf("how: _eceHow });", a));
+  const a = c.indexOf("            const _eceChain2 = "); const b = c.indexOf("\n", c.indexOf("how: '' });", a));
   if (a < 0 || b < 0) throw new Error("μπλοκ _eceW δεν βρέθηκε");
   return new Function("e1", "e2", "_ecNum1", "_eceChain", "_sagEcChain", "_nE", "_ecSatE", "_eceEst", "_eceHow", c.slice(a, b) + "\nreturn _eceW;");
 }
@@ -34,7 +34,7 @@ function buildWidget(w) {
 
 function run(c, w) {
   const f = []; const ok = (x, m) => { if (!x) f.push(m); };
-  ok(c.includes("const SAG_KERNEL_VERSION = 'v50.173 · 2026-11-03';"), "έκδοση v50.155");
+  ok(c.includes("const SAG_KERNEL_VERSION = 'v50.174 · 2026-11-04';"), "έκδοση v50.155");
   // ── T-ECWORST-01 ──
   ok(c.includes("eceMax: _eceMax, eceEst: _eceW.v, eceHow: _eceW.how,") && c.includes("const _eceNow = _eceW.v;"), "η ημερήσια κρίση και ο Ks παίρνουν το χειρότερο βάθος");
   ok(!c.includes("eceEst: (e1 !== null ? _eceEst(e1) : NaN)") && !c.includes("const _eceNow = _eceEst(e1);"), "η παλιά ρηχή-μόνο κλήση έφυγε");
@@ -52,7 +52,7 @@ function run(c, w) {
   const w4 = E(288, 463, false, 1.18, chain, nE, 49.6, est, " (×2,5)");
   ok(w4.v === 1.18, "Α4 χωρίς αριθμημένα κανάλια (lse01) -> ΔΕΝ διαβάζει soil_moisture2");
   const w5 = E(400, null, true, null, chain, nE, 49.6, est, " (×2,5)");
-  ok(w5.v === 1 && w5.how === " (×2,5)", "Α5 χωρίς αλυσίδα -> εφεδρεία ×2,5 όπως πριν");
+  ok(Number.isNaN(w5.v) && w5.how === "", "Α5 χωρίς αλυσίδα -> καμία τιμή (T-ECE-NOFALLBACK-01)");
   const w6 = E(999, 463, true, null, chain, nE, 49.6, est, " (×2,5)");
   ok(w6.v === 1.96 && w6.el === "βαθύ", "Α6 ρηχή αλυσίδα άκυρη, βαθιά έγκυρη -> βαθύ");
   // ── T-FCTEXT-02 / T-METCOVERED-01 ──
@@ -103,7 +103,7 @@ const base = run(C, W);
 if (base.length) { console.log("ΑΠΟΤΥΧΙΑ ΒΑΣΗΣ:\n  " + base.join("\n  ")); process.exit(1); }
 console.log("ΒΑΣΗ: όλοι οι έλεγχοι πέρασαν");
 const MUT = [
-  ["C1 παλιά έκδοση", "'v50.173 · 2026-11-03'", "'v50.159 · 2026-10-04'", "c"],
+  ["C1 παλιά έκδοση", "'v50.174 · 2026-11-04'", "'v50.159 · 2026-10-04'", "c"],
   ["C2 πάντα ρηχό", "const _eceW = (_eceChain2 !== null && (_eceChain === null || _eceChain2 > _eceChain))", "const _eceW = (false)", "c"],
   ["C3 διαβάζει βαθύ και σε lse01", "const _eceChain2 = (e2 === null || !_ecNum1) ? null", "const _eceChain2 = (e2 === null) ? null", "c"],
   ["C4 Ks από ρηχό", "const _eceNow = _eceW.v;", "const _eceNow = _eceEst(e1);", "c"],

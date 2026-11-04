@@ -36,7 +36,7 @@ function run(core, sync, form, wid) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   try {
     const K = load(core);
-    ok(K.SAG_KERNEL_VERSION === "v50.173 · 2026-11-03", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.174 · 2026-11-04", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     // ── Α: ανάγνωση ──
     const zp = K._sagZonesParse(J([{ n: " Γκαζόν Β ", s: [IDA, IDB + ":2", "κακό"], c: [["c1", 500], ["c2"]] }, { n: "", c: [["c1"]] }, { n: "Χωρίς καλλιέργεια", s: [IDA], c: [] }, null]));
     ok(J(zp) === J([{ n: "Γκαζόν Β", s: [IDA, IDB + ":2"], c: [{ id: "c1", a: 500 }, { id: "c2", a: NaN }] }]), "Α1 καθαρισμός ζωνών (" + J(zp) + ")");
