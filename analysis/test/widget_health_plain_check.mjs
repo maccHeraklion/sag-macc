@@ -66,7 +66,7 @@ function run(w) {
     if (a < 0 || b < 0) throw new Error("δεν βρέθηκαν οι κάρτες");
     const seg = w.slice(a, b);
     ok((seg.match(/T-HEALTH-PLAIN-01/g) || []).length === 3, "Δ0 τρεις κάρτες με σήμανση");
-    const R = (re, src) => new Function("re", "e", "_sagSrcTxt9", "_sagBat9", "_sagInv9", "return [" + seg + "];")(re, e, src === undefined ? "Θερμοκρασία αέρα: σταθμός" : src, { "a1": "92 %" }, { "a1": { n: "Σταθμός" } });
+    const R = (re, src) => new Function("re", "e", "_sagSrcTxt9", "_sagBat9", "_sagInv9", "sagCov9", "_hk9", "return [" + seg + "];")(re, e, src === undefined ? "Θερμοκρασία αέρα: σταθμός" : src, { "a1": "92 %" }, { "a1": { n: "Σταθμός" } }, () => ({ d: 6, p: 7, u: 0, w: 0 }), "olive:koroneiki");
     const card = (out, id) => out.find(c => c && c.p && c.p.id === id) || null;
     const sum = (c) => flat(find(c, x => x.t === "summary"));
     const txt = (c) => flat(c).replace(/\s+/g, " ");
@@ -76,7 +76,7 @@ function run(w) {
     const H = card(out, "healthCard"), A = card(out, "alertsCard"), B = card(out, "basisCard");
     ok(H && A && B, "Ρ0 υπάρχουν και οι τρεις κάρτες");
     ok(/όλα λειτουργούν/.test(sum(H)) && !/θέμα/.test(sum(H)), "Ρ1 Ρηγάκης: «όλα λειτουργούν», κανένα θέμα (" + sum(H) + ")");
-    ok(/Παρακολούθηση ασθενειών Λειτουργεί · παρακολουθούνται 6 ασθένειες από μύκητες/.test(txt(H)), "Ρ2 μοντέλο μολύνσεων σε απλά λόγια (" + txt(H).slice(0, 400) + ")");
+    ok(/Παρακολούθηση ασθενειών Λειτουργεί · παρακολουθούνται 6 ασθένειες/.test(txt(H)), "Ρ2 μοντέλο μολύνσεων σε απλά λόγια (" + txt(H).slice(0, 400) + ")");
     ok(!/μέγ\.|Ενεργές ·|°C·ημ/.test(txt(H)), "Ρ3 χωρίς «μέγ. 5 ω» / «Ενεργές ·» / «°C·ημ»");
     ok(/Παρακολούθηση εντόμων Λειτουργεί · παρακολουθούνται 7 εχθροί/.test(txt(H)), "Ρ4 έντομα σε απλά λόγια");
     ok(!/κόμης|Προληπτικό|Βροχή|Αλατότητα|Κύρια αιτία|Κατάσταση ανάπτυξης|Ρηχό έναντι/.test(txt(H)), "Ρ5 η υγεία ΔΕΝ έχει καιρό/άλατα/μεθοδολογία");
