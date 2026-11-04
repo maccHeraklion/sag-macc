@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.176 · 2026-11-04';   // T-LEAFWET-RH-01 (μετρημένο υγρό φύλλο υπερισχύει του ορίου RH· περονόσποροι/βοτρύτης: επιθεώρηση) · T-MILDEW-INSPECT-01 (ωίδιο: επιθεώρηση αντί εντολής ψεκασμού) · T-ECE-NOFALLBACK-01 (χωρίς εφεδρεία ×2,5) · T-COVERED-WX-01 (κείμενα παγετού/καύσωνα σε θερμοκήπιο) · T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
+const SAG_KERNEL_VERSION = 'v50.177 · 2026-11-04';   // T-RH-CAP-90-01 (όριο RH ≤ 90 για ασθένειες υγρού φύλλου) · T-LEAFWET-RH-01 (μετρημένο υγρό φύλλο υπερισχύει του ορίου RH· περονόσποροι/βοτρύτης: επιθεώρηση) · T-MILDEW-INSPECT-01 (ωίδιο: επιθεώρηση αντί εντολής ψεκασμού) · T-ECE-NOFALLBACK-01 (χωρίς εφεδρεία ×2,5) · T-COVERED-WX-01 (κείμενα παγετού/καύσωνα σε θερμοκήπιο) · T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -8356,6 +8356,9 @@ const _SAG_LWS_HIGH       = 50;   // συμφωνία με τη γραμμή v4.
 const _SAG_LWS_SHADE_DT   = 5;    // °C — ίδιο κατώφλι με το LWS-SUN-01
 const _SAG_CANOPY_COOLING = 1.5;  // °C ψύξη φύλλου έναντι αέρα τη νύχτα
 const _SAG_LWS_RAIN_MM    = 0.2;  // mm/h που ήδη βρέχουν το φύλλωμα
+// T-RH-CAP-90-01 (v50.177, απόφαση Michalis 4/11): οροφή του ορίου RH για παθογόνα που απαιτούν υγρό φύλλο.
+// Η εκτίμηση διαβροχής χωρίς όργανο ξεκινά από RH 90· όριο 92/95 αντέφασκε μαζί της και τα em320 δεν το φτάνουν.
+const _SAG_WET_RH_CAP     = 90;   // % — ισχύει ΜΟΝΟ όταν requiresLeafWetness !== false
 const _SAG_LWS_SOURCE_EL = {
   rain: 'Βροχή', sensor: 'Αισθητήρας φύλλου', dew_leaf: 'Δρόσος (θερμ. φύλλου)',
   dew_air: 'Δρόσος (εκτίμηση)', rh: 'Σχετική υγρασία', none: 'Στεγνό',
@@ -8669,7 +8672,8 @@ function calculate_InfectionHours(hourTick, measurements, parameters) {
       // T-LEAFWET-RH-01 (v50.176): το όριο RH είναι υποκατάστατο του νερού στο φύλλο. Όταν ο αισθητήρας
       // φύλλου ΜΕΤΡΑ νερό, δεν μπλοκάρει· τα em320 σταματούν στο 89,5–95 % και ο περονόσπορος είχε 0 ώρες.
       // Εκτίμηση (δρόσος αέρα, RH) και ωίδια (δεν θέλουν υγρό φύλλο): όπως πριν.
-      const humidityOk = RH >= Number(_oh.min) || (needsWet && _lwsMeasuredWet);
+      const _rhMin = needsWet ? Math.min(Number(_oh.min), _SAG_WET_RH_CAP) : Number(_oh.min);   // T-RH-CAP-90-01
+      const humidityOk = RH >= _rhMin || (needsWet && _lwsMeasuredWet);
       const wetOk = needsWet ? leafIsWet : true;
 
       // B6 FIX: Rain inhibit for erysiphe (rain washes conidia)

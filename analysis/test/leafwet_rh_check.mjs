@@ -67,12 +67,21 @@ function run(src) {
     ok(b.cnt(AS) === 0, "Β3 αλτερνάρια (T ≥ 24) δεν μετρά στους 17 °C");
     // Γ. χωρίς αισθητήρα φύλλου: RH 92 → διαβροχή από εκτίμηση, το όριο RH ισχύει όπως πριν
     const c = series(K, 6, { T: 19, RH: 92 }, CUKE);
-    ok(c.cnt(PC) === 0 && c.lws && /Σχετική υγρασία|Δρόσος \(εκτίμηση\)/.test(c.lws.value), "Γ1 χωρίς όργανο, RH 92: εκτίμηση δεν παρακάμπτει το όριο 95 (" + c.cnt(PC) + ", " + (c.lws && c.lws.value) + ")");
+    ok(c.cnt(PC) === 6 && c.lws && /Σχετική υγρασία|Δρόσος \(εκτίμηση\)/.test(c.lws.value), "Γ1 χωρίς όργανο, RH 92: με οροφή 90 (T-RH-CAP-90-01) μετρά (" + c.cnt(PC) + ", " + (c.lws && c.lws.value) + ")");
+    const c3 = series(K, 6, { T: 19, RH: 89 }, CUKE);
+    ok(c3.cnt(PC) === 0, "Γ1β χωρίς όργανο, RH 89: στεγνό, δεν μετρά (" + c3.cnt(PC) + ")");
+    const c4 = series(K, 6, { T: 17, RH: 91 }, TOM);
+    ok(c4.cnt(BC) === 6 && c4.cnt(PI) === 6, "Γ1γ ντομάτα χωρίς όργανο, RH 91: βοτρύτης (92→90) και περονόσπορος μετρούν (" + c4.cnt(BC) + "/" + c4.cnt(PI) + ")");
+    const ORANGE = { cultivation_type_general: "citrusFruits", cultivation_type: "orange", stage: "fruiting", name: "ΠΟΡΤΟΚΑΛΙ", soil_type: "silty_clay_loam", area: 2000, irrigation_system: "dripIrrigation" };
+    const c5 = series(K, 6, { T: 20, RH: 92 }, ORANGE);
+    const c6 = series(K, 6, { T: 19, RH: 87, dp: 18 }, CUKE);
+    ok(c6.cnt(PC) === 0 && c6.lws && /Δρόσος \(εκτίμηση\)/.test(c6.lws.value), "Γ1ε εκτίμηση δρόσου από αέρα με RH 87: κάτω από την οροφή 90, δεν μετρά (" + c6.cnt(PC) + ", " + (c6.lws && c6.lws.value) + ")");
+    ok(c5.cnt("phytophthora_citrophthora") === 0, "Γ1δ φυτόφθορα εσπεριδοειδών (χωρίς απαίτηση υγρού φύλλου, όριο 95): η οροφή ΔΕΝ ισχύει (" + c5.cnt("phytophthora_citrophthora") + ")");
     const c2 = series(K, 6, { T: 19, RH: 96 }, CUKE);
     ok(c2.cnt(PC) === 6, "Γ2 χωρίς όργανο, RH 96: μετρά όπως πριν");
     // Δ. δρόσος στο φύλλο (μετρημένη θερμοκρασία φύλλου ≤ σημείο δρόσου, σκιασμένο): μετρά
-    const d = series(K, 6, { T: 19, RH: 92, dp: 17.4, lm: 5, lt: 17.0 }, CUKE);
-    ok(d.cnt(PC) === 6 && d.lws && d.lws.value === "Δρόσος (θερμ. φύλλου)", "Δ1 δρόσος στο φύλλο μετρά (" + d.cnt(PC) + ", " + (d.lws && d.lws.value) + ")");
+    const d = series(K, 6, { T: 19, RH: 88, dp: 17.4, lm: 5, lt: 17.0 }, CUKE);
+    ok(d.cnt(PC) === 6 && d.lws && d.lws.value === "Δρόσος (θερμ. φύλλου)", "Δ1 δρόσος στο φύλλο (μετρημένη θερμοκρασία φύλλου) μετρά και με RH 88 (" + d.cnt(PC) + ", " + (d.lws && d.lws.value) + ")");
     // Ε. ωίδιο δεν θέλει υγρό φύλλο: RH 40 με βρεγμένο φύλλο ΔΕΝ μετρά (όριο RH 50 ισχύει)
     const e = series(K, 3, { T: 24, RH: 40, lm: 60, lt: 23.5 }, CUKE);
     ok(e.cnt(PX) === 0, "Ε1 ωίδιο: το υγρό φύλλο δεν παρακάμπτει το όριο RH (" + e.cnt(PX) + ")");
@@ -106,8 +115,8 @@ const base = run(SRC);
 if (base.length) { console.log("ΑΠΟΤΥΧΙΑ ΒΑΣΗΣ:\n  " + base.join("\n  ")); process.exit(1); }
 console.log("ΒΑΣΗ: όλοι οι έλεγχοι πέρασαν");
 const M = [
-  ["M1 χωρίς παράκαμψη", "const humidityOk = RH >= Number(_oh.min) || (needsWet && _lwsMeasuredWet);", "const humidityOk = RH >= Number(_oh.min);"],
-  ["M2 παράκαμψη και για ωίδια", "const humidityOk = RH >= Number(_oh.min) || (needsWet && _lwsMeasuredWet);", "const humidityOk = RH >= Number(_oh.min) || _lwsMeasuredWet;"],
+  ["M1 χωρίς παράκαμψη", "const humidityOk = RH >= _rhMin || (needsWet && _lwsMeasuredWet);", "const humidityOk = RH >= _rhMin;"],
+  ["M2 παράκαμψη και για ωίδια", "const humidityOk = RH >= _rhMin || (needsWet && _lwsMeasuredWet);", "const humidityOk = RH >= _rhMin || _lwsMeasuredWet;"],
   ["M3 κάθε υγρό φύλλο (και εκτίμηση)", "const _lwsMeasuredWet = leafIsWet && (_lws.source === 'sensor' || _lws.source === 'dew_leaf');", "const _lwsMeasuredWet = leafIsWet;"],
   ["M4 χωρίς δρόσο φύλλου", "(_lws.source === 'sensor' || _lws.source === 'dew_leaf')", "(_lws.source === 'sensor')"],
   ["M5 βοτρύτης εκτός λίστας", "'brassica_downy_mildew', 'botrytis_cinerea'];", "'brassica_downy_mildew'];"],
@@ -117,6 +126,9 @@ const M = [
   ["M8 σιωπή με λάθος όνομα", "(pathogenKey === 'plasmopara_viticola' ? 'τον περονόσπορο' : 'το ωίδιο')", "'το ωίδιο'"],
   ["M9 η πύλη θερμοκρασίας", "const conditionsOk = tempOk && humidityOk && wetOk && !rainInhibit;", "const conditionsOk = humidityOk && wetOk && !rainInhibit;"],
   ["M10 πάγωμα οργάνου", "const _frozenHere = _ihFrozen || (needsWet && _leafFrozen);", "const _frozenHere = _ihFrozen;"],
+  ["M12 χωρίς οροφή", "const _rhMin = needsWet ? Math.min(Number(_oh.min), _SAG_WET_RH_CAP) : Number(_oh.min);", "const _rhMin = Number(_oh.min);"],
+  ["M13 οροφή και στα χωρίς υγρό φύλλο", "const _rhMin = needsWet ? Math.min(Number(_oh.min), _SAG_WET_RH_CAP) : Number(_oh.min);", "const _rhMin = Math.min(Number(_oh.min), _SAG_WET_RH_CAP);"],
+  ["M14 οροφή 85", "const _SAG_WET_RH_CAP     = 90;", "const _SAG_WET_RH_CAP     = 85;"],
 ];
 let bad = 0;
 for (const [n, a, b] of M) {
