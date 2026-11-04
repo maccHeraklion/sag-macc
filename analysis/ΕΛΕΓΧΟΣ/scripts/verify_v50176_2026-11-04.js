@@ -1,0 +1,39 @@
+// SAG — PROBE ΑΝΑΓΝΩΣΗΣ · 4/11/2026 · Πριν/μετά το v50.176 (T-LEAFWET-RH-01): fleet_summary, hash ζωντανού πυρήνα,
+// μηνύματα και μετρητές ωρών των 6 ασθενειών υγρού φύλλου (περονόσποροι + βοτρύτης) σε όλους τους αγρούς.
+const zlib = require("zlib"); const crypto = require("crypto");
+const TOKEN = process.env.T_ANALYSIS_TOKEN; const API = "https://api.us-e1.tago.io";
+async function get(path) { const r = await fetch(API + path, { headers: { Authorization: TOKEN } }); const j = await r.json().catch(() => ({})); if (!j.status) throw new Error(JSON.stringify(j.message || j).slice(0, 140)); return j.result; }
+const P = "V176|"; const FLEET = "6a98855ca06e41000bfae024"; const CORE = "6898958ea9fc0d000a382484";
+const PATH = ["plasmopara_viticola", "erysiphe_necator", "phytophthora_infestans", "botrytis_cinerea", "venturia_inaequalis", "taphrina_deformans", "colletotrichum_oleae", "spilocaea_oleagina", "alternaria_solani", "podosphaera_xanthii", "oidium_farinosum", "phytophthora_niederhauserii", "neopestalotiopsis_clavispora", "phytophthora_pythium_root_rot_herbs", "pseudocercospora_cladosporioides", "monilinia_spp", "leveillula_taurica", "peronospora_destructor", "pseudoperonospora_cubensis", "cercospora_beticola", "podosphaera_aphanis", "alternaria_dauci", "brassica_downy_mildew", "brassica_alternaria", "alternaria_alternata_citrus_abs", "zymoseptoria_tritici", "fusarium_graminearum", "puccinia_striiformis", "puccinia_menthae", "blumeria_graminis", "phytophthora_citrophthora", "colletotrichum_gloeosporioides", "plasmopara_halstedii", "colletotrichum_acutatum", "phomopsis_viticola", "cerotelium_fici", "botryosphaeria_panicle_shoot_blight", "septoria_pistaciarum", "cryphonectria_parasitica", "phytophthora_xcambivora", "fusarium_spp_corm_rot", "podosphaera_mors_uvae", "gloeosporidiella_ribis", "pseudoidium_ceratoniae", "pseudocercospora_ceratoniae", "pestalotiopsis_uvicola", "verticillium_dahliae", "phytophthora_capsici", "rhizoctonia_solani", "sclerotinia_sclerotiorum", "bactrocera_oleae", "prays_oleae", "palpita_unionalis", "tuta_absoluta", "myzus_persicae", "ceratitis_capitata", "bemisia_tabaci", "rhynchites_cribripennis", "rhopalosiphum_padi", "sitobion_avenae", "lobesia_botrana", "cydia_pomonella", "thrips_tabaci", "phyllocnistis_citrella", "euphyllura_phillyreae", "saissetia_oleae", "parlatoria_oleae", "phthorimaea_operculella", "leptinotarsa_decemlineata", "tetranychus_urticae", "panonychus_ulmi", "panonychus_citri", "xanthomonas_arboricola_pv_juglandis", "pseudomonas_savastanoi", "erwinia_amylovora", "meloidogyne_incognita"];
+const PRE = ['infection_hours_counter_max_','infection_hours_counter_','nematode_dd_accumulated_','nematode_generation_index_','dh_accumulated_','gdd_accumulated_','gdd_daily_','gdd_hourly_','fir_message_','fir_','pei_','case_','last_spray_','spray_protection_end_','inspection_clean_','soilhist_','gdd_seeded_'];
+const dec = (k) => { if (!/^[a-z][0-9][0-9]$/.test(k)) return k; const p = PRE[k.charCodeAt(0) - 97], n = PATH[Number(k.slice(1))]; return p && n ? p + n : k; };
+const WET = ["plasmopara_viticola", "phytophthora_infestans", "pseudoperonospora_cubensis", "peronospora_destructor", "brassica_downy_mildew", "botrytis_cinerea"];
+const tag = (d, k) => ((d.tags || []).find((t) => String(t.key).toLowerCase() === k.toLowerCase()) || {}).value;
+const val = (x) => (x && typeof x === "object" && "value" in x ? x.value : x);
+(async () => {
+  console.log(P + "=== " + new Date().toISOString());
+  try {
+    for (const e of await get(`/device/${FLEET}/data?variables=fleet_summary&qty=1`)) { const m = e.metadata || {}; console.log(P + "FLEET|" + e.time + "|kernel=" + m.kernel + "|computed=" + m.computed + "/" + m.total + "|errors=" + JSON.stringify(m.errors || []).slice(0, 200) + "|ms=" + m.ms); }
+    const meta = await get(`/analysis/${CORE}/download`); let buf = Buffer.from(await (await fetch(meta.url)).arrayBuffer()); if (buf[0] === 0x1f && buf[1] === 0x8b) buf = zlib.gunzipSync(buf);
+    console.log(P + "CORE|bytes=" + buf.length + "|sha256=" + crypto.createHash("sha256").update(buf).digest("hex") + "|" + (/SAG_KERNEL_VERSION = '([^']+)'/.exec(buf.toString("utf8")) || [])[1]);
+  } catch (e) { console.log(P + "ERR|" + e.message); }
+  const cnt = {}; const rows = [];
+  const fields = await get("/device?filter[tags][0][key]=isField&filter[tags][0][value]=yes&amount=200&fields=id,name,tags");
+  for (const f of fields) {
+    try {
+      const b = (await get(`/device/${f.id}/data?variables=field_bundle&qty=1`))[0]; if (!b || !b.metadata || !b.metadata.data) continue;
+      const o = JSON.parse(zlib.inflateRawSync(Buffer.from(String(b.metadata.data), "base64")).toString("utf8"));
+      const sh = {}; for (const k in o.shared || {}) sh[dec(k)] = o.shared[k];
+      for (const cr of o.crops || []) {
+        const ind = {}; for (const k in cr.indicators || {}) ind[dec(k)] = cr.indicators[k];
+        for (const k of WET) { const m = ind["fir_message_" + k]; if (!m) continue; const v = String(val(m)).split(" ")[0]; cnt[v] = (cnt[v] || 0) + 1;
+          const h = val(ind["infection_hours_counter_" + k]), mx = val(ind["infection_hours_counter_max_" + k]);
+          if (v !== "Χαμηλός" || Number(h) > 0 || Number(mx) > 0) rows.push((tag(f, "name") || f.name) + "/" + String(cr.id).split(":")[1] + "/" + k + "=" + v + " h" + h + " max" + mx + " fir" + val(ind["fir_" + k]) + " src=" + val(ind.leaf_wetness_source)); }
+      }
+    } catch (e) { console.log(P + "ERR|" + f.id + "|" + e.message); }
+  }
+  console.log(P + "ΜΗΝΥΜΑΤΑ_6|" + JSON.stringify(cnt) + "|time=" + b0());
+  for (const r of rows) console.log(P + "ROW|" + r);
+  console.log(P + "=== ΤΕΛΟΣ");
+  function b0() { return new Date().toISOString().slice(11, 16); }
+})().catch((e) => console.log(P + "FATAL|" + e.message));

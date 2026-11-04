@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.175 · 2026-11-04';   // T-MILDEW-INSPECT-01 (ωίδιο: επιθεώρηση αντί εντολής ψεκασμού) · T-ECE-NOFALLBACK-01 (χωρίς εφεδρεία ×2,5) · T-COVERED-WX-01 (κείμενα παγετού/καύσωνα σε θερμοκήπιο) · T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
+const SAG_KERNEL_VERSION = 'v50.176 · 2026-11-04';   // T-LEAFWET-RH-01 (μετρημένο υγρό φύλλο υπερισχύει του ορίου RH· περονόσποροι/βοτρύτης: επιθεώρηση) · T-MILDEW-INSPECT-01 (ωίδιο: επιθεώρηση αντί εντολής ψεκασμού) · T-ECE-NOFALLBACK-01 (χωρίς εφεδρεία ×2,5) · T-COVERED-WX-01 (κείμενα παγετού/καύσωνα σε θερμοκήπιο) · T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -8551,6 +8551,7 @@ function calculate_InfectionHours(hourTick, measurements, parameters) {
     rain1h: _lwsRain1h,
   });
   const leafIsWet = _lws.wet;
+  const _lwsMeasuredWet = leafIsWet && (_lws.source === 'sensor' || _lws.source === 'dew_leaf');   // T-LEAFWET-RH-01
 
   // ── T-LWFREEZE-01 (v50.106) · ΠΑΛΙΟΣ ΑΙΣΘΗΤΗΡΑΣ ΦΥΛΛΟΥ ΔΕΝ ΠΑΡΑΓΕΙ ΥΓΡΕΣ ΩΡΕΣ ──
   // ΑΠΟΔΕΙΞΗ ΠΑΡΑΓΩΓΗΣ (log 5/9): «φύλλο 14.8 ώρες (όριο 1.5 h)» σε ΤΡΕΙΣ αγρούς
@@ -8662,10 +8663,13 @@ function calculate_InfectionHours(hourTick, measurements, parameters) {
         continue;
       }
       const tempOk = T_air >= Number(_otr.min) && T_air <= Number(_otr.max);
-      const humidityOk = RH >= Number(_oh.min);
 
       // B6 FIX: Leaf wetness only if pathogen requires it (erysiphe: false)
       const needsWet = (pathogen.requiresLeafWetness !== false);
+      // T-LEAFWET-RH-01 (v50.176): το όριο RH είναι υποκατάστατο του νερού στο φύλλο. Όταν ο αισθητήρας
+      // φύλλου ΜΕΤΡΑ νερό, δεν μπλοκάρει· τα em320 σταματούν στο 89,5–95 % και ο περονόσπορος είχε 0 ώρες.
+      // Εκτίμηση (δρόσος αέρα, RH) και ωίδια (δεν θέλουν υγρό φύλλο): όπως πριν.
+      const humidityOk = RH >= Number(_oh.min) || (needsWet && _lwsMeasuredWet);
       const wetOk = needsWet ? leafIsWet : true;
 
       // B6 FIX: Rain inhibit for erysiphe (rain washes conidia)
@@ -12830,9 +12834,12 @@ function _sagPathogenCases(measurements, indicators, sprayed, inspected, nowMs, 
 // T-MILDEW-INSPECT-01: περίοδος ωιδίου από ημερολόγιο, γιατί ο πυρήνας δεν έχει φαινολογία (τα στάδια είναι FAO-56 νερού).
 // Ημερομηνίες αμπελιού: εκτίμηση χωρίς πηγή, εγκεκριμένη από τον γεωπόνο 4/11/2026. Τα λαχανικά δεν έχουν ούτε σιωπή ούτε κρίσιμη περίοδο.
 const _SAG_MILDEW_INSPECT = ['erysiphe_necator', 'podosphaera_xanthii', 'leveillula_taurica'];
+// T-LEAFWET-RH-01: ίδια λογική επιθεώρησης για τους περονόσπορους και τον βοτρύτη (οι παραγωγοί ψεκάζουν προληπτικά).
+const _SAG_WET_INSPECT = ['plasmopara_viticola', 'phytophthora_infestans', 'pseudoperonospora_cubensis', 'peronospora_destructor', 'brassica_downy_mildew', 'botrytis_cinerea'];
+const _sagInspectName = (key) => _SAG_MILDEW_INSPECT.indexOf(key) >= 0 ? 'ωίδιο' : key === 'botrytis_cinerea' ? 'βοτρύτη' : 'περονόσπορο';
 function _sagMildewPhase(key, md) {
-  if (_SAG_MILDEW_INSPECT.indexOf(key) < 0) return 'off';
-  if (key !== 'erysiphe_necator') return 'normal';
+  if (_SAG_MILDEW_INSPECT.indexOf(key) < 0 && _SAG_WET_INSPECT.indexOf(key) < 0) return 'off';
+  if (key !== 'erysiphe_necator' && key !== 'plasmopara_viticola') return 'normal';
   if (md >= 1201 || md <= 215) return 'silent';
   if (md >= 401 && md <= 630) return 'critical';
   return 'normal';
@@ -12925,14 +12932,14 @@ function getPathogenMessages(fir, measurements) {
     const _mdNow = moment().tz(measurements?.timezone || 'Europe/Athens');
     const _mildew = _sagMildewPhase(pathogenKey, (_mdNow.month() + 1) * 100 + _mdNow.date());
     if (_mildew === 'silent') {
-      messages = [...messages, { variable: `fir_message_${pathogenKey}`, value: 'Χαμηλός κίνδυνος', metadata: { color: 'green', text: 'Εκτός περιόδου για το ωίδιο του αμπελιού.' } }];
+      messages = [...messages, { variable: `fir_message_${pathogenKey}`, value: 'Χαμηλός κίνδυνος', metadata: { color: 'green', text: 'Εκτός περιόδου για ' + (pathogenKey === 'plasmopara_viticola' ? 'τον περονόσπορο' : 'το ωίδιο') + ' του αμπελιού.' } }];
       continue;
     }
     if (_mildew === 'normal' && firValue >= 0.4) {
       const _pdM = _protFor(pathogenKey);
       messages = [...messages, { variable: `fir_message_${pathogenKey}`, value: 'Υψηλός κίνδυνος', metadata: { color: 'orange', text: _pdM
         ? 'Προστασία έως ' + _pdM + ' — μην ψεκάσετε ξανά. Αν δείτε συμπτώματα, δηλώστε επιθεώρηση.'
-        : 'Ευνοϊκές συνθήκες για ωίδιο — επιθεωρήστε το φύλλωμα. Αν δείτε συμπτώματα, ψεκάστε.' } }];
+        : 'Ευνοϊκές συνθήκες για ' + _sagInspectName(pathogenKey) + (_SAG_WET_INSPECT.indexOf(pathogenKey) >= 0 && _whyFor(pathogenKey, pathogen) ? ' (' + _whyFor(pathogenKey, pathogen) + ')' : '') + ' — επιθεωρήστε το φύλλωμα. Αν δείτε συμπτώματα, ψεκάστε.' } }];
       continue;
     }
     if (firValue < 0.2) {

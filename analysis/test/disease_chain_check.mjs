@@ -81,7 +81,9 @@ function run(src, w) {
   ok(L(12).v === "Υψηλός κίνδυνος" && L(12).col === "orange" && L(12).fir >= 0.99, "Α5 12 ώρες (= requiredDurationHrs) -> FIR 1, ωίδιο λαχανικών: Υψηλός/πορτοκαλί, T-MILDEW-INSPECT-01 (" + L(12).v + ", fir " + L(12).fir + ")");
   ok(ladder.every((x, i) => i === 0 || x.fir >= ladder[i - 1].fir), "Α6 το FIR είναι μονότονο όσο συνεχίζουν οι συνθήκες");
   const _gm = (v) => K.getPathogenMessages([{ variable: "fir_pseudoperonospora_cubensis", value: v }], { timezone: "Europe/Athens", data: {} }).find((x) => x.variable === "fir_message_pseudoperonospora_cubensis");
-  ok(_gm(0.5) && _gm(0.5).value === "Υψηλός κίνδυνος" && _gm(0.5).metadata.color === "yellow" && _gm(0.7).value === "Σοβαρός κίνδυνος" && _gm(0.7).metadata.color === "red", "Α6β ασθένεια εκτός ωιδίου: όρια 0,4 και 0,7 όπως πριν");
+  ok(_gm(0.5) && _gm(0.5).value === "Υψηλός κίνδυνος" && _gm(0.5).metadata.color === "orange" && _gm(0.7).value === "Υψηλός κίνδυνος" && _gm(0.7).metadata.color === "orange" && /για περονόσπορο/.test(_gm(0.7).metadata.text), "Α6β περονόσπορος (T-LEAFWET-RH-01): από 0,4 Υψηλός/πορτοκαλί με επιθεώρηση");
+  const _ga = (v) => K.getPathogenMessages([{ variable: "fir_alternaria_solani", value: v }], { timezone: "Europe/Athens", data: {} }).find((x) => x.variable === "fir_message_alternaria_solani");
+  ok(_ga(0.5) && _ga(0.5).value === "Υψηλός κίνδυνος" && _ga(0.5).metadata.color === "yellow" && _ga(0.7).value === "Σοβαρός κίνδυνος" && _ga(0.7).metadata.color === "red", "Α6γ ασθένεια εκτός επιθεώρησης (αλτερνάρια): όρια 0,4 και 0,7 όπως πριν");
   const m12 = st && L(12); const msgTxt = String(((tick(K, { data: {} }, 1, { T: 24, RH: 70, lm: 0, lt: 23.5 }).msg("podosphaera_xanthii") || {}).metadata || {}).text || "");
   ok(/Χωρίς κίνδυνο/.test(msgTxt), "Α7 το κείμενο χαμηλού κινδύνου υπάρχει");
   // ξανά 12 ώρες για να διαβάσω το κείμενο του σοβαρού
@@ -91,7 +93,7 @@ function run(src, w) {
   ok(r12.status && /^Ενεργές · \d+ μύκητ/.test(String(r12.status.value)), "Α9 infection_model_status ενεργό με αριθμό (" + (r12.status && r12.status.value) + ")");
   // ── Β. περονόσπορος κολοκυνθοειδών (pseudoperonospora_cubensis): 6 ω, T 5–30, RH ≥ 95, ΜΕ διαβροχή ──
   st = { data: {} }; let rB = null; for (let h = 1; h <= 6; h++) rB = tick(K, st, h, { T: 19, RH: 97, lm: 60, lt: 18.5 });
-  ok(rB.cnt("pseudoperonospora_cubensis") === 6 && rB.firOf("pseudoperonospora_cubensis") >= 0.99 && (rB.msg("pseudoperonospora_cubensis") || {}).value === "Σοβαρός κίνδυνος", "Β1 6 ω υγρό φύλλο (αισθητήρας 60 %) + RH 97 + 19 °C -> Σοβαρός περονόσπορος (" + rB.cnt("pseudoperonospora_cubensis") + " ω, fir " + rB.firOf("pseudoperonospora_cubensis") + ")");
+  ok(rB.cnt("pseudoperonospora_cubensis") === 6 && rB.firOf("pseudoperonospora_cubensis") >= 0.99 && (rB.msg("pseudoperonospora_cubensis") || {}).value === "Υψηλός κίνδυνος", "Β1 6 ω υγρό φύλλο (αισθητήρας 60 %) + RH 97 + 19 °C -> Υψηλός περονόσπορος με επιθεώρηση, T-LEAFWET-RH-01 (" + rB.cnt("pseudoperonospora_cubensis") + " ω, fir " + rB.firOf("pseudoperonospora_cubensis") + ")");
   ok(rB.lws && rB.lws.value === "Αισθητήρας φύλλου", "Β2 η πηγή διαβροχής είναι ο αισθητήρας φύλλου (" + (rB.lws && rB.lws.value) + ")");
   ok(/υγρά φύλλα/.test(String((rB.msg("pseudoperonospora_cubensis") || {}).metadata.text)), "Β3 το μήνυμα λέει «υγρά φύλλα»");
   // Β4 χωρίς αισθητήρα φύλλου: RH 96 -> δρόσος εκτίμηση ή RH -> ΠΑΛΙ μετρά (ευαισθησία χωρίς όργανο)
@@ -101,7 +103,7 @@ function run(src, w) {
   const lw1 = K._sagLeafWetness({ T_air: 19, RH: 91 }), lw2 = K._sagLeafWetness({ T_air: 19, RH: 89 });
   ok(lw1.wet === true && lw1.source === "rh" && lw2.wet === false && lw2.source === "none", "Β5 εφεδρεία RH ≥ 90: 91 -> υγρό (rh), 89 -> στεγνό");
   // Β6 T-LWS-SHADED-DRY-01 (v50.156): στεγνός ΣΚΙΑΣΜΕΝΟΣ αισθητήρας υπερισχύει της ΕΚΤΙΜΗΣΗΣ δρόσου και της εφεδρείας RH
-  ok(src.includes("const SAG_KERNEL_VERSION = 'v50.175 · 2026-11-04';"), "έκδοση v50.156");
+  ok(src.includes("const SAG_KERNEL_VERSION = 'v50.176 · 2026-11-04';"), "έκδοση v50.156");
   const lw3 = K._sagLeafWetness({ leafMoisture: 0, leafShaded: true, leafTemp: 22, T_air: 19, RH: 96, dewPoint: 18.4 });
   ok(lw3.wet === false && lw3.source === "sensor_dry", "Β6 στεγνός σκιασμένος αισθητήρας + RH 96/εκτίμηση δρόσου -> ΣΤΕΓΝΟ (η μέτρηση υπερισχύει της εκτίμησης) — " + lw3.source);
   const lw4 = K._sagLeafWetness({ leafMoisture: 0, leafShaded: false, leafTemp: 22, T_air: 19, RH: 96, dewPoint: 18.4 });
@@ -199,7 +201,7 @@ const base = run(SRC, W);
 if (base.length) { console.log("ΑΠΟΤΥΧΙΑ ΒΑΣΗΣ:\n  " + base.join("\n  ")); process.exit(1); }
 console.log("ΒΑΣΗ: όλοι οι έλεγχοι πέρασαν");
 const MUT = [
-  ["m1 η υγρασία δεν ελέγχεται", "const humidityOk = RH >= Number(_oh.min);", "const humidityOk = true;", "c"],
+  ["m1 η υγρασία δεν ελέγχεται", "const humidityOk = RH >= Number(_oh.min) || (needsWet && _lwsMeasuredWet);", "const humidityOk = true;", "c"],
   ["m2 ο μετρητής δεν προχωρά", ": (conditionsOk ? parseFloat((prevCount + _sagTickHours()).toFixed(1)) : 0);", ": 0;", "c"],
   ["m3 er ποτέ 1", "er = (infection_hours >= _reqDur) ? 1.0", "er = (infection_hours >= _reqDur) ? 0.5", "c"],
   ["m4 κατώφλι Σοβαρού πέφτει στο 0,4", "    } else if (firValue < 0.7) {", "    } else if (firValue < 0.4) {", "c"],
@@ -212,7 +214,7 @@ const MUT = [
   ["m11 ωίδιο αμπελιού ξανά στο αγγούρι", "    (c) => c && c.cultivation_type_general === \"vineCrops\"", "    (c) => true", "c"],
   ["m12 θερμοκήπιο δεν σιωπά", "    if (_SAG_COVERED_ACTIVE) return [];\n    const RH = Array.isArray(fcs.rh)", "    if (false) return [];\n    const RH = Array.isArray(fcs.rh)", "c"],
   ["m13 ο σκιασμένος στεγνός αισθητήρας ξανά πίσω από τη δρόσο", "  if (hasLm && o.leafShaded === true)\n    return { wet: false, weight: 0, source: 'sensor_dry', confidence: 'HIGH', lm: lmOut };\n  if (Number.isFinite(dp) && Number.isFinite(T)", "  if (hasLm && o.leafShaded === true && !Number.isFinite(dp) && !(RH >= 90))\n    return { wet: false, weight: 0, source: 'sensor_dry', confidence: 'HIGH', lm: lmOut };\n  if (Number.isFinite(dp) && Number.isFinite(T)", "c"],
-  ["m14 παλιά έκδοση", "'v50.175 · 2026-11-04'", "'v50.159 · 2026-10-04'", "c"],
+  ["m14 παλιά έκδοση", "'v50.176 · 2026-11-04'", "'v50.159 · 2026-10-04'", "c"],
   ["W1 widget χάνει το «σοβαρ»", 'function Ba(t){const s=String(t||"").toLowerCase();return s.includes("χαμηλ")?1:s.includes("μέτρι")||s.includes("μετρι")?2:s.includes("υψηλ")?3:s.includes("σοβαρ")?4:0}', 'function Ba(t){const s=String(t||"").toLowerCase();return s.includes("χαμηλ")?1:s.includes("μέτρι")||s.includes("μετρι")?2:s.includes("υψηλ")?3:0}', "w"],
   ["W2 κύρια κάρτα μόνο Σοβαρός", 'if(R<3&&!Vc)continue;const X=R===4?"b-red"', 'if(R<4&&!Vc)continue;const X=R===4?"b-red"', "w"],
 ];

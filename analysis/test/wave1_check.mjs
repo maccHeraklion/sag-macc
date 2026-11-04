@@ -23,7 +23,7 @@ function run(core) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   try {
     const K = load(core);
-    ok(K.SAG_KERNEL_VERSION === "v50.175 · 2026-11-04", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.176 · 2026-11-04", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     const faults = (range) => {
       const data = {}; for (const ch of K._sagDevExpect("se0x")) for (const a of [].concat(ch.a)) data[a] = [{ value: 20, time: T, device: "Δ" }];
       const dev = { n: "Δ", t: "se0x", qerr: 0, stats: { soil_temperature1: { n: 30, spanH: 24, range, min: 10, max: 10 + range } } };
@@ -83,7 +83,7 @@ function run(core) {
     // ── Ε: T-MILDEW-INSPECT-01 ωίδιο: πραγματική getPathogenMessages με καρφωμένη ημερομηνία ──
     const ph = K._sagMildewPhase, EN = "erysiphe_necator";
     ok(ph(EN, 1130) === "normal" && ph(EN, 1201) === "silent" && ph(EN, 215) === "silent" && ph(EN, 216) === "normal" && ph(EN, 331) === "normal" && ph(EN, 401) === "critical" && ph(EN, 630) === "critical" && ph(EN, 701) === "normal", "Ε1 όρια ημερομηνιών αμπελιού");
-    ok(ph("podosphaera_xanthii", 101) === "normal" && ph("leveillula_taurica", 515) === "normal" && ph("plasmopara_viticola", 515) === "off", "Ε2 λαχανικά πάντα κανονική, άλλες ασθένειες εκτός");
+    ok(ph("podosphaera_xanthii", 101) === "normal" && ph("leveillula_taurica", 515) === "normal" && ph("plasmopara_viticola", 515) === "critical" && ph("alternaria_solani", 515) === "off", "Ε2 λαχανικά πάντα κανονική, περονόσπορος αμπελιού με ημερολόγιο (T-LEAFWET-RH-01), άλλες εκτός");
     const realNow = Date.now;
     const msgs = (iso, key, v) => { Date.now = () => Date.parse(iso); try { return K.getPathogenMessages([{ variable: "fir_" + key, value: v }], { timezone: "Europe/Athens", data: {} }).filter((x) => x.variable === "fir_message_" + key); } finally { Date.now = realNow; } };
     const msg = (iso, key, v) => msgs(iso, key, v)[0];
@@ -101,7 +101,7 @@ function run(core) {
     const e8 = msg(NOV, EN, 0.3);
     ok(e8 && e8.value === "Μέτριος κίνδυνος", "Ε8 κάτω από 0,4: όπως πριν (" + (e8 && e8.value) + ")");
     const e9 = msg(NOV, "plasmopara_viticola", 0.9);
-    ok(e9 && e9.value === "Σοβαρός κίνδυνος" && e9.metadata.color === "red", "Ε9 άλλη ασθένεια: όπως πριν (" + JSON.stringify(e9) + ")");
+    ok(e9 && e9.value === "Υψηλός κίνδυνος" && e9.metadata.color === "orange", "Ε9 περονόσπορος αμπελιού Νοέμβριο (T-LEAFWET-RH-01): επιθεώρηση (" + JSON.stringify(e9) + ")");
   } catch (e) { f.push("εκτέλεση: " + (e && e.stack || e)); }
   return f;
 }
@@ -122,10 +122,10 @@ const MUT = [
   ["μ12 αιτία πάντα ξερό", "if (vwc === null || vwc === undefined) return", "if (false) return"],
   ["μ13 σιωπή ως 28/2", "if (md >= 1201 || md <= 215) return", "if (md >= 1201 || md <= 228) return"],
   ["μ14 κρίσιμη από 15/4", "if (md >= 401 && md <= 630) return", "if (md >= 415 && md <= 630) return"],
-  ["μ15 κρίσιμη και στα λαχανικά", "if (key !== 'erysiphe_necator') return 'normal';", "if (false) return 'normal';"],
+  ["μ15 κρίσιμη και στα λαχανικά", "if (key !== 'erysiphe_necator' && key !== 'plasmopara_viticola') return 'normal';", "if (false) return 'normal';"],
   ["μ16 όριο 0,7 αντί 0,4", "if (_mildew === 'normal' && firValue >= 0.4) {", "if (_mildew === 'normal' && firValue >= 0.7) {"],
-  ["μ17 όλες οι ασθένειες σαν ωίδιο", "if (_SAG_MILDEW_INSPECT.indexOf(key) < 0) return 'off';", ""],
-  ["μ18 σιωπή χωρίς continue", "text: 'Εκτός περιόδου για το ωίδιο του αμπελιού.' } }];\n      continue;", "text: 'Εκτός περιόδου για το ωίδιο του αμπελιού.' } }];"],
+  ["μ17 όλες οι ασθένειες σαν ωίδιο", "if (_SAG_MILDEW_INSPECT.indexOf(key) < 0 && _SAG_WET_INSPECT.indexOf(key) < 0) return 'off';", ""],
+  ["μ18 σιωπή χωρίς continue", "+ ' του αμπελιού.' } }];\n      continue;", "+ ' του αμπελιού.' } }];"],
   ["μ5 αναστολή με λίτρα", "{ variable: 'grossIrrigationLiters', value: 0 },\n    { variable: 'irrigationDurationHours', value: 0 },\n    { variable: 'irrigation_inhibited_by_rain', value: true },", "{ variable: 'grossIrrigationLiters', value: 1 },\n    { variable: 'irrigationDurationHours', value: 0 },\n    { variable: 'irrigation_inhibited_by_rain', value: true },"],
 ];
 let killed = 0;
