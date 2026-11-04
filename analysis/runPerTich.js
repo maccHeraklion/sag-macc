@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.179 · 2026-11-04';   // T-LITVALUES-01 (τιμές βιβλιογραφίας: αλτερνάρια, ωίδια, φώμοψη, ανθράκνωση + παράθυρα ΠΚΠΦΠ Ηρακλείου) · T-NONFOLIAR-01 (7 ασθένειες ριζών/φλοιού εκτός μηχανής φύλλου) · T-RH-CAP-90-01 (όριο RH ≤ 90 για ασθένειες υγρού φύλλου) · T-LEAFWET-RH-01 (μετρημένο υγρό φύλλο υπερισχύει του ορίου RH· περονόσποροι/βοτρύτης: επιθεώρηση) · T-MILDEW-INSPECT-01 (ωίδιο: επιθεώρηση αντί εντολής ψεκασμού) · T-ECE-NOFALLBACK-01 (χωρίς εφεδρεία ×2,5) · T-COVERED-WX-01 (κείμενα παγετού/καύσωνα σε θερμοκήπιο) · T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
+const SAG_KERNEL_VERSION = 'v50.180 · 2026-11-04';   // T-SOILWOUND-01 (μελάνωση και γομμώσεις στο εδαφογενές μοντέλο, έλκος καστανιάς σε μοντέλο πληγών) · T-LITVALUES-01 (τιμές βιβλιογραφίας: αλτερνάρια, ωίδια, φώμοψη, ανθράκνωση + παράθυρα ΠΚΠΦΠ Ηρακλείου) · T-NONFOLIAR-01 (7 ασθένειες ριζών/φλοιού εκτός μηχανής φύλλου) · T-RH-CAP-90-01 (όριο RH ≤ 90 για ασθένειες υγρού φύλλου) · T-LEAFWET-RH-01 (μετρημένο υγρό φύλλο υπερισχύει του ορίου RH· περονόσποροι/βοτρύτης: επιθεώρηση) · T-MILDEW-INSPECT-01 (ωίδιο: επιθεώρηση αντί εντολής ψεκασμού) · T-ECE-NOFALLBACK-01 (χωρίς εφεδρεία ×2,5) · T-COVERED-WX-01 (κείμενα παγετού/καύσωνα σε θερμοκήπιο) · T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -2446,14 +2446,18 @@ Object.assign(PATHOGEN_PROFILE.fungi_Oomycetes, {
       { cultivation_type_general: "citrusFruits", cultivation_type: "lemon" },
       { cultivation_type_general: "citrusFruits", cultivation_type: "mandarin" }
     ],
-    type: "Infection_Triangle",
-    description: "Γομμώσεις εσπεριδοειδών — ωομύκητας εδάφους. Προσβάλλει κορμό, ρίζες, καρπούς. Κορυφή κινδύνου: χειμώνας.",
-    optimalTempRange: { min: 10, opt: 24, max: 30 },
-    optimalHumidity: { min: 95, max: 100 },
-    requiredDurationHrs: 12,
-    requiresLeafWetness: false,
-    rainInhibitsInfection: false,
-    notes: "ΕΔΑΦΟΓΕΝΗΣ ωομύκητας — κίνδυνος σε βαρύ/κακοστράγγιστο έδαφος. Κορυφή: Νοε-Μαρ Μεσογείου. SAG v4.1 provisional."
+    type: "Soilborne_Disease_Model",
+    description: "Γομμώσεις εσπεριδοειδών — ωομύκητας εδάφους που προσβάλλει ρίζες και λαιμό/κορμό από κορεσμένο έδαφος. T-SOILWOUND-01 (v50.180, 4/11/2026): από Infection_Triangle (RH 95 %/12 ω — λάθος μοντέλο) σε εδαφογενές με εποχικό παράθυρο (_SAG_SEASON_WINDOWS: άνοιξη + φθινόπωρο, Álvarez 2009 Βαλένθια — όχι χειμώνας).",
+    risk_model_params: {
+      soil_T_optimal_C: [12, 27],          // Matheron & Porchas 1996: αποικισμός ριζών 9–27 °C, κρίσιμο 27· Matheron 1992: σποριάγγεια 20–30· βέλτιστο 24–28
+      soil_moisture_optimal_pct: [85, 150], // AWC %: κορεσμός (MacDonald & Duniway 1978)
+      saturation_memory_days: 14,          // Besoain 2005, Hord & Ristaino 1992: ένα επεισόδιο κορεσμού αρκεί
+      inoculum_decay_years: 10,
+      stress_amplifier: 1.2,
+      drainage_class_multipliers: { poor: 1.5, moderate: 1.0, good: 0.6 }
+    },
+    advice_el: "Κρατήστε τον λαιμό στεγνό: μην βρέχετε τον κορμό στο πότισμα, μην παραχώνετε τον εμβολιασμό, βελτιώστε τη στράγγιση. Σε έντονη εξίδρωση κόμμεος ζητήστε γεωπόνο.",
+    notes: "ΠΗΓΕΣ: ΤΙΜΕΣ_ΒΙΒΛΙΟΓΡΑΦΙΑΣ_ΠΑΘΟΓΟΝΩΝ_2026-11-04 §2."
   },
   colletotrichum_gloeosporioides: {
     name: "Ανθράκνωση Εσπεριδοειδών (Colletotrichum gloeosporioides)",
@@ -2562,28 +2566,34 @@ Object.assign(PATHOGEN_PROFILE.fungi_Oomycetes, {
       { cultivation_type_general: "nutCrops", cultivation_type: "chestnut" }
     ],
     name: "Έλκος Καστανιάς (Cryphonectria parasitica — Chestnut Blight)",
-    type: "Infection_Triangle",
-    description: "Καστανόπληξ — είσοδος μέσω τραυμάτων φλοιού, νεκρώνει τον καμβιό, καταστρεπτικό νόσημα.",
-    optimalTempRange: { min: 10, opt: 25, max: 35 },
-    optimalHumidity: { min: 75, max: 100 },
-    requiresLeafWetness: false,
-    rainInhibitsInfection: false,
-    requiredDurationHrs: 24,
-    notes: "Τραύματα (παγετός, κλάδεμα) = πύλες εισόδου. Πολυετές νόσημα φλοιού. MODELING_APPROXIMATION: FIR ενδεικτικός υγρής-θερμής περιόδου, όχι άμεσος δείκτης φυλλικής μόλυνσης. SAG v4.1 LIT-tier."
+    type: "Wound_Canker_Model",
+    description: "Έλκος καστανιάς — μύκητας φλοιού που μπαίνει από πληγές (κλάδεμα, χαλάζι, παγετός) με βροχή σε ήπιο καιρό. T-SOILWOUND-01 (v50.180, 4/11/2026): από Infection_Triangle (RH 75 %/24 ω — μετρούσε «υγρή-θερμή περίοδο») σε μοντέλο πληγών.",
+    risk_model_params: {
+      T_optimal_C: [15, 28],               // Guérin 2001: ασκοσπόρια 15–25, μέγιστο 20–25· Guérin & Robin 2003: βλάβη ↑ με μέγιστη T
+      rain_event_min_mm: 1,                // Lione 2022: βροχερές ημέρες 1–10 mm ανεβάζουν τα προπάγουλα
+      wound_windows_days: { pruning: 28, hail: 28, storm: 28, frost: 60 },   // Russin & Shain 1984: πληγές 0–28 ημερών μολύνονται
+      season_weights: [[501, 731, 1.0], [301, 430, 0.6], [801, 1031, 0.6]]   // Guérin & Robin 2003: Μάιος–Ιούλιος μόλυνση, φθινόπωρο/χειμώνας καμία ορατή· Lione 2022: κορυφές άνοιξη + φθινόπωρο
+    },
+    advice_el: "Δεν υπάρχει χημική αντιμετώπιση. Κλαδεύετε σε ξηρό καιρό, απολυμαίνετε τα εργαλεία, αφαιρείτε τα έλκη με υγιές ξύλο· ρωτήστε για υποπαθογόνα στελέχη (υποϊός).",
+    notes: "ΠΗΓΕΣ: ΤΙΜΕΣ_ΒΙΒΛΙΟΓΡΑΦΙΑΣ_ΠΑΘΟΓΟΝΩΝ_2026-11-04 §3. Πληγές από τη φόρμα (wound_pruning_date, wound_hail_date, wound_frost_date → wound_history)."
   },
   phytophthora_xcambivora: {
     crops: [
       { cultivation_type_general: "nutCrops", cultivation_type: "chestnut" }
     ],
     name: "Μελάνωση Καστανιάς — Φυτόφθορα Καστανιάς (Phytophthora ×cambivora)",
-    type: "Infection_Triangle",
-    description: "Μελάνωση καστανιάς — ωοκόκκοι εδάφους, ευνοείται από κορεσμό εδάφους και δροσερές θερμοκρασίες.",
-    optimalTempRange: { min: 5, opt: 18, max: 25 },
-    optimalHumidity: { min: 95, max: 100 },
-    requiresLeafWetness: true,
-    rainInhibitsInfection: false,
-    requiredDurationHrs: 6,
-    notes: "Κλήρωση εδάφους = ευνοεί. Προσοχή: Phytophthora = ωοκόκκος, όχι μύκητας. SAG v4.1 LIT-tier."
+    type: "Soilborne_Disease_Model",
+    description: "Μελάνωση καστανιάς — ωομύκητες εδάφους (P. ×cambivora, P. cinnamomi): ζωοσπόρια μόνο σε κορεσμένο έδαφος, σποριάγγεια από 15 °C, βέλτιστο 24–27 °C. Η παλιά σημείωση «δροσερές θερμοκρασίες» δεν επιβεβαιώνεται. T-SOILWOUND-01 (v50.180, 4/11/2026): από Infection_Triangle (υγρό φύλλο 95 %/6 ω — λάθος μοντέλο) σε εδαφογενές.",
+    risk_model_params: {
+      soil_T_optimal_C: [15, 30],          // Nesbitt 1979: σποριάγγεια ≥ 15· Huang 2012: 8–32, βέλτ. 24· Brasier 1995: βέλτ. 27,5, μέγ. 33,5· Scagel 2023: cinnamomi 6,5/25,3/35
+      soil_moisture_optimal_pct: [85, 150], // AWC %: κορεσμός — MacDonald & Duniway 1978 (ζωοσπόρια 0 έως −5 mb)
+      saturation_memory_days: 14,          // Besoain 2005: κορεσμός 24 ω ανά δεκαπενθήμερο → 50 % σήψη ριζών
+      inoculum_decay_years: 10,
+      stress_amplifier: 1.2,
+      drainage_class_multipliers: { poor: 1.5, moderate: 1.0, good: 0.6 }   // Trenti 2025, Prospero 2023 (ποιοτικά)
+    },
+    advice_el: "Βελτιώστε τη στράγγιση, αποφύγετε κορεσμό και τραύματα στον λαιμό· δέντρα με εξίδρωση ή αραίωμα κόμης να τα δει γεωπόνος. Ένεση κορμού με φωσφονικό κάλιο (Brandano 2023) μόνο με γεωπόνο.",
+    notes: "ΠΗΓΕΣ: ΤΙΜΕΣ_ΒΙΒΛΙΟΓΡΑΦΙΑΣ_ΠΑΘΟΓΟΝΩΝ_2026-11-04 §1."
   },
   fusarium_spp_corm_rot: {
     crops: [
@@ -9048,7 +9058,7 @@ function _sagDrainageClass(parameters) {
 // er = f_T · f_M · f_hist · f_predecessor · f_drainage · f_stress.
 // Επιστρέφει null όταν δεν υπάρχει καμία μέτρηση θερμοκρασίας εδάφους
 // (χωρίς αισθητήρα ριζοστρώματος δεν εκτιμούμε — καμία κάρτα, όχι ψευδο-μηδενικό).
-function _computeSoilborneER(pathogen, pathogenKey, measurements, parameters, ipsiNorm) {
+function _computeSoilborneER(pathogen, pathogenKey, measurements, parameters, ipsiNorm, satDays) {
   const st = _sagSoilTempRead(measurements);
   if (st.v === null) return null;
   const awc = _sagSoilMoistAwcPct(measurements, parameters);   // T-SOILMODELS-02
@@ -9068,6 +9078,11 @@ function _computeSoilborneER(pathogen, pathogenKey, measurements, parameters, ip
       const dist = Math.min(Math.abs(awc - M_range[0]), Math.abs(awc - M_range[1]));
       f_M = Math.max(0.3, 1.0 - dist / 30);
     }
+  }
+  // T-SOILWOUND-01: μνήμη κορεσμού (Phytophthora) — f_M = 1 για saturation_memory_days μετά το τελευταίο επεισόδιο, μετά φθίνει ως 0,3.
+  if (params.saturation_memory_days !== undefined && satDays !== null && satDays !== undefined && Number.isFinite(Number(satDays))) {
+    const _mem = Number(params.saturation_memory_days) || 14;
+    f_M = satDays <= _mem ? 1.0 : Math.max(0.3, 1.0 - (satDays - _mem) / _mem);
   }
   // Ιστορικό αγρού (φόρμα): prior_detected / years_since_last_outbreak
   const history = parameters?.field_history?.[pathogenKey] || {};
@@ -9101,6 +9116,38 @@ function _computeSoilborneER(pathogen, pathogenKey, measurements, parameters, ip
   const stressAmp = Number(params.stress_amplifier) || 1.2;
   const f_stress = 1 + (stressAmp - 1) * (Number.isFinite(ipsiNorm) ? ipsiNorm : 0);
   return Math.max(0, Math.min(1, f_T * f_M * f_hist * f_predecessor * f_drainage * f_stress));
+}
+
+// T-SOILWOUND-01 (v50.180): ER έλκους καστανιάς — μοντέλο πληγών. er = f_T(αέρας) · f_season · f_entry, με
+// f_entry = 1 για δηλωμένη πρόσφατη πληγή (φόρμα: κλάδεμα/χαλάζι/καταιγίδα ≤ 28 ημ., παγετός ≤ 60), 0,5 για βροχή
+// ≥ rain_event_min_mm χωρίς δηλωμένη πληγή, 0 αλλιώς. Εκτός περιόδου μόλυνσης (season_weights) → 0, όχι null.
+// null ΜΟΝΟ χωρίς θερμοκρασία αέρα (καμία εκτίμηση).
+function _computeWoundCankerER(pathogen, measurements, parameters) {
+  const params = pathogen.risk_model_params || {};
+  const md = _sagMonthDayNow(measurements);
+  let f_season = 0;
+  for (const w of (params.season_weights || [])) if (md >= w[0] && md <= w[1]) f_season = Math.max(f_season, Number(w[2]) || 0);
+  if (f_season <= 0) return 0;
+  const tAir = Number(getVal(measurements, 'air_temperature', getVal(measurements, 'temperature', NaN)));
+  if (!Number.isFinite(tAir)) return null;
+  const T_range = params.T_optimal_C || [15, 28];
+  const T_min = T_range[0], T_max = T_range[1], T_opt = (T_min + T_max) / 2;
+  let f_T;
+  if (tAir < T_min || tAir > T_max) f_T = 0;
+  else if (tAir <= T_opt) f_T = (tAir - T_min) / (T_opt - T_min);
+  else                    f_T = (T_max - tAir) / (T_max - T_opt);
+  f_T = Math.max(0, Math.min(1, f_T));
+  const rainMin = Number(params.rain_event_min_mm) || 1;
+  let rain24 = Number(getVal(measurements, 'rain_height_daily', NaN));
+  if (!Number.isFinite(rain24)) rain24 = Number(getVal(measurements, 'current_rain_height_daily', NaN));
+  if (!Number.isFinite(rain24) || rain24 < 0) rain24 = 0;
+  const w = (parameters && parameters.wound_history) || {};
+  const _wwd = params.wound_windows_days || {};
+  const recent = (k, d, dflt) => w[k] !== undefined && Number(w[k]) <= (Number(_wwd[d]) || dflt);
+  const woundPresent = recent('days_since_pruning', 'pruning', 28) || recent('days_since_hail', 'hail', 28)
+    || recent('days_since_storm', 'storm', 28) || recent('days_since_frost', 'frost', 60);
+  const f_entry = woundPresent ? 1.0 : (rain24 >= rainMin ? 0.5 : 0);
+  return Math.max(0, Math.min(1, f_T * f_season * f_entry));
 }
 
 // ER βακτηριακών (καρκίνωση ελιάς) — v4.1 αυτούσιο:
@@ -9419,6 +9466,11 @@ const _SAG_MODEL_TEXTS = {
     low: 'Το ριζόστρωμα δεν ευνοεί το παθογόνο.',
     why: 'Θερμοκρασία και υγρασία εδάφους ευνοϊκές',
     watch: 'Δείτε για μαράνσεις τις ζεστές ώρες.',
+  },
+  Wound_Canker_Model: {   // T-SOILWOUND-01: έλκος καστανιάς
+    low: 'Χωρίς πρόσφατες πληγές ή βροχή σε ήπιο καιρό, ή εκτός περιόδου μόλυνσης (κυρίως Μάιος–Ιούλιος): χωρίς δίοδο μόλυνσης.',
+    why: 'Πρόσφατες πληγές (κλάδεμα, χαλάζι, παγετός) ή βροχή σε ήπιο καιρό μέσα στην περίοδο μόλυνσης',
+    watch: 'Μην κλαδεύετε με υγρασία· ελέγξτε κορμό και κλάδους για έλκη.',
   },
   Bacterial_Disease_Model: {
     low: 'Χωρίς πληγές ή βροχή, δεν υπάρχει δίοδος μόλυνσης.',
@@ -10015,8 +10067,36 @@ function calculate_FIR(hourTich, dailyTich, measurements, ipsiLast, parameters) 
       } else if (erCalculationType === "Soilborne_Disease_Model") {
         // T-SOILMODELS-01: κίνδυνος από συνθήκες ριζοστρώματος + ιστορικό αγρού.
         const _ipsiNorm = _ipsiOk ? Math.max(0, Math.min(1, Number(ipsiAvg) / 10)) : 0;
-        er = _computeSoilborneER(pathogen, pathogenKey, measurements, parameters, _ipsiNorm);
-        if (er === null) continue; // χωρίς αισθητήρα εδάφους: καμία κάρτα, όχι ψευδο-μηδέν
+        // T-SOILWOUND-01: εποχικό παράθυρο (γομμώσεις: άνοιξη + φθινόπωρο) — εκτός, κάρτα «Εκτός περιόδου» χωρίς fir_.
+        if (!_sagInSeasonWindow(pathogenKey, _sagMonthDayNow(measurements))) {
+          indicators = [...indicators, { variable: `fir_message_${pathogenKey}`, value: 'Χαμηλός κίνδυνος',
+            metadata: { color: 'green', text: _sagSilentText(pathogenKey) } }];
+          continue;
+        }
+        // T-SOILWOUND-01: μνήμη κορεσμού — τα ζωοσπόρια βγαίνουν μόνο σε κορεσμένο έδαφος (MacDonald & Duniway 1978) και ένα
+        // επεισόδιο 24 ωρών αρκεί για εβδομάδες (Besoain 2005). Κρατάμε τον χρόνο (λεπτά) της τελευταίας ώρας κορεσμού.
+        let _satDays = null;
+        const _rmp = pathogen.risk_model_params || {};
+        if (_rmp.saturation_memory_days !== undefined) {
+          const _awcNow = _sagSoilMoistAwcPct(measurements, parameters);
+          const _satMin = Number((_rmp.soil_moisture_optimal_pct || [])[0]) || 85;
+          const _nowMin = _sagMomentNow(measurements).valueOf() / 60000;
+          let _last = Number(getVal(measurements, 'soilsat_last_' + pathogenKey, NaN));
+          if (_awcNow !== null && _awcNow >= _satMin) _last = Math.floor(_nowMin);
+          if (Number.isFinite(_last)) {
+            indicators = [...indicators, { variable: 'soilsat_last_' + pathogenKey, value: _last }];
+            _satDays = Math.max(0, (_nowMin - _last) / 1440);
+          }
+        }
+        er = _computeSoilborneER(pathogen, pathogenKey, measurements, parameters, _ipsiNorm, _satDays);
+        if (er === null) {
+          // χωρίς αισθητήρα εδάφους: καμία εκτίμηση, όχι ψευδο-μηδέν. Για όσες ήρθαν από τη μηχανή φύλλου (T-SOILWOUND-01)
+          // η κάρτα λέει γιατί δεν υπολογίζεται και τι να κάνει ο παραγωγός· τα παλιά εδαφογενή μένουν σιωπηλά όπως πριν.
+          const _nfT = _SAG_NONFOLIAR_TEXT[pathogenKey];
+          if (_nfT) indicators = [...indicators, { variable: `fir_message_${pathogenKey}`, value: 'Μη διαθέσιμο',
+            metadata: { color: 'grey', text: 'Ασθένεια ' + _nfT[0] + ': χωρίς αισθητήρα εδάφους (θερμοκρασία και υγρασία ριζοστρώματος) ο κίνδυνος δεν υπολογίζεται. ' + _nfT[1] } }];
+          continue;
+        }
         // Χωρίς δηλωμένο ιστορικό ο συντελεστής μολύσματος είναι ουδέτερος (0,5):
         // η εκτίμηση στέκει, αλλά ΔΕΝ πρέπει να φαίνεται βέβαιη. Το σήμα το
         // διαβάζει η getPathogenMessages από τον ίδιο πίνακα (μοτίβο _whyFor).
@@ -10024,6 +10104,10 @@ function calculate_FIR(hourTich, dailyTich, measurements, ipsiLast, parameters) 
           indicators = [...indicators, { variable: `soilhist_${pathogenKey}`, value: 0 }];
         }
 
+      } else if (erCalculationType === "Wound_Canker_Model") {
+        // T-SOILWOUND-01: έλκος καστανιάς — πληγές ή βροχή σε ήπιο καιρό, μόνο στην περίοδο μόλυνσης.
+        er = _computeWoundCankerER(pathogen, measurements, parameters);
+        if (er === null) continue; // χωρίς θερμοκρασία αέρα: καμία εκτίμηση
       } else if (erCalculationType === "Bacterial_Disease_Model") {
         er = _computeBacterialER(pathogen, measurements, parameters);
         if (er === null) continue; // ούτε πληγές ούτε βροχή: κανένα σήμα, σιωπή
@@ -12629,7 +12713,7 @@ const _SAG_CASE_LEVEL_LABEL = { 1: 'χαμηλός', 2: 'μέτριος', 3: 'Υ
 // στη μηχανή υγρού φύλλου (σημειώσεις προφίλ: «MODELING_APPROXIMATION», «skeleton», «proxy»). Δεν μολύνουν από
 // το φύλλο· ο μετρητής ωρών και το «ψεκάστε» δεν τους αφορούν. Αναστέλλονται μέχρι να μπουν σε σωστό μοντέλο
 // (εδαφογενές ή πληγών). Τα προφίλ ΔΕΝ αλλάζουν, ώστε να ξαναμπούν χωρίς απώλεια.
-const _SAG_NONFOLIAR_SUSPENDED = ['phytophthora_xcambivora', 'cryphonectria_parasitica', 'phytophthora_citrophthora',
+const _SAG_NONFOLIAR_SUSPENDED = [   // T-SOILWOUND-01 (v50.180): μελάνωση, γομμώσεις και έλκος πήραν δικό τους μοντέλο· μένουν 4
   'phytophthora_niederhauserii', 'phytophthora_pythium_root_rot_herbs', 'fusarium_spp_corm_rot', 'plasmopara_halstedii'];
 const _SAG_NONFOLIAR_TEXT = {
   phytophthora_xcambivora: ['ριζών και λαιμού από το έδαφος (μελάνωση καστανιάς)', 'Βελτιώστε τη στράγγιση, αποφύγετε κορεσμό και τραύματα στον λαιμό· δέντρα με εξίδρωση ή αραίωμα κόμης να τα δει γεωπόνος.'],
@@ -12640,7 +12724,7 @@ const _SAG_NONFOLIAR_TEXT = {
   fusarium_spp_corm_rot: ['κόρμου από το έδαφος (κρόκος)', 'Υγιές πολλαπλασιαστικό υλικό, αμειψισπορά, στράγγιση.'],
   plasmopara_halstedii: ['συστημική από το έδαφος στο σπορόφυτο (ηλίανθος)', 'Επενδυμένος σπόρος, ανθεκτικά υβρίδια, αμειψισπορά.'],
 };
-const _SAG_NO_CASE_TYPES = new Set(['GDD_Pest', 'Soilborne_Disease_Model', 'Soil_Phenology_DD']);
+const _SAG_NO_CASE_TYPES = new Set(['GDD_Pest', 'Soilborne_Disease_Model', 'Soil_Phenology_DD', 'Wound_Canker_Model']);   // T-SOILWOUND-01
 let _SAG_NO_CASE_KEYS_CACHE = null;
 function _sagNoCaseKeySet() {
   if (_SAG_NO_CASE_KEYS_CACHE) return _SAG_NO_CASE_KEYS_CACHE;
@@ -12876,11 +12960,14 @@ function _sagPathogenCases(measurements, indicators, sprayed, inspected, nowMs, 
 const _SAG_SEASON_WINDOWS = {
   phomopsis_viticola: { from: 301, to: 510, what: 'τη φώμοψη', why: 'μολύνει μόνο στην έκπτυξη της βλάστησης (στάδια C–E, 2–10 εκ.) με βροχή' },
   colletotrichum_gloeosporioides: { from: 315, to: 531, what: 'την ανθράκνωση', why: 'μολύνει τα άνθη και τη νεαρή βλάστηση της άνοιξης' },
+  phytophthora_citrophthora: { ranges: [[301, 630], [901, 1130]], what: 'τις γομμώσεις', why: 'οι μολύνσεις του κορμού γίνονται άνοιξη και φθινόπωρο (Álvarez 2009, Βαλένθια)' },   // T-SOILWOUND-01
 };
 function _sagInSeasonWindow(key, md) {
   const w = _SAG_SEASON_WINDOWS[key];
   if (!w) return true;
-  return w.from <= w.to ? (md >= w.from && md <= w.to) : (md >= w.from || md <= w.to);
+  const _in = (a, b) => a <= b ? (md >= a && md <= b) : (md >= a || md <= b);
+  if (Array.isArray(w.ranges)) return w.ranges.some((r) => _in(r[0], r[1]));   // T-SOILWOUND-01: πολλαπλά παράθυρα
+  return _in(w.from, w.to);
 }
 function _sagMomentNow(measurements) {
   const tz = (measurements && measurements.timezone) || 'Europe/Athens';

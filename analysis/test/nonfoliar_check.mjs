@@ -47,20 +47,25 @@ function run(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let K; try { K = loadCore(src); } catch (e) { return ["φόρτωση πυρήνα: " + e.message]; }
   try {
-    ok(K.SAG_KERNEL_VERSION === "v50.179 · 2026-11-04", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.180 · 2026-11-04", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     const CH = cropOf(K, "chestnut"), OR = cropOf(K, "orange"), TO = cropOf(K, "tomato");
     const XC = "phytophthora_xcambivora", CP = "cryphonectria_parasitica", PC = "phytophthora_citrophthora";
     // Α. καστανιά, 30 ώρες T 18 RH 97 χωρίς αισθητήρα φύλλου (πριν: μελάνωση 6 ω → Σοβαρός, έλκος 24 ω → Σοβαρός)
     const a = series(K, 30, { T: 18, RH: 97 }, CH);
     ok(a.cnt(XC) === null && a.cnt(CP) === null, "Α1 καστανιά: κανένας μετρητής ωρών για μελάνωση/έλκος (" + a.cnt(XC) + "/" + a.cnt(CP) + ")");
-    ok(a.firOf(XC) === null && a.firOf(CP) === null, "Α2 καστανιά: κανένα fir_ για τα δύο");
+    ok(a.firOf(XC) === null && a.firOf(CP) && Number(a.firOf(CP).value) === 0, "Α2 καστανιά (v50.180): μελάνωση χωρίς fir_ (χωρίς έδαφος), έλκος fir 0 (εκτός περιόδου)");
     const mx = a.msg(XC), mc = a.msg(CP);
-    ok(mx && mx.value === "Μη διαθέσιμο" && mx.metadata.color === "grey" && /ριζών και λαιμού/.test(mx.metadata.text) && /αποσύρθηκε/.test(mx.metadata.text) && !/[Ψψ]εκάσ/.test(mx.metadata.text), "Α3 μελάνωση: γκρι «Μη διαθέσιμο», αιτία ρίζες, χωρίς «ψεκάστε» (" + JSON.stringify(mx) + ")");
-    ok(mc && mc.value === "Μη διαθέσιμο" && /φλοιού/.test(mc.metadata.text) && /χημική/.test(mc.metadata.text) && !/[Ψψ]εκάσ/.test(mc.metadata.text), "Α4 έλκος: γκρι, φλοιός, χωρίς ψεκασμό (" + JSON.stringify(mc) + ")");
-    ok(a.msgs.every((m) => !/^fir_message_(phytophthora_xcambivora|cryphonectria_parasitica)$/.test(m.variable) || m.value === "Μη διαθέσιμο"), "Α5 η getPathogenMessages δεν ξαναγράφει τις κάρτες τους");
+    ok(mx && mx.value === "Μη διαθέσιμο" && mx.metadata.color === "grey" && /ριζών και λαιμού/.test(mx.metadata.text) && /χωρίς αισθητήρα εδάφους/.test(mx.metadata.text) && !/[Ψψ]εκάσ/.test(mx.metadata.text), "Α3 μελάνωση (v50.180): γκρι «Μη διαθέσιμο», χωρίς αισθητήρα εδάφους, χωρίς «ψεκάστε» (" + JSON.stringify(mx) + ")");
+    ok(mc && mc.value === "Χαμηλός κίνδυνος" && /δίοδο μόλυνσης/.test(mc.metadata.text) && !/[Ψψ]εκάσ/.test(mc.metadata.text), "Α4 έλκος (v50.180, μοντέλο πληγών, Νοέμβριος): Χαμηλός, χωρίς δίοδο, χωρίς ψεκασμό (" + JSON.stringify(mc) + ")");
+    ok(a.msgs.every((m) => !/^fir_message_phytophthora_xcambivora$/.test(m.variable) || m.value === "Μη διαθέσιμο"), "Α5 η getPathogenMessages δεν ξαναγράφει την κάρτα της μελάνωσης");
+    // Ε. ηλίανθος: ο περονόσπορος ηλίανθου παραμένει στη λίστα αναστολής (v50.180: μένουν 4)
+    const SUN = cropOf(K, "sunflower"), PH = "plasmopara_halstedii";
+    const e = series(K, 10, { T: 18, RH: 97 }, SUN);
+    ok(e.cnt(PH) === null && e.firOf(PH) === null, "Ε1 ηλίανθος: χωρίς μετρητή και χωρίς fir_ (" + e.cnt(PH) + "/" + e.firOf(PH) + ")");
+    ok(e.msg(PH) && e.msg(PH).value === "Μη διαθέσιμο" && /σπορόφυτο/.test(e.msg(PH).metadata.text) && /αποσύρθηκε/.test(e.msg(PH).metadata.text) && !/[Ψψ]εκάσ/.test(e.msg(PH).metadata.text), "Ε2 ηλίανθος: γκρι «αποσύρθηκε» (" + JSON.stringify(e.msg(PH)) + ")");
     // Β. πορτοκαλιά: γομμώσεις γκρι, η αλτερνάρια εσπεριδοειδών συνεχίζει να μετρά
     const b = series(K, 10, { T: 20, RH: 92 }, OR);
-    ok(b.msg(PC) && b.msg(PC).value === "Μη διαθέσιμο" && /κορμού/.test(b.msg(PC).metadata.text), "Β1 γομμώσεις: γκρι με αιτία (" + JSON.stringify(b.msg(PC)) + ")");
+    ok(b.msg(PC) && b.msg(PC).value === "Μη διαθέσιμο" && /κορμού/.test(b.msg(PC).metadata.text) && !/[Ψψ]εκάσ/.test(b.msg(PC).metadata.text), "Β1 γομμώσεις (v50.180, χωρίς έδαφος): γκρι με αιτία, χωρίς ψεκασμό (" + JSON.stringify(b.msg(PC)) + ")");
     ok(b.cnt("alternaria_alternata_citrus_abs") === 10 && b.firOf("alternaria_alternata_citrus_abs"), "Β2 αλτερνάρια εσπεριδοειδών: μετρά 10 ώρες όπως πριν (" + b.cnt("alternaria_alternata_citrus_abs") + ")");
     // Γ. ντομάτα: ο περονόσπορος σολανωδών αμετάβλητος
     const c = series(K, 10, { T: 17, RH: 92 }, TO);
@@ -69,11 +74,11 @@ function run(src) {
     const ncs = K._sagNoCaseKeySet();
     ok(SUSP.every((k) => ncs.has(k)) && !ncs.has("phytophthora_infestans") && !ncs.has("botrytis_cinerea"), "Δ1 οι 7 χωρίς κύκλο υπόθεσης, οι φυλλικές μέσα");
     const nowMs = T0 + 40 * 3600e3; const openRec = { s: "open", o: Math.floor((T0 - 10 * 864e5) / 60000), p: 4, h: Math.floor((T0 - 36e5) / 60000) };
-    const meas = mkMeas({}, 40, { T: 18, RH: 97 }); meas.data["case_" + XC] = [{ value: JSON.stringify(openRec) }];
-    const outC = K._sagPathogenCases(meas, a.fir, null, null, nowMs, NaN, null) || [];
-    const cx = outC.find((x) => x.variable === "case_" + XC);
-    ok(cx && JSON.parse(cx.value).s === "auto", "Δ2 ανοιχτή ειδοποίηση μελάνωσης κλείνει αυτόματα (" + (cx && cx.value) + ")");
-    ok(!outC.some((x) => x.variable === "fir_message_" + XC), "Δ3 δεν εκπέμπεται «Σε παρακολούθηση» για αυτήν");
+    const meas = mkMeas({}, 40, { T: 18, RH: 97 }); meas.data["case_" + PH] = [{ value: JSON.stringify(openRec) }];
+    const outC = K._sagPathogenCases(meas, e.fir, null, null, nowMs, NaN, null) || [];
+    const cx = outC.find((x) => x.variable === "case_" + PH);
+    ok(cx && JSON.parse(cx.value).s === "auto", "Δ2 ανοιχτή ειδοποίηση περονόσπορου ηλίανθου κλείνει αυτόματα (" + (cx && cx.value) + ")");
+    ok(!outC.some((x) => x.variable === "fir_message_" + PH), "Δ3 δεν εκπέμπεται «Σε παρακολούθηση» για αυτόν");
     const meas2 = mkMeas({}, 40, { T: 17, RH: 92 }); meas2.data["case_phytophthora_infestans"] = [{ value: JSON.stringify(openRec) }];
     const outT = K._sagPathogenCases(meas2, c.fir, null, null, nowMs, NaN, null) || [];
     const ct = outT.find((x) => x.variable === "case_phytophthora_infestans");
@@ -85,12 +90,12 @@ const base = run(SRC);
 if (base.length) { console.log("ΑΠΟΤΥΧΙΑ ΒΑΣΗΣ:\n  " + base.join("\n  ")); process.exit(1); }
 console.log("ΒΑΣΗ: όλοι οι έλεγχοι πέρασαν");
 const M = [
-  ["M1 μελάνωση εκτός λίστας", "const _SAG_NONFOLIAR_SUSPENDED = ['phytophthora_xcambivora', ", "const _SAG_NONFOLIAR_SUSPENDED = ["],
-  ["M2 έλκος εκτός λίστας", "'cryphonectria_parasitica', 'phytophthora_citrophthora',", "'phytophthora_citrophthora',"],
+  ["M1 χωρίς γκρι κάρτα όταν λείπει έδαφος (v50.180)", "if (_nfT) indicators = [...indicators, { variable: `fir_message_${pathogenKey}`, value: 'Μη διαθέσιμο',", "if (false) indicators = [...indicators, { variable: `fir_message_${pathogenKey}`, value: 'Μη διαθέσιμο',"],
+  ["M2 ηλίανθος εκτός λίστας", "'fusarium_spp_corm_rot', 'plasmopara_halstedii'];", "'fusarium_spp_corm_rot'];"],
   ["M3 μετρητής συνεχίζει", "      if (_SAG_NONFOLIAR_SUSPENDED.indexOf(pathogenKey) >= 0) continue;   // T-NONFOLIAR-01: χωρίς μετρητή ωρών\n", ""],
   ["M4 κάρτα με κίνδυνο", "indicators = [...indicators, { variable: `fir_message_${pathogenKey}`, value: 'Μη διαθέσιμο',\n          metadata: { color: 'grey'", "indicators = [...indicators, { variable: `fir_message_${pathogenKey}`, value: 'Χαμηλός κίνδυνος',\n          metadata: { color: 'green'"],
   ["M5 χωρίς continue", "αποσύρθηκε μέχρι να μπει σωστό μοντέλο. ' + _nfT[1] } }];\n        continue;", "αποσύρθηκε μέχρι να μπει σωστό μοντέλο. ' + _nfT[1] } }];"],
-  ["M6 κείμενο «ψεκάστε»", "'Δεν υπάρχει χημική αντιμετώπιση. Κλαδεύετε", "'Ψεκάστε. Κλαδεύετε"],
+  ["M6 κείμενο «ψεκάστε» στις γομμώσεις", "'Κρατήστε τον λαιμό στεγνό, μην βρέχετε τον κορμό στο πότισμα, βελτιώστε τη στράγγιση.'],", "'Ψεκάστε τον κορμό.'],"],
   ["M7 υποθέσεις μένουν ανοιχτές", "    for (const _nf of _SAG_NONFOLIAR_SUSPENDED) s.add(_nf);", "    for (const _nf of []) s.add(_nf);"],
   ["M8 λάθος αιτία", "['ριζών και λαιμού από το έδαφος (μελάνωση καστανιάς)',", "['φύλλου (μελάνωση καστανιάς)',"],
 ];
