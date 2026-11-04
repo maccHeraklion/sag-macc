@@ -23,7 +23,7 @@ function run(core) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   try {
     const K = load(core);
-    ok(K.SAG_KERNEL_VERSION === "v50.178 · 2026-11-04", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.179 · 2026-11-04", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     const faults = (range) => {
       const data = {}; for (const ch of K._sagDevExpect("se0x")) for (const a of [].concat(ch.a)) data[a] = [{ value: 20, time: T, device: "Δ" }];
       const dev = { n: "Δ", t: "se0x", qerr: 0, stats: { soil_temperature1: { n: 30, spanH: 24, range, min: 10, max: 10 + range } } };
@@ -125,7 +125,7 @@ const MUT = [
   ["μ15 κρίσιμη και στα λαχανικά", "if (key !== 'erysiphe_necator' && key !== 'plasmopara_viticola') return 'normal';", "if (false) return 'normal';"],
   ["μ16 όριο 0,7 αντί 0,4", "if (_mildew === 'normal' && firValue >= 0.4) {", "if (_mildew === 'normal' && firValue >= 0.7) {"],
   ["μ17 όλες οι ασθένειες σαν ωίδιο", "if (_SAG_MILDEW_INSPECT.indexOf(key) < 0 && _SAG_WET_INSPECT.indexOf(key) < 0) return 'off';", ""],
-  ["μ18 σιωπή χωρίς continue", "+ ' του αμπελιού.' } }];\n      continue;", "+ ' του αμπελιού.' } }];"],
+  ["μ18 σιωπή χωρίς continue", "text: _sagSilentText(pathogenKey) } }];\n      continue;", "text: _sagSilentText(pathogenKey) } }];"],
   ["μ5 αναστολή με λίτρα", "{ variable: 'grossIrrigationLiters', value: 0 },\n    { variable: 'irrigationDurationHours', value: 0 },\n    { variable: 'irrigation_inhibited_by_rain', value: true },", "{ variable: 'grossIrrigationLiters', value: 1 },\n    { variable: 'irrigationDurationHours', value: 0 },\n    { variable: 'irrigation_inhibited_by_rain', value: true },"],
 ];
 let killed = 0;

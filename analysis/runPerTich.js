@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.178 · 2026-11-04';   // T-NONFOLIAR-01 (7 ασθένειες ριζών/φλοιού εκτός μηχανής φύλλου) · T-RH-CAP-90-01 (όριο RH ≤ 90 για ασθένειες υγρού φύλλου) · T-LEAFWET-RH-01 (μετρημένο υγρό φύλλο υπερισχύει του ορίου RH· περονόσποροι/βοτρύτης: επιθεώρηση) · T-MILDEW-INSPECT-01 (ωίδιο: επιθεώρηση αντί εντολής ψεκασμού) · T-ECE-NOFALLBACK-01 (χωρίς εφεδρεία ×2,5) · T-COVERED-WX-01 (κείμενα παγετού/καύσωνα σε θερμοκήπιο) · T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
+const SAG_KERNEL_VERSION = 'v50.179 · 2026-11-04';   // T-LITVALUES-01 (τιμές βιβλιογραφίας: αλτερνάρια, ωίδια, φώμοψη, ανθράκνωση + παράθυρα ΠΚΠΦΠ Ηρακλείου) · T-NONFOLIAR-01 (7 ασθένειες ριζών/φλοιού εκτός μηχανής φύλλου) · T-RH-CAP-90-01 (όριο RH ≤ 90 για ασθένειες υγρού φύλλου) · T-LEAFWET-RH-01 (μετρημένο υγρό φύλλο υπερισχύει του ορίου RH· περονόσποροι/βοτρύτης: επιθεώρηση) · T-MILDEW-INSPECT-01 (ωίδιο: επιθεώρηση αντί εντολής ψεκασμού) · T-ECE-NOFALLBACK-01 (χωρίς εφεδρεία ×2,5) · T-COVERED-WX-01 (κείμενα παγετού/καύσωνα σε θερμοκήπιο) · T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -1532,10 +1532,11 @@ const PATHOGEN_PROFILE =
       ],
       type: "Infection_Triangle",
       description: "Αναπτύσσεται σε υψηλή ατμοσφαιρική υγρασία αλλά δεν απαιτεί ελεύθερο νερό στα φύλλα.",
-      optimalTempRange: { min: 15, max: 35 }, // B4 FIX: ήταν {20,25}. Ref: Gadoury 1990
+      optimalTempRange: { min: 15, max: 32 }, // B4 FIX: ήταν {20,25}. Ref: Gadoury 1990 · T-LITVALUES-01: max 35→32, Bendek 2007 καμία βλάστηση στους 35
       optimalHumidity: { min: 60, max: 85 },
       requiredDurationHrs: 6,
       requiresLeafWetness: false,     // B6 FIX: Ωίδιο ΔΕΝ χρειάζεται βρεγμένο φύλλο
+      wetLeafInhibits: true,          // T-LITVALUES-01: ΜΕΤΡΗΜΕΝΟ νερό στο φύλλο σκάει τα κονίδια και κόβει τη νόσο (Bendek 2007, Blaich 1989, Carroll & Wilcox 2003)
       rainInhibitsInfection: true,    // Βροχή ξεπλένει κονίδια
       rainInhibitThresholdMm: 2.5,   // >2.5mm → reset counter. Ref: Gadoury 1990
       notes: "Αναστέλλεται από τη βροχή που απομακρύνει τα σπόρια. Χρειάζονται 6 συνεχόμενες ώρες εντός του βέλτιστου εύρους για υψηλό κίνδυνο μόλυνσης."
@@ -1693,10 +1694,10 @@ const PATHOGEN_PROFILE =
       ],
       type: "Infection_Triangle",
       description: "#2 ασθένεια σολανωδών μετά Phytophthora. Θερμότερο βέλτιστο.",
-      optimalTempRange: { min: 24, max: 30 },
-      optimalHumidity: { min: 85, max: 100 },
-      requiredDurationHrs: 8,
-      notes: "Ref: Rotem 1994, Agrios 2005."
+      optimalTempRange: { min: 13, opt: 25, max: 32 },   // T-LITVALUES-01: ήταν {24,30} και έδινε 0 ώρες παντού. TOMCAST ζώνη 13–17 °C (Meno 2020 ελάχ. 10)· Attri 2024 βλάστηση από 15, κορυφή 25–30· Thomidis 2023 (Ελλάδα) 20–30
+      optimalHumidity: { min: 90, max: 100 },   // T-LITVALUES-01: ήταν 85. Attri 2024: RH > 90 %
+      requiredDurationHrs: 6,   // T-LITVALUES-01: ήταν 8. Vloutoglou & Kalogerakis 2000 (Ελλάδα): 4–6 ώρες υγρού φύλλου αρκούν
+      notes: "Ref: Rotem 1994, Agrios 2005. T-LITVALUES-01 4/11/2026: TOMCAST, Vloutoglou 2000, Attri 2024, Thomidis 2023."
     }
   },
   // Έντομα
@@ -2249,7 +2250,7 @@ Object.assign(PATHOGEN_PROFILE.fungi_Oomycetes, {
     ],
     type: "Infection_Triangle",
     description: "Ενδοφυτικό ωίδιο — ευνοείται από ξηρές συνθήκες. Ειδικό χαρακτηριστικό: δεν χρειάζεται υγρό φύλλο.",
-    optimalTempRange: { min: 15, opt: 25, max: 32 },
+    optimalTempRange: { min: 15, opt: 25, max: 30 },   // T-LITVALUES-01: max 32→30, Guzmán-Plazola 2003 ≥ 30 °C δυσμενές, Elad 2007 αποικισμός 15–25
     optimalHumidity: { min: 60, max: 90 },
     requiredDurationHrs: 0,
     requiresLeafWetness: false,
@@ -2465,7 +2466,7 @@ Object.assign(PATHOGEN_PROFILE.fungi_Oomycetes, {
     description: "Ανθράκνωση εσπεριδοειδών — πτώση καρπιδίων μετά ανθοφορία, κηλιδώσεις φύλλων σε υγρές ανοιξιάτικες περιόδους.",
     optimalTempRange: { min: 10, opt: 25, max: 32 },
     optimalHumidity: { min: 90, max: 100 },
-    requiredDurationHrs: 12,
+    requiredDurationHrs: 8,   // T-LITVALUES-01: ήταν 12. Gonçalves 2021: μόλυνση ανθέων με 6–24 ώρες διαβροχής στους 18–24 °C
     requiresLeafWetness: true,
     rainInhibitsInfection: false,
     notes: "Πτώση καρπιδίων μετά ανθοφορία (PFD) — κρίσιμο σε υγρή άνοιξη. SAG v4.1 provisional."
@@ -2507,9 +2508,9 @@ Object.assign(PATHOGEN_PROFILE.fungi_Oomycetes, {
     ],
     type: "Infection_Triangle",
     description: "Μυκητολογική ασθένεια βλαστών/φύλλων — απαιτεί βροχή + παρατεταμένη διαβροχή φυλλώματος για μόλυνση. Σοβαρή σε υγρές ανοίξεις.",
-    optimalTempRange: { min: 5, opt: 20, max: 30 },
+    optimalTempRange: { min: 8, opt: 20, max: 35 },   // T-LITVALUES-01: ήταν {5,20,30}. ΠΚΠΦΠ Ηρακλείου 14/3/2024 ελάχ. 8–10 °C· Erincik 2003 μόλυνση έως 35,5, βέλτιστο 16–20
     optimalHumidity: { min: 95, max: 100 },
-    requiredDurationHrs: 7,
+    requiredDurationHrs: 12,   // T-LITVALUES-01: ήταν 7. ΠΚΠΦΠ Ηρακλείου 14/3/2024 «τουλάχιστον 12 ώρες συνεχούς διύγρανσης»· Anco 2013 ασήμαντη σπορίωση στις 11 ώρες
     requiresLeafWetness: true,
     rainInhibitsInfection: false,
     notes: "Κρίσιμο στην αρχή εκβλάστησης (BBCH 09–15). Μεταδίδεται με βροχόπτωση — πυκνίδια σε ξηρό ξύλο. ELGO-DIMITRA: αναφέρεται ως βασική ασθένεια αμπελώνα Κρήτης. Πίνακας Bugaret ενσωματωμένος. SAG v4.1 ELGO-tier."
@@ -8689,7 +8690,11 @@ function calculate_InfectionHours(hourTick, measurements, parameters) {
         rainInhibit = (rainfall_1h > (pathogen.rainInhibitThresholdMm || 2.5));
       }
 
-      const conditionsOk = tempOk && humidityOk && wetOk && !rainInhibit;
+      // T-LITVALUES-01: (α) wetLeafInhibits — μετρημένο νερό στο φύλλο (sensor/dew_leaf) σκάει τα κονίδια του ωιδίου αμπελιού·
+      // (β) εποχικές ασθένειες εκτός παραθύρου ημερολογίου (_SAG_SEASON_WINDOWS) δεν μετρούν ώρες.
+      const _wetInhibit = pathogen.wetLeafInhibits === true && _lwsMeasuredWet;
+      const _inSeason = _sagInSeasonWindow(pathogenKey, _sagMonthDayNow(measurements));
+      const conditionsOk = tempOk && humidityOk && wetOk && !rainInhibit && !_wetInhibit && _inSeason;
 
       const counterKey = `${INFECTION_HOURS_COUNTER_PREFIX}${pathogenKey}`;
       // FIX-3: θωράκιση — αν η τιμή έρθει ως string, το "5" + 1 έδινε "51" και
@@ -12724,7 +12729,8 @@ function _sagPathogenCases(measurements, indicators, sprayed, inspected, nowMs, 
     // η βερτισιλλίωση δεν έχει καν χημική αντιμετώπιση. Θα άνοιγε ειδοποίηση
     // που δεν κλείνει ποτέ, με κείμενο «δηλώστε ψεκασμό» ΔΙΠΛΑ στο «δεν
     // υπάρχει χημική θεραπεία» — αντιφατικό. Η κάρτα λέει ήδη τι να κάνει.
-    const isPest = _sagNoCaseKeySet().has(k);
+    const isPest = _sagNoCaseKeySet().has(k)
+      || !_sagInSeasonWindow(k, _sagMonthDayNow(measurements));   // T-LITVALUES-01: εκτός παραθύρου η ανοιχτή υπόθεση κλείνει (auto)
     const level = (msg && !isPest) ? (_SAG_CASE_LEVELS[String(msg.value)] || 0) : 0;
     let prev = getVal(measurements, 'case_' + k, null);
     if (typeof prev === 'string') { try { prev = JSON.parse(prev); } catch (_e) { prev = null; } }
@@ -12861,11 +12867,36 @@ function _sagPathogenCases(measurements, indicators, sprayed, inspected, nowMs, 
 
 // T-MILDEW-INSPECT-01: περίοδος ωιδίου από ημερολόγιο, γιατί ο πυρήνας δεν έχει φαινολογία (τα στάδια είναι FAO-56 νερού).
 // Ημερομηνίες αμπελιού: εκτίμηση χωρίς πηγή, εγκεκριμένη από τον γεωπόνο 4/11/2026. Τα λαχανικά δεν έχουν ούτε σιωπή ούτε κρίσιμη περίοδο.
+// T-LITVALUES-01 (v50.179, 4/11/2026): παράθυρα μόλυνσης εποχικών ασθενειών από το ημερολόγιο (ο πυρήνας δεν έχει φαινολογία).
+// Φώμοψη: δελτία αμπελιού ΠΚΠΦΠ&ΦΕ Ηρακλείου 2024–2026 — μολύνει ΜΟΝΟ στα στάδια C–D–E (BBCH 09–13, βλάστηση 2–10 εκ.) με βροχή,
+// ελάχιστη T 8–10 °C και ≥ 12 ώρες συνεχούς διύγρανσης (14/3/2024)· πρώιμη παραλιακή ζώνη στο D από αρχές Μαρτίου, όψιμη ορεινή
+// έως τέλη Απριλίου· «Δεν ενδείκνυνται ψεκασμοί» από το στάδιο G (28/4/2026). Ανθράκνωση εσπεριδοειδών: μόλυνση ανθέων και νεαρής
+// βλάστησης (Gonçalves 2021), άνθηση Κρήτης Απρίλιος–Μάιος. Εκτός παραθύρου: μετρητής 0, κάρτα «Εκτός περιόδου», χωρίς προειδοποίηση
+// πρόγνωσης, ανοιχτή υπόθεση κλείνει (auto). Ημερομηνίες μήνας*100+ημέρα, ώρα Ελλάδας, από το measurements.now του παλμού.
+const _SAG_SEASON_WINDOWS = {
+  phomopsis_viticola: { from: 301, to: 510, what: 'τη φώμοψη', why: 'μολύνει μόνο στην έκπτυξη της βλάστησης (στάδια C–E, 2–10 εκ.) με βροχή' },
+  colletotrichum_gloeosporioides: { from: 315, to: 531, what: 'την ανθράκνωση', why: 'μολύνει τα άνθη και τη νεαρή βλάστηση της άνοιξης' },
+};
+function _sagInSeasonWindow(key, md) {
+  const w = _SAG_SEASON_WINDOWS[key];
+  if (!w) return true;
+  return w.from <= w.to ? (md >= w.from && md <= w.to) : (md >= w.from || md <= w.to);
+}
+function _sagMomentNow(measurements) {
+  const tz = (measurements && measurements.timezone) || 'Europe/Athens';
+  const n = measurements && measurements.now ? new Date(measurements.now) : null;
+  return (n && !isNaN(n.getTime()) ? moment(n) : moment()).tz(tz);
+}
+function _sagMonthDayNow(measurements) { const m = _sagMomentNow(measurements); return (m.month() + 1) * 100 + m.date(); }
+const _sagSilentText = (key) => _SAG_SEASON_WINDOWS[key]
+  ? 'Εκτός περιόδου για ' + _SAG_SEASON_WINDOWS[key].what + ': ' + _SAG_SEASON_WINDOWS[key].why + '. Χωρίς κίνδυνο τώρα.'
+  : 'Εκτός περιόδου για ' + (key === 'plasmopara_viticola' ? 'τον περονόσπορο' : 'το ωίδιο') + ' του αμπελιού.';
 const _SAG_MILDEW_INSPECT = ['erysiphe_necator', 'podosphaera_xanthii', 'leveillula_taurica'];
 // T-LEAFWET-RH-01: ίδια λογική επιθεώρησης για τους περονόσπορους και τον βοτρύτη (οι παραγωγοί ψεκάζουν προληπτικά).
 const _SAG_WET_INSPECT = ['plasmopara_viticola', 'phytophthora_infestans', 'pseudoperonospora_cubensis', 'peronospora_destructor', 'brassica_downy_mildew', 'botrytis_cinerea'];
 const _sagInspectName = (key) => _SAG_MILDEW_INSPECT.indexOf(key) >= 0 ? 'ωίδιο' : key === 'botrytis_cinerea' ? 'βοτρύτη' : 'περονόσπορο';
 function _sagMildewPhase(key, md) {
+  if (_SAG_SEASON_WINDOWS[key] && !_sagInSeasonWindow(key, md)) return 'silent';   // T-LITVALUES-01
   if (_SAG_MILDEW_INSPECT.indexOf(key) < 0 && _SAG_WET_INSPECT.indexOf(key) < 0) return 'off';
   if (key !== 'erysiphe_necator' && key !== 'plasmopara_viticola') return 'normal';
   if (md >= 1201 || md <= 215) return 'silent';
@@ -12957,10 +12988,10 @@ function getPathogenMessages(fir, measurements) {
         metadata: { color: _L.c, text: _txt } }];
       continue;
     }
-    const _mdNow = moment().tz(measurements?.timezone || 'Europe/Athens');
+    const _mdNow = _sagMomentNow(measurements);   // T-LITVALUES-01: η ώρα του παλμού, όχι το ρολόι
     const _mildew = _sagMildewPhase(pathogenKey, (_mdNow.month() + 1) * 100 + _mdNow.date());
     if (_mildew === 'silent') {
-      messages = [...messages, { variable: `fir_message_${pathogenKey}`, value: 'Χαμηλός κίνδυνος', metadata: { color: 'green', text: 'Εκτός περιόδου για ' + (pathogenKey === 'plasmopara_viticola' ? 'τον περονόσπορο' : 'το ωίδιο') + ' του αμπελιού.' } }];
+      messages = [...messages, { variable: `fir_message_${pathogenKey}`, value: 'Χαμηλός κίνδυνος', metadata: { color: 'green', text: _sagSilentText(pathogenKey) } }];
       continue;
     }
     if (_mildew === 'normal' && firValue >= 0.4) {
@@ -16371,6 +16402,7 @@ function _sagInfectionAheadIndicators(fcs, parameters, pathogenProfile, already)
         const ph = cat[key];
         if (!ph || ph.type !== 'Infection_Triangle') continue;
         if (_SAG_NONFOLIAR_SUSPENDED.indexOf(key) >= 0) continue;   // T-NONFOLIAR-01
+        if (!_sagInSeasonWindow(key, _sagMonthDayNow(null))) continue;   // T-LITVALUES-01: εκτός παραθύρου, χωρίς προειδοποίηση
         if (!Array.isArray(ph.crops) || !ph.crops.some(match)) continue;
         if (already && already.has(key)) continue;   // το ΜΕΤΡΗΜΕΝΟ το λέει ήδη
         const tmin = Number(ph.optimalTempRange && ph.optimalTempRange.min);

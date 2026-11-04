@@ -11,7 +11,7 @@ const SRC = rawC.replace(/\r\n/g, "\n");
 const req = createRequire(corePath);
 function loadCore(src) {
   const shimReq = (m) => (m === "@tago-io/sdk" ? req("./test/sdk-mock.js") : req(m));
-  const tail = "\nreturn { calculate_GDD, calculate_InfectionHours, calculate_FIR, getPathogenMessages, _sagMildewPhase, setCovered: (v) => { _SAG_COVERED_ACTIVE = !!v; }, setTick: (h) => { _SAG_TICK_H = h; } };";
+  const tail = "\nreturn { calculate_GDD, calculate_InfectionHours, calculate_FIR, getPathogenMessages, _sagMildewPhase, PATHOGEN_PROFILE, setCovered: (v) => { _SAG_COVERED_ACTIVE = !!v; }, setTick: (h) => { _SAG_TICK_H = h; } };";
   const mod = { exports: {} };
   const f = new Function("require", "module", "exports", "process", "console", "__dirname", "__filename", src + tail);
   return f(shimReq, mod, mod.exports, { env: { RPERTICH_TEST_MODE: "true" }, exit() {}, on() {} }, { log() {}, warn() {}, error() {} }, path.dirname(corePath), corePath);
@@ -64,7 +64,7 @@ function run(src) {
     const b = series(K, 10, { T: 17, RH: 89, lm: 60, lt: 16.5 }, TOM);
     ok(b.cnt(PI) === 10 && b.cnt(BC) === 10, "Β1 ντομάτα RH 89: περονόσπορος και βοτρύτης 10 ώρες (" + b.cnt(PI) + "/" + b.cnt(BC) + ")");
     ok(b.msg(BC) && b.msg(BC).value === "Υψηλός κίνδυνος" && /για βοτρύτη/.test(b.msg(BC).metadata.text), "Β2 βοτρύτης: επιθεώρηση (" + JSON.stringify(b.msg(BC)) + ")");
-    ok(b.cnt(AS) === 0, "Β3 αλτερνάρια (T ≥ 24) δεν μετρά στους 17 °C");
+    ok(b.cnt(AS) === 10, "Β3 αλτερνάρια (T-LITVALUES-01: Tmin 13, μετρημένο υγρό φύλλο) μετρά 10 ώρες στους 17 °C (" + b.cnt(AS) + ")");
     // Γ. χωρίς αισθητήρα φύλλου: RH 92 → διαβροχή από εκτίμηση, το όριο RH ισχύει όπως πριν
     const c = series(K, 6, { T: 19, RH: 92 }, CUKE);
     ok(c.cnt(PC) === 6 && c.lws && /Σχετική υγρασία|Δρόσος \(εκτίμηση\)/.test(c.lws.value), "Γ1 χωρίς όργανο, RH 92: με οροφή 90 (T-RH-CAP-90-01) μετρά (" + c.cnt(PC) + ", " + (c.lws && c.lws.value) + ")");
@@ -73,10 +73,12 @@ function run(src) {
     const c4 = series(K, 6, { T: 17, RH: 91 }, TOM);
     ok(c4.cnt(BC) === 6 && c4.cnt(PI) === 6, "Γ1γ ντομάτα χωρίς όργανο, RH 91: βοτρύτης (92→90) και περονόσπορος μετρούν (" + c4.cnt(BC) + "/" + c4.cnt(PI) + ")");
     const ORANGE = { cultivation_type_general: "citrusFruits", cultivation_type: "orange", stage: "fruiting", name: "ΠΟΡΤΟΚΑΛΙ", soil_type: "silty_clay_loam", area: 2000, irrigation_system: "dripIrrigation" };
-    const c5 = series(K, 6, { T: 20, RH: 92 }, ORANGE);
+    // Γ1δ (ενημέρωση v50.179): η φυτόφθορα εσπεριδοειδών είναι εκτός μηχανής φύλλου από v50.178· η εξαίρεση της οροφής ελέγχεται στο ωίδιο με όριο 95 στο προφίλ (προσωρινά).
+    const _pEN = Object.values(K.PATHOGEN_PROFILE).map((c) => c && c.leveillula_taurica).find(Boolean); const _oldMin = _pEN.optimalHumidity.min; _pEN.optimalHumidity.min = 95;
+    const c5 = series(K, 6, { T: 20, RH: 92 }, TOM); _pEN.optimalHumidity.min = _oldMin;
     const c6 = series(K, 6, { T: 19, RH: 87, dp: 18 }, CUKE);
     ok(c6.cnt(PC) === 0 && c6.lws && /Δρόσος \(εκτίμηση\)/.test(c6.lws.value), "Γ1ε εκτίμηση δρόσου από αέρα με RH 87: κάτω από την οροφή 90, δεν μετρά (" + c6.cnt(PC) + ", " + (c6.lws && c6.lws.value) + ")");
-    ok(c5.cnt("phytophthora_citrophthora") === 0, "Γ1δ φυτόφθορα εσπεριδοειδών (χωρίς απαίτηση υγρού φύλλου, όριο 95): η οροφή ΔΕΝ ισχύει (" + c5.cnt("phytophthora_citrophthora") + ")");
+    ok(c5.cnt("leveillula_taurica") === 0, "Γ1δ ωίδιο σολανωδών (χωρίς απαίτηση υγρού φύλλου) με όριο 95: η οροφή 90 ΔΕΝ ισχύει, RH 92 δεν μετρά (" + c5.cnt("leveillula_taurica") + ")");
     const c2 = series(K, 6, { T: 19, RH: 96 }, CUKE);
     ok(c2.cnt(PC) === 6, "Γ2 χωρίς όργανο, RH 96: μετρά όπως πριν");
     // Δ. δρόσος στο φύλλο (μετρημένη θερμοκρασία φύλλου ≤ σημείο δρόσου, σκιασμένο): μετρά
@@ -123,8 +125,8 @@ const M = [
   ["M6 περονόσπορος αμπελιού χωρίς ημερολόγιο", "if (key !== 'erysiphe_necator' && key !== 'plasmopara_viticola') return 'normal';", "if (key !== 'erysiphe_necator') return 'normal';"],
   ["M7 όνομα", "key === 'botrytis_cinerea' ? 'βοτρύτη' : 'περονόσπορο'", "'περονόσπορο'"],
   ["M11 χωρίς αιτία", "(_SAG_WET_INSPECT.indexOf(pathogenKey) >= 0 && _whyFor(pathogenKey, pathogen) ? ' (' + _whyFor(pathogenKey, pathogen) + ')' : '')", "''"],
-  ["M8 σιωπή με λάθος όνομα", "(pathogenKey === 'plasmopara_viticola' ? 'τον περονόσπορο' : 'το ωίδιο')", "'το ωίδιο'"],
-  ["M9 η πύλη θερμοκρασίας", "const conditionsOk = tempOk && humidityOk && wetOk && !rainInhibit;", "const conditionsOk = humidityOk && wetOk && !rainInhibit;"],
+  ["M8 σιωπή με λάθος όνομα", "(key === 'plasmopara_viticola' ? 'τον περονόσπορο' : 'το ωίδιο')", "'το ωίδιο'"],
+  ["M9 η πύλη θερμοκρασίας", "const conditionsOk = tempOk && humidityOk && wetOk && !rainInhibit && !_wetInhibit && _inSeason;", "const conditionsOk = humidityOk && wetOk && !rainInhibit && !_wetInhibit && _inSeason;"],
   ["M10 πάγωμα οργάνου", "const _frozenHere = _ihFrozen || (needsWet && _leafFrozen);", "const _frozenHere = _ihFrozen;"],
   ["M12 χωρίς οροφή", "const _rhMin = needsWet ? Math.min(Number(_oh.min), _SAG_WET_RH_CAP) : Number(_oh.min);", "const _rhMin = Number(_oh.min);"],
   ["M13 οροφή και στα χωρίς υγρό φύλλο", "const _rhMin = needsWet ? Math.min(Number(_oh.min), _SAG_WET_RH_CAP) : Number(_oh.min);", "const _rhMin = Math.min(Number(_oh.min), _SAG_WET_RH_CAP);"],
