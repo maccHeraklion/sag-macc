@@ -33,7 +33,7 @@ async function run(core) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   try {
     const K = load(core);
-    ok(K.SAG_KERNEL_VERSION === "v50.177 · 2026-11-04", "Ε έκδοση v50.166 (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.178 · 2026-11-04", "Ε έκδοση v50.166 (" + K.SAG_KERNEL_VERSION + ")");
     ok(K._SAG_SHADOW_UNTIL === Date.parse("2026-11-08T00:00:00Z"), "Λ1 λήξη 8/11/2026 00:00 UTC");
     // ── Σ: ο κύκλος 22:21 UTC βλέπει 21:22 · 21:42 · 22:02 (τα 21:21–22:21) ──
     const calls = []; K._SAG_SHADOW.length = 0;
@@ -86,7 +86,7 @@ const MUT = [
   ["μ6 και εκτός ωριαίου κύκλου", "      if (hourTich) await _sagShadowRead(", "      if (true) await _sagShadowRead("],
   ["μ7 χωρίς μηδενισμό", "  _SAG_SHADOW.length = 0;  // T-SHADOW-HOUR-01\n", "\n"],
   ["μ8 ηλικία σε δευτερόλεπτα", "(end - ts[ts.length - 1]) / 60000", "(end - ts[ts.length - 1]) / 1000"],
-  ["μ9 λάθος έκδοση", "'v50.177 · 2026-11-04'", "'v50.165 · 2026-10-29'"],
+  ["μ9 λάθος έκδοση", "'v50.178 · 2026-11-04'", "'v50.165 · 2026-10-29'"],
 ];
 let killed = 0;
 for (const [name, a, b] of MUT) {

@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.177 · 2026-11-04';   // T-RH-CAP-90-01 (όριο RH ≤ 90 για ασθένειες υγρού φύλλου) · T-LEAFWET-RH-01 (μετρημένο υγρό φύλλο υπερισχύει του ορίου RH· περονόσποροι/βοτρύτης: επιθεώρηση) · T-MILDEW-INSPECT-01 (ωίδιο: επιθεώρηση αντί εντολής ψεκασμού) · T-ECE-NOFALLBACK-01 (χωρίς εφεδρεία ×2,5) · T-COVERED-WX-01 (κείμενα παγετού/καύσωνα σε θερμοκήπιο) · T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
+const SAG_KERNEL_VERSION = 'v50.178 · 2026-11-04';   // T-NONFOLIAR-01 (7 ασθένειες ριζών/φλοιού εκτός μηχανής φύλλου) · T-RH-CAP-90-01 (όριο RH ≤ 90 για ασθένειες υγρού φύλλου) · T-LEAFWET-RH-01 (μετρημένο υγρό φύλλο υπερισχύει του ορίου RH· περονόσποροι/βοτρύτης: επιθεώρηση) · T-MILDEW-INSPECT-01 (ωίδιο: επιθεώρηση αντί εντολής ψεκασμού) · T-ECE-NOFALLBACK-01 (χωρίς εφεδρεία ×2,5) · T-COVERED-WX-01 (κείμενα παγετού/καύσωνα σε θερμοκήπιο) · T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -8652,6 +8652,7 @@ function calculate_InfectionHours(hourTick, measurements, parameters) {
     const category = PATHOGEN_PROFILE?.[catKey] || {};
     for (const [pathogenKey, pathogen] of Object.entries(category)) {
       if (pathogen?.type !== "Infection_Triangle") continue;
+      if (_SAG_NONFOLIAR_SUSPENDED.indexOf(pathogenKey) >= 0) continue;   // T-NONFOLIAR-01: χωρίς μετρητή ωρών
       if (!Array.isArray(pathogen.crops) || !pathogen.crops.some(matchesFieldCrop)) continue;
 
       // T-IT-GUARD-01: χωρίς προαιρετική αλυσίδα, ΕΝΑ παθογόνο δίχως
@@ -9929,6 +9930,13 @@ function calculate_FIR(hourTich, dailyTich, measurements, ipsiLast, parameters) 
         continue;
       }
 
+      // T-NONFOLIAR-01: ασθένεια ριζών/φλοιού — καμία εκτίμηση από τη μηχανή φύλλου, μόνο τίμια κάρτα.
+      if (_SAG_NONFOLIAR_SUSPENDED.indexOf(pathogenKey) >= 0) {
+        const _nfT = _SAG_NONFOLIAR_TEXT[pathogenKey] || ['ριζών ή φλοιού', ''];
+        indicators = [...indicators, { variable: `fir_message_${pathogenKey}`, value: 'Μη διαθέσιμο',
+          metadata: { color: 'grey', text: 'Ασθένεια ' + _nfT[0] + ': το μοντέλο υγρού φύλλου δεν ισχύει για αυτήν και αποσύρθηκε μέχρι να μπει σωστό μοντέλο. ' + _nfT[1] } }];
+        continue;
+      }
       const erCalculationType = pathogen.type;
       let er = 0;
 
@@ -12612,6 +12620,21 @@ const _SAG_CASE_LEVEL_LABEL = { 1: 'χαμηλός', 2: 'μέτριος', 3: 'Υ
 // εδαφικές καταστάσεις (εδαφογενή, νηματώδεις). Τα συμβατικά μοντέλα συμβάντος
 // (βακτηριακά με βροχή/πληγή, υβριδικά στην άνθηση, βακτηριακή καύση) ΜΕΝΟΥΝ
 // στον κύκλο: εκεί ο ψεκασμός είναι όντως η έξοδος.
+// T-NONFOLIAR-01 (v50.178, απόφαση Michalis 4/11): ασθένειες ριζών, λαιμού, φλοιού ή σπορόφυτου που είχαν μπει
+// στη μηχανή υγρού φύλλου (σημειώσεις προφίλ: «MODELING_APPROXIMATION», «skeleton», «proxy»). Δεν μολύνουν από
+// το φύλλο· ο μετρητής ωρών και το «ψεκάστε» δεν τους αφορούν. Αναστέλλονται μέχρι να μπουν σε σωστό μοντέλο
+// (εδαφογενές ή πληγών). Τα προφίλ ΔΕΝ αλλάζουν, ώστε να ξαναμπούν χωρίς απώλεια.
+const _SAG_NONFOLIAR_SUSPENDED = ['phytophthora_xcambivora', 'cryphonectria_parasitica', 'phytophthora_citrophthora',
+  'phytophthora_niederhauserii', 'phytophthora_pythium_root_rot_herbs', 'fusarium_spp_corm_rot', 'plasmopara_halstedii'];
+const _SAG_NONFOLIAR_TEXT = {
+  phytophthora_xcambivora: ['ριζών και λαιμού από το έδαφος (μελάνωση καστανιάς)', 'Βελτιώστε τη στράγγιση, αποφύγετε κορεσμό και τραύματα στον λαιμό· δέντρα με εξίδρωση ή αραίωμα κόμης να τα δει γεωπόνος.'],
+  cryphonectria_parasitica: ['φλοιού από πληγές (έλκος καστανιάς)', 'Δεν υπάρχει χημική αντιμετώπιση. Κλαδεύετε σε ξηρό καιρό, απολυμαίνετε τα εργαλεία, αφαιρείτε τα έλκη· ρωτήστε για υποπαθογόνα στελέχη.'],
+  phytophthora_citrophthora: ['ριζών και κορμού από το έδαφος (γομμώσεις εσπεριδοειδών)', 'Κρατήστε τον λαιμό στεγνό, μην βρέχετε τον κορμό στο πότισμα, βελτιώστε τη στράγγιση.'],
+  phytophthora_niederhauserii: ['ριζών από το έδαφος (μαστιχόδεντρο)', 'Στράγγιση και αποφυγή κορεσμού του εδάφους.'],
+  phytophthora_pythium_root_rot_herbs: ['ριζών από το έδαφος (αρωματικά)', 'Στράγγιση, αποφυγή υπερβολικού ποτίσματος, υγιή φυτώρια.'],
+  fusarium_spp_corm_rot: ['κόρμου από το έδαφος (κρόκος)', 'Υγιές πολλαπλασιαστικό υλικό, αμειψισπορά, στράγγιση.'],
+  plasmopara_halstedii: ['συστημική από το έδαφος στο σπορόφυτο (ηλίανθος)', 'Επενδυμένος σπόρος, ανθεκτικά υβρίδια, αμειψισπορά.'],
+};
 const _SAG_NO_CASE_TYPES = new Set(['GDD_Pest', 'Soilborne_Disease_Model', 'Soil_Phenology_DD']);
 let _SAG_NO_CASE_KEYS_CACHE = null;
 function _sagNoCaseKeySet() {
@@ -12623,6 +12646,7 @@ function _sagNoCaseKeySet() {
         if (cat[pk] && _SAG_NO_CASE_TYPES.has(cat[pk].type)) s.add(pk);
       }
     }
+    for (const _nf of _SAG_NONFOLIAR_SUSPENDED) s.add(_nf);   // T-NONFOLIAR-01: οι ανοιχτές υποθέσεις τους κλείνουν (auto)
   } catch (_e) {}
   _SAG_NO_CASE_KEYS_CACHE = s;
   return s;
@@ -16346,6 +16370,7 @@ function _sagInfectionAheadIndicators(fcs, parameters, pathogenProfile, already)
       for (const key of Object.keys(cat)) {
         const ph = cat[key];
         if (!ph || ph.type !== 'Infection_Triangle') continue;
+        if (_SAG_NONFOLIAR_SUSPENDED.indexOf(key) >= 0) continue;   // T-NONFOLIAR-01
         if (!Array.isArray(ph.crops) || !ph.crops.some(match)) continue;
         if (already && already.has(key)) continue;   // το ΜΕΤΡΗΜΕΝΟ το λέει ήδη
         const tmin = Number(ph.optimalTempRange && ph.optimalTempRange.min);
