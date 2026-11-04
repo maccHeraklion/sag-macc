@@ -9,7 +9,7 @@ function load(core) {
   const shim = (m) => { if (m === "@tago-io/sdk") { class S { constructor() {} } return { Analysis: S, Resources: S, Account: S, Services: S, Device: S, Utils: { getTokenByName: async () => "" } }; } return req(m); };
   const quiet = { log() {}, warn() {}, error() {}, info() {}, debug() {} };
   return new Function("require", "module", "exports", "process", "console", "__dirname", "__filename", core
-    + "\n;return { calculate_IrrigationVolume, _sagDetectFaults, _sagDevExpect, _sagFrostIndicators, _sagHeatIndicators, _sagEcDailyVerdict, _sagEceNoWhy, SAG_KERNEL_VERSION, _cov: (v) => { _SAG_COVERED_ACTIVE = v; } };")(
+    + "\n;return { calculate_IrrigationVolume, _sagDetectFaults, _sagDevExpect, _sagFrostIndicators, _sagHeatIndicators, _sagEcDailyVerdict, _sagEceNoWhy, _sagMildewPhase, getPathogenMessages, SAG_KERNEL_VERSION, _cov: (v) => { _SAG_COVERED_ACTIVE = v; } };")(
     shim, { exports: {} }, {}, { env: {}, on() {}, exit() {} }, quiet, path.dirname(KPATH), KPATH);
 }
 const T = new Date(Date.now() - 6e5).toISOString();
@@ -23,7 +23,7 @@ function run(core) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   try {
     const K = load(core);
-    ok(K.SAG_KERNEL_VERSION === "v50.174 · 2026-11-04", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.175 · 2026-11-04", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     const faults = (range) => {
       const data = {}; for (const ch of K._sagDevExpect("se0x")) for (const a of [].concat(ch.a)) data[a] = [{ value: 20, time: T, device: "Δ" }];
       const dev = { n: "Δ", t: "se0x", qerr: 0, stats: { soil_temperature1: { n: 30, spanH: 24, range, min: 10, max: 10 + range } } };
@@ -80,6 +80,28 @@ function run(core) {
     const c0 = core.indexOf("            const _eceChain2 = "), c1 = core.indexOf("\n", core.indexOf("how: '' });", c0));
     const EW = new Function("e1", "e2", "_ecNum1", "_eceChain", "_sagEcChain", "_nE", "_ecSatE", core.slice(c0, c1) + "\n;return _eceW;");
     ok(Number.isNaN(EW(800, null, true, null, () => ({ ece: null }), () => null, 45).v), "Δ8 χωρίς αλυσίδα: καμία τιμή, ούτε ×2,5");
+    // ── Ε: T-MILDEW-INSPECT-01 ωίδιο: πραγματική getPathogenMessages με καρφωμένη ημερομηνία ──
+    const ph = K._sagMildewPhase, EN = "erysiphe_necator";
+    ok(ph(EN, 1130) === "normal" && ph(EN, 1201) === "silent" && ph(EN, 215) === "silent" && ph(EN, 216) === "normal" && ph(EN, 331) === "normal" && ph(EN, 401) === "critical" && ph(EN, 630) === "critical" && ph(EN, 701) === "normal", "Ε1 όρια ημερομηνιών αμπελιού");
+    ok(ph("podosphaera_xanthii", 101) === "normal" && ph("leveillula_taurica", 515) === "normal" && ph("plasmopara_viticola", 515) === "off", "Ε2 λαχανικά πάντα κανονική, άλλες ασθένειες εκτός");
+    const realNow = Date.now;
+    const msgs = (iso, key, v) => { Date.now = () => Date.parse(iso); try { return K.getPathogenMessages([{ variable: "fir_" + key, value: v }], { timezone: "Europe/Athens", data: {} }).filter((x) => x.variable === "fir_message_" + key); } finally { Date.now = realNow; } };
+    const msg = (iso, key, v) => msgs(iso, key, v)[0];
+    const NOV = "2026-11-04T10:00:00Z", MAY = "2026-05-15T10:00:00Z", JAN = "2026-01-15T10:00:00Z";
+    const e3 = msg(NOV, EN, 0.9);
+    ok(e3 && e3.value === "Υψηλός κίνδυνος" && e3.metadata.color === "orange" && /επιθεωρήστε το φύλλωμα/.test(e3.metadata.text) && !/το συντομότερο/.test(e3.metadata.text), "Ε3 αμπέλι Νοέμβριος: επιθεώρηση (" + JSON.stringify(e3) + ")");
+    const e4 = msg(MAY, EN, 0.9);
+    ok(e4 && e4.value === "Σοβαρός κίνδυνος" && e4.metadata.color === "red" && /Ψεκάστε το συντομότερο/.test(e4.metadata.text), "Ε4 αμπέλι Μάιος: όπως πριν (" + JSON.stringify(e4) + ")");
+    const e5 = msg(JAN, EN, 0.9);
+    ok(e5 && e5.value === "Χαμηλός κίνδυνος" && e5.metadata.color === "green" && msgs(JAN, EN, 0.9).length === 1 && msgs(NOV, EN, 0.9).length === 1, "Ε5 αμπέλι Ιανουάριος: σιωπή, ένα μόνο μήνυμα (" + JSON.stringify(e5) + ")");
+    const e6 = msg(JAN, "leveillula_taurica", 0.9);
+    ok(e6 && e6.value === "Υψηλός κίνδυνος" && /επιθεωρήστε/.test(e6.metadata.text), "Ε6 σολανώδη και τον Ιανουάριο: επιθεώρηση");
+    const e7 = msg(NOV, "podosphaera_xanthii", 0.5);
+    ok(e7 && e7.value === "Υψηλός κίνδυνος" && /επιθεωρήστε/.test(e7.metadata.text) && !/Ετοιμάστε/.test(e7.metadata.text), "Ε7 κολοκυνθοειδή 0,5: επιθεώρηση");
+    const e8 = msg(NOV, EN, 0.3);
+    ok(e8 && e8.value === "Μέτριος κίνδυνος", "Ε8 κάτω από 0,4: όπως πριν (" + (e8 && e8.value) + ")");
+    const e9 = msg(NOV, "plasmopara_viticola", 0.9);
+    ok(e9 && e9.value === "Σοβαρός κίνδυνος" && e9.metadata.color === "red", "Ε9 άλλη ασθένεια: όπως πριν (" + JSON.stringify(e9) + ")");
   } catch (e) { f.push("εκτέλεση: " + (e && e.stack || e)); }
   return f;
 }
@@ -98,6 +120,12 @@ const MUT = [
   ["μ10 Ks χωρίς φρουρό", " && !Number.isFinite(_eceW.v)) {   // T-ECE-NOFALLBACK-01", " && false) {   // T-ECE-NOFALLBACK-01"],
   ["μ11 κάρτα χωρίς αιτία", "if (!hasRef && a.noEce) {", "if (false) {"],
   ["μ12 αιτία πάντα ξερό", "if (vwc === null || vwc === undefined) return", "if (false) return"],
+  ["μ13 σιωπή ως 28/2", "if (md >= 1201 || md <= 215) return", "if (md >= 1201 || md <= 228) return"],
+  ["μ14 κρίσιμη από 15/4", "if (md >= 401 && md <= 630) return", "if (md >= 415 && md <= 630) return"],
+  ["μ15 κρίσιμη και στα λαχανικά", "if (key !== 'erysiphe_necator') return 'normal';", "if (false) return 'normal';"],
+  ["μ16 όριο 0,7 αντί 0,4", "if (_mildew === 'normal' && firValue >= 0.4) {", "if (_mildew === 'normal' && firValue >= 0.7) {"],
+  ["μ17 όλες οι ασθένειες σαν ωίδιο", "if (_SAG_MILDEW_INSPECT.indexOf(key) < 0) return 'off';", ""],
+  ["μ18 σιωπή χωρίς continue", "text: 'Εκτός περιόδου για το ωίδιο του αμπελιού.' } }];\n      continue;", "text: 'Εκτός περιόδου για το ωίδιο του αμπελιού.' } }];"],
   ["μ5 αναστολή με λίτρα", "{ variable: 'grossIrrigationLiters', value: 0 },\n    { variable: 'irrigationDurationHours', value: 0 },\n    { variable: 'irrigation_inhibited_by_rain', value: true },", "{ variable: 'grossIrrigationLiters', value: 1 },\n    { variable: 'irrigationDurationHours', value: 0 },\n    { variable: 'irrigation_inhibited_by_rain', value: true },"],
 ];
 let killed = 0;

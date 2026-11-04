@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.174 · 2026-11-04';   // T-ECE-NOFALLBACK-01 (χωρίς εφεδρεία ×2,5) · T-COVERED-WX-01 (κείμενα παγετού/καύσωνα σε θερμοκήπιο) · T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
+const SAG_KERNEL_VERSION = 'v50.175 · 2026-11-04';   // T-MILDEW-INSPECT-01 (ωίδιο: επιθεώρηση αντί εντολής ψεκασμού) · T-ECE-NOFALLBACK-01 (χωρίς εφεδρεία ×2,5) · T-COVERED-WX-01 (κείμενα παγετού/καύσωνα σε θερμοκήπιο) · T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -12827,6 +12827,17 @@ function _sagPathogenCases(measurements, indicators, sprayed, inspected, nowMs, 
 }
 // ── End T-CASE-01 ───────────────────────────────────────────────────────
 
+// T-MILDEW-INSPECT-01: περίοδος ωιδίου από ημερολόγιο, γιατί ο πυρήνας δεν έχει φαινολογία (τα στάδια είναι FAO-56 νερού).
+// Ημερομηνίες αμπελιού: εκτίμηση χωρίς πηγή, εγκεκριμένη από τον γεωπόνο 4/11/2026. Τα λαχανικά δεν έχουν ούτε σιωπή ούτε κρίσιμη περίοδο.
+const _SAG_MILDEW_INSPECT = ['erysiphe_necator', 'podosphaera_xanthii', 'leveillula_taurica'];
+function _sagMildewPhase(key, md) {
+  if (_SAG_MILDEW_INSPECT.indexOf(key) < 0) return 'off';
+  if (key !== 'erysiphe_necator') return 'normal';
+  if (md >= 1201 || md <= 215) return 'silent';
+  if (md >= 401 && md <= 630) return 'critical';
+  return 'normal';
+}
+
 function getPathogenMessages(fir, measurements) {
   const FIR_PREFIX = 'fir_';
   if (fir === undefined) {
@@ -12909,6 +12920,19 @@ function getPathogenMessages(fir, measurements) {
       }
       messages = [...messages, { variable: `fir_message_${pathogenKey}`, value: _L.v,
         metadata: { color: _L.c, text: _txt } }];
+      continue;
+    }
+    const _mdNow = moment().tz(measurements?.timezone || 'Europe/Athens');
+    const _mildew = _sagMildewPhase(pathogenKey, (_mdNow.month() + 1) * 100 + _mdNow.date());
+    if (_mildew === 'silent') {
+      messages = [...messages, { variable: `fir_message_${pathogenKey}`, value: 'Χαμηλός κίνδυνος', metadata: { color: 'green', text: 'Εκτός περιόδου για το ωίδιο του αμπελιού.' } }];
+      continue;
+    }
+    if (_mildew === 'normal' && firValue >= 0.4) {
+      const _pdM = _protFor(pathogenKey);
+      messages = [...messages, { variable: `fir_message_${pathogenKey}`, value: 'Υψηλός κίνδυνος', metadata: { color: 'orange', text: _pdM
+        ? 'Προστασία έως ' + _pdM + ' — μην ψεκάσετε ξανά. Αν δείτε συμπτώματα, δηλώστε επιθεώρηση.'
+        : 'Ευνοϊκές συνθήκες για ωίδιο — επιθεωρήστε το φύλλωμα. Αν δείτε συμπτώματα, ψεκάστε.' } }];
       continue;
     }
     if (firValue < 0.2) {
