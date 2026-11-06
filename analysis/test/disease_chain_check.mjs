@@ -103,7 +103,7 @@ function run(src, w) {
   const lw1 = K._sagLeafWetness({ T_air: 19, RH: 91 }), lw2 = K._sagLeafWetness({ T_air: 19, RH: 89 });
   ok(lw1.wet === true && lw1.source === "rh" && lw2.wet === false && lw2.source === "none", "Β5 εφεδρεία RH ≥ 90: 91 -> υγρό (rh), 89 -> στεγνό");
   // Β6 T-LWS-SHADED-DRY-01 (v50.156): στεγνός ΣΚΙΑΣΜΕΝΟΣ αισθητήρας υπερισχύει της ΕΚΤΙΜΗΣΗΣ δρόσου και της εφεδρείας RH
-  ok(src.includes("const SAG_KERNEL_VERSION = 'v50.181 · 2026-11-06';"), "έκδοση v50.156");
+  ok(src.includes("const SAG_KERNEL_VERSION = 'v50.182 · 2026-11-06';"), "έκδοση v50.156");
   const lw3 = K._sagLeafWetness({ leafMoisture: 0, leafShaded: true, leafTemp: 22, T_air: 19, RH: 96, dewPoint: 18.4 });
   ok(lw3.wet === false && lw3.source === "sensor_dry", "Β6 στεγνός σκιασμένος αισθητήρας + RH 96/εκτίμηση δρόσου -> ΣΤΕΓΝΟ (η μέτρηση υπερισχύει της εκτίμησης) — " + lw3.source);
   const lw4 = K._sagLeafWetness({ leafMoisture: 0, leafShaded: false, leafTemp: 22, T_air: 19, RH: 96, dewPoint: 18.4 });
@@ -201,7 +201,7 @@ const base = run(SRC, W);
 if (base.length) { console.log("ΑΠΟΤΥΧΙΑ ΒΑΣΗΣ:\n  " + base.join("\n  ")); process.exit(1); }
 console.log("ΒΑΣΗ: όλοι οι έλεγχοι πέρασαν");
 const MUT = [
-  ["m1 η υγρασία δεν ελέγχεται", "const humidityOk = RH >= _rhMin || (needsWet && _lwsMeasuredWet);", "const humidityOk = true;", "c"],
+  ["m1 η υγρασία δεν ελέγχεται", "const humidityOk = RH >= _rhMin || (needsWet && (_lwsMeasuredWet || _lwsRainWet));", "const humidityOk = true;", "c"],
   ["m2 ο μετρητής δεν προχωρά", ": (conditionsOk ? parseFloat((prevCount + _sagTickHours()).toFixed(1)) : 0);", ": 0;", "c"],
   ["m3 er ποτέ 1", "er = (infection_hours >= _reqDur) ? 1.0", "er = (infection_hours >= _reqDur) ? 0.5", "c"],
   ["m4 κατώφλι Σοβαρού πέφτει στο 0,4", "    } else if (firValue < 0.7) {", "    } else if (firValue < 0.4) {", "c"],
@@ -214,7 +214,7 @@ const MUT = [
   ["m11 ωίδιο αμπελιού ξανά στο αγγούρι", "    (c) => c && c.cultivation_type_general === \"vineCrops\"", "    (c) => true", "c"],
   ["m12 θερμοκήπιο δεν σιωπά", "    if (_SAG_COVERED_ACTIVE) return [];\n    const RH = Array.isArray(fcs.rh)", "    if (false) return [];\n    const RH = Array.isArray(fcs.rh)", "c"],
   ["m13 ο σκιασμένος στεγνός αισθητήρας ξανά πίσω από τη δρόσο", "  if (hasLm && o.leafShaded === true)\n    return { wet: false, weight: 0, source: 'sensor_dry', confidence: 'HIGH', lm: lmOut };\n  if (Number.isFinite(dp) && Number.isFinite(T)", "  if (hasLm && o.leafShaded === true && !Number.isFinite(dp) && !(RH >= 90))\n    return { wet: false, weight: 0, source: 'sensor_dry', confidence: 'HIGH', lm: lmOut };\n  if (Number.isFinite(dp) && Number.isFinite(T)", "c"],
-  ["m14 παλιά έκδοση", "'v50.181 · 2026-11-06'", "'v50.159 · 2026-10-04'", "c"],
+  ["m14 παλιά έκδοση", "'v50.182 · 2026-11-06'", "'v50.159 · 2026-10-04'", "c"],
   ["W1 widget χάνει το «σοβαρ»", 'function Ba(t){const s=String(t||"").toLowerCase();return s.includes("χαμηλ")?1:s.includes("μέτρι")||s.includes("μετρι")?2:s.includes("υψηλ")?3:s.includes("σοβαρ")?4:0}', 'function Ba(t){const s=String(t||"").toLowerCase();return s.includes("χαμηλ")?1:s.includes("μέτρι")||s.includes("μετρι")?2:s.includes("υψηλ")?3:0}', "w"],
   ["W2 κύρια κάρτα μόνο Σοβαρός", 'if(R<3&&!Vc)continue;const X=R===4?"b-red"', 'if(R<4&&!Vc)continue;const X=R===4?"b-red"', "w"],
 ];
