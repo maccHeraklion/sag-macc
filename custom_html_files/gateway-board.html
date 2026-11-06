@@ -58,6 +58,11 @@ h1{font-size:20px; margin:0 0 4px}
 .gwmeta a{color:var(--blue); text-decoration:none}
 .gwmeta a:hover{text-decoration:underline}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+/* T-GWFIELDS-01: ποιους αγρούς/αισθητήρες ακούει η πύλη — μικρό, θαμπό, τα σιωπηλά κόκκινα. */
+.gwfields{font-size:11.5px; color:var(--muted); margin-top:4px; line-height:1.5}
+.gwfields b{color:var(--muted); font-weight:600}
+.gwfields .gwsilent{color:var(--red); font-weight:600}
+.gwfields .gwcut{font-style:italic}
 .empty{color:var(--muted); font-size:13px; padding:18px 8px; line-height:1.6}
 .legend{font-size:12px; color:var(--muted); margin-top:12px}
 .legend span{margin-right:14px; white-space:nowrap}
@@ -190,6 +195,36 @@ function esc(s) {
 function telHref(p) {
   var s = String(p == null ? '' : p).replace(/[^\d+]/g, '');
   return s.length >= 8 ? s : '';
+}
+
+/* T-GWFIELDS-01 (7/11): «ποιους αγρούς ακούει» σε ένα συμπαγές μπλοκ ανά πύλη.
+   Ο τεχνικός που πάει στην πύλη βλέπει ποιοι πελάτες κρέμονται από αυτήν· τα
+   όργανα που σιωπούν βγαίνουν κόκκινα με την ηλικία τους. Αν η ανάλυση έκοψε τη
+   λίστα για να χωρέσει (fields_cut), το λέμε — δεν προσποιούμαστε πληρότητα. */
+function gwFieldsHtml(g) {
+  if (!g || !Array.isArray(g.fields) || !g.fields.length) return '';
+  var parts = [];
+  for (var i = 0; i < g.fields.length; i++) {
+    var f = g.fields[i] || {};
+    var silent = Array.isArray(f.silent) ? f.silent : [];
+    var names = Array.isArray(f.s) ? f.s : null;
+    var items = [];
+    if (names) {
+      for (var j = 0; j < names.length; j++) {
+        var nm = String(names[j]);
+        var sIdx = -1;
+        for (var q = 0; q < silent.length; q++) if (String(silent[q]).indexOf(nm + ' (') === 0) { sIdx = q; break; }
+        items.push(sIdx >= 0 ? '<span class="gwsilent">' + esc(silent[sIdx]) + '</span>' : esc(nm));
+      }
+    } else {
+      // Η λίστα ονομάτων κόπηκε (όριο μεγέθους) — μένουν το πλήθος και τα σιωπηλά.
+      items.push(esc(String(f.k != null ? f.k : '?')) + ' αισθ.');
+      for (var r = 0; r < silent.length; r++) items.push('<span class="gwsilent">' + esc(silent[r]) + '</span>');
+    }
+    parts.push('<div><b>' + esc(f.f || '(εκτός αγρού)') + '</b>: ' + items.join(', ') + '</div>');
+  }
+  return '<div class="gwfields">' + parts.join('')
+    + (g.fieldsCut ? '<div class="gwcut">… η λίστα κόπηκε για να χωρέσει</div>' : '') + '</div>';
 }
 
 /* ═══ Η ΚΑΤΑΣΤΑΣΗ — ΙΔΙΟΣ ΚΑΝΟΝΑΣ ΜΕ ΤΗ ΦΟΡΜΑ ════════════════════════════ */
@@ -345,6 +380,10 @@ function ingest(rows) {
       ent.sensors = md.sensors;
       ent.rssi = md.rssi;
       ent.rowText = md.text || '';
+      /* T-GWFIELDS-01 (7/11): ποιους αγρούς/αισθητήρες ακούει η πύλη, με τα σιωπηλά σημαδεμένα.
+         Έρχεται έτοιμο από την ανάλυση — εδώ μόνο το δείχνουμε. */
+      ent.fields = Array.isArray(md.fields) ? md.fields : null;
+      ent.fieldsCut = !!md.fields_cut;
       ent.verdict = {
         cls: ROW_CLS[md.color] || 'grey',
         label: md.state || 'άγνωστη',
@@ -685,6 +724,7 @@ function render() {
             + ' από αυτό'
             + (g.rssi != null ? ' · λήψη ' + esc(String(Math.round(Number(g.rssi)))) + ' dBm' : '')
           : '')
+      + gwFieldsHtml(g)
       + '<br>' + pos
       + (g.phone
           ? '<br>τηλ: ' + (tel

@@ -29,6 +29,8 @@
 //
 // ΓΡΑΦΕΙ: στη συσκευή εποπτείας, μία εγγραφή ανά gateway (`gateway_row`) και μία σύνοψη
 // (`gateway_summary`). Με 10 gateways και ωριαία εκτέλεση: **264 εγγραφές/ημέρα.**
+// + T-GWFIELDS-01 (7/11/2026): κάθε κάρτα πύλης λέει ΠΟΙΟΥΣ ΑΓΡΟΥΣ/αισθητήρες ακούει (`metadata.fields`) και γράφεται
+//   ΜΙΑ εγγραφή `tech_tasks` (εργασίες τεχνικού: σίγηση αγρού, λάθος αγρός, σιωπηλά όργανα) — +24 εγγραφές/ημέρα, +1 ανάγνωση/ώρα.
 // ΔΕΝ γράφει ΤΙΠΟΤΑ σε συσκευές πελατών και ΔΕΝ αγγίζει τον πυρήνα.
 
 const TOKEN = process.env.T_ANALYSIS_TOKEN;
@@ -100,6 +102,149 @@ function locOf(row) {
   return null;
 }
 
+// ═══ T-GWFIELDS-01 (7/11/2026) · ΑΓΡΟΙ ΑΝΑ ΠΥΛΗ + ΕΡΓΑΣΙΕΣ ΤΕΧΝΙΚΟΥ (ΑΡΧΗ) ═══════════════════════════════════
+// ΤΟ ΚΕΝΟ: ο χάρτης έλεγε «8 αισθητήρες πέρασαν» από μια πύλη, αλλά ΟΧΙ ποιοι και ποιων αγρών. Ο τεχνικός
+// που πάει στην πύλη δεν ξέρει ποιους πελάτες επηρεάζει· ο πίνακας στόλου κρίνει ΑΝΑ ΑΓΡΟ και δεν μπορεί να πει
+// «ολόκληρο το χωριό σίγησε μαζί, φταίει η πύλη». Όλα τα παρακάτω βγαίνουν από δεδομένα που ΗΔΗ έχουμε στη μνήμη
+// (κατάλογος συσκευών με last_input, ετικέτες αγρών, lrrid ανά αισθητήρα) — ΜΙΑ επιπλέον ανάγνωση (οι αγροί).
+// Το μπλοκ είναι αυτοτελές (χωρίς API) ώστε να δοκιμάζεται εκτός TagoIO: scratchpad/gwfields/test_tasks.mjs.
+const SILENT_H = 48;           // ώρες: πάνω από αυτό ένα όργανο «σιωπά» (ίδιο όριο με τον πίνακα στόλου)
+const SITE_QUIET_H = 6;        // ώρες: όριο για να μετρήσει μια συσκευή σε «σίγηση αγρού»
+const SITE_WINDOW_MIN = 20;    // λεπτά: συσκευές που σίγησαν μέσα σε αυτό το παράθυρο = κοινό αίτιο (πύλη/ρεύμα)
+const WRONG_FIELD_KM = 15;     // km: πύλη πιο μακριά από αυτό από τον αγρό = λάθος ανάθεση ή λάθος συντεταγμένες
+const TASK_MAX = 60;           // μέγιστο πλήθος εργασιών σε μία εγγραφή
+const TASK_JSON_MAX = 6000;    // μέγιστο μήκος metadata (χαρακτήρες)
+const VALVE_RE = /uc5|ws558/i; // βάνες/ελεγκτές: άλλος ιδιοκτήτης — μόνο σημείωση, όχι εργασία
+
+function ageHours(iso, ref) {
+  const t = iso ? new Date(iso).getTime() : NaN;
+  return Number.isFinite(t) ? ((ref || Date.now()) - t) / 36e5 : Infinity;
+}
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371, toR = Math.PI / 180;
+  const dLat = (lat2 - lat1) * toR, dLon = (lon2 - lon1) * toR;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * toR) * Math.cos(lat2 * toR) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+function truncName(s, n) { s = String(s == null ? "" : s); return s.length > n ? s.slice(0, n - 1) + "…" : s; }
+function daysTxt(h) { return Number.isFinite(h) ? Math.round(h / 24) + " ημ" : "ποτέ"; }
+
+/* Από τις εγγραφές-αγρούς (isField=yes) στο «ποιος αγρός έχει ποια συσκευή». Η ετικέτα `devices` είναι JSON
+   {όνομα: id} (createField) — αν κάποιος την έχει χαλάσει με το χέρι, μαζεύουμε όσα 24-hex ids βρούμε μέσα της. */
+function buildFieldOf(fields) {
+  const fieldOf = new Map();
+  for (const f of fields || []) {
+    const tags = Array.isArray(f && f.tags) ? f.tags : [];
+    const tag = (k) => { const t = tags.find((x) => x && x.key === k); return t ? String(t.value || "").trim() : ""; };
+    const fieldName = tag("name") || f.name || String(f.id);
+    let coords = null;
+    const cm = tag("coordinates").match(/^\s*(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)\s*$/);
+    if (cm) coords = { lat: Number(cm[1]), lon: Number(cm[2]) };
+    let ids = [];
+    const raw = tag("devices");
+    try {
+      const o = JSON.parse(raw);
+      if (o && typeof o === "object") ids = Object.values(o).map(String);
+    } catch (e) { ids = raw.match(/[0-9a-f]{24}/g) || []; }
+    for (const id of ids) {
+      if (!/^[0-9a-f]{24}$/.test(id)) continue;
+      const arr = fieldOf.get(id) || [];
+      if (!arr.some((x) => x.fieldId === f.id)) arr.push({ fieldName, fieldId: f.id, coords });
+      fieldOf.set(id, arr);
+    }
+  }
+  return fieldOf;
+}
+
+/* Οι ΕΡΓΑΣΙΕΣ ΤΕΧΝΙΚΟΥ. Διαγνώσεις σε επίπεδο τοποθεσίας που ο πίνακας ανά αγρό ΔΕΝ μπορεί να εκφράσει:
+     site_silence   : ≥2 συσκευές του ίδιου αγρού σίγησαν μέσα σε 20′ → κοινό αίτιο, ύποπτη η πύλη/ρεύμα, ΟΧΙ οι αισθητήρες
+     wrong_field    : ο αισθητήρας ακούγεται από πύλη >15 km από τις συντεταγμένες του αγρού του → λάθος ανάθεση ή θέση
+     silent_in_field: όργανα που σιωπούν >48 ω, ΜΙΑ εργασία ανά αγρό· βάνες/ελεγκτές μόνο ως σημείωση
+   Δεν διαβάζει τίποτα: δουλεύει με ό,τι έχει ήδη φορτωθεί. Επιστρέφει { tasks, counts }. */
+function computeTechTasks({ live, fieldOf, gw, pos, now }) {
+  now = now || Date.now();
+  const tasks = [];
+  const counts = { site_silence: 0, wrong_field: 0, silent_in_field: 0 };
+  const byField = new Map();   // fieldName -> [{ name, id, h, last }]
+  for (const d of live || []) {
+    const fs = fieldOf.get(d.id) || [];
+    const h = ageHours(d.last_input, now);
+    for (const f of fs) {
+      const arr = byField.get(f.fieldName) || [];
+      arr.push({ name: String(d.name || d.id), id: d.id, h, last: d.last_input });
+      byField.set(f.fieldName, arr);
+    }
+  }
+
+  // 1 · ΟΛΟΚΛΗΡΟΣ ΑΓΡΟΣ ΣΙΓΗΣΕ ΜΑΖΙ. Παίρνουμε τη ΜΕΓΑΛΥΤΕΡΗ ομάδα συσκευών με last_input μέσα σε 20′.
+  for (const [fieldName, devs] of byField.entries()) {
+    const quiet = devs.filter((x) => x.h > SITE_QUIET_H && Number.isFinite(new Date(x.last).getTime()))
+      .sort((a, b) => new Date(a.last) - new Date(b.last));
+    if (quiet.length < 2) continue;
+    let best = [];
+    for (let i = 0; i < quiet.length; i++) {
+      const t0 = new Date(quiet[i].last).getTime();
+      const grp = quiet.filter((x) => { const t = new Date(x.last).getTime(); return t >= t0 && t - t0 <= SITE_WINDOW_MIN * 6e4; });
+      if (grp.length > best.length) best = grp;
+    }
+    if (best.length < 2) continue;
+    const span = Math.round((new Date(best[best.length - 1].last) - new Date(best[0].last)) / 6e4);
+    tasks.push({ sev: 3, kind: "site_silence", field: fieldName, dev: best.map((x) => x.name).join(", "),
+      title: "Ολόκληρος αγρός σίγησε μαζί",
+      why: `${best.length} συσκευές σίγησαν μέσα σε ${span} λεπτά (από ${new Date(best[0].last).toISOString()})`
+        + " — ύποπτη η πύλη/ρεύμα, όχι οι αισθητήρες",
+      action: "Έλεγχος πύλης (ρεύμα, internet) πριν από τους αισθητήρες" });
+    counts.site_silence++;
+  }
+
+  // 2 · ΑΙΣΘΗΤΗΡΑΣ ΣΕ ΛΑΘΟΣ ΑΓΡΟ. Η πύλη που τον ακούει είναι μακριά από τον αγρό στον οποίο είναι δηλωμένος.
+  for (const [code, g] of (gw || new Map()).entries()) {
+    const p = (g.lat != null && g.lon != null) ? { lat: Number(g.lat), lon: Number(g.lon) } : (pos && pos[code]) || null;
+    if (!p || !Number.isFinite(p.lat) || !Number.isFinite(p.lon)) continue;
+    for (const s of g.list || []) {
+      for (const f of fieldOf.get(s.id) || []) {
+        if (!f.coords) continue;
+        const km = haversineKm(p.lat, p.lon, f.coords.lat, f.coords.lon);
+        if (!(km > WRONG_FIELD_KM)) continue;
+        tasks.push({ sev: 2, kind: "wrong_field", field: f.fieldName, dev: s.n,
+          title: "Αισθητήρας δηλωμένος σε λάθος αγρό",
+          why: `ακούγεται από πύλη ${code} που βρίσκεται ${km.toFixed(1).replace(".", ",")} km από τις συντεταγμένες του αγρού`,
+          action: "Διόρθωση ανάθεσης από το γραφείο (removeSensorFromField) ή έλεγχος συντεταγμένων αγρού" });
+        counts.wrong_field++;
+      }
+    }
+  }
+
+  // 3 · ΣΙΩΠΗΛΑ ΟΡΓΑΝΑ ανά αγρό. Οι βάνες/ελεγκτές (uc5xx, ws558) ανήκουν σε άλλον — μόνο σημείωση.
+  for (const [fieldName, devs] of byField.entries()) {
+    const silent = devs.filter((x) => x.h > SILENT_H);
+    const valves = silent.filter((x) => VALVE_RE.test(x.name));
+    const sensors = silent.filter((x) => !VALVE_RE.test(x.name));
+    if (!sensors.length) continue;
+    const lst = (arr) => arr.map((x) => `${x.name} (σιωπά ${daysTxt(x.h)})`).join(", ");
+    tasks.push({ sev: 3, kind: "silent_in_field", field: fieldName, dev: sensors.map((x) => x.name).join(", "),
+      title: "Σιωπηλά όργανα",
+      why: lst(sensors) + (valves.length ? ` (+ βάνα/ελεγκτής σιωπηλός: ${lst(valves)})` : ""),
+      action: "Μπαταρία / κεραία / έλεγχος επιτόπου" });
+    counts.silent_in_field++;
+  }
+
+  // Αποδιπλασιασμός, σειρά (σοβαρότητα ↓, αγρός α-ω), όριο πλήθους και μεγέθους.
+  const seen = new Set();
+  let out = tasks.filter((t) => { const k = t.kind + "|" + t.field + "|" + t.dev; if (seen.has(k)) return false; seen.add(k); return true; });
+  out.sort((a, b) => (b.sev - a.sev) || String(a.field).localeCompare(String(b.field), "el"));
+  if (out.length > TASK_MAX) out = out.slice(0, TASK_MAX);
+  const size = () => JSON.stringify({ tasks: out }).length;
+  for (let guard = 0; size() > TASK_JSON_MAX && guard < 200; guard++) {
+    let i = -1;
+    for (let j = 0; j < out.length; j++) if (out[j].why.length > 24 && (i < 0 || out[j].why.length > out[i].why.length)) i = j;
+    if (i < 0) { out.pop(); continue; }                       // δεν μένει τι να κόψουμε — πετάμε την τελευταία
+    out[i].why = out[i].why.slice(0, Math.max(20, Math.floor(out[i].why.length / 2))) + "…";
+  }
+  return { tasks: out, counts };
+}
+// ═══ T-GWFIELDS-01 (ΤΕΛΟΣ) ════════════════════════════════════════════════════════════════════════════════
+
 /* Η ΜΝΗΜΗ: ποιες συσκευές ξέρουμε ότι στέλνουν lrrid, και πού σταμάτησε η ανακάλυψη.
    Ζει σε ΜΙΑ μεταβλητή της συσκευής εποπτείας. Αν λείπει ή είναι χαλασμένη, δεν ρίχνει
    την εκτέλεση — απλώς κάνουμε πλήρη σάρωση και την ξαναχτίζουμε. */
@@ -160,6 +305,17 @@ async function loadState() {
       .map(rosterEntry);
   } catch (e) { console.log("ΚΑΤΑΛΟΓΟΣ|σφάλμα " + ((e && e.message) || e)); }
 
+  // 1γ · T-GWFIELDS-01: οι αγροί (isField=yes) ΜΙΑ φορά (1 ανάγνωση) → ποια συσκευή ανήκει σε ποιον αγρό και πού
+  //      είναι ο αγρός. Αποτυχία ΔΕΝ ρίχνει την εκτέλεση: συνεχίζουμε με άδειο χάρτη (οι κάρτες πύλης βγαίνουν όπως πριν).
+  let fieldOf = new Map();
+  try {
+    const f = await api(`/device?amount=200&page=1&fields[]=id&fields[]=name&fields[]=tags`
+      + `&filter[tags][0][key]=isField&filter[tags][0][value]=yes`);
+    reads++;
+    fieldOf = buildFieldOf((f || []).filter((d) => (d.tags || []).some((t) => t && t.key === "isField" && t.value === "yes")));
+    console.log(`ΑΓΡΟΙ|${(f || []).length} αγροί · ${fieldOf.size} συσκευές με αγρό`);
+  } catch (e) { console.log("ΑΓΡΟΙ|σφάλμα " + ((e && e.message) || e)); }
+
   // 2 · Ποιες ρωτάμε: τις ΓΝΩΣΤΕΣ + ένα κυλιόμενο παράθυρο από τις υπόλοιπες.
   const st = await loadState(); reads++;
   const known = st.ids.filter((id) => byId.has(id));
@@ -199,7 +355,7 @@ async function loadState() {
       if (!idRow || idRow.value === undefined || idRow.value === null) continue;
       stillKnown.push(id);
       const key = String(idRow.value);
-      const g = gw.get(key) || { n: 0, last: null, lat: null, lon: null, rssi: null, snr: null, devs: [] };
+      const g = gw.get(key) || { n: 0, last: null, lat: null, lon: null, rssi: null, snr: null, devs: [], list: [] };
       g.n++;
       if (!g.last || idRow.time > g.last) {
         g.last = idRow.time;
@@ -210,6 +366,8 @@ async function loadState() {
       if (la && lo && la.value != null && lo.value != null) { g.lat = la.value; g.lon = lo.value; }
       else { const lp = locOf(idRow); if (lp) { g.lat = lp.lat; g.lon = lp.lng; } }
       if (g.devs.length < 5) g.devs.push(d.name);
+      // T-GWFIELDS-01: ΠΛΗΡΗΣ λίστα (όχι μόνο 5) με αγρό και ηλικία σιωπής — τροφή για το «Ακούει:» και τις εργασίες.
+      g.list.push({ id, n: truncName(d.name, 28), f: (fieldOf.get(id) || []).map((x) => x.fieldName), h: ageHours(d.last_input) });
       gw.set(key, g);
     }
   }));
@@ -237,7 +395,7 @@ async function loadState() {
     else if (ageH < STALE_H) { color = "orange"; state = "ΑΡΑΙΟΣ ΜΑΡΤΥΡΑΣ"; suspect++; }
     else dead++;
     // Το κείμενο λέει ΤΙ ΞΕΡΟΥΜΕ και ΠΩΣ το ξέρουμε — ποτέ σκέτο νούμερο.
-    const text = `${state}. Το ξέρουμε επειδή ${g.n} αισθητήρ${g.n === 1 ? "ας πέρασε" : "ες πέρασαν"}`
+    const text0 = `${state}. Το ξέρουμε επειδή ${g.n} αισθητήρ${g.n === 1 ? "ας πέρασε" : "ες πέρασαν"}`
       + ` από αυτό το gateway, τελευταία φορά ${ageTxt(ageH)}.`
       + (color === "red"
           ? ` ΠΡΟΣΟΧΗ: αυτό ΔΕΝ σημαίνει ότι το gateway είναι χαλασμένο.`
@@ -246,12 +404,35 @@ async function loadState() {
           : "")
       + (g.rssi != null ? ` Ισχύς λήψης ${Math.round(Number(g.rssi))} dBm.` : "")
       + (g.lat != null ? ` Θέση ${Number(g.lat).toFixed(5)}, ${Number(g.lon).toFixed(5)}.` : " Θέση άγνωστη.")
-      + ` Αισθητήρες: ${g.devs.join(", ")}${g.n > g.devs.length ? " …" : ""}.`
+      + ` Αισθητήρες: ${g.devs.join(", ")}${g.n > g.devs.length ? " …" : ""}.`;
+    /* T-GWFIELDS-01: ΠΟΙΟΥΣ ΑΓΡΟΥΣ ακούει η πύλη και ποια όργανά τους σιωπούν. Ο τεχνικός που πάει στην πύλη
+       πρέπει να ξέρει ποιους πελάτες επηρεάζει· και αν τα σιωπηλά όργανα ΔΕΝ περνούν από εδώ, η πύλη δεν φταίει. */
+    const perField = new Map();
+    for (const s of g.list || []) {
+      for (const fn of (s.f && s.f.length ? s.f : ["(εκτός αγρού)"])) {
+        const e = perField.get(fn) || { f: fn, k: 0, s: [], silent: [] };
+        e.k++; e.s.push(s.n);
+        if (s.h > SILENT_H) e.silent.push(`${s.n} (${daysTxt(s.h)})`);
+        perField.set(fn, e);
+      }
+    }
+    const fields = Array.from(perField.values()).sort((a, b) => (b.k - a.k) || (a.f === "(εκτός αγρού)" ? 1 : -1));
+    const text = text0
+      + (fields.length ? ` Ακούει: ${fields.slice(0, 8).map((e) => `${e.f} (${e.k} αισθ.)`).join(", ")}${fields.length > 8 ? ", …" : ""}.` : "")
       + " Η ταυτότητα έρχεται από το δίκτυο Actility (πεδίο LRR), όχι από το ίδιο το gateway.";
     const md = { color, sensors: g.n, age_h: Number(ageH.toFixed(2)), state, text };
     if (g.rssi != null) md.rssi = Number(g.rssi);
     if (g.snr != null) md.snr = Number(g.snr);
     if (g.lat != null) md.location = { lat: Number(g.lat), lng: Number(g.lon) };
+    if (fields.length) {
+      // Όριο 1500 χαρακτήρες: πρώτα φεύγουν οι λίστες ονομάτων (τα ΣΙΩΠΗΛΑ μένουν), μετά ολόκληροι αγροί.
+      let fl = fields.map((e) => ({ f: e.f, k: e.k, s: e.s, silent: e.silent }));
+      let cut = false;
+      if (JSON.stringify(fl).length > 1500) { cut = true; fl = fl.map((e) => ({ f: e.f, k: e.k, silent: e.silent })); }
+      while (fl.length > 1 && JSON.stringify(fl).length > 1500) { cut = true; fl.pop(); }
+      md.fields = fl;
+      if (cut) md.fields_cut = true;
+    }
     out.push({ variable: "gateway_row", value: id, metadata: md });
   }
 
@@ -286,8 +467,19 @@ async function loadState() {
       text: "Μνήμη σάρωσης: ποιες συσκευές στέλνουν ταυτότητα gateway. Μειώνει τις"
         + " αναγνώσεις από ~220 σε ~" + (stillKnown.length + DISCOVER_PER_RUN) + " ανά εκτέλεση." } });
 
+  // 4γ · T-GWFIELDS-01: οι ΕΡΓΑΣΙΕΣ ΤΕΧΝΙΚΟΥ — μία εγγραφή, από δεδομένα που ήδη έχουμε (0 νέες αναγνώσεις).
+  //      Δικό της try/catch: αν σκάσει, οι κάρτες πύλης γράφονται κανονικά. Ο πίνακας στόλου (sag-fleet.html) τη δείχνει.
+  let techCounts = { site_silence: 0, wrong_field: 0, silent_in_field: 0 }, techN = 0;
+  try {
+    const tt = computeTechTasks({ live, fieldOf, gw, pos, now });
+    techCounts = tt.counts; techN = tt.tasks.length;
+    out.push({ variable: "tech_tasks", value: techN,
+      metadata: { t: new Date(now).toISOString(), tasks: tt.tasks, text: `${techN} εργασίες τεχνικού` } });
+  } catch (e) { console.log("ΕΡΓΑΣΙΕΣ|σφάλμα " + ((e && e.message) || e)); }
+
   await api(`/device/${OVERSEER}/data`, { method: "POST", body: JSON.stringify(out) });
 
+  console.log(`ΕΡΓΑΣΙΕΣ|${techN}|site_silence=${techCounts.site_silence}|wrong_field=${techCounts.wrong_field}|silent=${techCounts.silent_in_field}`);
   for (const [id, g] of rows.slice(0, 12)) {
     const ageH = g.last ? (now - new Date(g.last).getTime()) / 36e5 : Infinity;
     console.log(`G|${id}|αισθητήρες=${g.n}|${ageTxt(ageH)}`
