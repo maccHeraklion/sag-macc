@@ -20,7 +20,7 @@ const SRC = { "Βροχή": "R", "Αισθητήρας φύλλου": "S", "Δρ
   const tot = { lv: {}, open: 0, openOld: 0, hs: [] };
   for (const f of fields) {
     const nm = String(tag(f, "name") || f.name);
-    if (/Ρηγάκη|Παντάλου|ΚΟΥΤΣΑΚ|ΓΡΙΝΙΑΡ/i.test(nm)) hist.push({ f, nm });
+    if (/Ρηγάκη|Πανταλού|ΚΟΥΤΣΑΚ|ΓΡΙΝΙΑΡ/i.test(nm)) hist.push({ f, nm });
     try {
       const b = (await get(`/device/${f.id}/data?variables=field_bundle&qty=1`))[0]; if (!b || !b.metadata || !b.metadata.data) continue;
       const ageH = (now - Date.parse(b.time)) / 3600000; if (ageH > 3) continue;

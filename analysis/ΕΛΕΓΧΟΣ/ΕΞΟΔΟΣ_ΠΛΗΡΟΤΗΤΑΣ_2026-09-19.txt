@@ -44,7 +44,7 @@
       → isField=yes|yesStavrakakis
       → milesight_uc511_7441 εκτός πρότυπου connector
 
-  ✗ Α3 - Παντάλου  (Natura Cretica)
+  ✗ Α3 - Πανταλού  (Natura Cretica)
       τύποι: em320_th,lms01_ls,lse01,s2120,uc511
       → milesight_uc511_7408 εκτός πρότυπου connector
 
