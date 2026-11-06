@@ -1,4 +1,4 @@
-// SAG — DEPLOY PROBE · T-GWFIELDS-01 (χάρτης πυλών: ποιον ακούει κάθε πύλη + εργασίες τεχνικού στην Εποπτεία) · commit b6ae076 · από GitHub raw στο TagoIO Files.
+// SAG — DEPLOY PROBE · T-GWFIELDS-01 (χάρτης πυλών: ποιον ακούει κάθε πύλη + εργασίες τεχνικού στην Εποπτεία) · commit 2d20abd · από GitHub raw στο TagoIO Files.
 // Πολιτική 6aad48f03c26e2000bde4710 ΕΝΕΡΓΗ μόνο κατά το ανέβασμα. Παράθυρο hh:25–hh:15 UTC, ποτέ 00:10–00:30. Το analysis gatewayLiveness ανεβαίνει χωριστά (MCP).
 const zlib = require("zlib");
 const crypto = require("crypto");
@@ -8,16 +8,16 @@ const API = "https://api.us-e1.tago.io";
 const PUBLIC_FILE_BASE = "https://api.tago.io/file/67934c48e8e573000ae5964b/";
 const REPO_RAW = "https://raw.githubusercontent.com/maccHeraklion/sag-macc";
 
-const COMMIT = "b6ae0766e051df79a0b8985f7ba59ee6c1c11178";
+const COMMIT = "2d20abd35cbd7fca7585576a4292e68e51160f5c";
 let DRY_RUN = true;
 try { const sc = JSON.parse(process.env.T_ANALYSIS_DATA || "null"); const o = Array.isArray(sc) ? sc[0] : sc; if (o && (o.dry === false || String(o.dry) === "false")) DRY_RUN = false; } catch (e) { /* dry */ }
 const TASKS = [
   { kind: "file", target: "html_files/gateway-board.html", path: "custom_html_files/gateway-board.html",
     eol: "lf", contentType: "text/html", sha256: "2a1efa0587cd69f2f077442db379feca3822b4ec9477ab445ff789995abd1228",
-    expectLiveBefore: process.env.GB_BEFORE || null },
+    expectLiveBefore: "f27150233284d2f3d6df76cd3a0970fb03e02c5f774765c747d2e4e836615468" },
   { kind: "file", target: "storage/sagMain/sag-fleet.html", path: "custom_html_files/sag-fleet.html",
-    eol: "lf", contentType: "text/html", sha256: "52f334aea8c73b1a824592b1f6228daef29cff367420a2ee790dd99ad36015f5",
-    expectLiveBefore: process.env.SF_BEFORE || null },
+    eol: "lf", contentType: "text/html", sha256: "b0115826fe9ba646923d09901bcb72c2e4c64bac938a4d8c3a671a8386d1030e",
+    expectLiveBefore: "b5901f90f26c325b8f9011e592d83edc87554a6ae86677b1db68d5ad58a86f47" },
 ];
 
 const CONTENT_TYPE_BY_EXT = { html: "text/html", js: "text/javascript", css: "text/css", json: "application/json", svg: "image/svg+xml" };
