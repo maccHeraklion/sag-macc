@@ -975,7 +975,8 @@ function ingest(points) {
      2/9 — δηλαδή έδειχνε αληθινά ονόματα παραγωγών με ψεύτικη κατάσταση, ενώ
      ΗΤΑΝ συνδεδεμένος. Αν ήρθε σύνοψη, είμαστε ζωντανοί: άδειος πίνακας και το
      λέμε, ποτέ μπαγιάτικο στιγμιότυπο. */
-  if (!rows.length && !sum) { if (techDirty && STATE.live) renderTech(); return false; }
+  if (!rows.length && !sum && techDirty && STATE.live) renderTech();   // T-GWFIELDS-01: παρτίδα μόνο με tech_tasks
+  if (!rows.length && !sum) return false;
   /* Κρατάμε ΜΟΝΟ την ΠΙΟ ΠΡΟΣΦΑΤΗ εγγραφή ανά αγρό.
      ΠΡΟΣΟΧΗ — ΕΔΩ ΗΤΑΝ ΣΦΑΛΜΑ: κρατούσα την ΠΡΩΤΗ που συναντούσα, υποθέτοντας
      σιωπηλά ότι το TagoIO επιστρέφει τα νεότερα πρώτα. Σε συσκευή Immutable, που

@@ -198,9 +198,26 @@ function computeTechTasks({ live, fieldOf, gw, pos, now }) {
   }
 
   // 2 · ΑΙΣΘΗΤΗΡΑΣ ΣΕ ΛΑΘΟΣ ΑΓΡΟ. Η πύλη που τον ακούει είναι μακριά από τον αγρό στον οποίο είναι δηλωμένος.
+  // T-GWFIELDS-01b (7/11 01:40 UTC, μετά την πρώτη ζωντανή εκτέλεση: 43 ψευδή «λάθος αγρός»): η θέση μιας πύλης
+  // ΔΕΝ είναι πάντα αληθινή — κάποιοι parsers βάζουν στο lrrid τη θέση της ΣΥΣΚΕΥΗΣ/του αγρού, κι έτσι τρεις
+  // διαφορετικές πύλες έδειχναν ακριβώς τις συντεταγμένες του ΚΕΚ. Δύο φρουροί: (α) θέση που μοιράζονται ≥2 πύλες
+  // δεν μετρά· (β) η θέση πρέπει να ΕΠΙΒΕΒΑΙΩΝΕΤΑΙ από τουλάχιστον έναν αγρό που ακούει η πύλη ΜΕΣΑ στα όρια —
+  // αλλιώς δεν ξέρουμε πού είναι η πύλη και δεν κατηγορούμε κανέναν.
+  const _posKey = (q) => Number(q.lat).toFixed(3) + "," + Number(q.lon).toFixed(3);
+  const _posCount = new Map();
+  for (const [code, g] of (gw || new Map()).entries()) {
+    const q = (g.lat != null && g.lon != null) ? { lat: Number(g.lat), lon: Number(g.lon) } : (pos && pos[code]) || null;
+    if (q && Number.isFinite(q.lat) && Number.isFinite(q.lon)) _posCount.set(_posKey(q), (_posCount.get(_posKey(q)) || 0) + 1);
+  }
   for (const [code, g] of (gw || new Map()).entries()) {
     const p = (g.lat != null && g.lon != null) ? { lat: Number(g.lat), lon: Number(g.lon) } : (pos && pos[code]) || null;
     if (!p || !Number.isFinite(p.lat) || !Number.isFinite(p.lon)) continue;
+    if ((_posCount.get(_posKey(p)) || 0) > 1) continue;                       // (α) κοινή «θέση» = άγνωστη θέση
+    let _near = 0;
+    for (const s of g.list || []) for (const f of fieldOf.get(s.id) || []) {
+      if (f.coords && haversineKm(p.lat, p.lon, f.coords.lat, f.coords.lon) <= WRONG_FIELD_KM) _near++;
+    }
+    if (_near < 1) continue;                                                   // (β) καμία επιβεβαίωση της θέσης
     for (const s of g.list || []) {
       for (const f of fieldOf.get(s.id) || []) {
         if (!f.coords) continue;
