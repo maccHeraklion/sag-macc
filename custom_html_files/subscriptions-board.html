@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Συνδρομές</title>
+<script src="https://admin.tago.io/dist/custom-widget.min.js"></script>
+<!--
+  T-SUBS-01 (6/11/2026). Αίτημα Κώστα. Διαβάζει subs_chunk / subs_summary / subs_log / subs_result από τη
+  συσκευή «SAG Εποπτεία» (6a98855ca06e41000bfae024), που γράφει το analysis subscriptionManage.
+  Οι ενέργειες στέλνουν μία γραμμή subs_command. Καμία ενέργεια δεν γίνεται αυτόματα: θέλει πάντα κλικ,
+  αιτιολογία και επιβεβαίωση. Η λήξη μόνο εμφανίζεται, δεν προκαλεί παύση.
+-->
+<style>
+:root{
+  --bg:#f7f9fc; --ink:#1a2b3c; --muted:#6c7a89; --line:#e8eef3; --card:#fff;
+  --green:#1e9e57; --green-bg:#e9f9f0; --orange:#c96a12; --orange-bg:#fdf1e6;
+  --red:#c0392b; --red-bg:#fdecea; --grey:#6c7a89; --grey-bg:#eef1f4; --blue:#2f6feb; --blue-bg:#eaf1fe; --radius:14px;
+}
+*{box-sizing:border-box}
+body{margin:0; padding:16px; background:var(--bg); color:var(--ink); min-height:100vh;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; font-size:15px}
+.wrap{max-width:1300px; margin:0 auto}
+h1{font-size:20px; margin:0 0 4px}
+.sub{color:var(--muted); font-size:13px; margin:0 0 14px}
+.tiles{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px}
+.tile{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 16px; min-width:120px}
+.tile .n{font-size:24px; font-weight:700; line-height:1.1}
+.tile .l{font-size:12px; color:var(--muted); margin-top:2px}
+.layout{display:grid; grid-template-columns:320px 1fr; gap:14px; align-items:start}
+@media (max-width:800px){ .layout{grid-template-columns:1fr} }
+.panel{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:12px}
+.search{width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:10px; font-size:15px; margin-bottom:8px; color:var(--ink); background:#fff}
+.client{display:flex; justify-content:space-between; gap:8px; align-items:center; width:100%; text-align:left; border:0; background:transparent;
+  padding:10px; border-radius:10px; cursor:pointer; font-size:14.5px; color:var(--ink)}
+.client:hover{background:var(--bg)}
+.client.on{background:var(--blue-bg)}
+.client .c{color:var(--muted); font-size:12.5px; white-space:nowrap}
+.dot{display:inline-block; min-width:18px; padding:0 5px; border-radius:9px; font-size:11.5px; font-weight:700; text-align:center}
+.dot.paused{background:var(--orange-bg); color:var(--orange)}
+.head{display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start; margin-bottom:12px}
+.head h2{font-size:18px; margin:0 0 3px}
+.meta{color:var(--muted); font-size:13px}
+.note{border-radius:10px; padding:9px 12px; font-size:13.5px; margin-bottom:10px; background:var(--grey-bg)}
+.note.warn{background:var(--orange-bg); color:#7a4209}
+.note.err{background:var(--red-bg); color:#7c2118}
+.note.ok{background:var(--green-bg); color:#14683a}
+.card{border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px}
+.card .top{display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center}
+.card .name{font-weight:650; font-size:15.5px}
+.pill{display:inline-block; padding:2px 9px; border-radius:20px; font-size:12px; font-weight:650; margin-left:6px}
+.pill.active{background:var(--green-bg); color:var(--green)}
+.pill.paused{background:var(--orange-bg); color:var(--orange)}
+.pill.stopped{background:var(--red-bg); color:var(--red)}
+.facts{display:flex; flex-wrap:wrap; gap:4px 18px; margin:8px 0; font-size:13.5px}
+.facts b{font-weight:600}
+.late{color:var(--red); font-weight:600}
+.soon{color:var(--orange); font-weight:600}
+.small{color:var(--muted); font-size:12.5px; margin-top:3px}
+.btns{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px}
+button.act{border:1px solid var(--line); background:#fff; border-radius:9px; padding:7px 13px; font-size:13.5px; cursor:pointer; color:var(--ink)}
+button.act:hover{background:var(--bg)}
+button.act.warn{color:var(--orange); border-color:#f0d3b4}
+button.act.danger{color:var(--red); border-color:#f1c4bf}
+button.act.good{color:var(--green); border-color:#bfe8d0}
+button.act:disabled{opacity:.5; cursor:not-allowed}
+h3{font-size:14px; margin:16px 0 8px; color:var(--muted); font-weight:600}
+.log{font-size:13px; padding:7px 0; border-top:1px solid var(--line)}
+.empty{color:var(--muted); padding:30px 10px; text-align:center}
+.modal{position:fixed; inset:0; background:rgba(20,30,40,.45); display:none; align-items:center; justify-content:center; padding:16px; z-index:10}
+.modal.on{display:flex}
+.box{background:#fff; border-radius:var(--radius); padding:18px; max-width:520px; width:100%; max-height:90vh; overflow:auto}
+.box h2{font-size:17px; margin:0 0 10px}
+.box ul{margin:6px 0 10px; padding-left:20px; font-size:13.5px}
+.box label{display:block; font-size:13.5px; margin:10px 0 4px; font-weight:600}
+.box textarea{width:100%; min-height:64px; padding:8px 10px; border:1px solid var(--line); border-radius:9px; font:inherit; color:var(--ink)}
+.box .row{display:flex; gap:8px; justify-content:flex-end; margin-top:14px}
+.check{display:flex; gap:8px; align-items:flex-start; font-weight:400 !important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Συνδρομές</h1>
+  <p class="sub" id="sub">Φόρτωση…</p>
+  <div class="tiles" id="tiles"></div>
+  <div class="layout">
+    <div class="panel">
+      <input class="search" id="q" placeholder="Αναζήτηση πελάτη ή αγρού…" />
+      <div id="clients"></div>
+    </div>
+    <div class="panel" id="detail"><div class="empty">Διάλεξε πελάτη από τη λίστα.</div></div>
+  </div>
+</div>
+<div class="modal" id="modal"><div class="box" id="box"></div></div>
+
+<script>
+var NO_CLIENT = '__none__';
+var ACTION = {
+  pause:  { title:'Παύση', verb:'παύση', cls:'warn',
+            text:'Ο πελάτης δεν θα βλέπει τον αγρό και θα βλέπει μήνυμα ανανέωσης. Οι μετρήσεις και οι υπολογισμοί συνεχίζουν. Η επαναφορά γίνεται με ένα κλικ.' },
+  stop:   { title:'Διακοπή', verb:'διακοπή', cls:'danger',
+            text:'Ίδιο με την παύση, και η συνδρομή σημειώνεται ανενεργή (subscriptionActive=no). Τα δεδομένα δεν σβήνονται.' },
+  resume: { title:'Επαναφορά', verb:'επαναφορά', cls:'good',
+            text:'Ο πελάτης ξαναβλέπει τον αγρό όπως πριν.' }
+};
+var STATE = { active:'Ενεργή', paused:'Σε παύση', stopped:'Διακοπή' };
+
+var S = { rows:{}, clients:[], fields:[], logs:[], summary:null, snap:null, sel:null, q:'', me:'', pending:null, seen:{}, result:null };
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function fmtDate(d){ var p = String(d || '').split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : ''; }
+function fmtTime(t){ var d = new Date(t); return isNaN(d) ? '' : d.toLocaleString('el-GR', { hour12:false, dateStyle:'short', timeStyle:'short' }); }
+function daysLeft(d){ if (!d) return null; return Math.round((Date.parse(d + 'T00:00:00Z') - Date.parse(new Date().toISOString().slice(0,10) + 'T00:00:00Z')) / 864e5); }
+function norm(s){ return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+function newReq(){ return String(Date.now()) + '-' + Math.floor(Math.random() * 1e6); }
+
+/* ═══ ΔΕΔΟΜΕΝΑ ═══ */
+function flatten(d){
+  var rows = [];
+  if (Array.isArray(d)) for (var i = 0; i < d.length; i++) {
+    if (d[i] && Array.isArray(d[i].result)) rows = rows.concat(d[i].result);
+    else if (d[i] && d[i].variable) rows.push(d[i]);
+  }
+  return rows;
+}
+function ingest(rows){
+  rows.forEach(function(r){ if (r && r.id) S.rows[r.id] = r; });
+  var all = Object.keys(S.rows).map(function(k){ return S.rows[k]; });
+  var byTime = function(a, b){ return new Date(b.time) - new Date(a.time); };
+
+  var sums = all.filter(function(r){ return r.variable === 'subs_summary'; }).sort(byTime);
+  for (var i = 0; i < sums.length; i++) {
+    var g = sums[i].group, parts = (sums[i].metadata || {}).parts;
+    var ch = all.filter(function(r){ return r.variable === 'subs_chunk' && r.group === g; });
+    if (ch.length >= parts) {
+      var items = [];
+      ch.sort(function(a, b){ return a.metadata.part - b.metadata.part; }).forEach(function(r){ items = items.concat(r.metadata.items || []); });
+      S.clients = items.filter(function(x){ return x.k === 'c'; });
+      S.fields = items.filter(function(x){ return x.k === 'f'; });
+      S.summary = sums[i].metadata; S.snap = sums[i].time;
+      break;
+    }
+  }
+  S.logs = all.filter(function(r){ return r.variable === 'subs_log'; }).sort(byTime);
+
+  if (S.pending) {
+    var res = all.filter(function(r){ return r.variable === 'subs_result' && r.metadata && r.metadata.req === S.pending.req; })[0];
+    if (res) onResult(res.metadata);
+  }
+}
+
+/* ═══ ΕΜΦΑΝΙΣΗ ═══ */
+function fieldsOf(id){
+  if (id === NO_CLIENT) {
+    var known = {}; S.clients.forEach(function(c){ known[c.i] = 1; });
+    return S.fields.filter(function(f){ return !known[f.c]; });
+  }
+  return S.fields.filter(function(f){ return f.c === id; });
+}
+function count(st){ return S.fields.filter(function(f){ return f.s === st; }).length; }
+
+function renderTop(){
+  $('sub').textContent = S.snap ? 'Τελευταία εικόνα: ' + fmtTime(S.snap) + '. Η λήξη δεν προκαλεί αυτόματη παύση: κάθε ενέργεια γίνεται μόνο από εδώ.' : 'Περιμένω την πρώτη εικόνα από το analysis…';
+  var expired = S.fields.filter(function(f){ var d = daysLeft(f.e); return d !== null && d < 0 && f.s === 'active'; }).length;
+  var t = [[S.clients.length,'Πελάτες'],[S.fields.length,'Αγροί'],[count('paused'),'Σε παύση'],[count('stopped'),'Σε διακοπή'],[expired,'Ληγμένοι αλλά ενεργοί']];
+  $('tiles').innerHTML = t.map(function(x){ return '<div class="tile"><div class="n">' + x[0] + '</div><div class="l">' + x[1] + '</div></div>'; }).join('');
+}
+
+function renderClients(){
+  var q = norm(S.q);
+  var list = S.clients.map(function(c){ return { i:c.i, n:c.n }; });
+  if (fieldsOf(NO_CLIENT).length) list.push({ i:NO_CLIENT, n:'Χωρίς πελάτη' });
+  var html = list.filter(function(c){
+    if (!q) return true;
+    if (norm(c.n).indexOf(q) >= 0) return true;
+    return fieldsOf(c.i).some(function(f){ return norm(f.n).indexOf(q) >= 0; });
+  }).map(function(c){
+    var fs = fieldsOf(c.i);
+    var held = fs.filter(function(f){ return f.s !== 'active'; }).length;
+    return '<button class="client' + (S.sel === c.i ? ' on' : '') + '" data-c="' + esc(c.i) + '"><span>' + esc(c.n) + '</span><span class="c">'
+      + (held ? '<span class="dot paused">' + held + '</span> ' : '') + fs.length + ' αγρ.</span></button>';
+  }).join('');
+  $('clients').innerHTML = html || '<div class="empty">Δεν βρέθηκε κάτι.</div>';
+}
+
+function endHtml(f){
+  if (!f.e) return f.odd ? '<span class="soon">Μη αναγνώσιμη ημερομηνία</span>' : '<span class="small">Χωρίς ημερομηνία</span>';
+  var d = daysLeft(f.e), s = fmtDate(f.e);
+  if (d < 0) return '<span class="late">' + s + ' (έληξε πριν ' + (-d) + ' ημ.)</span>';
+  if (d <= 30) return '<span class="soon">' + s + ' (σε ' + d + ' ημ.)</span>';
+  return esc(s);
+}
+
+function renderDetail(){
+  if (!S.sel) { $('detail').innerHTML = '<div class="empty">Διάλεξε πελάτη από τη λίστα.</div>'; return; }
+  var c = S.clients.filter(function(x){ return x.i === S.sel; })[0] || { n:'Χωρίς πελάτη' };
+  var fs = fieldsOf(S.sel);
+  var busy = !!S.pending;
+  var h = '<div class="head"><div><h2>' + esc(c.n) + '</h2><div class="meta">'
+    + [c.m, c.p].filter(Boolean).map(esc).join(' · ') + '</div></div><div class="btns">';
+  var activeIds = fs.filter(function(f){ return f.s === 'active' && (f.u.length || f.pub); }).length;
+  var heldIds = fs.filter(function(f){ return f.s !== 'active'; }).length;
+  if (activeIds > 1) h += '<button class="act warn" data-all="pause"' + (busy ? ' disabled' : '') + '>Παύση όλων (' + activeIds + ')</button>';
+  if (heldIds > 1) h += '<button class="act good" data-all="resume"' + (busy ? ' disabled' : '') + '>Επαναφορά όλων (' + heldIds + ')</button>';
+  h += '</div></div>';
+
+  if (S.result) h += S.result;
+  if (busy) h += '<div class="note">Η ενέργεια τρέχει…</div>';
+  if (c.ox && c.ox.length) h += '<div class="note warn"><b>Η παύση αγρού δεν κρύβει:</b> ' + c.ox.map(esc).join(', ') + '. Αυτά τα dashboards δεν ανήκουν σε συγκεκριμένο αγρό και μένουν ορατά.</div>';
+  if (!fs.length) h += '<div class="empty">Αυτός ο πελάτης δεν έχει αγρούς.</div>';
+
+  fs.forEach(function(f){
+    h += '<div class="card"><div class="top"><div><span class="name">' + esc(f.n) + '</span><span class="pill ' + f.s + '">' + STATE[f.s] + '</span></div></div>'
+      + '<div class="facts"><span><b>Λήξη:</b> ' + endHtml(f) + '</span>'
+      + '<span><b>Κόστος:</b> ' + esc(f.cost !== '' && f.cost != null ? f.cost + ' €' : '—') + (f.list && f.list !== f.cost ? ' <span class="small">(τιμοκατάλογος ' + esc(f.list) + ' €)</span>' : '') + '</span>'
+      + (f.ct ? '<span><b>Ελεγκτές:</b> ' + f.ct + '</span>' : '') + '</div>'
+      + '<div class="small">' + (f.u.length ? 'Έχουν πρόσβαση: ' + f.u.map(esc).join(', ') : 'Κανένας πελάτης δεν έχει πρόσβαση σε αυτό το dashboard.') + (f.pub ? ' · Δημόσιο dashboard.' : '') + '</div>'
+      + (f.at && f.s !== 'active' ? '<div class="small">Από ' + esc(fmtTime(f.at)) + '</div>' : '')
+      + '<div class="btns">';
+    if (f.s === 'active') {
+      var can = (f.u.length || f.pub) && !f.nod;
+      h += '<button class="act warn" data-a="pause" data-f="' + f.i + '"' + (busy || !can ? ' disabled' : '') + '>Παύση</button>'
+        + '<button class="act danger" data-a="stop" data-f="' + f.i + '"' + (busy || !can ? ' disabled' : '') + '>Διακοπή</button>';
+    } else {
+      if (f.s === 'paused') h += '<button class="act danger" data-a="stop" data-f="' + f.i + '"' + (busy ? ' disabled' : '') + '>Διακοπή</button>';
+      h += '<button class="act good" data-a="resume" data-f="' + f.i + '"' + (busy ? ' disabled' : '') + '>Επαναφορά</button>';
+    }
+    h += '</div></div>';
+  });
+
+  var ids = {}; fs.forEach(function(f){ ids[f.i] = 1; });
+  var logs = S.logs.filter(function(r){ return r.metadata && ids[r.metadata.field_id]; }).slice(0, 15);
+  if (logs.length) {
+    h += '<h3>Ιστορικό</h3>' + logs.map(function(r){
+      var m = r.metadata, a = ACTION[m.action];
+      return '<div class="log"><b>' + esc(a ? a.title : m.action) + '</b> · ' + esc(m.field) + ' · ' + esc(fmtTime(m.at)) + ' · ' + esc(m.by)
+        + (m.reason ? '<div class="small">' + esc(m.reason) + '</div>' : '') + '</div>';
+    }).join('');
+  }
+  $('detail').innerHTML = h;
+}
+
+function render(){ renderTop(); renderClients(); renderDetail(); }
+
+/* ═══ ΕΝΕΡΓΕΙΕΣ ═══ */
+function openModal(action, ids, openWarning){
+  var a = ACTION[action];
+  var fs = S.fields.filter(function(f){ return ids.indexOf(f.i) >= 0; });
+  var users = {}; fs.forEach(function(f){ f.u.forEach(function(u){ users[u] = 1; }); });
+  var ct = fs.filter(function(f){ return f.ct; }).length;
+  var pub = fs.filter(function(f){ return f.pub; }).length;
+  var needReason = action !== 'resume';
+  var h = '<h2>' + esc(a.title) + (fs.length > 1 ? ' ' + fs.length + ' αγρών' : ': ' + esc(fs[0].n)) + '</h2>'
+    + '<div class="note">' + esc(a.text) + '</div>';
+  if (fs.length > 1) h += '<ul>' + fs.map(function(f){ return '<li>' + esc(f.n) + '</li>'; }).join('') + '</ul>';
+  if (Object.keys(users).length) h += '<div class="small"><b>Επηρεάζονται:</b> ' + Object.keys(users).map(esc).join(', ') + '</div>';
+  if (openWarning) h += '<div class="note err" style="margin-top:10px">' + esc(openWarning) + '</div>';
+  if (action !== 'resume' && ct && !openWarning) h += '<div class="note warn" style="margin-top:10px">Υπάρχει ελεγκτής άρδευσης. Ο πελάτης δεν θα μπορεί να κλείσει βάνα ή να αλλάξει πρόγραμμα. Θα ελεγχθεί αν κάποια βάνα είναι ανοιχτή.</div>';
+  if (action !== 'resume' && pub) h += '<div class="note warn" style="margin-top:10px">Το δημόσιο dashboard θα πάψει να είναι δημόσιο όσο κρατά η παύση.</div>';
+  if (needReason) h += '<label for="reason">Αιτιολογία (υποχρεωτική)</label><textarea id="reason" maxlength="200"></textarea>';
+  if (openWarning) h += '<label class="check"><input type="checkbox" id="open_ok" /> Το γνωρίζω και θέλω να συνεχίσω.</label>';
+  h += '<div class="row"><button class="act" id="m_no">Άκυρο</button><button class="act ' + a.cls + '" id="m_yes">' + esc(a.title) + '</button></div>';
+  $('box').innerHTML = h;
+  $('modal').classList.add('on');
+  $('m_no').onclick = closeModal;
+  $('m_yes').onclick = function(){
+    var reason = needReason ? $('reason').value.trim() : '';
+    if (needReason && reason.length < 3) { $('reason').focus(); return; }
+    if (openWarning && !$('open_ok').checked) return;
+    closeModal();
+    send(action, ids, reason, !!openWarning);
+  };
+}
+function closeModal(){ $('modal').classList.remove('on'); }
+
+function send(action, ids, reason, confirmOpen){
+  var req = newReq();
+  S.pending = { req:req, action:action, ids:ids, reason:reason, started:Date.now() };
+  S.result = null;
+  render();
+  var row = { variable:'subs_command', value:action, metadata:{ action:action, field_ids:ids, reason:reason, confirm_open:!!confirmOpen, by:S.me, req:req } };
+  Promise.resolve(window.TagoIO.sendData([row])).catch(function(e){
+    S.pending = null;
+    S.result = '<div class="note err">Η εντολή δεν στάλθηκε: ' + esc(e && e.message || e) + '</div>';
+    render();
+  });
+  setTimeout(function(){
+    if (S.pending && S.pending.req === req) {
+      S.pending = null;
+      S.result = '<div class="note err">Δεν ήρθε απάντηση μέσα σε 90 δευτερόλεπτα. Μην το ξαναπατήσεις: κάνε ανανέωση της σελίδας και δες την κατάσταση.</div>';
+      render();
+    }
+  }, 90000);
+}
+
+function onResult(m){
+  var p = S.pending;
+  if (S.seen[m.req]) return;
+  S.seen[m.req] = 1;
+  S.pending = null;
+  var rs = m.results || [];
+  var ok = rs.filter(function(r){ return r.status === 'ok'; });
+  var fail = rs.filter(function(r){ return r.status === 'fail'; });
+  var conf = rs.filter(function(r){ return r.status === 'needs_confirm'; });
+  var dry = rs.filter(function(r){ return r.status === 'dry_run'; });
+  var a = ACTION[m.action] || { title:m.action };
+  var h = '';
+  if (ok.length) h += '<div class="note ok">' + esc(a.title) + ' έγινε: ' + ok.map(function(r){ return esc(r.name); }).join(', ') + '</div>';
+  if (dry.length) h += '<div class="note">' + dry.map(function(r){ return esc(r.name) + ': ' + esc(r.msg); }).join('<br>') + '</div>';
+  if (fail.length) h += '<div class="note err">Δεν έγινε: ' + fail.map(function(r){ return esc(r.name) + ': ' + esc(r.msg); }).join('<br>') + '</div>';
+  (m.warnings || []).forEach(function(w){ h += '<div class="note warn">' + esc(w) + '</div>'; });
+  S.result = h;
+  render();
+  if (conf.length && p) {
+    openModal(m.action, conf.map(function(r){ return r.id; }), conf.map(function(r){ return r.name + ': ' + r.msg; }).join(' '));
+  }
+}
+
+document.addEventListener('click', function(e){
+  var c = e.target.closest('[data-c]');
+  if (c) { S.sel = c.getAttribute('data-c'); S.result = null; render(); return; }
+  var b = e.target.closest('[data-a]');
+  if (b && !b.disabled) { openModal(b.getAttribute('data-a'), [b.getAttribute('data-f')]); return; }
+  var all = e.target.closest('[data-all]');
+  if (all && !all.disabled) {
+    var act = all.getAttribute('data-all');
+    var ids = fieldsOf(S.sel).filter(function(f){
+      return act === 'resume' ? f.s !== 'active' : (f.s === 'active' && (f.u.length || f.pub));
+    }).map(function(f){ return f.i; });
+    if (ids.length) openModal(act, ids);
+  }
+});
+$('q').addEventListener('input', function(){ S.q = this.value; renderClients(); });
+
+if (window.TagoIO && window.TagoIO.ready) {
+  window.TagoIO.onStart(function(w){ try { if (w && Array.isArray(w.data)) ingest(flatten(w.data)); } catch (_e) {} render(); });
+  window.TagoIO.onRealtime(function(d){ try { ingest(flatten(d)); render(); } catch (_e) {} });
+  if (window.TagoIO.onSyncUserInformation) window.TagoIO.onSyncUserInformation(function(u){ S.me = (u && (u.name || u.email)) || ''; });
+  window.TagoIO.ready();
+} else if (window.SUBS_MOCK) {
+  ingest(window.SUBS_MOCK); render();
+} else {
+  $('sub').textContent = 'Η σελίδα δεν τρέχει μέσα στο TagoIO: δεν υπάρχουν δεδομένα.';
+}
+</script>
+</body>
+</html>
