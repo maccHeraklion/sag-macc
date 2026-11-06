@@ -20,7 +20,7 @@ function cut(src, a, b, label) {
 }
 const msgs = (o) => { const r = {}; for (const [k, v] of Object.entries(o)) r["fir_message_" + k] = { value: v }; return r; };
 const LOW = "Χαμηλός κίνδυνος", NA = "Μη διαθέσιμο";
-const CUKE = ["podosphaera_xanthii", "pseudoperonospora_cubensis", "verticillium_dahliae", "phytophthora_capsici", "sclerotinia_sclerotiorum", "meloidogyne_incognita", "myzus_persicae", "bemisia_tabaci", "tetranychus_urticae"];
+const CUKE = ["podosphaera_xanthii", "pseudoperonospora_cubensis", "botrytis_cinerea", "verticillium_dahliae", "phytophthora_capsici", "sclerotinia_sclerotiorum", "meloidogyne_incognita", "myzus_persicae", "bemisia_tabaci", "tetranychus_urticae"];
 const TOM = ["phytophthora_infestans", "botrytis_cinerea", "alternaria_solani", "leveillula_taurica", "verticillium_dahliae", "phytophthora_capsici", "sclerotinia_sclerotiorum", "meloidogyne_incognita", "tuta_absoluta", "myzus_persicae", "bemisia_tabaci", "phthorimaea_operculella", "leptinotarsa_decemlineata", "tetranychus_urticae"];
 const all = (l, v) => Object.fromEntries(l.map((k) => [k, v]));
 function run(w) {
@@ -34,17 +34,17 @@ function run(w) {
     const CU = "vegetableCrops:cucumber", TO = "vegetableCrops:tomato", ZU = "vegetableCrops:zucchini";
     const T = (re, hk) => H.sagCovTxt9(H.sagCov9(re, hk));
 
-    ok(T(msgs(all(CUKE, LOW)), CU) === "Καλύπτονται 9: 6 ασθένειες · 3 έντομα και ακάρεα", "Α1 Κουτσάκης αγγούρι (" + T(msgs(all(CUKE, LOW)), CU) + ")");
+    ok(T(msgs(all(CUKE, LOW)), CU) === "Καλύπτονται 10: 7 ασθένειες · 3 έντομα και ακάρεα", "Α1 Κουτσάκης αγγούρι (" + T(msgs(all(CUKE, LOW)), CU) + ")");
     ok(T(msgs(all(TOM, LOW)), TO) === "Καλύπτονται 14: 8 ασθένειες · 6 έντομα και ακάρεα", "Α2 Γρινιαράκης ντομάτα (" + T(msgs(all(TOM, LOW)), TO) + ")");
     const c3 = H.sagCov9(msgs(all(TOM, NA)), TO);
     ok(c3 && c3.d === 0 && c3.p === 0 && c3.u === 14, "Α3 όλα «Μη διαθέσιμο» δεν μετρούν ως κάλυψη");
     ok(/^Δεν καλύπτεται τώρα/.test(H.sagCovTxt9(c3)) && /14 χωρίς μετρήσεις τώρα/.test(H.sagCovTxt9(c3)), "Α4 κείμενο χωρίς κάλυψη (" + H.sagCovTxt9(c3) + ")");
-    const z = all(["podosphaera_xanthii", "pseudoperonospora_cubensis", "myzus_persicae", "bemisia_tabaci", "tetranychus_urticae"], LOW);
-    ok(T(msgs(z), ZU) === "Καλύπτονται 5: 2 ασθένειες · 3 έντομα και ακάρεα · 3 χωρίς υπολογισμό τώρα", "Α5 ΚΕΚ κολοκύθι χωρίς έδαφος (" + T(msgs(z), ZU) + ")");
+    const z = all(["podosphaera_xanthii", "pseudoperonospora_cubensis", "botrytis_cinerea", "myzus_persicae", "bemisia_tabaci", "tetranychus_urticae"], LOW);
+    ok(T(msgs(z), ZU) === "Καλύπτονται 6: 3 ασθένειες · 3 έντομα και ακάρεα · 3 χωρίς υπολογισμό τώρα", "Α5 ΚΕΚ κολοκύθι χωρίς έδαφος (" + T(msgs(z), ZU) + ")");
     ok(H.sagCov9({ fir_message_plasmopara_viticola: { value: LOW } }, CU).d === 0, "Α6 παθογόνο άλλης καλλιέργειας δεν μετρά");
     ok(H.sagCovTxt9(H.sagCov9({}, "")) === "" && H.sagCov9({}, "") === null, "Α7 χωρίς δεδομένα και χωρίς καλλιέργεια: καμία γραμμή");
     ok(H.sagCov9({ fir_message_myzus_persicae: { value: "" } }, CU).p === 0, "Α8 κενή τιμή δεν μετρά");
-    ok(H.sagCov9(msgs(all(CUKE, "Νηματώδεις: καμία ένδειξη")), CU).d === 6, "Α9 κείμενο νηματωδών μετρά");
+    ok(H.sagCov9(msgs(all(CUKE, "Νηματώδεις: καμία ένδειξη")), CU).d === 7, "Α9 κείμενο νηματωδών μετρά");
 
     // διασταύρωση με τον πραγματικό πυρήνα
     const keys = []; for (const c of Object.values(PP)) for (const [k, p] of Object.entries(c)) keys.push([k, p]);
