@@ -326,7 +326,7 @@ See [analysis/createField.md](analysis/createField.md) for full details.
 
 | Branch | Environment |
 |---|---|
-| `innodays` | main / production base |
+| `main` | canonical / production base (ο παλιός κλάδος `innodays` δεν υπάρχει πλέον στο origin) |
 | `autoDeploy` | current working branch |
 
 Deploy scripts use `TAGO_TOKEN` from `.env`.

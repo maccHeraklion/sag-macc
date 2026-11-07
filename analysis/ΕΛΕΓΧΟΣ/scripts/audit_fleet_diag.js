@@ -6,7 +6,7 @@
 const zlib = require("zlib");
 const TOKEN = process.env.T_ANALYSIS_TOKEN;
 const API = "https://api.us-e1.tago.io";
-const PICK = ["KEK", "ΚΑΜΠΑΝΗΣ ΧΡ", "Κουκιά", "ΜΕΛΙΒΟΙΑ-1", "ΜΕΛΙΒΟΙΑ-2", "Β3", "ΚΟΥΤΣΑΚΗΣ", "Α2", "Α5", "Innodays", "Κρασαγάκης", "ΚΥΔΩΝ", "Γρίβα", "Σκοτίνα Πάνω"];
+const PICK = ["KEK", "ΚΑΜΠΑΝΗΣ ΧΡ", "Κουκιά", "ΜΕΛΙΒΟΙΑ-1", "ΜΕΛΙΒΟΙΑ-2", "Β3", "ΚΟΥΤΣΑΚΗΣ", "Α2", "Α5", "Κρασαγάκης", "ΚΥΔΩΝ", "Γρίβα", "Σκοτίνα Πάνω"];
 async function get(path) {
   const r = await fetch(API + path, { headers: { Authorization: TOKEN } });
   const j = await r.json();

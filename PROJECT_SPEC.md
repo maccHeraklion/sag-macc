@@ -251,7 +251,7 @@ Build output goes to `_dist/`. Upload is handled by deployment scripts in `scrip
 
 | Branch | Role |
 |---|---|
-| `innodays` | Main / production-stable base |
+| `main` | Canonical / production-stable base (the old `innodays` branch no longer exists on origin) |
 | `autoDeploy` | Active development branch |
 
 ---

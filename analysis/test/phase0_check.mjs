@@ -110,7 +110,7 @@ function run(src) {
     { let r = tick(K, { data: {} }, T0, 1, { T: 18, RH: 60, lm: 0, lt: 0 }, TOM);   // μηδενικά
       ok(r.get("leaf_wetness_source").value !== "Δρόσος (θερμ. φύλλου)" && r.cnt(PI) === 0, "Ν5α αισθητήρας με μηδενικά, RH 60: ΟΧΙ δρόσος (" + r.get("leaf_wetness_source").value + ", " + r.cnt(PI) + ")");
       ok(r.get("leaf_sensor_placement").value === "Εκτός χώρου ή βλάβη" && r.get("leaf_sensor_placement").metadata.color === "orange" && /18,0 °C χαμηλότερη/.test(r.get("leaf_sensor_placement").metadata.text), "Ν5β κάρτα «Εκτός χώρου ή βλάβη» (" + JSON.stringify(r.get("leaf_sensor_placement")) + ")");
-      r = tick(K, { data: {} }, T0, 1, { T: 18, RH: 80, lm: 5, lt: 14 }, TOM);   // 4 °C ψυχρότερος, όπως Innodays
+      r = tick(K, { data: {} }, T0, 1, { T: 18, RH: 80, lm: 5, lt: 14 }, TOM);   // 4 °C ψυχρότερος (περίπτωση κοινόχρηστου αισθητήρα σε άλλο χώρο, 6/11)
       ok(r.get("leaf_wetness_source").value === "Στεγνό (αβέβαιο)" && r.cnt(PI) === 0, "Ν5γ 4 °C ψυχρότερος, RH 80: όχι δρόσος, «Στεγνό (αβέβαιο)» (" + r.get("leaf_wetness_source").value + ")");
       r = tick(K, { data: {} }, T0, 1, { T: 18, RH: 96, lm: 5, lt: 14 }, TOM);
       ok(r.get("leaf_wetness_source").value === "Δρόσος (εκτίμηση)" && r.cnt(PI) === 1, "Ν5δ 4 °C ψυχρότερος, RH 96: περνά στην ΕΚΤΙΜΗΣΗ από τον αέρα (" + r.get("leaf_wetness_source").value + ")");
