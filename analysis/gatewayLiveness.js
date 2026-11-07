@@ -362,12 +362,14 @@ function mapFitRow(md) {
     for (const d of md.dv) d.n = n ? truncName(d.n, n) : "";
     if (fits()) return md;
   }
+  for (const d of md.dv) delete d.gs;   // πρώτα φεύγουν οι παλιότερες πύλες, μετά τα ίδια τα όργανα
+  if (fits()) return md;
   while (md.dv.length && !fits()) { md.dv.pop(); md.dc = (md.dc || 0) + 1; }
   if (!fits()) { md.n = truncName(md.n, 60); md.c = md.c == null ? null : truncName(md.c, 40); }
   return md;
 }
 /* ΚΑΘΑΡΗ: ό,τι χρειάζεται της δίνεται. fields = εγγραφές αγρών με tags, devs = κατάλογος χωρίς tags. */
-function buildMapFieldRows({ fields, devs, typeOf, gwOf, now }) {
+function buildMapFieldRows({ fields, devs, typeOf, gwOf, heard, now }) {
   now = now || Date.now();
   const byId = new Map((devs || []).map((d) => [d.id, d]));
   const metas = [];
@@ -377,8 +379,13 @@ function buildMapFieldRows({ fields, devs, typeOf, gwOf, now }) {
     const dv = mapFieldDevices(tags).map((x) => {
       const d = byId.get(x.id) || {};
       const h = ageHours(d.last_input, now);
-      return { i: x.id.slice(-6), n: String(d.name || x.name || ""), t: (typeOf && typeOf.get(x.id)) || null,
-        h: Number.isFinite(h) ? Math.round(Math.max(0, h) * 10) / 10 : null, g: (gwOf && gwOf.get(x.id)) || null };
+      let g = (gwOf && gwOf.get(x.id)) || null;
+      const gs = heardList(heard, x.id, g, now);
+      if (!g && gs.length) g = gs.shift()[0];   // δεν ρωτήθηκε σε αυτή την εκτέλεση: η πιο πρόσφατη γνωστή πύλη
+      const row = { i: x.id.slice(-6), n: String(d.name || x.name || ""), t: (typeOf && typeOf.get(x.id)) || null,
+        h: Number.isFinite(h) ? Math.round(Math.max(0, h) * 10) / 10 : null, g };
+      if (gs.length) row.gs = gs;
+      return row;
     });
     // Τα χειρότερα πρώτα: αν χρειαστεί να φύγει όργανο, φεύγει το πιο υγιές.
     dv.sort((a, b) => (b.h == null ? Infinity : b.h) - (a.h == null ? Infinity : a.h));
@@ -398,6 +405,44 @@ function buildMapFieldRows({ fields, devs, typeOf, gwOf, now }) {
   }
   const time = new Date(now).toISOString();   // ΙΔΙΑ ώρα σε όλη την παρτίδα: έτσι ο χάρτης ξεχωρίζει τον τελευταίο κύκλο
   return metas.map((m) => ({ variable: "map_field", value: m.dv.length, time, metadata: mapFitRow(m) }));
+}
+/* T-GWMAP-05 (7/11/2026) · ΟΛΕΣ ΟΙ ΠΥΛΕΣ ΑΝΑ ΟΡΓΑΝΟ. Το lrrid κάθε πακέτου λέει ΜΙΑ πύλη, την καλύτερη εκείνης της στιγμής. Όργανο
+   που το ακούνε δύο πύλες εναλλάσσεται, και ο χάρτης έδειχνε μόνο την τελευταία. Κρατάμε μνήμη 7 ημερών όργανο → πύλη → ώρα τελευταίου
+   πακέτου, από τις αναγνώσεις που γίνονται ήδη: 0 νέες ωριαίες. Μόνο η πρώτη εκτέλεση διαβάζει βαθιά, μία φορά, για να γεμίσει. */
+const HEARD_TTL_H = 168;            // ώρες: πύλη που δεν παρέδωσε τόσο καιρό φεύγει από το όργανο
+const HEARD_MAX_CHARS = 9000;       // όριο μεγέθους της εγγραφής μνήμης
+const HEARD_SEED_QTY = 150;         // εγγραφές lrrid ανά όργανο, μόνο στην πρώτη εκτέλεση
+const heardKey = (id) => String(id).slice(-10);
+const hourOf = (t) => Math.floor(new Date(t).getTime() / 36e5);
+function noteHeard(heard, id, code, time) {
+  const h = hourOf(time);
+  if (code === undefined || code === null || code === "" || !Number.isFinite(h)) return;
+  const k = heardKey(id), c = String(code), e = heard[k] || (heard[k] = {});
+  if (!(e[c] >= h)) e[c] = h;
+}
+function pruneHeard(heard, now) {
+  const cut = hourOf(now) - HEARD_TTL_H;
+  for (const k of Object.keys(heard)) {
+    for (const c of Object.keys(heard[k])) if (heard[k][c] < cut) delete heard[k][c];
+    if (!Object.keys(heard[k]).length) delete heard[k];
+  }
+  // Αν ξεπεράσει το όριο φεύγουν πρώτα οι παλιότερες συνδέσεις, ποτέ η πιο πρόσφατη ενός οργάνου.
+  while (JSON.stringify(heard).length > HEARD_MAX_CHARS) {
+    let bk = null, bc = null, bh = Infinity;
+    for (const k of Object.keys(heard)) {
+      const cs = Object.keys(heard[k]);
+      const newest = Math.max(...cs.map((c) => heard[k][c]));
+      for (const c of cs) if (heard[k][c] < bh && heard[k][c] < newest) { bh = heard[k][c]; bk = k; bc = c; }
+    }
+    if (bk === null) break;
+    delete heard[bk][bc];
+  }
+  return heard;
+}
+/* Οι ΑΛΛΕΣ πύλες ενός οργάνου: [[κωδικός, ώρες από το τελευταίο πακέτο]], νεότερη πρώτα, χωρίς την τρέχουσα. */
+function heardList(heard, id, latest, now) {
+  const e = (heard && heard[heardKey(id)]) || {}, nowH = hourOf(now);
+  return Object.keys(e).filter((c) => c !== String(latest)).sort((a, b) => e[b] - e[a]).map((c) => [c, Math.max(0, nowH - e[c])]);
 }
 // ═══ T-GWMAP-04 (ΤΕΛΟΣ) ═══════════════════════════════════════════════════════════════════════════════════
 
@@ -479,6 +524,14 @@ async function loadState() {
 
   // 2 · Ποιες ρωτάμε: τις ΓΝΩΣΤΕΣ + ένα κυλιόμενο παράθυρο από τις υπόλοιπες.
   const st = await loadState(); reads++;
+  // T-GWMAP-05: null = η ανάγνωση απέτυχε, άρα ΔΕΝ ξαναγράφουμε τη μνήμη (κενή μνήμη δεν είναι το ίδιο με άγνωστη).
+  let heard = null;
+  try {
+    const hr = await api(`/device/${OVERSEER}/data?variables[]=gateway_heard_state&qty=1`); reads++;
+    const hm = hr && hr[0] && hr[0].metadata && hr[0].metadata.h;
+    heard = hm && typeof hm === "object" ? hm : {};
+  } catch (e) { console.log("ΠΥΛΕΣ ΟΡΓΑΝΩΝ|σφάλμα ανάγνωσης μνήμης"); }
+  const heardSeed = !!heard && !Object.keys(heard).length;
   const known = st.ids.filter((id) => byId.has(id));
   const unknown = live.filter((d) => !known.includes(d.id)).map((d) => d.id);
   let cursor = unknown.length ? (st.cursor % unknown.length) : 0;
@@ -515,6 +568,7 @@ async function loadState() {
       const idRow = pick("lrrid");
       if (!idRow || idRow.value === undefined || idRow.value === null) continue;
       stillKnown.push(id);
+      if (heard) for (const x of rows || []) if (x && x.variable === "lrrid") noteHeard(heard, id, x.value, x.time);
       const key = String(idRow.value);
       const g = gw.get(key) || { n: 0, last: null, lat: null, lon: null, rssi: null, snr: null, devs: [], list: [] };
       g.n++;
@@ -532,6 +586,21 @@ async function loadState() {
       gw.set(key, g);
     }
   }));
+
+  // 3α · T-GWMAP-05: μία φορά, όταν η μνήμη είναι κενή, διαβάζουμε το ιστορικό lrrid ώστε ο χάρτης να δείξει αμέσως όλες τις πύλες.
+  if (heardSeed && stillKnown.length) {
+    let si = 0;
+    await Promise.all(Array.from({ length: 6 }, async () => {
+      while (si < stillKnown.length) {
+        const id = stillKnown[si++];
+        try {
+          const hist = await api(`/device/${id}/data?variables[]=lrrid&qty=${HEARD_SEED_QTY}`); reads++;
+          for (const x of hist || []) noteHeard(heard, id, x.value, x.time);
+        } catch (e) { /* το όργανο θα γεμίσει σταδιακά */ }
+      }
+    }));
+    console.log(`ΠΥΛΕΣ ΟΡΓΑΝΩΝ|πρώτη σπορά|${stillKnown.length} όργανα`);
+  }
 
   // 3β · T-GWID-02: θέση από τη μνήμη όταν αυτή η εκτέλεση δεν τη βρήκε· η μνήμη ενημερώνεται με κάθε νέα θέση.
   const pos = st.pos || {};
@@ -643,10 +712,20 @@ async function loadState() {
   // 4δ · T-GWMAP-04: ο ενιαίος χάρτης. Τρέχει ΑΦΟΥ γραφτούν οι κάρτες πύλης, άρα δεν μπορεί να τις σταματήσει ούτε
   //      σφάλμα ούτε απόρριψη της εγγραφής. Χωρίς αγρούς δεν γράφει τίποτα: ο χάρτης θα δείξει ότι τα δεδομένα παλιώνουν.
   try {
-    const mapRows = fieldRecs.length ? buildMapFieldRows({ fields: fieldRecs, devs, typeOf, gwOf: mapGatewayOf(gw), now }) : [];
+    if (heard) pruneHeard(heard, now);
+    const mapRows = fieldRecs.length ? buildMapFieldRows({ fields: fieldRecs, devs, typeOf, gwOf: mapGatewayOf(gw), heard, now }) : [];
     if (mapRows.length) await api(`/device/${OVERSEER}/data`, { method: "POST", body: JSON.stringify(mapRows) });
     console.log(`ΧΑΡΤΗΣ|${mapRows.length} γραμμές map_field`);
   } catch (e) { console.log("ΧΑΡΤΗΣ|σφάλμα " + ((e && e.name) || "άγνωστο")); }
+  // Χωριστή εγγραφή: αν απορριφθεί η μνήμη, ο χάρτης έχει ήδη γραφτεί.
+  try {
+    if (heard) {
+      await api(`/device/${OVERSEER}/data`, { method: "POST", body: JSON.stringify([{ variable: "gateway_heard_state",
+        value: Object.keys(heard).length, metadata: { h: heard } }]) });
+      const multi = Object.keys(heard).filter((k) => Object.keys(heard[k]).length > 1).length;
+      console.log(`ΠΥΛΕΣ ΟΡΓΑΝΩΝ|όργανα=${Object.keys(heard).length}|με πάνω από μία πύλη=${multi}|χαρακτήρες=${JSON.stringify(heard).length}`);
+    }
+  } catch (e) { console.log("ΠΥΛΕΣ ΟΡΓΑΝΩΝ|σφάλμα εγγραφής " + ((e && e.name) || "άγνωστο")); }
 
   console.log(`ΕΡΓΑΣΙΕΣ|${techN}|site_silence=${techCounts.site_silence}|wrong_field=${techCounts.wrong_field}|silent=${techCounts.silent_in_field}`);
   for (const [id, g] of rows.slice(0, 12)) {

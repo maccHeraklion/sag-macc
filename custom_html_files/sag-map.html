@@ -409,7 +409,8 @@ function makeField(row, fl, newestMap) {
     var o = fd[String(d.i)] || {}; delete fd[String(d.i)];
     return { i: String(d.i), n: d.n || o.n || ('…' + d.i), t: d.t || o.t || null,
       h: (typeof d.h === 'number') ? d.h : (typeof o.h === 'number' ? o.h : null),
-      g: d.g || null, q: !!o.q, l: !!o.l, b: o.b || null };
+      g: d.g || null, gs: (Array.isArray(d.gs) ? d.gs : []).filter(function (x) { return Array.isArray(x) && x[0]; }),
+      q: !!o.q, l: !!o.l, b: o.b || null };
   });
   Object.keys(fd).forEach(function (k) {
     var o = fd[k];
@@ -463,11 +464,14 @@ function link(fields, gws) {
     (byName[f.name] = byName[f.name] || []).push(f);
     if (f.altName && f.altName !== f.name) (byName[f.altName] = byName[f.altName] || []).push(f);
     f.devs.forEach(function (d) {
-      var g = d.g ? byCode[d.g] : null;
-      if (!g) return;
-      (g.heard[f.key] = g.heard[f.key] || { f: f, devs: [], k: 0 }).devs.push(d);
-      g.heard[f.key].k = g.heard[f.key].devs.length;
-      f.gws[g.key] = g;
+      /* T-GWMAP-05: ΟΛΕΣ οι πύλες που παρέδωσαν πακέτο του οργάνου, όχι μόνο η τελευταία. */
+      [d.g].concat((d.gs || []).map(function (x) { return x[0]; })).forEach(function (code) {
+        var g = code ? byCode[code] : null;
+        if (!g) return;
+        (g.heard[f.key] = g.heard[f.key] || { f: f, devs: [], k: 0 }).devs.push(d);
+        g.heard[f.key].k = g.heard[f.key].devs.length;
+        f.gws[g.key] = g;
+      });
     });
   });
   gws.forEach(function (g) {
@@ -959,10 +963,13 @@ function panelField(f) {
   h += '<h3>Όργανα (' + (f.devs.length + f.dc) + ')</h3>';
   if (f.devs.length) {
     h += '<ul class="list">' + f.devs.map(function (d) {
-      var g = null;
-      Object.keys(f.gws).forEach(function (k) { if (f.gws[k].code === d.g) g = f.gws[k]; });
-      var gtxt = g ? (/^Πύλη /.test(g.name) ? '' : 'πύλη ') + '<button type="button" class="link" data-sel="gw" data-key="' + esc(g.key) + '">' + esc(g.name) + '</button>'
-        : (d.g ? 'πύλη ' + esc(d.g) : 'άγνωστη πύλη');
+      var gOf = function (code) {
+        var g = null;
+        Object.keys(f.gws).forEach(function (k) { if (f.gws[k].code === code) g = f.gws[k]; });
+        return g ? (/^Πύλη /.test(g.name) ? '' : 'πύλη ') + '<button type="button" class="link" data-sel="gw" data-key="' + esc(g.key) + '">' + esc(g.name) + '</button>' : 'πύλη ' + esc(code);
+      };
+      var gtxt = d.g ? gOf(d.g) : 'άγνωστη πύλη';
+      if (d.gs && d.gs.length) gtxt += ' · επίσης: ' + d.gs.map(function (x) { return gOf(x[0]) + ' (' + esc(ageWords(x[1])) + ')'; }).join(', ');
       return '<li><div class="row"><div class="rowT">' + esc(d.n) + '</div><div class="chips">' + chip(d.st) + (d.l ? '<span class="st c-office">▽ ΧΑΜΗΛΗ ΜΠΑΤΑΡΙΑ</span>' : '') + '</div>'
         + '<div class="rowM">' + esc(d.label) + ' · ' + esc(ageWords(d.h)) + ' · ' + gtxt + '</div></div></li>';
     }).join('') + '</ul>';
@@ -970,6 +977,7 @@ function panelField(f) {
     h += '<div class="note">' + chip(FSTATE.noinst) + ' Η εγγραφή δεν δηλώνει κανένα όργανο.</div>';
   }
   if (f.dc) h += '<div class="note">' + plural(f.dc, 'όργανο', 'όργανα') + ' δεν χώρεσαν στην εγγραφή (τα πιο υγιή).</div>';
+  if (f.devs.some(function (d) { return d.g; })) h += '<div class="note">Φαίνονται οι πύλες που παρέδωσαν πακέτο τις τελευταίες 7 ημέρες. Μια πύλη που ακούει το όργανο αλλά δεν είναι ποτέ η καλύτερη δεν καταγράφεται.</div>';
   if (f.devs.some(function (d) { return !d.g; })) h += '<div class="note">«Άγνωστη πύλη» σημαίνει ότι το όργανο δεν αναφέρει από ποια πύλη πέρασε, όχι ότι δεν ακούγεται.</div>';
   var tasks = ((RAW.tech && RAW.tech.tasks) || []).filter(function (t) { return t && t.field === f.name; });
   if (tasks.length) {

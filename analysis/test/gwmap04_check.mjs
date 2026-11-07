@@ -202,7 +202,7 @@ async function scenariosAnalysis(AN) {
   const base = await runAnalysis(AN);
   const before = await runAnalysis(ORIG.includes("T-GWMAP-04") ? AN : ORIG);
   const allOut = JSON.stringify(base.posts) + base.logs.join("\n");
-  want("Ζ1 δύο εγγραφές: πρώτα οι κάρτες, μετά ο χάρτης", base.posts.length, 2);
+  want("Ζ1 τρεις εγγραφές: κάρτες, χάρτης, μνήμη πυλών", [base.posts.length, base.posts[2] && base.posts[2][0].variable], [3, "gateway_heard_state"]);
   want("Ζ2 πρώτη εγγραφή: κάρτα πύλης, κανένα map_field", [base.posts[0].some((r) => r.variable === "gateway_row"), base.posts[0].some((r) => r.variable === "map_field")], [true, false]);
   want("Ζ3 δεύτερη εγγραφή: μόνο map_field", (base.posts[1] || []).every((r) => r.variable === "map_field") && (base.posts[1] || []).length === 1, true);
   const row = (base.posts[1] || [{ metadata: { dv: [] } }])[0].metadata;
@@ -215,9 +215,9 @@ async function scenariosAnalysis(AN) {
   want("Ζ9 απόρριψη map_field: οι κάρτες γράφτηκαν", rej.posts[0].some((r) => r.variable === "gateway_row"), true);
   want("Ζ10 απόρριψη map_field: καθαρό τέλος", [rej.logs.some((l) => l.includes("ΧΑΡΤΗΣ|σφάλμα")), rej.logs.some((l) => l.includes("ΤΕΛΟΣ ΜΕ ΣΦΑΛΜΑ")), rej.logs.some((l) => l.includes("ΣΥΝΟΨΗ|"))], [true, false, true]);
   const nof = await runAnalysis(AN, { failFields: true });
-  want("Ζ11 χωρίς αγρούς: μία εγγραφή, κανένα map_field", [nof.posts.length, nof.posts[0].some((r) => r.variable === "gateway_row")], [1, true]);
+  want("Ζ11 χωρίς αγρούς: κάρτες και μνήμη, κανένα map_field", [nof.posts.length, nof.posts[0].some((r) => r.variable === "gateway_row"), nof.posts.flat().some((r) => r.variable === "map_field")], [2, true, false]);
   // ΕΓΧΥΣΗ ΣΦΑΛΜΑΤΟΣ: η καθαρή συνάρτηση πέφτει με μήνυμα που περιέχει τιμή ετικέτας
-  const sig = "function buildMapFieldRows({ fields, devs, typeOf, gwOf, now }) {\n";
+  const sig = "function buildMapFieldRows({ fields, devs, typeOf, gwOf, heard, now }) {\n";
   if (AN.split(sig).length !== 2) bad.push("Ζ12 δεν εφαρμόστηκε η έγχυση");
   const boom = await runAnalysis(AN.replace(sig, sig + `  throw new Error("${SECRET}");\n`));
   want("Ζ12 πτώση της συνάρτησης: οι κάρτες γράφτηκαν", (boom.posts[0] || []).some((r) => r.variable === "gateway_row"), true);
