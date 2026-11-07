@@ -1,0 +1,1232 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SAG · Ενιαίος χάρτης στόλου</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+/* Η ίδια παλέτα με τον πίνακα στόλου: κάθε κατάσταση φέρει ΠΑΝΤΑ εικονίδιο και λέξη, ποτέ μόνο χρώμα. */
+:root {
+  color-scheme: light;
+  --s1: #fcfcfb; --s2: #ffffff; --s3: #f4f3f0;
+  --tx: #0b0b0b; --tx2: #52514e; --tx3: #6f6e66;
+  --line: #e3e1db; --line2: #d0cec6;
+  --visit: #d03b3b; --check: #c95f33; --office: #a86f00; --ok: #0a7f0a; --grey: #6f6e66;
+  --visit-bg: #fdf0f0; --check-bg: #fdf3ef; --office-bg: #fdf7e8; --ok-bg: #eefaee; --grey-bg: #f0efeb;
+  --accent: #2a78d6;
+  --shadow: 0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --s1: #1a1a19; --s2: #232322; --s3: #2b2b29;
+    --tx: #ffffff; --tx2: #c3c2b7; --tx3: #a5a49a;
+    --line: #383835; --line2: #4a4945;
+    --visit: #f07070; --check: #ec835a; --office: #fab219; --ok: #4cc94c; --grey: #a5a49a;
+    --visit-bg: #2e1c1c; --check-bg: #2d211c; --office-bg: #2c2517; --ok-bg: #182a18; --grey-bg: #2b2b29;
+    --accent: #3987e5;
+    --shadow: 0 1px 3px rgba(0,0,0,.4);
+  }
+  :root:not([data-theme="light"]) .leaflet-tile-pane { filter: brightness(.72) contrast(1.1) saturate(.85); }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --s1: #1a1a19; --s2: #232322; --s3: #2b2b29;
+  --tx: #ffffff; --tx2: #c3c2b7; --tx3: #a5a49a;
+  --line: #383835; --line2: #4a4945;
+  --visit: #f07070; --check: #ec835a; --office: #fab219; --ok: #4cc94c; --grey: #a5a49a;
+  --visit-bg: #2e1c1c; --check-bg: #2d211c; --office-bg: #2c2517; --ok-bg: #182a18; --grey-bg: #2b2b29;
+  --accent: #3987e5;
+  --shadow: 0 1px 3px rgba(0,0,0,.4);
+}
+:root[data-theme="dark"] .leaflet-tile-pane { filter: brightness(.72) contrast(1.1) saturate(.85); }
+
+/* Παγίδα T-GWMAP-02: το display:flex του συγγραφέα ακυρώνει το hidden. Ισχύει για ΟΛΗ τη σελίδα. */
+[hidden] { display: none !important; }
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--s1); color: var(--tx);
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+.wrap { max-width: 1500px; margin: 0 auto; padding: 12px; }
+h1 { margin: 0; font-size: 1.25rem; font-weight: 720; letter-spacing: -.01em; }
+.sub { margin: 0 0 8px; color: var(--tx3); font-size: .82rem; }
+
+/* ── ΔΙΑΦΑΝΕΙΑ: πάντα ορατή ─────────────────────────────────────── */
+.banner { padding: 8px 12px; border-radius: 8px; font-weight: 700; margin-bottom: 8px; }
+.banner.red { background: var(--visit); color: #fff; }
+.banner.demo { background: #5b3fd6; color: #fff; }
+.banner.warn { background: var(--office-bg); color: var(--office); border: 1px solid var(--office); font-weight: 650; }
+.honest { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 8px 12px; margin-bottom: 8px;
+  background: var(--s2); border: 1px solid var(--line); border-radius: 10px; font-size: .82rem; color: var(--tx2); }
+.honest b { color: var(--tx); font-variant-numeric: tabular-nums; }
+.honest .why { flex: 1 1 100%; color: var(--tx3); font-size: .78rem; }
+
+/* ── ΦΙΛΤΡΑ ─────────────────────────────────────────────────────── */
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+.seg { display: inline-flex; border: 1px solid var(--line2); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: var(--s2); padding: 7px 11px; cursor: pointer; border-right: 1px solid var(--line2); }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: #fff; font-weight: 650; }
+.bar select, .bar input[type=search] { padding: 7px 9px; border: 1px solid var(--line2); border-radius: 8px;
+  background: var(--s2); max-width: 230px; min-width: 0; }
+.bar input[type=search] { flex: 1 1 170px; }
+.bar label.chk { display: inline-flex; gap: 6px; align-items: center; font-size: .84rem; color: var(--tx2); cursor: pointer; }
+.btn { border: 1px solid var(--line2); background: var(--s2); padding: 7px 10px; border-radius: 8px; cursor: pointer; }
+.btn:hover, .seg button:hover { border-color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.filters > summary { display: none; }
+.result { font-size: .84rem; color: var(--tx2); margin-bottom: 8px; }
+.result b { color: var(--tx); }
+
+/* ── ΔΙΑΤΑΞΗ ────────────────────────────────────────────────────── */
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 10px; align-items: start; }
+.mapwrap { position: relative; }
+#map { height: min(72vh, 760px); min-height: 380px; border-radius: 10px; border: 1px solid var(--line); background: var(--s3); }
+.leaflet-container { font: inherit; }
+#mapveil { position: absolute; inset: 0; z-index: 800; display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 14px; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+#mapveil span { background: rgba(17,24,39,.85); color: #fff; font-size: .8rem; padding: 7px 13px; border-radius: 999px; }
+.side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.card { background: var(--s2); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; box-shadow: var(--shadow); min-width: 0; }
+.card h2 { margin: 0 0 2px; font-size: 1.02rem; font-weight: 700; overflow-wrap: anywhere; }
+.card h3 { margin: 12px 0 5px; font-size: .74rem; font-weight: 750; letter-spacing: .05em; text-transform: uppercase; color: var(--tx3); }
+.panelHead { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; }
+.x { border: 0; background: transparent; font-size: 1.1rem; line-height: 1; cursor: pointer; color: var(--tx3); padding: 2px 4px; }
+.meta { color: var(--tx2); font-size: .82rem; margin: 2px 0; overflow-wrap: anywhere; }
+.note { color: var(--tx3); font-size: .78rem; margin: 5px 0; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92em; }
+
+/* λέξη + εικονίδιο */
+.st { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 6px; font-size: .74rem;
+  font-weight: 700; white-space: nowrap; border: 1px solid currentColor; }
+.st.c-visit { color: var(--visit); background: var(--visit-bg); }
+.st.c-check { color: var(--check); background: var(--check-bg); }
+.st.c-office { color: var(--office); background: var(--office-bg); }
+.st.c-ok { color: var(--ok); background: var(--ok-bg); }
+.st.c-grey { color: var(--grey); background: var(--grey-bg); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
+
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { border-top: 1px solid var(--line); }
+.list li:first-child { border-top: 0; }
+.row { display: block; width: 100%; text-align: left; background: transparent; border: 0; padding: 6px 4px; cursor: pointer; border-radius: 6px; min-width: 0; }
+button.row:hover { background: var(--s3); }
+div.row { cursor: default; }
+.rowT { font-weight: 620; overflow-wrap: anywhere; }
+.rowM { color: var(--tx3); font-size: .78rem; overflow-wrap: anywhere; }
+.link { border: 0; background: transparent; color: var(--accent); padding: 0; cursor: pointer; text-decoration: underline; }
+.scroll { max-height: 340px; overflow-y: auto; }
+.km { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+.km input { flex: 1; min-width: 0; }
+.km output { font-weight: 700; min-width: 54px; text-align: right; font-variant-numeric: tabular-nums; }
+details > summary { cursor: pointer; font-weight: 680; }
+.lg { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 4px 10px; font-size: .78rem; margin-top: 6px; color: var(--tx2); }
+.lg .i { display: flex; gap: 6px; align-items: center; }
+.ln { display: inline-block; width: 28px; border-top: 3px solid var(--accent); }
+.ln.d { border-top: 2px dashed var(--tx3); }
+
+/* πινέζες */
+.pin { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800; line-height: 1; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.45); position: relative; }
+.pin.gw { border-radius: 5px; width: 28px; height: 28px; border-color: #111; }
+.pin.grp { width: 32px; height: 32px; font-size: 13px; }
+.pin.p-visit { background: #d03b3b; color: #fff; } .pin.p-check { background: #ec835a; color: #111; }
+.pin.p-office { background: #fab219; color: #111; } .pin.p-ok { background: #0ca30c; color: #fff; }
+.pin.p-grey { background: #78776f; color: #fff; }
+.pin.sel { box-shadow: 0 0 0 3px var(--accent), 0 1px 4px rgba(0,0,0,.45); }
+.pin .sub { position: absolute; right: -7px; top: -7px; min-width: 15px; height: 15px; border-radius: 8px; background: #111; color: #fff;
+  font-size: 9px; font-style: normal; display: flex; align-items: center; justify-content: center; padding: 0 2px; border: 1px solid #fff; }
+.pin .sus { position: absolute; left: -7px; bottom: -7px; width: 15px; height: 15px; border-radius: 50%; background: #fff; color: #b00020;
+  font-size: 10px; font-style: normal; display: flex; align-items: center; justify-content: center; border: 1px solid #b00020; }
+.leaflet-tooltip.near { background: var(--s2); color: var(--tx2); border-color: var(--line2); font-size: 11px; padding: 1px 5px; box-shadow: none; }
+
+@media (max-width: 900px) {
+  /* Στο κινητό ο χάρτης πρέπει να φαίνεται στην πρώτη οθόνη: η διαφάνεια μένει ολόκληρη, απλώς πιο πυκνή. */
+  .wrap { padding: 8px; }
+  h1 { font-size: 1.05rem; margin-bottom: 4px; }
+  .sub { display: none; }
+  .banner { padding: 5px 9px; font-size: .78rem; margin-bottom: 5px; }
+  .honest { padding: 5px 9px; gap: 1px 9px; font-size: .72rem; line-height: 1.3; margin-bottom: 5px; }
+  .honest .why { font-size: .68rem; }
+  .bar { margin-bottom: 5px; }
+  .filters > summary { display: block; font-size: .84rem; font-weight: 650; padding: 3px 0 5px; cursor: pointer; }
+  .result { font-size: .76rem; margin-bottom: 5px; }
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  #map { height: 56vh; min-height: 300px; }
+  .bar select { flex: 1 1 45%; max-width: none; }
+  .seg { width: 100%; }
+  .seg button { flex: 1 1 0; padding: 7px 4px; font-size: .8rem; }
+  .scroll { max-height: none; }
+}
+</style>
+
+<!-- Η ΛΟΓΙΚΗ: χωρίς DOM και χωρίς Leaflet, ώστε να δοκιμάζεται εκτός browser (analysis/test/gwmap04_check.mjs). -->
+<script id="sag-logic">
+'use strict';
+var ALIVE_H = 2;        // ίδια όρια με το gatewayLiveness
+var STALE_H = 24;
+var SILENT_H = 48;      // ίδιο όριο με τον πίνακα στόλου
+var GAP_H = 3;          // ώρες: πάνω από αυτό το όργανο έχει κενά (τη νύχτα είναι συχνά πραγματικό, γι' αυτό φαίνεται)
+var STALE_DATA_H = 2;   // ώρες: πάνω από αυτό κόκκινη λωρίδα
+var LINK_M = 200;       // μέτρα: ταύτιση πύλης δικτύου με συσκευή καταλόγου (T-GWMAP-03)
+var CONFIRM_KM = 15;    // km: η θέση πύλης επιβεβαιώνεται από αγρό που ακούει μέσα σε αυτή την απόσταση (computeTechTasks)
+var GR = { latMin: 33.5, latMax: 42.5, lngMin: 19, lngMax: 30.5 };
+
+var SEV = [
+  { k: 'v0', w: 'ΕΝΤΑΞΕΙ', ic: '✓', c: 'ok' }, { k: 'v1', w: 'ΓΡΑΦΕΙΟ', ic: '✎', c: 'office' },
+  { k: 'v2', w: 'ΕΛΕΓΧΟΣ', ic: '⚠', c: 'check' }, { k: 'v3', w: 'ΕΠΙΣΚΕΨΗ', ic: '⬤', c: 'visit' }
+];
+var FSTATE = {
+  noinst: { k: 'noinst', w: 'ΔΕΝ ΥΠΑΡΧΕΙ ΟΡΓΑΝΟ', ic: '∅', c: 'grey' },
+  silent: { k: 'silent', w: 'ΣΙΩΠΗΛΟ', ic: '✕', c: 'visit' },
+  gaps: { k: 'gaps', w: 'ΜΕ ΚΕΝΑ', ic: '◔', c: 'office' },
+  nocalc: { k: 'nocalc', w: 'ΧΩΡΙΣ ΥΠΟΛΟΓΙΣΜΟ', ic: '—', c: 'grey' }
+};
+var ISTATE = {
+  ok: { k: 'ok', w: 'ΕΝΕΡΓΟ', ic: '✓', c: 'ok' }, gaps: FSTATE.gaps, silent: FSTATE.silent,
+  unknown: { k: 'unknown', w: 'ΑΓΝΩΣΤΗ ΗΛΙΚΙΑ', ic: '?', c: 'grey' }
+};
+var GSTATE = {
+  g_alive: { k: 'g_alive', w: 'ΛΕΙΤΟΥΡΓΕΙ', ic: '✓', c: 'ok' },
+  g_sparse: { k: 'g_sparse', w: 'ΑΡΑΙΟΣ ΜΑΡΤΥΡΑΣ', ic: '◐', c: 'office' },
+  g_nowit: { k: 'g_nowit', w: 'ΧΩΡΙΣ ΠΡΟΣΦΑΤΟ ΜΑΡΤΥΡΑ', ic: '✕', c: 'visit' },
+  g_unid: { k: 'g_unid', w: 'ΧΩΡΙΣ ΤΑΥΤΟΠΟΙΗΣΗ', ic: '?', c: 'grey' },
+  g_storage: { k: 'g_storage', w: 'ΑΠΟΘΗΚΗ', ic: '▣', c: 'grey' }
+};
+
+/* Από τον πίνακα στόλου (Ε5): άγνωστη σοβαρότητα ΔΕΝ σημαίνει «εντάξει», ανεβαίνει σε ΕΛΕΓΧΟ. */
+function sev(v) {
+  var n;
+  if (typeof v === 'number') n = v;
+  else if (typeof v === 'string' && v.trim() !== '') n = Number(v);
+  else return 2;
+  if (!Number.isFinite(n)) return 2;
+  n = Math.round(n);
+  return (n < 0 || n > 3) ? 2 : n;
+}
+/* Από τον πίνακα στόλου (Ε4): το isFinite δέχεται συμβολοσειρές και μια κακή τιμή πάγωνε όλο το render. */
+function ageWords(h) {
+  if (typeof h !== 'number' || !Number.isFinite(h) || h < 0) return 'άγνωστη ηλικία';
+  if (h < 1 / 60) return 'μόλις τώρα';
+  if (h < 1) { var m = Math.round(h * 60); return 'πριν ' + m + (m === 1 ? ' λεπτό' : ' λεπτά'); }
+  if (h < 48) { var r = Math.round(h); return 'πριν ' + r + (r === 1 ? ' ώρα' : ' ώρες'); }
+  return 'πριν ' + Math.round(h / 24) + ' ημέρες';
+}
+function esc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function tnum(t) { var n = t ? Date.parse(t) : NaN; return Number.isFinite(n) ? n : 0; }
+/* Number(null) === 0: ρητό null δεν είναι θέση. Έξω από την Ελλάδα δεν είναι θέση αγρού μας. */
+function num(v) {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : NaN;
+  if (typeof v === 'string' && v.trim() !== '') return Number(v);
+  return NaN;
+}
+function pointOf(a, b) {
+  var lat = num(a), lng = num(b);
+  if (!(lat >= GR.latMin && lat <= GR.latMax && lng >= GR.lngMin && lng <= GR.lngMax)) return null;
+  return { lat: lat, lng: lng };
+}
+function posKey(p, dec) { return Number(p.lat).toFixed(dec) + ',' + Number(p.lng).toFixed(dec); }
+function distKm(a, b) {
+  var R = 6371, r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLng = (b.lng - a.lng) * r;
+  var s = Math.pow(Math.sin(dLat / 2), 2) + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.pow(Math.sin(dLng / 2), 2);
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+function kmWords(d) {
+  if (typeof d !== 'number' || !Number.isFinite(d)) return '—';
+  return d < 1 ? Math.round(d * 1000) + ' m' : d.toFixed(1).replace('.', ',') + ' km';
+}
+function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+function fold(s) {
+  return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ς/g, 'σ');
+}
+function typeLabel(t) {
+  var s = String(t == null ? '' : t).toLowerCase();
+  if (!s) return 'Άγνωστος τύπος';
+  if (/s2120/.test(s)) return 'Μετεωρολογικός σταθμός';
+  if (/^l?se0|se0x/.test(s)) return 'Σόνδα εδάφους';
+  if (/lms01/.test(s)) return 'Αισθητήρας φύλλου';
+  if (/em300|em320/.test(s)) return 'Θερμοϋγρόμετρο';
+  if (/uc5|ws558/.test(s)) return 'Ελεγκτής βανών';
+  return s.toUpperCase();
+}
+function instrState(d) {
+  if (d.q) return ISTATE.silent;
+  if (typeof d.h !== 'number' || !Number.isFinite(d.h)) return ISTATE.unknown;
+  if (d.h > SILENT_H) return ISTATE.silent;
+  if (d.h > GAP_H) return ISTATE.gaps;
+  return ISTATE.ok;
+}
+
+/* ═══ ΠΑΡΑΛΑΒΗ ═══════════════════════════════════════════════════════════════
+   Καμία υπόθεση σειράς: σε κάθε μεταβλητή κερδίζει ρητά η νεότερη εγγραφή. */
+function newRaw() {
+  return { fleet: {}, map: {}, gw: {}, fleetSum: null, gwSum: null, roster: null, tech: null, names: {}, bad: 0 };
+}
+function keepNewest(cur, p) { return !cur || tnum(p.time) >= tnum(cur.time); }
+function ingestRows(raw, rows) {
+  (rows || []).forEach(function (p) {
+    if (!p || !p.variable) return;
+    var m = p.metadata || {};
+    switch (p.variable) {
+      case 'fleet_summary':
+        if (keepNewest(raw.fleetSum, p)) raw.fleetSum = { time: p.time, md: m };
+        break;
+      case 'gateway_summary':
+        if (keepNewest(raw.gwSum, p)) raw.gwSum = { time: p.time, md: m };
+        break;
+      case 'gateway_roster':
+        if (!Array.isArray(m.list)) { raw.bad++; break; }
+        if (keepNewest(raw.roster, p)) raw.roster = { time: p.time, list: m.list };
+        break;
+      case 'tech_tasks':
+        if (!Array.isArray(m.tasks)) { raw.bad++; break; }
+        if (keepNewest(raw.tech, p)) raw.tech = { time: p.time, tasks: m.tasks };
+        break;
+      case 'gateway_row':
+        if (p.value == null || p.value === '') { raw.bad++; break; }
+        var code = String(p.value);
+        if (keepNewest(raw.gw[code], p)) {
+          /* T-GWID-02: κάρτα χωρίς θέση δεν σβήνει την τελευταία γνωστή, αλλιώς η πινέζα φεύγει (Πόμπια 19/10). */
+          var last = raw.gw[code] && raw.gw[code].md.location;
+          if (!m.location && last) m = Object.assign({}, m, { location: last });
+          raw.gw[code] = { code: code, time: p.time, md: m };
+        }
+        break;
+      case 'map_field':
+        if (!m.i) { raw.bad++; break; }
+        if (keepNewest(raw.map[m.i], p)) raw.map[m.i] = { time: p.time, md: m };
+        break;
+      case 'fleet_field':
+        var rec = null;
+        try { rec = JSON.parse(m.text || '{}'); } catch (e) { rec = null; }
+        if (!rec || !rec.f) { raw.bad++; break; }
+        rec.s = sev(rec.s != null ? rec.s : m.severity);
+        var k = rec.f + '|' + rec.i;
+        if (keepNewest(raw.fleet[k], p)) raw.fleet[k] = { time: p.time, rec: rec };
+        break;
+      default:
+    }
+  });
+  return raw;
+}
+
+/* ═══ ΠΥΛΕΣ ══════════════════════════════════════════════════════════════════ */
+function gwStateFromAge(h, color) {
+  if (typeof h === 'number' && Number.isFinite(h) && h >= 0) {
+    return h < ALIVE_H ? GSTATE.g_alive : (h < STALE_H ? GSTATE.g_sparse : GSTATE.g_nowit);
+  }
+  return color === 'green' ? GSTATE.g_alive : ((color === 'orange' || color === 'yellow') ? GSTATE.g_sparse : GSTATE.g_nowit);
+}
+function buildGateways(raw) {
+  var rows = Object.keys(raw.gw).map(function (k) { return raw.gw[k]; });
+  var newest = rows.reduce(function (a, r) { return Math.max(a, tnum(r.time)); }, 0);
+  var nets = rows.map(function (r) {
+    var md = r.md, lag = Math.max(0, (newest - tnum(r.time)) / 36e5);
+    /* Κάρτα παλιότερη από τον τελευταίο κύκλο: η πύλη έφυγε από τη σάρωση. Η ηλικία της μεγαλώνει όσο λείπει,
+       αλλιώς θα έλεγε για πάντα ΛΕΙΤΟΥΡΓΕΙ. */
+    var age = (typeof md.age_h === 'number' && Number.isFinite(md.age_h)) ? md.age_h + lag : null;
+    var e = raw.names[r.code] || null;
+    var p = md.location ? pointOf(md.location.lat, md.location.lng) : null;
+    return { key: 'lrr:' + r.code, code: r.code, net: true, name: (e && e.n && !e.q) ? e.n : 'Πύλη ' + r.code,
+      nameSure: !!(e && e.n && !e.q), nameGuess: (e && e.n && e.q) ? e.n : '', age: age, absent: lag > 0.5,
+      st: gwStateFromAge(age, md.color), sensors: md.sensors, rssi: md.rssi, snr: md.snr, p: p,
+      rowFields: Array.isArray(md.fields) ? md.fields : [], cut: !!md.fields_cut, storage: false, posKind: p ? 'ok' : 'none',
+      posWhy: p ? '' : 'το δίκτυο δεν έδωσε θέση', heard: {}, orphans: [], linkedRoster: false };
+  });
+  /* Φρουρός (α) του computeTechTasks: θέση που μοιράζονται 2+ πύλες είναι θέση αγρού ή συσκευής, όχι πύλης. */
+  var cnt = {};
+  nets.forEach(function (g) { if (g.p) { var k = posKey(g.p, 3); cnt[k] = (cnt[k] || 0) + 1; } });
+  nets.forEach(function (g) {
+    if (g.p && cnt[posKey(g.p, 3)] > 1) {
+      g.posKind = 'shared'; g.posWhy = 'ίδια θέση με άλλη πύλη, άρα θεωρείται άγνωστη'; g.sharedP = g.p; g.p = null;
+    }
+  });
+  /* Κατάλογος: συσκευές με όνομα τοποθεσίας. Γέφυρα με το δίκτυο είναι μόνο η θέση (T-GWMAP-03). */
+  var list = (raw.roster && raw.roster.list) || [];
+  var ros = list.filter(function (r) { return r && r.id; }).map(function (r) {
+    var p = pointOf(r.lat, r.lng);
+    return { key: 'dev:' + r.id, id: String(r.id), code: null, net: false, name: String(r.name || r.dev || r.id), dev: r.dev || '',
+      age: null, st: r.storage ? GSTATE.g_storage : GSTATE.g_unid, storage: !!r.storage, conflict: !!r.conflict, p: p,
+      posKind: p ? 'ok' : 'none', posWhy: p ? '' : (r.storage ? 'στην αποθήκη, χωρίς δηλωμένη θέση' : 'η ετικέτα coordinates δεν δίνει θέση'),
+      rowFields: [], heard: {}, orphans: [], merged: false };
+  });
+  var pairs = [];
+  nets.forEach(function (n) {
+    if (!n.p) return;
+    ros.forEach(function (r) {
+      if (!r.p) return;
+      var d = distKm(n.p, r.p) * 1000;
+      if (d <= LINK_M) pairs.push({ n: n, r: r, d: d });
+    });
+  });
+  pairs.sort(function (a, b) { return a.d - b.d; });
+  pairs.forEach(function (P, i) {
+    if (P.n.linkedRoster || P.r.merged) return;
+    var rivals = pairs.filter(function (Q, j) { return j !== i && (Q.n === P.n || Q.r === P.r); }).length;
+    P.n.linkedRoster = true; P.r.merged = true;
+    P.n.storage = P.r.storage; P.n.conflict = P.r.conflict; P.n.dev = P.r.dev;
+    if (!P.n.nameSure) {
+      if (rivals === 0) { P.n.name = P.r.name; P.n.nameGuess = ''; }
+      else P.n.nameGuess = P.r.name + ' (' + Math.round(P.d) + ' m, υπάρχει κι άλλη κοντά)';
+    }
+  });
+  var free = ros.filter(function (r) { return !r.merged; });
+  /* Ο ίδιος φρουρός στις υπόλοιπες, μαζί με τις πύλες που έχουν ήδη κριθεί κοινές. */
+  var cnt2 = {};
+  free.forEach(function (g) { if (g.p) { var k = posKey(g.p, 3); cnt2[k] = (cnt2[k] || 0) + 1; } });
+  nets.forEach(function (g) { if (g.sharedP) { var k = posKey(g.sharedP, 3); cnt2[k] = (cnt2[k] || 0) + 1; } });
+  free.forEach(function (g) {
+    if (g.p && cnt2[posKey(g.p, 3)] > 1) {
+      g.posKind = 'shared'; g.posWhy = 'ίδια θέση με άλλη πύλη, άρα θεωρείται άγνωστη'; g.p = null;
+    }
+  });
+  var all = nets.concat(free);
+  all.forEach(function (g) {
+    if (g.p && g.conflict) { g.posKind = 'suspect'; g.posWhy = 'διπλή ετικέτα coordinates με διαφορετικές τιμές'; }
+  });
+  return all;
+}
+
+/* ═══ ΑΓΡΟΙ ══════════════════════════════════════════════════════════════════ */
+function makeField(row, fl, newestMap) {
+  var md = row ? row.md : null, rec = fl ? fl.rec : null;
+  var id = md ? String(md.i) : '', i6 = md ? id.slice(-6) : String(rec.i || '');
+  var p = md ? pointOf(md.y, md.x) : pointOf(rec.y, rec.x);
+  if (!p && md && rec) p = pointOf(rec.y, rec.x);
+  var fd = {};
+  ((rec && rec.d) || []).forEach(function (d) { if (d && d.i) fd[String(d.i)] = d; });
+  var devs = ((md && md.dv) || []).map(function (d) {
+    var o = fd[String(d.i)] || {}; delete fd[String(d.i)];
+    return { i: String(d.i), n: d.n || o.n || ('…' + d.i), t: d.t || o.t || null,
+      h: (typeof d.h === 'number') ? d.h : (typeof o.h === 'number' ? o.h : null),
+      g: d.g || null, q: !!o.q, l: !!o.l, b: o.b || null };
+  });
+  Object.keys(fd).forEach(function (k) {
+    var o = fd[k];
+    devs.push({ i: k, n: o.n || ('…' + k), t: o.t || null, h: typeof o.h === 'number' ? o.h : null, g: null, q: !!o.q, l: !!o.l, b: o.b || null });
+  });
+  devs.forEach(function (d) { d.st = instrState(d); d.label = typeLabel(d.t); });
+  /* Χωρίς γραμμή στον πίνακα στόλου, ή με αποτυχία: δεν υπολογίστηκε. Παλιός πυρήνας δεν στέλνει ok, οπότε μόνο ok===0 μετρά. */
+  var computed = !!rec && !rec.e && !rec.nc && rec.ok !== 0;
+  var reason = '';
+  if (!rec) reason = 'δεν εμφανίζεται στον πίνακα στόλου';
+  else if (rec.e) reason = 'ο υπολογισμός απέτυχε: ' + rec.e;
+  else if (rec.nc) reason = 'δεν έχει ρύθμιση στη φόρμα';
+  else if (rec.ok === 0) reason = 'δεν γράφτηκε κάρτα σε αυτόν τον παλμό';
+  var keys = [];
+  if (computed) keys.push(SEV[rec.s].k); else keys.push('nocalc');
+  if (!devs.length) keys.push('noinst');
+  if (devs.some(function (d) { return d.st.k === 'silent'; })) keys.push('silent');
+  if (devs.some(function (d) { return d.st.k === 'gaps'; })) keys.push('gaps');
+  return { key: md ? 'f:' + id : 'x:' + i6 + ':' + rec.f, id: id, i6: i6, name: md ? String(md.n || id) : String(rec.f), altName: rec ? String(rec.f) : '',
+    client: (md && md.c) ? String(md.c) : '', p: p, ps: md ? (md.ps || null) : (p ? 'form' : null), pq: md ? (md.pq || 'ok') : null,
+    noMapRow: !md, absent: !!(md && newestMap - tnum(row.time) > 3 * 36e5), s: rec ? rec.s : null, computed: computed, reason: reason,
+    rec: rec, devs: devs, dc: (md && md.dc) || 0, keys: keys, suspect: false, gws: {} };
+}
+function buildFields(raw) {
+  var byI6 = {};
+  Object.keys(raw.fleet).forEach(function (k) {
+    var f = raw.fleet[k], i = String(f.rec.i || '');
+    (byI6[i] = byI6[i] || []).push(f);
+  });
+  var rows = Object.keys(raw.map).map(function (k) { return raw.map[k]; });
+  var newest = rows.reduce(function (a, r) { return Math.max(a, tnum(r.time)); }, 0);
+  var used = [], out = rows.map(function (r) {
+    var c = byI6[String(r.md.i).slice(-6)] || [];
+    var fl = c.filter(function (x) { return x.rec.f === r.md.n; })[0] || (c.length === 1 ? c[0] : null);
+    if (fl) used.push(fl);
+    return makeField(r, fl, newest);
+  });
+  Object.keys(raw.fleet).forEach(function (k) {
+    if (used.indexOf(raw.fleet[k]) < 0) out.push(makeField(null, raw.fleet[k], newest));
+  });
+  return out;
+}
+
+/* ═══ ΣΥΝΔΕΣΕΙΣ ══════════════════════════════════════════════════════════════
+   Μία σύνδεση είναι ΕΠΙΒΕΒΑΙΩΜΕΝΗ μόνο αν το δίκτυο είπε ότι αυτή η πύλη άκουσε όργανο του αγρού:
+   (α) dv.g === κωδικός, ή (β) ο αγρός είναι στη λίστα της κάρτας πύλης. Η απόσταση δεν δημιουργεί σύνδεση ποτέ. */
+function link(fields, gws) {
+  var byCode = {}, byName = {};
+  gws.forEach(function (g) { if (g.code) byCode[g.code] = g; });
+  fields.forEach(function (f) {
+    (byName[f.name] = byName[f.name] || []).push(f);
+    if (f.altName && f.altName !== f.name) (byName[f.altName] = byName[f.altName] || []).push(f);
+    f.devs.forEach(function (d) {
+      var g = d.g ? byCode[d.g] : null;
+      if (!g) return;
+      (g.heard[f.key] = g.heard[f.key] || { f: f, devs: [], k: 0 }).devs.push(d);
+      g.heard[f.key].k = g.heard[f.key].devs.length;
+      f.gws[g.key] = g;
+    });
+  });
+  gws.forEach(function (g) {
+    g.rowFields.forEach(function (rf) {
+      var c = byName[rf.f] || [];
+      /* Δύο εγγραφές με το ίδιο όνομα: το όνομα δεν ξεχωρίζει ποια ακούστηκε, άρα καμία δεν επιβεβαιώνεται από αυτό. */
+      if (c.length !== 1) { g.orphans.push({ f: rf.f, k: rf.k, amb: c.length > 1 }); return; }
+      var h = g.heard[c[0].key];
+      if (h) { h.k = Math.max(h.k, Number(rf.k) || 0); h.silent = rf.silent; }
+      else g.heard[c[0].key] = { f: c[0], devs: [], k: Number(rf.k) || 0, names: rf.s, silent: rf.silent };
+      c[0].gws[g.key] = g;
+    });
+  });
+}
+/* Ίδιο σημείο: ομαδική πινέζα. Δύο διαφορετικοί παραγωγοί στο ίδιο σημείο: ύποπτη θέση. */
+function groupFields(fields) {
+  var m = {}, out = [];
+  fields.forEach(function (f) {
+    if (!f.p) return;
+    var k = posKey(f.p, 5);
+    if (!m[k]) { m[k] = { key: 'g:' + k, p: f.p, fields: [], suspect: false }; out.push(m[k]); }
+    m[k].fields.push(f);
+  });
+  out.forEach(function (g) {
+    var owners = {};
+    g.fields.forEach(function (f) { if (f.client) owners[f.client] = 1; });
+    g.suspect = Object.keys(owners).length > 1 || g.fields.some(function (f) { return f.pq === 'shared'; });
+    g.fields.forEach(function (f) { f.suspect = g.suspect; f.groupKey = g.key; f.groupN = g.fields.length; });
+  });
+  return out;
+}
+/* Φρουρός (β) του computeTechTasks και η περίπτωση «ο parser έβαλε τη θέση του αγρού στο lrrid». Θέση που συμφωνεί
+   με τον κατάλογο είναι δύο ανεξάρτητες πηγές και δεν αμφισβητείται εδώ. */
+function judgeGatewayPositions(fields, gws) {
+  var pts = {};
+  fields.forEach(function (f) { if (f.p) pts[posKey(f.p, 4)] = 1; });
+  gws.forEach(function (g) {
+    if (!g.net || !g.p || g.posKind !== 'ok' || g.linkedRoster) return;
+    if (pts[posKey(g.p, 4)]) { g.posKind = 'suspect'; g.posWhy = 'συμπίπτει με θέση αγρού, πιθανό σφάλμα parser'; return; }
+    var heard = Object.keys(g.heard).map(function (k) { return g.heard[k].f; }).filter(function (f) { return f.p && !f.suspect; });
+    if (heard.length && !heard.some(function (f) { return distKm(g.p, f.p) <= CONFIRM_KM; })) {
+      g.posKind = 'suspect'; g.posWhy = 'κανένας αγρός που ακούει δεν είναι σε απόσταση ' + CONFIRM_KM + ' km';
+    }
+  });
+}
+function buildModel(raw, now) {
+  var fields = buildFields(raw), gws = buildGateways(raw);
+  link(fields, gws);
+  var groups = groupFields(fields);
+  judgeGatewayPositions(fields, gws);
+  gws.forEach(function (g) {
+    g.keys = [g.st.k];
+    g.heardList = Object.keys(g.heard).map(function (k) { return g.heard[k]; })
+      .sort(function (a, b) { return String(a.f.name).localeCompare(String(b.f.name), 'el'); });
+  });
+  var known = 0, total = 0, st = 0, stKnown = 0;
+  fields.forEach(function (f) {
+    f.devs.forEach(function (d) {
+      total++; if (d.g) known++;
+      if (/s2120/i.test(String(d.t))) { st++; if (d.g) stKnown++; }
+    });
+  });
+  var md = (raw.gwSum && raw.gwSum.md) || {};
+  var times = {
+    gw: raw.gwSum ? tnum(raw.gwSum.time) : Object.keys(raw.gw).reduce(function (a, k) { return Math.max(a, tnum(raw.gw[k].time)); }, 0),
+    fleet: raw.fleetSum ? tnum(raw.fleetSum.time) : Object.keys(raw.fleet).reduce(function (a, k) { return Math.max(a, tnum(raw.fleet[k].time)); }, 0),
+    map: Object.keys(raw.map).reduce(function (a, k) { return Math.max(a, tnum(raw.map[k].time)); }, 0)
+  };
+  return { fields: fields, gws: gws, groups: groups, times: times, hasMap: times.map > 0,
+    cover: { gwPos: gws.filter(function (g) { return g.posKind === 'ok'; }).length, gwSus: gws.filter(function (g) { return g.posKind === 'suspect'; }).length,
+      gwAll: gws.length, seen: num(md.sensors_seen), sensorsAll: num(md.sensors_total), known: known, total: total, st: st, stKnown: stKnown,
+      fSus: fields.filter(function (f) { return f.suspect; }).length, bad: raw.bad } };
+}
+/* Τι λείπει ή έχει παλιώσει. Κάθε πηγή κρίνεται χωριστά: ο πυρήνας και η ανάλυση πυλών είναι διαφορετικές εκτελέσεις. */
+function freshness(model, now) {
+  var srcs = [{ n: 'Πύλες', t: model.times.gw }, { n: 'Αγροί (πυρήνας)', t: model.times.fleet }, { n: 'Θέσεις αγρών (map_field)', t: model.times.map }];
+  var any = srcs.some(function (s) { return s.t > 0; });
+  return { any: any, srcs: srcs.map(function (s) {
+    var h = s.t > 0 ? Math.max(0, (now - s.t) / 36e5) : null;
+    return { n: s.n, t: s.t, h: h, stale: h != null && h > STALE_DATA_H };
+  }) };
+}
+
+/* ═══ ΦΙΛΤΡΑ ═════════════════════════════════════════════════════════════════
+   `skip` = το φίλτρο που αγνοείται: έτσι κάθε αριθμός σε μια λίστα λέει τι θα δεις αν το διαλέξεις. */
+function isGwStatus(s) { return /^g_/.test(s || ''); }
+function fieldPass(f, flt, skip) {
+  if (!flt.nocalc && !f.computed) return false;
+  if (skip !== 'producer' && flt.producer && (f.client || '∅') !== flt.producer) return false;
+  if (skip !== 'status' && flt.status && f.keys.indexOf(flt.status) < 0) return false;
+  if (skip !== 'type' && flt.type && !f.devs.some(function (d) { return d.label === flt.type; })) return false;
+  if (flt.q) {
+    var q = fold(flt.q), hay = [f.name, f.client, f.i6].concat(f.devs.map(function (d) { return d.n + ' ' + d.label + ' ' + (d.g || ''); }));
+    if (fold(hay.join(' ')).indexOf(q) < 0) return false;
+  }
+  return true;
+}
+function gatewayPass(g, flt, skip, passKeys) {
+  var fieldSide = (skip !== 'producer' && flt.producer) || (skip !== 'type' && flt.type)
+    || (skip !== 'status' && flt.status && !isGwStatus(flt.status));
+  /* Με φίλτρο τύπου η πύλη μένει μόνο αν άκουσε ΑΥΤΟΝ τον τύπο: αλλιώς το φίλτρο «σταθμοί» θα έδειχνε πύλη
+     που άκουσε άλλο όργανο του ίδιου αγρού, σαν να υπήρχε σύνδεση σταθμού. */
+  var hears = Object.keys(g.heard).some(function (k) {
+    if (!passKeys[k]) return false;
+    return skip === 'type' || !flt.type || g.heard[k].devs.some(function (d) { return d.label === flt.type; });
+  });
+  if (fieldSide && !hears) return false;
+  if (skip !== 'status' && isGwStatus(flt.status) && g.keys.indexOf(flt.status) < 0) return false;
+  if (flt.q && !hears) {
+    if (fold([g.name, g.code, g.dev, g.nameGuess].join(' ')).indexOf(fold(flt.q)) < 0) return false;
+  }
+  return true;
+}
+function select(model, flt, skip) {
+  var fields = model.fields.filter(function (f) { return fieldPass(f, flt, skip); }), keys = {};
+  fields.forEach(function (f) { keys[f.key] = 1; });
+  var gws = model.gws.filter(function (g) { return gatewayPass(g, flt, skip, keys); });
+  /* Φίλτρο κατάστασης πύλης: οι αγροί δεν έχουν τέτοια κατάσταση. */
+  if (skip !== 'status' && isGwStatus(flt.status)) fields = [];
+  return { fields: fields, gws: gws };
+}
+function visible(model, flt) {
+  var s = select(model, flt);
+  var f = flt.view === 'gw' ? [] : s.fields, g = flt.view === 'fields' ? [] : s.gws;
+  var inst = 0;
+  f.forEach(function (x) {
+    x.devs.forEach(function (d) { if (!flt.type || d.label === flt.type) inst++; });
+  });
+  return { fields: f, gws: g, inst: inst, allFields: s.fields.length, allGws: s.gws.length };
+}
+function optionCounts(model, flt) {
+  var out = { producer: {}, status: {}, type: {} };
+  select(model, flt, 'producer').fields.forEach(function (f) {
+    var k = f.client || '∅'; out.producer[k] = (out.producer[k] || 0) + 1;
+  });
+  var s = select(model, flt, 'status');
+  if (flt.view !== 'gw') s.fields.forEach(function (f) { f.keys.forEach(function (k) { out.status[k] = (out.status[k] || 0) + 1; }); });
+  if (flt.view !== 'fields') s.gws.forEach(function (g) { g.keys.forEach(function (k) { out.status[k] = (out.status[k] || 0) + 1; }); });
+  select(model, flt, 'type').fields.forEach(function (f) {
+    f.devs.forEach(function (d) { out.type[d.label] = (out.type[d.label] || 0) + 1; });
+  });
+  return out;
+}
+/* Κοντινοί αγροί: ΜΟΝΟ από πύλη με αξιόπιστη θέση, ποτέ αγρός με ύποπτη θέση, ποτέ όσοι είναι ήδη επιβεβαιωμένοι. */
+function nearby(g, km, fields) {
+  if (!g || !g.p || g.posKind !== 'ok' || !(km > 0)) return { list: [], skipped: 0 };
+  var list = [], skipped = 0;
+  fields.forEach(function (f) {
+    if (!f.p || g.heard[f.key]) return;
+    var d = distKm(g.p, f.p);
+    if (d > km) return;
+    if (f.suspect) { skipped++; return; }
+    list.push({ f: f, d: d });
+  });
+  list.sort(function (a, b) { return a.d - b.d; });
+  return { list: list, skipped: skipped };
+}
+/* Ο λόγος βγαίνει από τα δεδομένα, όχι από σταθερό κείμενο: μόλις ένας parser αρχίσει να στέλνει lrrid (T-GWID-04),
+   η πρόταση αλλάζει μόνη της αντί να λέει κάτι που δεν ισχύει πια. */
+function stationWhy(c) {
+  var tail = ' Αυτό δεν σημαίνει ότι δεν ακούγονται. Γραμμή υπάρχει μόνο όταν το δίκτυο επιβεβαιώνει τη λήψη.';
+  if (!c.st) return 'Γραμμή υπάρχει μόνο όταν το δίκτυο επιβεβαιώνει τη λήψη.';
+  if (c.stKnown >= c.st) return 'Όλοι οι μετεωρολογικοί σταθμοί S2120 (' + c.st + ') αναφέρουν από ποια πύλη πέρασαν. Γραμμή υπάρχει μόνο όταν το δίκτυο επιβεβαιώνει τη λήψη.';
+  if (c.stKnown > 0) return 'Γιατί κάποιοι σταθμοί δεν έχουν γραμμή: μόνο ' + c.stKnown + ' από ' + c.st + ' μετεωρολογικούς σταθμούς S2120 αναφέρουν από ποια πύλη πέρασαν.' + tail;
+  return 'Γιατί οι σταθμοί δεν έχουν γραμμή: κανένας από τους ' + c.st + ' μετεωρολογικούς σταθμούς S2120 δεν αναφέρει από ποια πύλη πέρασε.' + tail;
+}
+function primaryState(f) {
+  if (!f.computed) return FSTATE.nocalc;
+  if (!f.devs.length) return FSTATE.noinst;
+  return SEV[f.s];
+}
+function subState(f) {
+  if (f.keys.indexOf('silent') >= 0) return FSTATE.silent;
+  if (f.keys.indexOf('gaps') >= 0) return FSTATE.gaps;
+  return null;
+}
+function trouble(f) {
+  if (!f.computed) return 1.5;
+  return f.s + (f.keys.indexOf('silent') >= 0 ? 0.3 : 0) + (f.keys.indexOf('gaps') >= 0 ? 0.1 : 0);
+}
+function gwTrouble(g) { return { g_nowit: 3, g_sparse: 2, g_unid: 1, g_alive: 0.5, g_storage: 0 }[g.st.k]; }
+function noPosition(v) {
+  var out = [];
+  v.gws.forEach(function (g) { if (!g.p) out.push({ kind: 'gw', key: g.key, name: g.name, why: g.posWhy || 'άγνωστη θέση' }); });
+  v.fields.forEach(function (f) {
+    if (!f.p) out.push({ kind: 'field', key: f.key, name: f.name, why: f.noMapRow ? 'χωρίς θέση στη φόρμα, δεν έχει φτάσει map_field' : 'ούτε η φόρμα ούτε η ετικέτα δίνουν θέση' });
+  });
+  return out;
+}
+</script>
+</head>
+<body>
+<div class="wrap">
+  <h1>Ενιαίος χάρτης στόλου</h1>
+  <p class="sub">Πύλες, αγροί και όργανα σε έναν χάρτη. Διάλεξε πύλη για να δεις τι ακούει, ή αγρό για να δεις τα όργανά του.</p>
+
+  <div id="demo" class="banner demo" hidden>ΔΟΚΙΜΑΣΤΙΚΑ ΔΕΔΟΜΕΝΑ: πλασματικοί αγροί και πύλες, όχι ο πραγματικός στόλος.</div>
+  <div id="stale" class="banner red" role="alert" hidden></div>
+  <div id="warn" class="banner warn" hidden></div>
+  <div id="honest" class="honest" aria-live="polite"></div>
+
+  <div class="bar">
+    <div class="seg" role="group" aria-label="Προβολή">
+      <button type="button" id="vAll" aria-pressed="true"></button>
+      <button type="button" id="vGw" aria-pressed="false"></button>
+      <button type="button" id="vFields" aria-pressed="false"></button>
+    </div>
+  </div>
+  <details class="filters" id="filters" open>
+  <summary id="filtSum">Φίλτρα</summary>
+  <div class="bar">
+    <select id="fProducer" aria-label="Παραγωγός"></select>
+    <select id="fStatus" aria-label="Κατάσταση"></select>
+    <select id="fType" aria-label="Τύπος οργάνου"></select>
+    <input id="fQ" type="search" placeholder="Αναζήτηση αγρού, πύλης, οργάνου…" aria-label="Αναζήτηση" />
+    <label class="chk"><input type="checkbox" id="fNoCalc" checked aria-label="Εμφάνιση αγρών χωρίς υπολογισμό" /> Χωρίς υπολογισμό</label>
+    <button type="button" class="btn" id="bClear">Καθαρισμός</button>
+    <button type="button" class="btn" id="bFit">Προσαρμογή χάρτη</button>
+  </div>
+  </details>
+  <div class="result" id="result"></div>
+
+  <div class="layout">
+    <div>
+      <div class="mapwrap">
+        <div id="map"></div>
+        <div id="mapveil" hidden><span>Πατήστε για να μετακινήσετε τον χάρτη</span></div>
+      </div>
+      <div class="card" style="margin-top:10px">
+        <details>
+          <summary>Υπόμνημα</summary>
+          <div class="lg" id="legend"></div>
+        </details>
+      </div>
+    </div>
+    <div class="side">
+      <div class="card" id="panel"></div>
+      <div class="card">
+        <details open>
+          <summary id="noposHead">Χωρίς θέση στον χάρτη</summary>
+          <div id="nopos" class="scroll"></div>
+        </details>
+      </div>
+      <div class="card">
+        <details open>
+          <summary id="resHead">Αποτελέσματα</summary>
+          <div id="results" class="scroll"></div>
+        </details>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   SAG · ΕΝΙΑΙΟΣ ΧΑΡΤΗΣ ΣΤΟΛΟΥ (T-GWMAP-04, 7/11/2026)
+   Διαβάζει από τη συσκευή «SAG Εποπτεία»: map_field, fleet_field, fleet_summary, tech_tasks,
+   gateway_row, gateway_summary, gateway_roster. Καμία εγγραφή, καμία αποθήκευση στον browser.
+   ═══════════════════════════════════════════════════════════════════════════ */
+var $ = function (id) { return document.getElementById(id); };
+var SDK_URL = 'https://admin.tago.io/dist/custom-widget.min.js';
+/* Τοπική δοκιμή: μόνο με ?fixture=1, μόνο σε κορυφαίο παράθυρο (μέσα στο TagoIO είμαστε πάντα iframe) και μόνο χωρίς TagoIO.
+   Γι' αυτό το SDK φορτώνεται από τον κώδικα: αν φορτωνόταν πάντα, το window.TagoIO δεν θα έλειπε ποτέ. */
+var FIXTURE = /[?&]fixture=1(&|$)/.test(location.search) && window.top === window.self && !window.TagoIO;
+
+var RAW = newRaw();
+var MODEL = buildModel(RAW, Date.now());
+var UI = { map: null, layer: null, over: null, userMoved: false, fitN: -1, sel: null, km: 10, started: false, connected: false,
+  flt: { view: 'all', producer: '', status: '', type: '', q: '', nocalc: true } };
+
+function chip(s) { return '<span class="st c-' + s.c + '">' + s.ic + ' ' + esc(s.w) + '</span>'; }
+function clock(ms) {
+  return new Date(ms).toLocaleString('el-GR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+}
+function byKey(list, key) { for (var i = 0; i < list.length; i++) if (list[i].key === key) return list[i]; return null; }
+
+/* ═══ ΧΑΡΤΗΣ ═══════════════════════════════════════════════════════════════ */
+function initMap() {
+  if (UI.map || typeof L === 'undefined') {
+    if (typeof L === 'undefined') { var w = $('warn'); w.hidden = false; w.textContent = 'Η βιβλιοθήκη χάρτη δεν φορτώθηκε. Οι λίστες δουλεύουν, ο χάρτης όχι.'; }
+    return;
+  }
+  /* T-MAPDRAG-01: (pointer: coarse) ρωτά για την ΚΥΡΙΑ συσκευή. Laptop με οθόνη αφής έχει ποντίκι και δεν παγώνει. */
+  var isTouch = false;
+  try {
+    isTouch = window.matchMedia('(pointer: coarse)').matches === true && window.matchMedia('(any-pointer: fine)').matches !== true;
+  } catch (e) { isTouch = false; }
+  UI.map = L.map($('map'), { scrollWheelZoom: !isTouch, dragging: !isTouch, zoomControl: false }).setView([38.2, 24.5], 6);
+  L.control.zoom({ zoomInTitle: 'Μεγέθυνση', zoomOutTitle: 'Σμίκρυνση' }).addTo(UI.map);
+  if (isTouch) {
+    var veil = $('mapveil');
+    veil.hidden = false;
+    /* T-MAPVEIL-01: σε κινητό το click συχνά δεν φτάνει, γι' αυτό ακούμε και touchend και pointerup. */
+    var unlock = function () { try { UI.map.dragging.enable(); } catch (e) {} veil.hidden = true; };
+    veil.addEventListener('click', unlock);
+    veil.addEventListener('touchend', unlock);
+    veil.addEventListener('pointerup', unlock);
+  }
+  var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
+  var sat = L.layerGroup([
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19, maxNativeZoom: 18, attribution: 'Εικόνες © Esri, Maxar, Earthstar Geographics' }),
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19, maxNativeZoom: 18 })
+  ]);
+  osm.addTo(UI.map);
+  L.control.layers({ 'Χάρτης': osm, 'Δορυφόρος': sat }, null, { position: 'topright', collapsed: window.innerWidth < 700 }).addTo(UI.map);
+  /* T-GWMAP-02: μόλις ο χρήστης πιάσει τον χάρτη, οι ενημερώσεις δεν τον ξαναμετακινούν. */
+  var mark = function () { UI.userMoved = true; };
+  var mc = UI.map.getContainer();
+  mc.addEventListener('mousedown', mark);
+  mc.addEventListener('touchstart', mark, { passive: true });
+  mc.addEventListener('wheel', mark, { passive: true });
+  UI.map.on('dragstart', mark);
+  UI.map.on('zoomend', function () { if (UI.sel && UI.sel.kind === 'gw' && MODEL) drawMap(visible(MODEL, UI.flt)); });
+  UI.layer = L.layerGroup().addTo(UI.map);
+  UI.over = L.layerGroup().addTo(UI.map);
+  setTimeout(function () { try { UI.map.invalidateSize(); } catch (e) {} }, 250);
+}
+function pinIcon(s, cls, text, sub, suspect, selected) {
+  var html = '<div class="pin ' + cls + ' p-' + s.c + (selected ? ' sel' : '') + '">' + esc(text)
+    + (sub ? '<i class="sub">' + esc(sub) + '</i>' : '') + (suspect ? '<i class="sus">!</i>' : '') + '</div>';
+  var size = cls === 'grp' ? 32 : (cls === 'gw' ? 28 : 26);
+  return L.divIcon({ className: '', html: html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
+}
+/* Η χειρότερη κατάσταση της ομάδας ορίζει το χρώμα, το πλήθος μπαίνει στη θέση του εικονιδίου. */
+function groupState(list) {
+  var worst = null, wr = -1;
+  list.forEach(function (f) { var t = trouble(f); if (t > wr) { wr = t; worst = f; } });
+  return primaryState(worst);
+}
+function drawMap(v) {
+  if (!UI.map) return;
+  UI.layer.clearLayers();
+  UI.over.clearLayers();
+  var sel = UI.sel, selGw = sel && sel.kind === 'gw' ? byKey(MODEL.gws, sel.key) : null;
+  var selF = sel && sel.kind === 'field' ? byKey(MODEL.fields, sel.key) : null;
+  /* Η πύλη που επιλέχθηκε δείχνει ΠΑΝΤΑ τους αγρούς της, και στην προβολή «Μόνο πύλες»: αυτό ζήτησε ο χρήστης. */
+  var show = {};
+  v.fields.forEach(function (f) { show[f.key] = 1; });
+  if (selGw) selGw.heardList.forEach(function (h) { show[h.f.key] = 1; });
+  var nb = selGw ? nearby(selGw, UI.km, MODEL.fields) : { list: [], skipped: 0 };
+  nb.list.forEach(function (n) { show[n.f.key] = 1; });
+  if (selF) show[selF.key] = 1;
+  var pts = [];
+  MODEL.groups.forEach(function (grp) {
+    var list = grp.fields.filter(function (f) { return show[f.key]; });
+    if (!list.length) return;
+    var single = list.length === 1 && grp.fields.length === 1, s, sub = null, text;
+    var isSel = !!sel && ((sel.kind === 'group' && sel.key === grp.key) || (selF && selF.groupKey === grp.key));
+    if (single) { s = primaryState(list[0]); text = s.ic; var ss = subState(list[0]); sub = ss ? ss.ic : null; }
+    else { s = groupState(list); text = String(list.length); }
+    var label = single ? (list[0].name + ': ' + s.w) : (list.length + ' εγγραφές στο ίδιο σημείο, χειρότερη: ' + s.w);
+    if (grp.suspect) label += ' · ύποπτη θέση';
+    var m = L.marker([grp.p.lat, grp.p.lng], { icon: pinIcon(s, single ? 'f' : 'grp', text, sub, grp.suspect, isSel), title: label, alt: label, riseOnHover: true });
+    m.on('click', function () { select_(single ? { kind: 'field', key: list[0].key } : { kind: 'group', key: grp.key }); });
+    m.addTo(UI.layer);
+    pts.push([grp.p.lat, grp.p.lng]);
+  });
+  var gshow = v.gws.slice();
+  if (selGw && gshow.indexOf(selGw) < 0) gshow.push(selGw);
+  if (selF) Object.keys(selF.gws).forEach(function (k) { if (gshow.indexOf(selF.gws[k]) < 0) gshow.push(selF.gws[k]); });
+  gshow.forEach(function (g) {
+    if (!g.p) return;
+    var label = g.name + ': ' + g.st.w + (g.posKind === 'suspect' ? ' · ύποπτη θέση' : '');
+    var m = L.marker([g.p.lat, g.p.lng], { icon: pinIcon(g.st, 'gw', g.st.ic, null, g.posKind === 'suspect', !!selGw && selGw === g),
+      title: label, alt: label, zIndexOffset: 1000, riseOnHover: true });
+    m.on('click', function () { select_({ kind: 'gw', key: g.key }); });
+    m.addTo(UI.layer);
+    pts.push([g.p.lat, g.p.lng]);
+  });
+  var accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#2a78d6';
+  /* Πλήρες χρώμα κειμένου, όχι γκρίζο: στα γκρίζα πλακίδια η διακεκομμένη γραμμή χανόταν. */
+  var greyc = getComputedStyle(document.documentElement).getPropertyValue('--tx').trim() || '#0b0b0b';
+  if (selGw && selGw.p) {
+    selGw.heardList.forEach(function (h) {
+      if (!h.f.p) return;
+      L.polyline([[selGw.p.lat, selGw.p.lng], [h.f.p.lat, h.f.p.lng]], { color: accent, weight: 3, opacity: .9 })
+        .bindTooltip('επιβεβαιωμένη λήψη: ' + esc(h.f.name), { sticky: true }).addTo(UI.over);
+    });
+    if (selGw.posKind === 'ok' && UI.km > 0) {
+      L.circle([selGw.p.lat, selGw.p.lng], { radius: UI.km * 1000, color: greyc, weight: 1.5, dashArray: '3 7', fill: false, interactive: false }).addTo(UI.over);
+      var seen = {}, placed = [];
+      nb.list.forEach(function (n) {
+        var k = posKey(n.f.p, 5);
+        if (seen[k]) return;
+        seen[k] = 1;
+        var ln = L.polyline([[selGw.p.lat, selGw.p.lng], [n.f.p.lat, n.f.p.lng]], { color: greyc, weight: 2.5, dashArray: '7 7', opacity: 1 });
+        /* Μόνιμη ετικέτα μόνο όπου δεν πέφτει πάνω σε άλλη· οι υπόλοιπες δείχνουν στο πέρασμα του ποντικιού. */
+        var a = UI.map.latLngToLayerPoint([selGw.p.lat, selGw.p.lng]), b = UI.map.latLngToLayerPoint([n.f.p.lat, n.f.p.lng]);
+        var mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        var free = !placed.some(function (q) { return Math.abs(q.x - mid.x) < 160 && Math.abs(q.y - mid.y) < 22; });
+        if (free) placed.push(mid);
+        ln.bindTooltip('κοντά, χωρίς επιβεβαίωση', { permanent: free, direction: 'center', className: 'near' });
+        ln.addTo(UI.over);
+      });
+    }
+  }
+  if (selF && selF.p) {
+    Object.keys(selF.gws).forEach(function (k) {
+      var g = selF.gws[k];
+      if (!g.p) return;
+      L.polyline([[selF.p.lat, selF.p.lng], [g.p.lat, g.p.lng]], { color: accent, weight: 3, opacity: .9 })
+        .bindTooltip('επιβεβαιωμένη λήψη από ' + esc(g.name), { sticky: true }).addTo(UI.over);
+    });
+  }
+  /* T-GWMAP-02: όχι fitBounds σε κάθε ενημέρωση, και ποτέ μετά από κίνηση του χρήστη. */
+  if (pts.length && !UI.userMoved && pts.length !== UI.fitN) {
+    UI.fitN = pts.length;
+    try { UI.map.fitBounds(pts, { padding: [36, 36], maxZoom: 13 }); } catch (e) {}
+  }
+  UI.lastPts = pts;
+}
+
+/* ═══ ΠΛΑΙΣΙΟ ΛΕΠΤΟΜΕΡΕΙΩΝ: ΕΝΑ ΣΤΟΙΧΕΙΟ, ΤΡΙΑ ΠΕΡΙΕΧΟΜΕΝΑ ═══════════════════ */
+function fieldRowHtml(f, extra) {
+  var s = primaryState(f), ss = subState(f);
+  return '<li><button type="button" class="row" data-sel="field" data-key="' + esc(f.key) + '"><div class="rowT">' + esc(f.name) + '</div>'
+    + '<div class="chips">' + chip(s) + (ss ? chip(ss) : '') + (f.suspect ? '<span class="st c-check">! ύποπτη θέση</span>' : '') + '</div>'
+    + '<div class="rowM">' + esc(f.client || 'χωρίς παραγωγό') + (extra ? ' · ' + extra : '') + '</div></button></li>';
+}
+function panelGw(g) {
+  var h = '<div class="panelHead"><div><h2>' + esc(g.name) + '</h2></div><button type="button" class="x" data-close aria-label="Κλείσιμο">✕</button></div>'
+    + '<div class="chips">' + chip(g.st) + (g.posKind === 'suspect' ? '<span class="st c-check">! ύποπτη θέση</span>' : '') + (g.storage && g.net ? '<span class="st c-grey">▣ ΔΗΛΩΜΕΝΗ ΣΤΗΝ ΑΠΟΘΗΚΗ</span>' : '') + '</div>';
+  if (g.code) h += '<div class="meta">Κωδικός δικτύου <span class="mono">' + esc(g.code) + '</span></div>';
+  if (g.nameGuess) h += '<div class="meta">Πιθανόν: ' + esc(g.nameGuess) + ' (ανεπιβεβαίωτο)</div>';
+  if (g.net) {
+    h += '<div class="meta">Τελευταίος μάρτυρας: ' + esc(ageWords(g.age)) + ' · ' + (g.sensors == null ? 'άγνωστο πλήθος αισθητήρων' : esc(plural(Number(g.sensors), 'αισθητήρας', 'αισθητήρες')))
+      + (g.rssi != null ? ' · λήψη ' + esc(String(Math.round(Number(g.rssi)))) + ' dBm' : '') + '</div>';
+    if (g.st.k === 'g_nowit') h += '<div class="note">Δεν σημαίνει χαλασμένη πύλη: οι αισθητήρες που την κατονομάζουν σταμάτησαν να στέλνουν.</div>';
+    if (g.absent) h += '<div class="note">Δεν εμφανίστηκε στον τελευταίο κύκλο σάρωσης, η ηλικία υπολογίζεται από την τελευταία της κάρτα.</div>';
+  } else {
+    h += '<div class="note">Κανένας αισθητήρας δεν την κατονομάζει, άρα δεν ξέρουμε αν ζει ούτε τι ακούει. Δεν σημαίνει ότι είναι εκτός λειτουργίας.</div>';
+  }
+  h += '<div class="meta">Θέση: ' + (g.p ? '<span class="mono">' + g.p.lat.toFixed(5) + ', ' + g.p.lng.toFixed(5) + '</span>' : 'άγνωστη')
+    + (g.posWhy ? ' (' + esc(g.posWhy) + ')' : '') + '</div>';
+  h += '<h3>Επιβεβαιωμένη λήψη (' + plural(g.heardList.length, 'αγρός', 'αγροί') + ')</h3>';
+  if (g.heardList.length) {
+    h += '<ul class="list">' + g.heardList.map(function (x) {
+      var names = x.devs.length ? x.devs.map(function (d) { return d.n; }).join(', ') : (Array.isArray(x.names) ? x.names.join(', ') : '');
+      return fieldRowHtml(x.f, esc(plural(x.k, 'όργανο', 'όργανα') + (names ? ': ' + names : '')) + (x.f.p ? '' : ' · χωρίς θέση, δεν σχεδιάζεται γραμμή'));
+    }).join('') + '</ul>';
+  } else {
+    h += '<div class="note">Κανένας αγρός με επιβεβαιωμένη λήψη από αυτή την πύλη.</div>';
+  }
+  if (!g.p && g.heardList.length) h += '<div class="note">Η θέση της πύλης δεν είναι γνωστή, άρα δεν σχεδιάζονται γραμμές.</div>';
+  if (g.orphans.length) {
+    h += '<div class="note">Ακούει και: ' + g.orphans.map(function (o) {
+      return esc(o.f) + ' (' + esc(String(o.k)) + (o.amb ? ', όνομα σε πολλές εγγραφές' : '') + ')'; }).join(', ') + '.</div>';
+  }
+  if (g.cut) h += '<div class="note">Η λίστα της κάρτας κόπηκε για να χωρέσει.</div>';
+  h += '<h3>Κοντά, χωρίς επιβεβαίωση</h3>';
+  if (g.p && g.posKind === 'ok') {
+    h += '<div class="km"><label for="kmR">Ακτίνα</label><input id="kmR" type="range" min="0" max="40" step="1" value="' + UI.km + '" /><output id="kmO"></output></div><div id="nearSec"></div>';
+  } else {
+    h += '<div class="note">Δεν υπολογίζεται: η θέση της πύλης δεν είναι αξιόπιστη.</div>';
+  }
+  return h;
+}
+function nearHtml(g) {
+  var n = nearby(g, UI.km, MODEL.fields);
+  var h = '<div class="note">Η απόσταση δεν αποδεικνύει σύνδεση. Αυτοί οι αγροί μπορεί να ακούγονται από άλλη πύλη ή από καμία.</div>';
+  if (n.list.length) {
+    h += '<ul class="list">' + n.list.map(function (x) { return fieldRowHtml(x.f, esc(kmWords(x.d)) + ' · κοντά, χωρίς επιβεβαίωση'); }).join('') + '</ul>';
+  } else if (UI.km > 0) {
+    h += '<div class="note">Κανένας αγρός χωρίς επιβεβαίωση σε αυτή την ακτίνα.</div>';
+  }
+  if (n.skipped) h += '<div class="note">' + plural(n.skipped, 'αγρός', 'αγροί') + ' με ύποπτη θέση ' + (n.skipped === 1 ? 'δεν μετρήθηκε' : 'δεν μετρήθηκαν') + '.</div>';
+  return h;
+}
+function panelField(f) {
+  var s = primaryState(f), ss = subState(f);
+  var h = '<div class="panelHead"><div><h2>' + esc(f.name) + '</h2></div><button type="button" class="x" data-close aria-label="Κλείσιμο">✕</button></div>'
+    + '<div class="chips">' + chip(s) + (ss ? chip(ss) : '') + (f.suspect ? '<span class="st c-check">! ύποπτη θέση</span>' : '') + '</div>'
+    + '<div class="meta">Παραγωγός: ' + esc(f.client || 'χωρίς παραγωγό') + '</div>';
+  if (!f.computed) h += '<div class="meta">Γιατί χωρίς υπολογισμό: ' + esc(f.reason) + '</div>';
+  var src = f.ps === 'form' ? 'από τη φόρμα' : (f.ps === 'tag' ? 'από την ετικέτα' : '');
+  h += '<div class="meta">Θέση: ' + (f.p ? '<span class="mono">' + f.p.lat.toFixed(5) + ', ' + f.p.lng.toFixed(5) + '</span> ' + src : 'άγνωστη') + '</div>';
+  if (f.suspect) h += '<div class="note">Ίδιο σημείο με άλλον παραγωγό: η θέση μάλλον δεν είναι του αγρού.</div>';
+  if (f.pq === 'diff') h += '<div class="note">Η φόρμα και η ετικέτα διαφέρουν πάνω από 1 km.</div>';
+  if (f.pq === 'dup') h += '<div class="note">Διπλή ετικέτα coordinates με διαφορετικές τιμές.</div>';
+  if (f.groupN > 1) h += '<div class="note">Στο ίδιο σημείο υπάρχουν ' + f.groupN + ' εγγραφές. <button type="button" class="link" data-sel="group" data-key="' + esc(f.groupKey) + '">Δες τες</button></div>';
+  if (f.absent) h += '<div class="note">Η εγγραφή δεν ανανεώθηκε στον τελευταίο κύκλο.</div>';
+  if (f.noMapRow) h += '<div class="note">Δεν έχει φτάσει map_field για αυτή την εγγραφή: όργανα και θέση έρχονται μόνο από τον πίνακα στόλου.</div>';
+  h += '<h3>Όργανα (' + (f.devs.length + f.dc) + ')</h3>';
+  if (f.devs.length) {
+    h += '<ul class="list">' + f.devs.map(function (d) {
+      var g = null;
+      Object.keys(f.gws).forEach(function (k) { if (f.gws[k].code === d.g) g = f.gws[k]; });
+      var gtxt = g ? (/^Πύλη /.test(g.name) ? '' : 'πύλη ') + '<button type="button" class="link" data-sel="gw" data-key="' + esc(g.key) + '">' + esc(g.name) + '</button>'
+        : (d.g ? 'πύλη ' + esc(d.g) : 'άγνωστη πύλη');
+      return '<li><div class="row"><div class="rowT">' + esc(d.n) + '</div><div class="chips">' + chip(d.st) + (d.l ? '<span class="st c-office">▽ ΧΑΜΗΛΗ ΜΠΑΤΑΡΙΑ</span>' : '') + '</div>'
+        + '<div class="rowM">' + esc(d.label) + ' · ' + esc(ageWords(d.h)) + ' · ' + gtxt + '</div></div></li>';
+    }).join('') + '</ul>';
+  } else {
+    h += '<div class="note">' + chip(FSTATE.noinst) + ' Η εγγραφή δεν δηλώνει κανένα όργανο.</div>';
+  }
+  if (f.dc) h += '<div class="note">' + plural(f.dc, 'όργανο', 'όργανα') + ' δεν χώρεσαν στην εγγραφή (τα πιο υγιή).</div>';
+  if (f.devs.some(function (d) { return !d.g; })) h += '<div class="note">«Άγνωστη πύλη» σημαίνει ότι το όργανο δεν αναφέρει από ποια πύλη πέρασε, όχι ότι δεν ακούγεται.</div>';
+  var tasks = ((RAW.tech && RAW.tech.tasks) || []).filter(function (t) { return t && t.field === f.name; });
+  if (tasks.length) {
+    h += '<h3>Εργασίες τεχνικού</h3><ul class="list">' + tasks.map(function (t) {
+      return '<li><div class="row"><div class="rowT">' + esc(t.title) + '</div><div class="rowM">' + esc(t.why) + '</div></div></li>'; }).join('') + '</ul>';
+  }
+  return h;
+}
+function panelGroup(g) {
+  var h = '<div class="panelHead"><div><h2>' + g.fields.length + ' εγγραφές στο ίδιο σημείο</h2></div><button type="button" class="x" data-close aria-label="Κλείσιμο">✕</button></div>'
+    + (g.suspect ? '<div class="chips"><span class="st c-check">! ύποπτη θέση</span></div><div class="note">Διαφορετικοί παραγωγοί στο ίδιο σημείο: μάλλον πρόχειρη θέση, όχι η πραγματική.</div>' : '')
+    + '<div class="meta">Θέση: <span class="mono">' + g.p.lat.toFixed(5) + ', ' + g.p.lng.toFixed(5) + '</span></div>'
+    + '<ul class="list">' + g.fields.map(function (f) { return fieldRowHtml(f, ''); }).join('') + '</ul>';
+  return h;
+}
+function renderPanel() {
+  var el = $('panel'), sel = UI.sel, h = '';
+  var obj = !sel ? null : (sel.kind === 'gw' ? byKey(MODEL.gws, sel.key) : (sel.kind === 'field' ? byKey(MODEL.fields, sel.key) : byKey(MODEL.groups, sel.key)));
+  if (!obj) {
+    UI.sel = null;
+    el.innerHTML = '<h2>Λεπτομέρειες</h2><div class="note">Πάτησε μια πύλη ή έναν αγρό στον χάρτη ή στη λίστα.</div>';
+    return;
+  }
+  h = sel.kind === 'gw' ? panelGw(obj) : (sel.kind === 'field' ? panelField(obj) : panelGroup(obj));
+  el.innerHTML = h;
+  if (sel.kind === 'gw' && $('kmR')) {
+    var paint = function () { $('kmO').textContent = UI.km ? UI.km + ' km' : 'κλειστή'; $('nearSec').innerHTML = nearHtml(obj); };
+    paint();
+    $('kmR').addEventListener('input', function (e) { UI.km = Number(e.target.value) || 0; paint(); drawMap(visible(MODEL, UI.flt)); });
+  }
+}
+/* Επιλογή πύλης: ο χάρτης πλαισιώνει την ακτίνα, ή τους αγρούς της αν δεν υπολογίζεται ακτίνα. Είναι ενέργεια του χρήστη,
+   όχι ενημέρωση δεδομένων, άρα δεν παραβιάζει το T-GWMAP-02. */
+function frameGateway(g) {
+  if (!UI.map || !g || !g.p) return;
+  UI.userMoved = true;
+  try {
+    if (g.posKind === 'ok' && UI.km > 0) { UI.map.fitBounds(L.latLng(g.p.lat, g.p.lng).toBounds(UI.km * 2300), { maxZoom: 13 }); return; }
+    var pts = [[g.p.lat, g.p.lng]];
+    g.heardList.forEach(function (h) { if (h.f.p) pts.push([h.f.p.lat, h.f.p.lng]); });
+    UI.map.fitBounds(pts, { padding: [40, 40], maxZoom: 13 });
+  } catch (e) {}
+}
+function select_(s) {
+  var same = UI.sel && UI.sel.kind === s.kind && UI.sel.key === s.key;
+  UI.sel = s;
+  renderPanel();
+  if (s.kind === 'gw' && !same) frameGateway(byKey(MODEL.gws, s.key));
+  drawMap(visible(MODEL, UI.flt));
+  /* Στο κινητό ο χάρτης έρχεται στην κορυφή: το πλαίσιο αρχίζει ακριβώς κάτω του, άρα φαίνονται και οι γραμμές και τα στοιχεία. */
+  if (window.innerWidth <= 900) { try { document.querySelector('.mapwrap').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {} }
+}
+
+/* ═══ ΦΙΛΤΡΑ ΚΑΙ ΛΙΣΤΕΣ ══════════════════════════════════════════════════════ */
+function fillSelect(el, first, opts, value) {
+  var h = '<option value="">' + esc(first) + '</option>', has = false, grp = null;
+  opts.forEach(function (o) {
+    if (o.grp !== grp) { if (grp) h += '</optgroup>'; grp = o.grp || null; if (grp) h += '<optgroup label="' + esc(grp) + '">'; }
+    if (o.v === value) has = true;
+    h += '<option value="' + esc(o.v) + '"' + (o.v === value ? ' selected' : '') + '>' + esc(o.l) + ' (' + o.n + ')</option>';
+  });
+  if (grp) h += '</optgroup>';
+  /* Τρέχουσα επιλογή που έμεινε χωρίς εγγραφές: μένει ορατή με 0, αλλιώς το φίλτρο θα χανόταν σιωπηλά. */
+  if (value && !has) h += '<option value="' + esc(value) + '" selected>' + esc(value) + ' (0)</option>';
+  el.innerHTML = h;
+}
+function renderFilters(v) {
+  var c = optionCounts(MODEL, UI.flt), flt = UI.flt;
+  var producers = {}; MODEL.fields.forEach(function (f) { producers[f.client || '∅'] = 1; });
+  fillSelect($('fProducer'), 'Όλοι οι παραγωγοί', Object.keys(producers).sort(function (a, b) { return a.localeCompare(b, 'el'); }).map(function (k) {
+    return { v: k, l: k === '∅' ? '(χωρίς παραγωγό)' : k, n: c.producer[k] || 0 }; }), flt.producer);
+  var so = [];
+  SEV.slice().reverse().forEach(function (s) { so.push({ v: s.k, l: s.ic + ' ' + s.w, n: c.status[s.k] || 0, grp: 'Αγροί: απόφαση πυρήνα' }); });
+  ['silent', 'gaps', 'noinst', 'nocalc'].forEach(function (k) { var s = FSTATE[k]; so.push({ v: k, l: s.ic + ' ' + s.w, n: c.status[k] || 0, grp: 'Αγροί: δεδομένα' }); });
+  ['g_alive', 'g_sparse', 'g_nowit', 'g_unid', 'g_storage'].forEach(function (k) { var s = GSTATE[k]; so.push({ v: k, l: s.ic + ' ' + s.w, n: c.status[k] || 0, grp: 'Πύλες' }); });
+  fillSelect($('fStatus'), 'Όλες οι καταστάσεις', so, flt.status);
+  var types = {}; MODEL.fields.forEach(function (f) { f.devs.forEach(function (d) { types[d.label] = 1; }); });
+  fillSelect($('fType'), 'Όλοι οι τύποι οργάνων', Object.keys(types).sort(function (a, b) { return a.localeCompare(b, 'el'); }).map(function (k) {
+    return { v: k, l: k, n: c.type[k] || 0 }; }), flt.type);
+  var active = [flt.producer, flt.status, flt.type, flt.q, !flt.nocalc].filter(Boolean).length;
+  $('filtSum').textContent = 'Φίλτρα' + (active ? ' (' + active + (active === 1 ? ' ενεργό)' : ' ενεργά)') : '');
+  $('vAll').textContent = 'Όλα (' + (v.allGws + v.allFields) + ')';
+  $('vGw').textContent = 'Μόνο πύλες (' + v.allGws + ')';
+  $('vFields').textContent = 'Μόνο αγροί και όργανα (' + v.allFields + ')';
+  ['vAll', 'vGw', 'vFields'].forEach(function (id, i) {
+    $(id).setAttribute('aria-pressed', String(['all', 'gw', 'fields'][i] === flt.view));
+  });
+  var hid = (MODEL.gws.length + MODEL.fields.length) - (v.gws.length + v.fields.length);
+  $('result').innerHTML = 'Εμφανίζονται: <b>' + plural(v.gws.length, 'πύλη', 'πύλες') + '</b> · <b>' + plural(v.fields.length, 'αγρός', 'αγροί') + '</b> · <b>' + plural(v.inst, 'όργανο', 'όργανα') + '</b>'
+    + (hid > 0 ? ' · κρυμμένα από τα φίλτρα: ' + hid : '');
+}
+function renderNoPos(v) {
+  var list = noPosition(v);
+  var total = MODEL.gws.filter(function (g) { return !g.p; }).length + MODEL.fields.filter(function (f) { return !f.p; }).length;
+  $('noposHead').textContent = 'Χωρίς θέση στον χάρτη (' + list.length + (list.length !== total ? ' από ' + total : '') + ')';
+  $('nopos').innerHTML = list.length ? '<ul class="list">' + list.map(function (x) {
+    return '<li><button type="button" class="row" data-sel="' + (x.kind === 'gw' ? 'gw' : 'field') + '" data-key="' + esc(x.key) + '"><div class="rowT">'
+      + (x.kind === 'gw' ? (/^Πύλη /.test(x.name) ? '' : 'Πύλη: ') : 'Αγρός: ') + esc(x.name) + '</div><div class="rowM">' + esc(x.why) + '</div></button></li>'; }).join('') + '</ul>'
+    : '<div class="note">Όλα όσα εμφανίζονται έχουν θέση.</div>';
+}
+function renderResults(v) {
+  var gs = v.gws.slice().sort(function (a, b) { return gwTrouble(b) - gwTrouble(a) || String(a.name).localeCompare(String(b.name), 'el'); });
+  var fs = v.fields.slice().sort(function (a, b) { return trouble(b) - trouble(a) || String(a.name).localeCompare(String(b.name), 'el'); });
+  $('resHead').textContent = 'Αποτελέσματα (' + (gs.length + fs.length) + ')';
+  var h = '';
+  if (gs.length) {
+    h += '<ul class="list">' + gs.map(function (g) {
+      return '<li><button type="button" class="row" data-sel="gw" data-key="' + esc(g.key) + '"><div class="rowT">' + esc(g.name) + '</div>'
+        + '<div class="chips">' + chip(g.st) + (g.posKind === 'suspect' ? '<span class="st c-check">! ύποπτη θέση</span>' : '') + '</div>'
+        + '<div class="rowM">Πύλη · ' + plural(g.heardList.length, 'αγρός', 'αγροί') + ' με επιβεβαιωμένη λήψη</div></button></li>'; }).join('') + '</ul>';
+  }
+  if (fs.length) h += '<ul class="list">' + fs.map(function (f) { return fieldRowHtml(f, plural(f.devs.length, 'όργανο', 'όργανα')); }).join('') + '</ul>';
+  $('results').innerHTML = h || '<div class="note">' + (UI.connected ? 'Τίποτα δεν ταιριάζει στα φίλτρα.' : 'Αναμονή δεδομένων…') + '</div>';
+}
+function renderHonest() {
+  var now = Date.now(), fr = freshness(MODEL, now), c = MODEL.cover, parts = [];
+  fr.srcs.forEach(function (s) {
+    parts.push('<span>' + esc(s.n) + ': <b>' + (s.t ? esc(clock(s.t)) + '</b> (' + esc(ageWords(s.h)) + ')' : '—</b>') + '</span>');
+  });
+  parts.push('<span>Πύλες με θέση: <b>' + c.gwPos + ' από ' + c.gwAll + '</b>' + (c.gwSus ? ' (+' + c.gwSus + ' ύποπτες)' : '') + '</span>');
+  var seen = Number.isFinite(c.seen) && Number.isFinite(c.sensorsAll) && c.sensorsAll > 0;
+  parts.push('<span>Αισθητήρες με γνωστή πύλη: <b>' + (seen ? c.seen + ' από ' + c.sensorsAll : '—') + '</b>'
+    + (c.total ? ' (στους αγρούς ' + c.known + ' από ' + c.total + ')' : '') + '</span>');
+  if (c.fSus) parts.push('<span>Αγροί με ύποπτη θέση: <b>' + c.fSus + '</b></span>');
+  if (c.bad) parts.push('<span>Εγγραφές που αγνοήθηκαν ως άκυρες: <b>' + c.bad + '</b></span>');
+  parts.push('<span class="why">' + esc(stationWhy(c)) + '</span>');
+  $('honest').innerHTML = parts.join('');
+  var stale = fr.srcs.filter(function (s) { return s.stale; });
+  var el = $('stale');
+  if (UI.started && !fr.any) { el.hidden = false; el.textContent = 'Δεν έχουν φτάσει δεδομένα. Ό,τι βλέπεις εδώ δεν λέει τίποτα για τον στόλο.'; }
+  else if (stale.length) {
+    el.hidden = false;
+    el.textContent = '⚠ Παλιά δεδομένα, πάνω από ' + STALE_DATA_H + ' ώρες: ' + stale.map(function (s) { return s.n + ' ' + ageWords(s.h); }).join(' · ')
+      + '. Η εικόνα μπορεί να μην ισχύει πια.';
+  } else el.hidden = true;
+  var w = $('warn');
+  if (fr.any && !MODEL.hasMap) {
+    w.hidden = false;
+    w.textContent = 'Δεν φτάνει map_field: εμφανίζονται μόνο όσοι αγροί υπάρχουν στον πίνακα στόλου, χωρίς παραγωγό και χωρίς συνδέσεις ανά όργανο.';
+  } else if (typeof L !== 'undefined') w.hidden = true;
+}
+function renderAll() {
+  var v = visible(MODEL, UI.flt);
+  renderHonest();
+  renderFilters(v);
+  renderPanel();
+  drawMap(v);
+  renderNoPos(v);
+  renderResults(v);
+}
+function refresh() { MODEL = buildModel(RAW, Date.now()); renderAll(); }
+
+function renderLegend() {
+  var items = SEV.slice().reverse().concat([FSTATE.silent, FSTATE.gaps, FSTATE.noinst, FSTATE.nocalc, GSTATE.g_alive, GSTATE.g_sparse, GSTATE.g_nowit, GSTATE.g_unid, GSTATE.g_storage]);
+  var h = items.map(function (s) { return '<div class="i">' + chip(s) + '</div>'; }).join('');
+  h += '<div class="i"><span class="ln"></span> επιβεβαιωμένη λήψη</div><div class="i"><span class="ln d"></span> κοντά, χωρίς επιβεβαίωση</div>'
+    + '<div class="i">στρογγυλή πινέζα: αγρός</div><div class="i">τετράγωνη πινέζα: πύλη</div><div class="i">αριθμός στην πινέζα: εγγραφές στο ίδιο σημείο</div><div class="i">! : ύποπτη θέση</div>'
+    + '<div class="i">Κάποιοι σταθμοί σιωπούν κάθε νύχτα: οι ώρες αυτές είναι πραγματικές και φαίνονται ως ΜΕ ΚΕΝΑ.</div>';
+  $('legend').innerHTML = h;
+}
+
+/* ═══ ΣΥΜΒΑΝΤΑ ═══════════════════════════════════════════════════════════════ */
+function setFlt(k, v) { UI.flt[k] = v; renderAll(); }
+$('vAll').onclick = function () { setFlt('view', 'all'); };
+$('vGw').onclick = function () { setFlt('view', 'gw'); };
+$('vFields').onclick = function () { setFlt('view', 'fields'); };
+$('fProducer').onchange = function (e) { setFlt('producer', e.target.value); };
+$('fStatus').onchange = function (e) { setFlt('status', e.target.value); };
+$('fType').onchange = function (e) { setFlt('type', e.target.value); };
+$('fQ').oninput = function (e) { setFlt('q', String(e.target.value || '').trim()); };
+$('fNoCalc').onchange = function (e) { setFlt('nocalc', !!e.target.checked); };
+$('bClear').onclick = function () {
+  UI.flt = { view: 'all', producer: '', status: '', type: '', q: '', nocalc: true };
+  $('fQ').value = ''; $('fNoCalc').checked = true; UI.sel = null; renderAll();
+};
+$('bFit').onclick = function () {
+  if (UI.map && UI.lastPts && UI.lastPts.length) { try { UI.map.fitBounds(UI.lastPts, { padding: [36, 36], maxZoom: 13 }); } catch (e) {} }
+};
+document.addEventListener('click', function (e) {
+  var t = e.target.closest ? e.target.closest('[data-sel],[data-close]') : null;
+  if (!t) return;
+  if (t.hasAttribute('data-close')) { UI.sel = null; renderPanel(); drawMap(visible(MODEL, UI.flt)); return; }
+  var kind = t.getAttribute('data-sel'), key = t.getAttribute('data-key');
+  select_({ kind: kind, key: key });
+  var o = kind === 'gw' ? byKey(MODEL.gws, key) : (kind === 'field' ? byKey(MODEL.fields, key) : byKey(MODEL.groups, key));
+  if (kind !== 'gw' && o && o.p && UI.map) { UI.userMoved = true; UI.map.panTo([o.p.lat, o.p.lng]); }
+});
+
+/* ═══ ΕΚΚΙΝΗΣΗ ═════════════════════════════════════════════════════════════════ */
+function feed(data) {
+  if (!data) return;
+  var pts = [];
+  (Array.isArray(data) ? data : [data]).forEach(function (g) {
+    if (g && Array.isArray(g.result)) pts = pts.concat(g.result);
+    else if (g && g.variable) pts.push(g);
+  });
+  if (!pts.length) return;
+  ingestRows(RAW, pts);
+  UI.connected = true;
+  UI.started = true;
+  refresh();
+}
+function startLive() {
+  if (!(window.TagoIO && window.TagoIO.onStart)) {
+    UI.started = true;
+    renderAll();
+    var w = $('warn'); w.hidden = false;
+    w.textContent = 'Η σελίδα δεν τρέχει μέσα στο TagoIO: ο χάρτης λειτουργεί, τα δεδομένα όχι.';
+    return;
+  }
+  window.TagoIO.onStart(function (w) {
+    try {
+      var ps = (w && w.display && w.display.parameters) || [];
+      ps.forEach(function (p) {
+        if (p && p.key === 'gateway_names') { try { RAW.names = JSON.parse(String(p.value || '{}')) || {}; } catch (e) { RAW.names = {}; } }
+      });
+    } catch (e) {}
+    UI.started = true;
+    if (w && w.data) feed(w.data); else renderAll();
+    setTimeout(function () { try { if (UI.map) UI.map.invalidateSize(); } catch (e) {} }, 200);
+  });
+  window.TagoIO.onRealtime(function (d) { try { feed(d); } catch (e) {} });
+  window.TagoIO.ready();
+  /* Widget με λάθος μεταβλητές δεν καλεί ποτέ με δεδομένα: χωρίς αυτό η σελίδα θα περίμενε σιωπηλά για πάντα. */
+  setTimeout(function () { if (!UI.started) { UI.started = true; renderAll(); } }, 10000);
+}
+function startFixture() {
+  $('demo').hidden = false;
+  if (/[?&]theme=dark/.test(location.search)) document.documentElement.setAttribute('data-theme', 'dark');
+  fetch('../analysis/test/fixtures/sag_map_fixture.json').then(function (r) { return r.json(); }).then(function (fx) {
+    /* Οι ώρες μετατοπίζονται στο τώρα, αλλιώς το αρχείο θα έβγαζε πάντα κόκκινη λωρίδα. &stale=1: δείχνει τη λωρίδα. */
+    var shift = Date.now() - Date.parse(fx.base) - (/[?&]stale=1/.test(location.search) ? 3 * 36e5 : 0);
+    RAW.names = fx.names || {};
+    feed(fx.rows.map(function (r) {
+      var c = JSON.parse(JSON.stringify(r));
+      c.time = new Date(Date.parse(c.time) + shift).toISOString();
+      return c;
+    }));
+  }).catch(function () {
+    UI.started = true; renderAll();
+    var w = $('warn'); w.hidden = false; w.textContent = 'Το αρχείο δοκιμής δεν φορτώθηκε. Άνοιξε τη σελίδα από στατικό διακομιστή στη ρίζα του αποθετηρίου.';
+  });
+}
+
+/* Στον υπολογιστή τα φίλτρα είναι πάντα ανοιχτά (χωρίς κεφαλίδα), στο κινητό διπλωμένα. */
+var WIDE = window.matchMedia('(min-width: 901px)');
+var syncFilters = function () { $('filters').open = WIDE.matches; };
+syncFilters();
+if (WIDE.addEventListener) WIDE.addEventListener('change', syncFilters);
+renderLegend();
+initMap();
+renderAll();
+setInterval(renderHonest, 60000);   // η ηλικία των δεδομένων μεγαλώνει και χωρίς νέα εγγραφή: αυτό πιάνει το πάγωμα
+if (FIXTURE) startFixture();
+else {
+  var sdk = document.createElement('script');
+  sdk.src = SDK_URL;
+  sdk.onload = startLive;
+  sdk.onerror = startLive;
+  document.body.appendChild(sdk);
+}
+</script>
+</body>
+</html>

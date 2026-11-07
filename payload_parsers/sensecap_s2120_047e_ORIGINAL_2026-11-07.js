@@ -1,0 +1,25 @@
+/* This is a default example for payload parser.
+** The ignore_vars variable in this code should be used to ignore variables
+** from the device that you don't want.
+**
+** Testing:
+** You can do manual tests to this parse by using the Device Emulator. Copy and Paste the following code:
+** [{ "variable": "payload", "value": "0109611395" }]
+**
+*/
+// Add ignorable variables in this array.
+const ignore_vars = ['rf_chain', 'channel', 'modulation', 'app_id', 'dev_id', 'time', 'gtw_trusted', 'port'];
+
+// Remove unwanted variables.
+payload = payload.filter(x => !ignore_vars.includes(x.variable));
+console.log('payload: ', payload)
+// 4/10/2026 (P4, εντολή Μιχάλη): αφαιρέθηκε η σταθερή barometric_pressure_hpa = 1017.2 που προστιθόταν
+// σε ΚΑΘΕ uplink. Ο σταθμός στέλνει δική του πραγματική πίεση (π.χ. 1008.6) από τον connector.
+
+// You can edit any variable that's being added to your device.
+// For example, if you need to convert a variable from Fahrenheit to Celsius, uncomment the following code:
+// const temperature = payload.find(x => x.variable === "temperature");
+// if (temperature) {
+//   temperature.value = (5 / 9) * (temperature.value - 32);
+//   temperature.unit = "C";
+// }
