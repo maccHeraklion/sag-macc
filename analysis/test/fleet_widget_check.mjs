@@ -106,7 +106,7 @@ const CHECKS = [
   ["ΔΙΟΡΘΩΣΗ: σύνοψη ΧΩΡΙΣ γραμμές αγρών δεν ρίχνει πια στο παγωμένο δείγμα", f =>
     f.page.includes("if (!rows.length && !sum) return false;") && !f.page.includes("\n  if (!rows.length) return false;")],
   ["ΔΙΟΡΘΩΣΗ: καμία χρήση isFinite() σε ώρες σιωπής — μόνο Number.isFinite", f =>
-    !/\(isFinite\(d\.h\)/.test(f.page) && (f.page.match(/Number\.isFinite\(d\.h\) && d\.h > 48/g) || []).length === 3],
+    !/\(isFinite\(d\.h\)/.test(f.page) && (f.page.match(/Number\.isFinite\(d\.h\) && d\.h > 48/g) || []).length === 4],
   ["ΔΙΟΡΘΩΣΗ: η sev() εφαρμόζεται ΚΑΙ στο παγωμένο δείγμα", f =>
     /STATE\.rows = window\.SAG_DEMO\.map\(function \(r\) \{ r\.s = sev\(r\.s\); return r; \}\);/.test(f.page)],
   ["ΔΙΟΡΘΩΣΗ: η ετικέτα «Άνοιγμα όλων» γράφεται από το render (syncExpand), όχι μία φορά στο κλικ", f =>

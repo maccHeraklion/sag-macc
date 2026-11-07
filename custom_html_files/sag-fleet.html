@@ -537,7 +537,9 @@ function why(r) {
      που έχει να πει η γραμμή — πιο πάνω ΚΑΙ από τη χαλασμένη μπαταρία. Ο
      παραγωγός βλέπει παλιά κάρτα και νομίζει ότι είναι σημερινή. */
   if (r.e) return 'Ο υπολογισμός απέτυχε: ' + r.e;
-  if (r.nc) return 'Δεν έχει ρύθμιση στη φόρμα — δεν υπολογίζεται τίποτα γι\' αυτόν τον αγρό';
+  /* W-FLEET-NC-01: η σιωπή οργάνου προηγείται της έλλειψης ρύθμισης. Σταθμός και αυτοματισμός δεν έχουν ρύθμιση από σχεδιασμό. */
+  var ncDead = (r.d || []).some(function (d) { return d.q || (Number.isFinite(d.h) && d.h > 48); });
+  if (r.nc && !ncDead && (r.p || 'agronomy') === 'agronomy') return 'Δεν έχει ρύθμιση στη φόρμα — δεν υπολογίζεται τίποτα γι\' αυτόν τον αγρό';
   var kills = (r.z || []).filter(function (z) { return z.k; });
   var warns = (r.z || []).filter(function (z) { return !z.k; });
   /* Μια συσκευή που ΚΑΙ σιωπά ΚΑΙ έχει καταγεγραμμένη βλάβη δεν αναφέρεται δύο
@@ -606,7 +608,7 @@ function hB(n) { return n == null ? '—' : nf(Math.round(n)) + ' B'; }
 function healthRow(r) {
   var h = [];
   if (r.e) h.push('<span class="bad">Σφάλμα κύκλου: ' + esc(r.e) + '</span>');
-  if (r.nc) h.push('<span class="bad">Χωρίς ρύθμιση στη φόρμα</span>');
+  if (r.nc && (r.p || 'agronomy') === 'agronomy') h.push('<span class="bad">Χωρίς ρύθμιση στη φόρμα</span>');
   if (r.ok === 0 && !r.e && !r.nc) h.push('<span class="bad">Δεν γράφτηκε κάρτα</span>');
   if (r.ok === 1) h.push('<span>Κάρτα γράφτηκε' + (r.bb != null ? ' · ' + hB(r.bb) : '') + '</span>');
   if (r.bt) h.push('<span class="warn">Η κάρτα γέμισε — κόπηκαν παλιοί δείκτες</span>');

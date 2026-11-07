@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.187 · 2026-11-07';   // T-APPROVAL-01 (SIVANTO PRIME από την έγκριση ΥΠΑΑΤ 14670: ουσία flupyradifurone, πίνακας χρήσεων ανά καλλιέργεια, PHI ανά καλλιέργεια από την έγκριση, συνώνυμα δηλώσεων) · T-PHASE1-01 (εποχικά παράθυρα εντόμων και ασθενειών ελιάς, θερινή παύση δάκου, ώρες διαβροχής ανά θερμοκρασία με κλάσεις, ευπάθεια ουδέτερη, προστασία ψεκασμού ως το μεσοδιάστημα, τζιτζικάκια + ανθράκνωση κολοκυνθοειδών + C. coccodes) · T-PHASE0B-01 (ώρα υγρή από ΟΛΑ τα δείγματα του αισθητήρα φύλλου, διαβροχή φύλλων σε θερμοκήπιο, πύλη ξενιστή ανά θέση καλλιέργειας) · T-PHASE0-01 (σφάλματα: ώρα βροχής και όριο RH, κρίση σκιάς στα μεσάνυχτα, αισθητήρας φύλλου εκτός χώρου ή με μηδενικά, ώρες στο κείμενο, διπλή μέτρηση μυκήτων) · T-BOTRYTIS-HOSTS-01 (βοτρύτης: +σταφίδα, αγγούρι, κολοκύθι, μελιτζάνα, πατάτα, λάχανο, ροδακινιά — μόνο ξενιστές) · T-SOILWOUND-01 (μελάνωση και γομμώσεις στο εδαφογενές μοντέλο, έλκος καστανιάς σε μοντέλο πληγών) · T-LITVALUES-01 (τιμές βιβλιογραφίας: αλτερνάρια, ωίδια, φώμοψη, ανθράκνωση + παράθυρα ΠΚΠΦΠ Ηρακλείου) · T-NONFOLIAR-01 (7 ασθένειες ριζών/φλοιού εκτός μηχανής φύλλου) · T-RH-CAP-90-01 (όριο RH ≤ 90 για ασθένειες υγρού φύλλου) · T-LEAFWET-RH-01 (μετρημένο υγρό φύλλο υπερισχύει του ορίου RH· περονόσποροι/βοτρύτης: επιθεώρηση) · T-MILDEW-INSPECT-01 (ωίδιο: επιθεώρηση αντί εντολής ψεκασμού) · T-ECE-NOFALLBACK-01 (χωρίς εφεδρεία ×2,5) · T-COVERED-WX-01 (κείμενα παγετού/καύσωνα σε θερμοκήπιο) · T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
+const SAG_KERNEL_VERSION = 'v50.188 · 2026-11-07';   // T-APPROVAL-01 (SIVANTO PRIME από την έγκριση ΥΠΑΑΤ 14670: ουσία flupyradifurone, πίνακας χρήσεων ανά καλλιέργεια, PHI ανά καλλιέργεια από την έγκριση, συνώνυμα δηλώσεων) · T-PHASE1-01 (εποχικά παράθυρα εντόμων και ασθενειών ελιάς, θερινή παύση δάκου, ώρες διαβροχής ανά θερμοκρασία με κλάσεις, ευπάθεια ουδέτερη, προστασία ψεκασμού ως το μεσοδιάστημα, τζιτζικάκια + ανθράκνωση κολοκυνθοειδών + C. coccodes) · T-PHASE0B-01 (ώρα υγρή από ΟΛΑ τα δείγματα του αισθητήρα φύλλου, διαβροχή φύλλων σε θερμοκήπιο, πύλη ξενιστή ανά θέση καλλιέργειας) · T-PHASE0-01 (σφάλματα: ώρα βροχής και όριο RH, κρίση σκιάς στα μεσάνυχτα, αισθητήρας φύλλου εκτός χώρου ή με μηδενικά, ώρες στο κείμενο, διπλή μέτρηση μυκήτων) · T-BOTRYTIS-HOSTS-01 (βοτρύτης: +σταφίδα, αγγούρι, κολοκύθι, μελιτζάνα, πατάτα, λάχανο, ροδακινιά — μόνο ξενιστές) · T-SOILWOUND-01 (μελάνωση και γομμώσεις στο εδαφογενές μοντέλο, έλκος καστανιάς σε μοντέλο πληγών) · T-LITVALUES-01 (τιμές βιβλιογραφίας: αλτερνάρια, ωίδια, φώμοψη, ανθράκνωση + παράθυρα ΠΚΠΦΠ Ηρακλείου) · T-NONFOLIAR-01 (7 ασθένειες ριζών/φλοιού εκτός μηχανής φύλλου) · T-RH-CAP-90-01 (όριο RH ≤ 90 για ασθένειες υγρού φύλλου) · T-LEAFWET-RH-01 (μετρημένο υγρό φύλλο υπερισχύει του ορίου RH· περονόσποροι/βοτρύτης: επιθεώρηση) · T-MILDEW-INSPECT-01 (ωίδιο: επιθεώρηση αντί εντολής ψεκασμού) · T-ECE-NOFALLBACK-01 (χωρίς εφεδρεία ×2,5) · T-COVERED-WX-01 (κείμενα παγετού/καύσωνα σε θερμοκήπιο) · T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -9139,6 +9139,7 @@ function _sagRunReset() {
   _SAG_RUN_CACHE.miss = 0;
   _SAG_RUN_CACHE.recSaved = 0;
   _SAG_FLEET.length = 0;   // T-FLEET-REPORT-01
+  _SAG_NC_ALL = null;      // T-FLEET-NC-01
   _SAG_SHADOW.length = 0;  // T-SHADOW-HOUR-01
   _sagHpReset();           // T-HOURPACKET-01
   _SAG_LAST_BUNDLE = null;  // T-FLEET-HEALTH-01
@@ -17634,6 +17635,57 @@ function _sagFieldPurpose(field) {
   return SAG_FIELD_PURPOSES.indexOf(v) >= 0 ? v : 'agronomy';
 }
 
+/* ══ T-FLEET-NC-01 (v50.188 · 7/11/2026) · ΤΑ ΟΡΓΑΝΑ ΤΩΝ ΕΓΓΡΑΦΩΝ ΧΩΡΙΣ ΡΥΘΜΙΣΗ ═══
+   ΤΟ ΕΥΡΗΜΑ (7/11): όποια εγγραφή δεν έχει ρύθμιση φόρμας έμπαινε στον πίνακα με κενή λίστα
+   οργάνων, άρα η σιωπή της δεν κρινόταν ποτέ. 11 ζώνες του ξενοδοχείου έδειχναν ΕΝΤΑΞΕΙ με
+   τα όργανά τους σιωπηλά 85 ώρες, και ένας νεκρός σταθμός καιρού θα έδειχνε το ίδιο.
+   Μόνο ο πίνακας στόλου αλλάζει. Τίποτα δεν υπολογίζεται και τίποτα δεν γράφεται σε αγρό.
+   ΜΙΑ λίστα συσκευών ανά εκτέλεση, και μόνο αν υπάρχει τέτοια εγγραφή. Αν αποτύχει, μένει ό,τι
+   ίσχυε (κενή λίστα) και ο κύκλος συνεχίζει. */
+let _SAG_NC_ALL = null;
+function _sagNcIds(devices) {
+  const out = [];
+  const walk = (v) => {
+    if (Array.isArray(v)) { v.forEach(walk); return; }
+    if (v && typeof v === 'object') { Object.values(v).forEach(walk); return; }
+    const s = String(v == null ? '' : v).trim();
+    if (/^[0-9a-f]{24}$/i.test(s) && out.indexOf(s) < 0) out.push(s);
+  };
+  walk(devices);
+  return out;
+}
+function _sagNcRows(ids, all, nowMs) {
+  const out = [];
+  for (const id of ids) {
+    const e = all.get(id);
+    if (!e) continue;
+    const t = e.li ? new Date(e.li).getTime() : NaN;
+    out.push({ n: e.n, i: id.slice(-6), h: Number.isFinite(t) ? Math.round((nowMs - t) / 360000) / 10 : null,
+      q: 0, b: null, l: 0, t: e.t });
+  }
+  return out;
+}
+async function _sagNcInventory(account, devices, nowMs) {
+  const ids = _sagNcIds(devices);
+  if (!ids.length) return [];
+  if (!_SAG_NC_ALL) {
+    const all = new Map();
+    try {
+      for (let page = 1; page <= 20; page++) {
+        const b = await account.devices.list({ page, amount: 100, fields: ['id', 'name', 'tags', 'last_input'] });
+        if (!Array.isArray(b) || !b.length) break;
+        for (const d of b) {
+          const ty = (d.tags || []).find((x) => x && x.key === 'type');
+          all.set(String(d.id), { n: d.name, li: d.last_input || null, t: (ty && ty.value) || null });
+        }
+        if (b.length < 100) break;
+      }
+    } catch (_eNcL) { console.log('[T-FLEET-NC-01] η λίστα συσκευών απέτυχε: ' + (_eNcL && _eNcL.message)); }
+    _SAG_NC_ALL = all;
+  }
+  return _sagNcRows(ids, _SAG_NC_ALL, nowMs);
+}
+
 // ── T-FLEET-HEALTH-01 (v50.143 · 19/9/2026) · ΥΓΕΙΑ ΣΥΣΤΗΜΑΤΟΣ ΣΤΟΝ ΠΙΝΑΚΑ ──
 // ΤΟ ΕΥΡΗΜΑ (19/9): το sag-fleet.html είχε μετακινηθεί σε backup στις 16/9 και ο
 // πίνακας ήταν άδειος επί 3 ημέρες — και ΚΑΝΕΝΑΣ δεν το είδε, γιατί ο πίνακας
@@ -19619,8 +19671,9 @@ module.exports = new Analysis(async (context) => {
                φαίνονται τα όργανά τους) αλλά ΔΕΝ τους χρεώνουμε δουλειά γραφείου
                για κάτι που δεν ζητήθηκε ποτέ. */
             const _ncPurpose = _sagFieldPurpose(fields[i]);
+            const _ncInv = await _sagNcInventory(account, devices, Date.now());   // T-FLEET-NC-01
             _SAG_FLEET.push({ f: fieldName, i: String(fields[i]?.id || '').slice(-6), y: null, x: null,
-              d: [], k: [], v: [], a: [], z: [],
+              d: _ncInv, k: [], v: [], a: [], z: [],
               g: _ncPurpose === 'agronomy' ? ['ρύθμιση αγρού από τη φόρμα (καμία)'] : [],
               p: _ncPurpose, nc: 1 });
           } catch (_eNc) {}

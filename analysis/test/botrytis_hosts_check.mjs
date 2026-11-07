@@ -56,7 +56,7 @@ function run(src, w) {
   let K; try { K = loadCore(src); } catch (e) { return ["φόρτωση πυρήνα: " + e.message]; }
   try {
     const BC = "botrytis_cinerea";
-    ok(K.SAG_KERNEL_VERSION === "v50.187 · 2026-11-07", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.188 · 2026-11-07", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     const p = Object.values(K.PATHOGEN_PROFILE).map((c) => c && c[BC]).find(Boolean);
     const has = (g, c) => p.crops.some((x) => x.cultivation_type_general === g && x.cultivation_type === c);
     ok(NEW.every(([g, c]) => has(g, c)), "Π1 οι 7 νέοι ξενιστές στο προφίλ (λείπουν: " + NEW.filter(([g, c]) => !has(g, c)).map((x) => x[1]).join(",") + ")");
