@@ -347,8 +347,11 @@ function scenariosPage(HTML) {
   // Θ · φίλτρα: κάθε αριθμός λέει ό,τι θα δεις
   const F0 = { view: "all", producer: "", status: "", type: "", q: "", nocalc: true };
   const V = (o) => S.visible(M, { ...F0, ...o });
-  want("Θ1 Όλα", [V({}).gws.length, V({}).fields.length], [M.gws.length, M.fields.length]);
-  want("Θ2 Μόνο πύλες", [V({ view: "gw" }).fields.length, V({ view: "gw" }).gws.length], [0, M.gws.length]);
+  const NS = M.gws.filter((g) => g.st.k !== "g_storage").length;
+  want("Θ1 Όλα, χωρίς αποθήκη", [V({}).gws.length, V({}).fields.length], [NS, M.fields.length]);
+  want("Θ2 Μόνο πύλες, χωρίς αποθήκη", [V({ view: "gw" }).fields.length, V({ view: "gw" }).gws.length], [0, NS]);
+  want("Θ2β αποθήκη μόνο με φίλτρο", [V({ view: "gw", status: "g_storage" }).gws.length, M.gws.length - NS > 0], [M.gws.length - NS, true]);
+  want("Θ2γ μετρητές πυλών", [M.cover.gwNet + M.cover.gwUnid + M.cover.gwStore >= M.gws.length - M.gws.filter((g) => g.net && g.st.k === "g_storage").length, M.cover.gwStore], [true, M.gws.length - NS]);
   want("Θ3 Μόνο αγροί", [V({ view: "fields" }).gws.length, V({ view: "fields" }).fields.length], [0, M.fields.length]);
   const c0 = S.optionCounts(M, F0);
   for (const [p, n] of Object.entries(c0.producer)) want("Θ4 αριθμός παραγωγού " + p, V({ producer: p }).fields.length, n);
@@ -373,7 +376,7 @@ function scenariosPage(HTML) {
   want("Ι1 χωρίς θέση: πύλες", ["Πύλη DEMO00A3", "Πύλη DEMO00A6"].every((n) => all.some((x) => x.name === n)), true);
   want("Ι2 χωρίς θέση: αγροί", ["Δοκ Χωρίς Θέση", "Δοκ Μηδενική Φόρμα"].every((n) => all.some((x) => x.name === n)), true);
   want("Ι3 χωρίς θέση με λόγο", all.every((x) => x.why), true);
-  want("Ι4 σύνολο = πινέζες + λίστα", all.length + M.fields.filter((f) => f.p).length + M.gws.filter((g) => g.p).length, M.fields.length + M.gws.length);
+  want("Ι4 σύνολο = πινέζες + λίστα", all.length + M.fields.filter((f) => f.p).length + M.gws.filter((g) => g.p && g.st.k !== "g_storage").length, M.fields.length + NS);
 
   // Κ · διαφάνεια
   const fr = (h) => S.freshness(M, Date.parse(FIX.base) + h * 36e5).srcs.map((s) => s.stale);

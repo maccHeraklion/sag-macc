@@ -538,7 +538,9 @@ function buildModel(raw, now) {
   };
   return { fields: fields, gws: gws, groups: groups, times: times, hasMap: times.map > 0,
     cover: { gwPos: gws.filter(function (g) { return g.posKind === 'ok'; }).length, gwSus: gws.filter(function (g) { return g.posKind === 'suspect'; }).length,
-      gwAll: gws.length, seen: num(md.sensors_seen), sensorsAll: num(md.sensors_total), known: known, total: total, st: st, stKnown: stKnown,
+      gwAll: gws.length, gwNet: gws.filter(function (g) { return g.net; }).length, gwAlive: gws.filter(function (g) { return g.st.k === 'g_alive'; }).length,
+      gwUnid: gws.filter(function (g) { return !g.net && g.st.k !== 'g_storage'; }).length, gwStore: gws.filter(function (g) { return g.st.k === 'g_storage'; }).length,
+      seen: num(md.sensors_seen), sensorsAll: num(md.sensors_total), known: known, total: total, st: st, stKnown: stKnown,
       fSus: fields.filter(function (f) { return f.suspect; }).length, bad: raw.bad } };
 }
 /* Τι λείπει ή έχει παλιώσει. Κάθε πηγή κρίνεται χωριστά: ο πυρήνας και η ανάλυση πυλών είναι διαφορετικές εκτελέσεις. */
@@ -575,6 +577,8 @@ function gatewayPass(g, flt, skip, passKeys) {
     return skip === 'type' || !flt.type || g.heard[k].devs.some(function (d) { return d.label === flt.type; });
   });
   if (fieldSide && !hears) return false;
+  /* Έλεγχος 7/11 με πραγματικά δεδομένα: οι πύλες της αποθήκης φούσκωναν τον στόλο. Φαίνονται μόνο αν ζητηθούν από το φίλτρο κατάστασης. */
+  if (skip !== 'status' && g.st.k === 'g_storage' && flt.status !== 'g_storage') return false;
   if (skip !== 'status' && isGwStatus(flt.status) && g.keys.indexOf(flt.status) < 0) return false;
   if (flt.q && !hears) {
     if (fold([g.name, g.code, g.dev, g.nameGuess].join(' ')).indexOf(fold(flt.q)) < 0) return false;
@@ -1085,7 +1089,9 @@ function renderHonest() {
   fr.srcs.forEach(function (s) {
     parts.push('<span>' + esc(s.n) + ': <b>' + (s.t ? esc(clock(s.t)) + '</b> (' + esc(ageWords(s.h)) + ')' : '—</b>') + '</span>');
   });
-  parts.push('<span>Πύλες με θέση: <b>' + c.gwPos + ' από ' + c.gwAll + '</b>' + (c.gwSus ? ' (+' + c.gwSus + ' ύποπτες)' : '') + '</span>');
+  /* Δύο διαφορετικές μετρήσεις, ποτέ ένα άθροισμα: μια δηλωμένη πύλη χωρίς ταυτοποίηση μπορεί να είναι η ίδια με μια ορατή. */
+  parts.push('<span>Πύλες που βλέπει το δίκτυο: <b>' + c.gwNet + '</b> (' + c.gwAlive + ' ζωντανές)</span>');
+  parts.push('<span>Δηλωμένες χωρίς ταυτοποίηση: <b>' + c.gwUnid + '</b> · στην αποθήκη: <b>' + c.gwStore + '</b></span>');
   var seen = Number.isFinite(c.seen) && Number.isFinite(c.sensorsAll) && c.sensorsAll > 0;
   parts.push('<span>Αισθητήρες με γνωστή πύλη: <b>' + (seen ? c.seen + ' από ' + c.sensorsAll : '—') + '</b>'
     + (c.total ? ' (στους αγρούς ' + c.known + ' από ' + c.total + ')' : '') + '</span>');
@@ -1128,7 +1134,9 @@ function renderLegend() {
 }
 
 /* ═══ ΣΥΜΒΑΝΤΑ ═══════════════════════════════════════════════════════════════ */
-function setFlt(k, v) { UI.flt[k] = v; renderAll(); }
+function setFlt(k, v) { UI.flt[k] = v; refit(); renderAll(); }
+/* Κάθε αλλαγή φίλτρου φέρνει τον χάρτη στα αποτελέσματα: φίλτρο παραγωγού που δείχνει άλλη περιοχή μοιάζει με κενό αποτέλεσμα. */
+function refit() { UI.userMoved = false; UI.fitN = null; }
 $('vAll').onclick = function () { setFlt('view', 'all'); };
 $('vGw').onclick = function () { setFlt('view', 'gw'); };
 $('vFields').onclick = function () { setFlt('view', 'fields'); };
@@ -1139,7 +1147,7 @@ $('fQ').oninput = function (e) { setFlt('q', String(e.target.value || '').trim()
 $('fNoCalc').onchange = function (e) { setFlt('nocalc', !!e.target.checked); };
 $('bClear').onclick = function () {
   UI.flt = { view: 'all', producer: '', status: '', type: '', q: '', nocalc: true };
-  $('fQ').value = ''; $('fNoCalc').checked = true; UI.sel = null; renderAll();
+  $('fQ').value = ''; $('fNoCalc').checked = true; UI.sel = null; refit(); renderAll();
 };
 $('bFit').onclick = function () {
   if (UI.map && UI.lastPts && UI.lastPts.length) { try { UI.map.fitBounds(UI.lastPts, { padding: [36, 36], maxZoom: 13 }); } catch (e) {} }
