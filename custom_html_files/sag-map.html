@@ -142,6 +142,7 @@ details > summary { cursor: pointer; font-weight: 680; }
 .pin.gw { border-radius: 5px; width: 30px; height: 30px; border-color: #111; }
 .pin svg { width: 18px; height: 18px; display: block; }
 .pin.gw svg { width: 21px; height: 21px; }
+.pin.gw.p-grey:not(.sel):not(.mini) { transform: scale(.8); opacity: .8; }
 .pin.mini { display: inline-flex; flex: none; width: 22px; height: 22px; box-shadow: none; }
 .pin.mini svg { width: 14px; height: 14px; }
 .pin.grp { width: 32px; height: 32px; font-size: 13px; }
@@ -291,6 +292,10 @@ function badgeOf(s, ss) {
   if (ss) return ss.ic;
   return (s.c === 'ok' || s.k === 'nocalc' || s.k === 'noinst') ? null : s.ic;
 }
+/* Σειρά στον χάρτη: μπροστά ό,τι χρειάζεται προσοχή. Μια ζωντανή πύλη δεν σκεπάζει αγρό με πρόβλημα, μια πύλη χωρίς ταυτοποίηση δεν σκεπάζει κανέναν. */
+var PIN_TOP = 5000;
+function gwZ(g) { return { g_nowit: 3000, g_sparse: 2000, g_alive: 500, g_unid: -500, g_storage: -1000 }[g.st.k] || 0; }
+function fieldsZ(list) { return Math.round(list.reduce(function (a, f) { return Math.max(a, trouble(f)); }, 0) * 1000); }
 function instrState(d) {
   if (d.q) return ISTATE.silent;
   if (typeof d.h !== 'number' || !Number.isFinite(d.h)) return ISTATE.unknown;
@@ -862,7 +867,8 @@ function drawMap(v) {
     else { s = groupState(list); text = String(list.length); sub = badgeOf(s, null); }
     var label = single ? (kind.w + ' ' + list[0].name + ': ' + s.w) : (list.length + ' εγγραφές στο ίδιο σημείο, χειρότερη: ' + s.w);
     if (grp.suspect) label += ' · ύποπτη θέση';
-    var m = L.marker([grp.p.lat, grp.p.lng], { icon: pinIcon(s, single ? 'f' : 'grp', text, sub, grp.suspect, isSel, kind ? kind.svg : null), title: label, alt: label, riseOnHover: true });
+    var m = L.marker([grp.p.lat, grp.p.lng], { icon: pinIcon(s, single ? 'f' : 'grp', text, sub, grp.suspect, isSel, kind ? kind.svg : null), title: label, alt: label,
+      zIndexOffset: isSel ? PIN_TOP : fieldsZ(list), riseOnHover: true, riseOffset: PIN_TOP + 1000 });
     m.on('click', function () { select_(single ? { kind: 'field', key: list[0].key } : { kind: 'group', key: grp.key }); reveal('panel'); });
     m.addTo(UI.layer);
     pts.push([grp.p.lat, grp.p.lng]);
@@ -874,7 +880,7 @@ function drawMap(v) {
     if (!g.p) return;
     var label = g.name + ': ' + g.st.w + (g.posKind === 'suspect' ? ' · ύποπτη θέση' : '');
     var m = L.marker([g.p.lat, g.p.lng], { icon: pinIcon(g.st, 'gw', 'Πύλη', badgeOf(g.st, null), g.posKind === 'suspect', !!selGw && selGw === g, GW_SVG),
-      title: label, alt: label, zIndexOffset: 1000, riseOnHover: true });
+      title: label, alt: label, zIndexOffset: (!!selGw && selGw === g) ? PIN_TOP : gwZ(g), riseOnHover: true, riseOffset: PIN_TOP + 1000 });
     m.on('click', function () { select_({ kind: 'gw', key: g.key }); reveal('panel'); });
     m.addTo(UI.layer);
     pts.push([g.p.lat, g.p.lng]);
