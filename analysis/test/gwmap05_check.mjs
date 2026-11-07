@@ -58,8 +58,7 @@ const r = check(AN0, H0); for (const b of r) console.log("ΑΠΟΤΥΧΙΑ", b);
 console.log(r.length ? "ΑΠΟΤΥΧΙΑ" : "ΟΚ ανάλυση και σελίδα");
 const MUT = [
   ["AN", "if (!(e[c] >= h)) e[c] = h;", "e[c] = h;"], ["AN", "c !== String(latest)", "true"], ["AN", ".sort((a, b) => e[b] - e[a])", ""], ["AN", 'code === ""', "false"],
-  ["AN", "if (Array.isArray(l)) for (const e of l) if (Array.isArray(e)) noteHeard(heard, id, e[0], x.time);", ""], ["AN", "if (Array.isArray(e)) noteHeard", "noteHeard"], ["AN", "  noteHeard(heard, id, x.value, x.time);
-  const l", "  const l"], ["AN", "|| !Number.isFinite(h)", ""], ["AN", "if (heard[k][c] < cut) delete heard[k][c];", ""], ["AN", "if (!Object.keys(heard[k]).length) delete heard[k];", ""],
+  ["AN", "if (Array.isArray(l)) for (const e of l) if (Array.isArray(e)) noteHeard(heard, id, e[0], x.time);", ""], ["AN", "if (Array.isArray(e)) noteHeard", "noteHeard"], ["AN", "  noteHeard(heard, id, x.value, x.time);\n  const l", "  const l"], ["AN", "|| !Number.isFinite(h)", ""], ["AN", "if (heard[k][c] < cut) delete heard[k][c];", ""], ["AN", "if (!Object.keys(heard[k]).length) delete heard[k];", ""],
   ["AN", "&& heard[k][c] < newest", ""],
   ["H", "[d.g].concat((d.gs || []).map(function (x) { return x[0]; }))", "[d.g]"], ["H", "f.gws[g.key] = g;\n      });\n    });", "});\n    });"], ["H", "var g = code ? byCode[code] : null;\n        if (!g) return;", "var g = byCode[code];"],
 ];
