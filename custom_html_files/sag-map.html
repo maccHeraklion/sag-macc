@@ -86,14 +86,17 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 720; letter-spacing: -.01em; }
 .result b { color: var(--tx); }
 
 /* ── ΔΙΑΤΑΞΗ ────────────────────────────────────────────────────── */
-.layout { display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 10px; align-items: start; }
+/* 7/11, Μιχάλης: ο χάρτης πιάνει όλο το πλάτος και οι πίνακες μπαίνουν από κάτω. */
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; align-items: start; }
 .mapwrap { position: relative; }
 #map { height: min(72vh, 760px); min-height: 380px; border-radius: 10px; border: 1px solid var(--line); background: var(--s3); }
 .leaflet-container { font: inherit; }
 #mapveil { position: absolute; inset: 0; z-index: 800; display: flex; align-items: flex-end; justify-content: center;
   padding-bottom: 14px; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 #mapveil span { background: rgba(17,24,39,.85); color: #fff; font-size: .8rem; padding: 7px 13px; border-radius: 999px; }
-.side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.side { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; min-width: 0; align-items: start; }
+#panel { grid-column: 1 / -1; }
+#panel .list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 0 14px; }
 .card { background: var(--s2); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; box-shadow: var(--shadow); min-width: 0; }
 .card h2 { margin: 0 0 2px; font-size: 1.02rem; font-weight: 700; overflow-wrap: anywhere; }
 .card h3 { margin: 12px 0 5px; font-size: .74rem; font-weight: 750; letter-spacing: .05em; text-transform: uppercase; color: var(--tx3); }
@@ -831,7 +834,7 @@ function drawMap(v) {
     var label = single ? (list[0].name + ': ' + s.w) : (list.length + ' εγγραφές στο ίδιο σημείο, χειρότερη: ' + s.w);
     if (grp.suspect) label += ' · ύποπτη θέση';
     var m = L.marker([grp.p.lat, grp.p.lng], { icon: pinIcon(s, single ? 'f' : 'grp', text, sub, grp.suspect, isSel), title: label, alt: label, riseOnHover: true });
-    m.on('click', function () { select_(single ? { kind: 'field', key: list[0].key } : { kind: 'group', key: grp.key }); });
+    m.on('click', function () { select_(single ? { kind: 'field', key: list[0].key } : { kind: 'group', key: grp.key }); reveal('panel'); });
     m.addTo(UI.layer);
     pts.push([grp.p.lat, grp.p.lng]);
   });
@@ -843,7 +846,7 @@ function drawMap(v) {
     var label = g.name + ': ' + g.st.w + (g.posKind === 'suspect' ? ' · ύποπτη θέση' : '');
     var m = L.marker([g.p.lat, g.p.lng], { icon: pinIcon(g.st, 'gw', g.st.ic, null, g.posKind === 'suspect', !!selGw && selGw === g),
       title: label, alt: label, zIndexOffset: 1000, riseOnHover: true });
-    m.on('click', function () { select_({ kind: 'gw', key: g.key }); });
+    m.on('click', function () { select_({ kind: 'gw', key: g.key }); reveal('panel'); });
     m.addTo(UI.layer);
     pts.push([g.p.lat, g.p.lng]);
   });
@@ -1021,6 +1024,10 @@ function frameGateway(g) {
     UI.map.fitBounds(pts, { padding: [40, 40], maxZoom: 13 });
   } catch (e) {}
 }
+/* Ο πίνακας είναι κάτω από τον χάρτη: κλικ σε πινέζα τον φέρνει στο οπτικό πεδίο, κλικ στη λίστα φέρνει πίσω τον χάρτη. */
+function reveal(id) {
+  try { var el = $(id); if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: id === 'map' ? 'start' : 'nearest' }); } catch (e) {}
+}
 function select_(s) {
   var same = UI.sel && UI.sel.kind === s.kind && UI.sel.key === s.key;
   UI.sel = s;
@@ -1168,6 +1175,7 @@ document.addEventListener('click', function (e) {
   select_({ kind: kind, key: key });
   var o = kind === 'gw' ? byKey(MODEL.gws, key) : (kind === 'field' ? byKey(MODEL.fields, key) : byKey(MODEL.groups, key));
   if (kind !== 'gw' && o && o.p && UI.map) { UI.userMoved = true; UI.map.panTo([o.p.lat, o.p.lng]); }
+  if (o && o.p) reveal('map');
 });
 
 /* ═══ ΕΚΚΙΝΗΣΗ ═════════════════════════════════════════════════════════════════ */
