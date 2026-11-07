@@ -47,6 +47,12 @@ try {
       if (_ref) _rec.time = _ref.time;
       const _la = Number(_up.LrrLAT), _lo = Number(_up.LrrLON);
       if (Number.isFinite(_la) && Number.isFinite(_lo) && _la !== 0 && _lo !== 0) _rec.location = { lat: _la, lng: _lo };
+      /* T-GWMAP-06: ΟΛΕΣ οι πύλες που άκουσαν αυτό το πακέτο, στο metadata της ίδιας εγγραφής: 0 επιπλέον εγγραφές. */
+      const _lr = _up.Lrrs && _up.Lrrs.Lrr;
+      const _ls = (Array.isArray(_lr) ? _lr : (_lr ? [_lr] : [])).filter((x) => x && x.Lrrid).slice(0, 12)
+        .map((x) => [String(x.Lrrid), Number.isFinite(Number(x.LrrRSSI)) ? Number(x.LrrRSSI) : null, Number.isFinite(Number(x.LrrSNR)) ? Number(x.LrrSNR) : null]);
+      if (_ls.length) _rec.metadata = { lrrs: _ls };
+      else if (Object.keys(_up).length > 1) _rec.metadata = { lrrs_keys: Object.keys(_up).slice(0, 40).join(',').slice(0, 400) };   // προσωρινό: ονόματα κλειδιών, ποτέ τιμές
       payload.push(_rec);
     } else {
       // προσωρινό διαγνωστικό της δοκιμής: ονόματα κλειδιών μόνο, ποτέ τιμές

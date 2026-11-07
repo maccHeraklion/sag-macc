@@ -420,6 +420,13 @@ function noteHeard(heard, id, code, time) {
   const k = heardKey(id), c = String(code), e = heard[k] || (heard[k] = {});
   if (!(e[c] >= h)) e[c] = h;
 }
+/* T-GWMAP-06: όπου ο parser κρατά τη λίστα του δικτύου (metadata.lrrs), μετράνε ΟΛΕΣ οι πύλες του πακέτου, όχι μόνο η καλύτερη. */
+function noteRow(heard, id, x) {
+  if (!x) return;
+  noteHeard(heard, id, x.value, x.time);
+  const l = x.metadata && x.metadata.lrrs;
+  if (Array.isArray(l)) for (const e of l) if (Array.isArray(e)) noteHeard(heard, id, e[0], x.time);
+}
 function pruneHeard(heard, now) {
   const cut = hourOf(now) - HEARD_TTL_H;
   for (const k of Object.keys(heard)) {
@@ -568,7 +575,7 @@ async function loadState() {
       const idRow = pick("lrrid");
       if (!idRow || idRow.value === undefined || idRow.value === null) continue;
       stillKnown.push(id);
-      if (heard) for (const x of rows || []) if (x && x.variable === "lrrid") noteHeard(heard, id, x.value, x.time);
+      if (heard) for (const x of rows || []) if (x && x.variable === "lrrid") noteRow(heard, id, x);
       const key = String(idRow.value);
       const g = gw.get(key) || { n: 0, last: null, lat: null, lon: null, rssi: null, snr: null, devs: [], list: [] };
       g.n++;
@@ -595,7 +602,7 @@ async function loadState() {
         const id = stillKnown[si++];
         try {
           const hist = await api(`/device/${id}/data?variables[]=lrrid&qty=${HEARD_SEED_QTY}`); reads++;
-          for (const x of hist || []) noteHeard(heard, id, x.value, x.time);
+          for (const x of hist || []) noteRow(heard, id, x);
         } catch (e) { /* το όργανο θα γεμίσει σταδιακά */ }
       }
     }));

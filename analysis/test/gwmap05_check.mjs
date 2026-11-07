@@ -12,7 +12,7 @@ const A = "abcdef000000000000000001", B = "abcdef000000000000000002";
 function pure(AN) {
   const start = AN.indexOf("const HEARD_TTL_H"), end = AN.indexOf("// ═══ T-GWMAP-04 (ΤΕΛΟΣ)");
   const sb = {}; vm.createContext(sb);
-  vm.runInContext(AN.slice(start, end) + "\nglobalThis.X = { noteHeard, pruneHeard, heardList, HEARD_MAX_CHARS };", sb);
+  vm.runInContext(AN.slice(start, end) + "\nglobalThis.X = { noteHeard, noteRow, pruneHeard, heardList, HEARD_MAX_CHARS };", sb);
   return sb.X;
 }
 function linkOf(H) {
@@ -39,6 +39,10 @@ function check(AN, H) {
   X.pruneHeard(big, NOW);
   want("όριο μεγέθους", JSON.stringify(big).length <= X.HEARD_MAX_CHARS || Object.keys(big).every((k) => Object.keys(big[k]).length === 1), true);
   want("κρατά την πιο πρόσφατη κάθε οργάνου", Object.keys(big).every((k) => big[k]["1000AAAA"] !== undefined), true);
+  const lr = {}; X.noteRow(lr, A, { value: "1000AAAA", time: iso(1), metadata: { lrrs: [["1000AAAA", -90, 8], ["1000BBBB", -110, 1], "χάλια", [null, 1]] } });
+  want("όλες οι πύλες του πακέτου", X.heardList(lr, A, "1000AAAA", NOW), [["1000BBBB", 1]]);
+  X.noteRow(lr, B, { value: "1000CCCC", time: iso(1) }); X.noteRow(lr, B, null);
+  want("χωρίς λίστα μένει η μία", X.heardList(lr, B, null, NOW).map((x) => x[0]), ["1000CCCC"]);
   const link = linkOf(H);
   const g1 = { key: "a", code: "1000AAAA", heard: {}, rowFields: [], orphans: [] }, g2 = { key: "b", code: "1000BBBB", heard: {}, rowFields: [], orphans: [] };
   const d = { g: "1000AAAA", gs: [["1000BBBB", 5], ["1000ZZZZ", 7]] }, f = { key: "f", name: "Α", devs: [d], gws: {} };
@@ -54,7 +58,8 @@ const r = check(AN0, H0); for (const b of r) console.log("ΑΠΟΤΥΧΙΑ", b);
 console.log(r.length ? "ΑΠΟΤΥΧΙΑ" : "ΟΚ ανάλυση και σελίδα");
 const MUT = [
   ["AN", "if (!(e[c] >= h)) e[c] = h;", "e[c] = h;"], ["AN", "c !== String(latest)", "true"], ["AN", ".sort((a, b) => e[b] - e[a])", ""], ["AN", 'code === ""', "false"],
-  ["AN", "|| !Number.isFinite(h)", ""], ["AN", "if (heard[k][c] < cut) delete heard[k][c];", ""], ["AN", "if (!Object.keys(heard[k]).length) delete heard[k];", ""],
+  ["AN", "if (Array.isArray(l)) for (const e of l) if (Array.isArray(e)) noteHeard(heard, id, e[0], x.time);", ""], ["AN", "if (Array.isArray(e)) noteHeard", "noteHeard"], ["AN", "  noteHeard(heard, id, x.value, x.time);
+  const l", "  const l"], ["AN", "|| !Number.isFinite(h)", ""], ["AN", "if (heard[k][c] < cut) delete heard[k][c];", ""], ["AN", "if (!Object.keys(heard[k]).length) delete heard[k];", ""],
   ["AN", "&& heard[k][c] < newest", ""],
   ["H", "[d.g].concat((d.gs || []).map(function (x) { return x[0]; }))", "[d.g]"], ["H", "f.gws[g.key] = g;\n      });\n    });", "});\n    });"], ["H", "var g = code ? byCode[code] : null;\n        if (!g) return;", "var g = byCode[code];"],
 ];
