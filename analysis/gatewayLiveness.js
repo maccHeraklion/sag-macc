@@ -83,6 +83,10 @@ function rosterEntry(d) {
   if (seen.length) { e.lat = Number(seen[0].lat.toFixed(6)); e.lng = Number(seen[0].lng.toFixed(6)); }
   if (seen.length > 1) e.conflict = 1;
   if (val("deployedGateway") !== "yes") e.storage = true;
+  // T-GWMAP-10: δηλωμένη πύλη χωρίς πακέτο στο ThingPark. Μόνο πλήρης ημερομηνία, αλλιώς αγνοείται.
+  const off = val("network_last_uplink"), lrr = val("network_lrrid");
+  if (/^\d{4}-\d{2}-\d{2}$/.test(off)) e.off = off;
+  if (lrr) e.lrr = lrr;
   return e;
 }
 

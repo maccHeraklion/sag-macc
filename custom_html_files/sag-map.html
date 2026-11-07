@@ -209,6 +209,7 @@ var GSTATE = {
   g_alive: { k: 'g_alive', w: 'ΛΕΙΤΟΥΡΓΕΙ', ic: '✓', c: 'ok' },
   g_sparse: { k: 'g_sparse', w: 'ΑΡΑΙΟΣ ΜΑΡΤΥΡΑΣ', ic: '◐', c: 'office' },
   g_nowit: { k: 'g_nowit', w: 'ΧΩΡΙΣ ΠΡΟΣΦΑΤΟ ΜΑΡΤΥΡΑ', ic: '✕', c: 'visit' },
+  g_off: { k: 'g_off', w: 'ΕΚΤΟΣ ΔΙΚΤΥΟΥ', ic: '✕', c: 'check' },
   g_unid: { k: 'g_unid', w: 'ΧΩΡΙΣ ΤΑΥΤΟΠΟΙΗΣΗ', ic: '?', c: 'grey' },
   g_storage: { k: 'g_storage', w: 'ΑΠΟΘΗΚΗ', ic: '▣', c: 'grey' }
 };
@@ -304,7 +305,7 @@ function badgeOf(s, ss) {
 }
 /* Σειρά στον χάρτη: μπροστά ό,τι χρειάζεται προσοχή. Μια ζωντανή πύλη δεν σκεπάζει αγρό με πρόβλημα, μια πύλη χωρίς ταυτοποίηση δεν σκεπάζει κανέναν. */
 var PIN_TOP = 5000;
-function gwZ(g) { return { g_nowit: 3000, g_sparse: 2000, g_alive: 500, g_unid: -500, g_storage: -1000 }[g.st.k] || 0; }
+function gwZ(g) { return { g_nowit: 3000, g_sparse: 2000, g_off: 1500, g_alive: 500, g_unid: -500, g_storage: -1000 }[g.st.k] || 0; }
 function fieldsZ(list) { return Math.round(list.reduce(function (a, f) { return Math.max(a, trouble(f)); }, 0) * 1000); }
 function instrState(d) {
   if (d.q) return ISTATE.silent;
@@ -403,7 +404,7 @@ function buildGateways(raw) {
   var ros = list.filter(function (r) { return r && r.id; }).map(function (r) {
     var p = pointOf(r.lat, r.lng);
     return { key: 'dev:' + r.id, id: String(r.id), code: null, net: false, name: String(r.name || r.dev || r.id), dev: r.dev || '',
-      age: null, st: r.storage ? GSTATE.g_storage : GSTATE.g_unid, storage: !!r.storage, conflict: !!r.conflict, p: p,
+      age: null, st: r.storage ? GSTATE.g_storage : (r.off ? GSTATE.g_off : GSTATE.g_unid), storage: !!r.storage, off: r.off || null, lrr: r.lrr || null, conflict: !!r.conflict, p: p,
       posKind: p ? 'ok' : 'none', posWhy: p ? '' : (r.storage ? 'στην αποθήκη, χωρίς δηλωμένη θέση' : 'η ετικέτα coordinates δεν δίνει θέση'),
       rowFields: [], heard: {}, orphans: [], merged: false };
   });
@@ -421,7 +422,7 @@ function buildGateways(raw) {
     if (P.n.linkedRoster || P.r.merged) return;
     var rivals = pairs.filter(function (Q, j) { return j !== i && (Q.n === P.n || Q.r === P.r); }).length;
     P.n.linkedRoster = true; P.r.merged = true;
-    P.n.storage = P.r.storage; P.n.conflict = P.r.conflict; P.n.dev = P.r.dev;
+    P.n.storage = P.r.storage; P.n.conflict = P.r.conflict; P.n.dev = P.r.dev; P.n.off = P.r.off;
     if (!P.n.nameSure) {
       if (rivals === 0) { P.n.name = P.r.name; P.n.nameGuess = ''; }
       else P.n.nameGuess = P.r.name + ' (' + Math.round(P.d) + ' m, υπάρχει κι άλλη κοντά)';
@@ -597,7 +598,7 @@ function buildModel(raw, now) {
   return { fields: fields, gws: gws, groups: groups, times: times, hasMap: times.map > 0,
     cover: { gwPos: gws.filter(function (g) { return g.posKind === 'ok'; }).length, gwSus: gws.filter(function (g) { return g.posKind === 'suspect'; }).length,
       gwAll: gws.length, gwNet: gws.filter(function (g) { return g.net; }).length, gwAlive: gws.filter(function (g) { return g.st.k === 'g_alive'; }).length,
-      gwUnid: gws.filter(function (g) { return !g.net && g.st.k !== 'g_storage'; }).length, gwStore: gws.filter(function (g) { return g.st.k === 'g_storage'; }).length,
+      gwUnid: gws.filter(function (g) { return !g.net && g.st.k === 'g_unid'; }).length, gwOff: gws.filter(function (g) { return g.st.k === 'g_off'; }).length, gwStore: gws.filter(function (g) { return g.st.k === 'g_storage'; }).length,
       seen: num(md.sensors_seen), sensorsAll: num(md.sensors_total), known: known, total: total, st: st, stKnown: stKnown,
       fSus: fields.filter(function (f) { return f.suspect; }).length, bad: raw.bad } };
 }
@@ -710,7 +711,7 @@ function trouble(f) {
   if (!f.computed) return 1.5;
   return f.s + (f.keys.indexOf('silent') >= 0 ? 0.3 : 0) + (f.keys.indexOf('gaps') >= 0 ? 0.1 : 0);
 }
-function gwTrouble(g) { return { g_nowit: 3, g_sparse: 2, g_unid: 1, g_alive: 0.5, g_storage: 0 }[g.st.k]; }
+function gwTrouble(g) { return { g_nowit: 3, g_off: 2.5, g_sparse: 2, g_unid: 1, g_alive: 0.5, g_storage: 0 }[g.st.k]; }
 function noPosition(v) {
   var out = [];
   v.gws.forEach(function (g) { if (!g.p) out.push({ kind: 'gw', key: g.key, name: g.name, why: g.posWhy || 'άγνωστη θέση' }); });
@@ -956,6 +957,7 @@ function panelGw(g) {
   var h = '<div class="panelHead"><div><h2>' + esc(g.name) + '</h2></div><button type="button" class="x" data-close aria-label="Κλείσιμο">✕</button></div>'
     + '<div class="chips">' + chip(g.st) + (g.posKind === 'suspect' ? '<span class="st c-check">! ύποπτη θέση</span>' : '') + (g.storage && g.net ? '<span class="st c-grey">▣ ΔΗΛΩΜΕΝΗ ΣΤΗΝ ΑΠΟΘΗΚΗ</span>' : '') + '</div>';
   if (g.code) h += '<div class="meta">Κωδικός δικτύου <span class="mono">' + esc(g.code) + '</span></div>';
+  if (g.off) h += '<div class="meta">Τελευταίο πακέτο στο ThingPark: ' + esc(g.off.split('-').reverse().join('/')) + (g.lrr ? ' · <span class="mono">' + esc(g.lrr) + '</span>' : '') + '</div>';
   if (g.nameGuess) h += '<div class="meta">Πιθανόν: ' + esc(g.nameGuess) + ' (ανεπιβεβαίωτο)</div>';
   if (g.net) {
     h += '<div class="meta">Τελευταίος μάρτυρας: ' + esc(ageWords(g.age)) + ' · ' + (g.sensors == null ? 'άγνωστο πλήθος αισθητήρων' : esc(plural(Number(g.sensors), 'αισθητήρας', 'αισθητήρες')))
@@ -1111,7 +1113,7 @@ function renderFilters(v) {
   var so = [];
   SEV.slice().reverse().forEach(function (s) { so.push({ v: s.k, l: s.ic + ' ' + s.w, n: c.status[s.k] || 0, grp: 'Αγροί: απόφαση πυρήνα' }); });
   ['silent', 'gaps', 'noinst', 'nocalc'].forEach(function (k) { var s = FSTATE[k]; so.push({ v: k, l: s.ic + ' ' + s.w, n: c.status[k] || 0, grp: 'Αγροί: δεδομένα' }); });
-  ['g_alive', 'g_sparse', 'g_nowit', 'g_unid', 'g_storage'].forEach(function (k) { var s = GSTATE[k]; so.push({ v: k, l: s.ic + ' ' + s.w, n: c.status[k] || 0, grp: 'Πύλες' }); });
+  ['g_alive', 'g_sparse', 'g_nowit', 'g_off', 'g_unid', 'g_storage'].forEach(function (k) { var s = GSTATE[k]; so.push({ v: k, l: s.ic + ' ' + s.w, n: c.status[k] || 0, grp: 'Πύλες' }); });
   fillSelect($('fStatus'), 'Όλες οι καταστάσεις', so, flt.status);
   var types = {}; MODEL.fields.forEach(function (f) { f.devs.forEach(function (d) { types[d.label] = 1; }); });
   fillSelect($('fType'), 'Όλοι οι τύποι οργάνων', Object.keys(types).sort(function (a, b) { return a.localeCompare(b, 'el'); }).map(function (k) {
@@ -1158,7 +1160,7 @@ function renderHonest() {
   });
   /* Δύο διαφορετικές μετρήσεις, ποτέ ένα άθροισμα: μια δηλωμένη πύλη χωρίς ταυτοποίηση μπορεί να είναι η ίδια με μια ορατή. */
   parts.push('<span>Πύλες που βλέπει το δίκτυο: <b>' + c.gwNet + '</b> (' + c.gwAlive + ' ζωντανές)</span>');
-  parts.push('<span>Δηλωμένες χωρίς ταυτοποίηση: <b>' + c.gwUnid + '</b> · στην αποθήκη: <b>' + c.gwStore + '</b></span>');
+  parts.push('<span>Δηλωμένες χωρίς ταυτοποίηση: <b>' + c.gwUnid + '</b> · εκτός δικτύου: <b>' + c.gwOff + '</b> · στην αποθήκη: <b>' + c.gwStore + '</b></span>');
   var seen = Number.isFinite(c.seen) && Number.isFinite(c.sensorsAll) && c.sensorsAll > 0;
   parts.push('<span>Αισθητήρες με γνωστή πύλη: <b>' + (seen ? c.seen + ' από ' + c.sensorsAll : '—') + '</b>'
     + (c.total ? ' (στους αγρούς ' + c.known + ' από ' + c.total + ')' : '') + '</span>');
@@ -1192,7 +1194,7 @@ function renderAll() {
 function refresh() { MODEL = buildModel(RAW, Date.now()); renderAll(); }
 
 function renderLegend() {
-  var items = SEV.slice().reverse().concat([FSTATE.silent, FSTATE.gaps, FSTATE.noinst, FSTATE.nocalc, GSTATE.g_alive, GSTATE.g_sparse, GSTATE.g_nowit, GSTATE.g_unid, GSTATE.g_storage]);
+  var items = SEV.slice().reverse().concat([FSTATE.silent, FSTATE.gaps, FSTATE.noinst, FSTATE.nocalc, GSTATE.g_alive, GSTATE.g_sparse, GSTATE.g_nowit, GSTATE.g_off, GSTATE.g_unid, GSTATE.g_storage]);
   var mini = function (cls, svg, w) { return '<div class="i"><span class="pin mini ' + cls + ' p-grey">' + svg + '</span> ' + esc(w) + '</div>'; };
   var h = '<div class="i"><b>Το σχέδιο λέει τι είναι:</b></div>' + mini('gw', GW_SVG, 'πύλη')
     + [KIND.field, KIND.hotel, KIND.station, KIND.valve, KIND.none].map(function (k) { return mini('f', k.svg, k.d); }).join('')
