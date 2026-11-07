@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SAG ERP · CRM</title>
+<script src="https://admin.tago.io/dist/custom-widget.min.js"></script>
 <style>
 :root{
 --bg:#f4f6f8;--panel:#ffffff;--panel2:#f9fafb;--ink:#101828;--ink2:#344054;--mute:#667085;--line:#e4e7ec;--line2:#eef0f3;
@@ -184,6 +185,26 @@ const SUBITEMS=[{k:'lw3',sku:'LW-3',n:'Σύνδεση LoRaWAN έως 3 σήμα�
 const SUBSYS=window.SUBSYS||[],CATPK=window.CATPK||[];EQ.forEach(p=>{if(!p.img)p.img=IMG[p.k]||null});
 SUBPK.forEach(x=>{x.renew=x.price});SUBITEMS.forEach(x=>{x.kind='subi';x.sup='SC';x.price=Math.round(x.cost*(1+SUBMK[x.cls])*100)/100;x.renew=x.yrs===1?x.price:0});
 const PROD=[...EQ,...PLANS,...ADDONS,...SVC,...SUBITEMS,...SUBPK];
+/* ══════════ ΤΙΜΟΚΑΤΑΛΟΓΟΣ: εφαρμογή πραγματικών δεδομένων (ιδιωτική έκδοση ή ζωντανά από το TagoIO) ══════════ */
+const CATMAP={s2120:'101990961',se01:'SE01-LB-868',se0x:'SE02-LB-868',sph01:'SPH01-LB-868',lms01:'LMS01-LS-868',em320:'EM320-TH-868M',em300:'EM300-TH-868M',uc511:'UC511-DI-868M',uc501:'UC501-868M',ws558:'WS558-868M PN: Switch',istation:'PDTIOT-ISS04',ifemto:'PDTIOT-IFE03',sg50:'SG50-L08GL-868M PN: 30W',dlos8n:'DLOS8N-868',lps8n:'LPS8N-868',valve:'agrohum-Valve-BSP-1inch-FC',meter:'ALTAIR-V4-DN20-R500'};
+const EQ_CORE=EQ.map(p=>({...p}));let LIVE=null;
+function applyRealCatalog(D){
+ EQ.length=0;EQ.push(...EQ_CORE.map(p=>({...p})));
+ const sp=v=>v==='AGROHUM'?'SA':'SC',mfOf=x=>/^CyRIC/.test(x[3])?(/Milesight|EM320/i.test(x[0]+x[5])?'Milesight':'CyRIC IoT'):x[3],pr=c=>c?Math.round(c*(1+MARKUP)*100)/100:0;
+ const G={Καιρός:'Αισθητήρες',Έδαφος:'Αισθητήρες',Φυτό:'Αισθητήρες',Κλίμα:'Αισθητήρες',Άρδευση:'Ελεγκτές & Διεπαφές',Αυτοματισμός:'Ελεγκτές & Διεπαφές',Πύλες:'Πύλες Δικτύου (Gateways)',Υλικά:'Υλικά εγκατάστασης',Άλλο:'Άλλο'};
+ const by={};D.IT.forEach(x=>by[x[0]]=x);const find=s=>by[s]||D.IT.find(x=>x[0].startsWith(s));const used=new Set();
+ for(const p of EQ){p.cost=null;const x=CATMAP[p.k]&&find(CATMAP[p.k]);if(x){used.add(x[0]);p.sku=x[0];p.n=x[5];p.cost=x[4]||null;p.price=pr(x[4]);p.mf=mfOf(x);p.sup=sp(x[3]);p.grp=x[1];p.app=x[2]}else{p.grp=p.k==='meter'?'Μετρητές':(G[p.grp]||p.grp);p.price=0;p.app=p.k==='kit'||p.k==='solar'?'Υλικό εγκατάστασης':'Εκτός τιμοκαταλόγου · υπάρχει στο TagoIO'}}
+ const tt=s=>/101990961/.test(s)?'s2120':/^SE0|^SE01|^SE02/.test(s)?'se0x':/LMS01/.test(s)?'lms01_ls':/SPH01/.test(s)?'sph01':/EM320/.test(s)?'em320_th':/EM300/.test(s)?'em300_th':/UC511/.test(s)?'uc511':/UC501/.test(s)?'uc501':/WS558/.test(s)?'ws558':'—';
+ let i=0;for(const x of D.IT){if(used.has(x[0])||x[1]==='Συνδρομές')continue;EQ.push({k:'c'+(i++),sku:x[0],n:x[5],tt:x[1].startsWith('Πύλες')?'gateway':tt(x[0]),mf:mfOf(x),sup:sp(x[3]),cost:x[4]||null,price:pr(x[4]),min:0,grp:x[1],app:x[2],kind:'eq'})}
+ const IR=[[/^LMS01/,'lms01'],[/^SE01/,'se01'],[/^SE02|^SE0X/,'se0x'],[/SPH01/,'sph01'],[/^EM320/,'em320'],[/^EM300/,'em300'],[/^UC511|^UC512/,'uc511'],[/^UC50/,'uc501'],[/^WS558-/,'ws558'],[/^SG50/,'sg50'],[/^PDTIOT-ISS/,'istation'],[/^PDTIOT-IFE/,'ifemto'],[/^DLOS8N/,'dlos8n'],[/^LPS8N/,'lps8n']];
+ for(const p of EQ){if(!p.img&&p.sku){const r=IR.find(z=>z[0].test(p.sku));if(r)p.img=IMG[r[1]]||null}}
+ const subs=D.IT.filter(x=>x[1]==='Συνδρομές');if(subs.length){SUBITEMS.length=0;for(const x of subs){const lw=/TAGO|Actility/i.test(x[0]),y=(x[0].match(/(\d)Y/)||[])[1],cls=lw?'lorawan':'network',price=Math.round(x[4]*(1+SUBMK[cls])*100)/100,yrs=lw?1:+(y||1);SUBITEMS.push({k:'s_'+x[0].replace(/\W+/g,'_'),sku:x[0],n:x[5],cls,cost:x[4],yrs,kind:'subi',sup:'SC',price,renew:yrs===1?price:0})}}
+ for(const z of D.SUBSYS||[]){if(!/Ετήσια/.test(z.src))continue;const s=SUBPK.find(q=>q.key===z.k);if(s){s.price=z.p;s.renew=z.p}}
+ SUBSYS.length=0;SUBSYS.push(...(D.SUBSYS||[]).filter(z=>!z.src.startsWith('Τιμοκατάλογος')));CATPK.length=0;CATPK.push(...(D.CATPK||[]));
+ PROD.length=0;PROD.push(...EQ,...PLANS,...ADDONS,...SVC,...SUBITEMS,...SUBPK);window.CATU=D.u;
+}
+if(window.__REAL)applyRealCatalog(window.__REAL);
+
 const PARTNERS=[
  {id:'P1',n:'Μαραγκάκης (χονδρέμπορος γεωργικών εφοδίων)',model:'Προμήθεια',rSetup:15,rRenew:10,list:'Χονδρική −20 %',ct:'Γραφείο Μαραγκάκη',city:'Ιεράπετρα'},
  {id:'P2',n:'Αγρο-Σύμβουλοι (γεωπονικό γραφείο, πλασματικό)',model:'Σύσταση',rSetup:10,rRenew:0,list:'Λιανική',ct:'Υπεύθυνος γεωπόνος',city:'Ηράκλειο'}];
@@ -496,6 +517,16 @@ seed();
 $('#q').addEventListener('input',e=>search(e.target.value));document.addEventListener('click',e=>{if(!e.target.closest('.search'))$('#res').classList.remove('on')});
 $('#dbg').onclick=closeD;document.addEventListener('keydown',e=>{if(e.key==='Escape')closeD()});$('#burger').onclick=()=>$('#side').classList.toggle('on');
 $('#theme').onclick=()=>{const r=document.documentElement,dk=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;r.dataset.theme=dk?'light':'dark'};
+/* ══════════ ΖΩΝΤΑΝΑ ΜΕΣΑ ΣΤΟ TAGOIO (Φάση 1Α) ══════════
+   Ο τιμοκατάλογος έρχεται από τα δεδομένα του widget (costing_list, ίδια μορφή v4 με το Δημιουργία Προσφοράς).
+   Χωρίς TagoIO (π.χ. αρχείο στον υπολογιστή) το demo δουλεύει με τα πλασματικά δεδομένα. Οι συναλλαγές μένουν πλασματικές ως τη Φάση 2. */
+async function inflateB64(b64){const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));const ds=new DecompressionStream('deflate');return JSON.parse(await new Response(new Blob([bin]).stream().pipeThrough(ds)).text())}
+function findCL(src){if(!src||typeof src!=='object')return null;if(Array.isArray(src)){for(const e of src){const r=findCL(e);if(r)return r}return null}if(src.variable==='costing_list'&&src.metadata&&src.metadata.cl)return src;for(const v of Object.values(src)){if(v&&typeof v==='object'){const r=findCL(v);if(r)return r}}return null}
+async function liveCatalog(src){try{const pt=findCL(src);if(!pt)return;const c=await inflateB64(pt.metadata.cl);if(!c||!Array.isArray(c.i))return;
+ const IT=c.i.map(x=>Array.isArray(x)?[x[0],c.ct[x[1]],c.in[x[2]],c.vn[x[3]],x[4],x[5]]:[x.sku,x.cat,x.ind,x.ven,x.pr,x.d]),by={};IT.forEach(x=>by[x[0]]=x);
+ const CP=(c.pk||[]).map(k=>{const it=(k.it||[]).map(i=>({q:i.q,n:(by[i.sku]||[,,,,,i.sku])[5],p:(by[i.sku]||[])[4]||0}));return{n:k.n,it,sum:it.reduce((s,i)=>s+i.q*i.p,0)}});
+ applyRealCatalog({IT,SUBSYS:[],CATPK:CP,u:c.u});LIVE={n:IT.length,u:c.u};const d=$('.demo');if(d)d.textContent='Ζωντανός τιμοκατάλογος ('+IT.length+' είδη) · πλασματικές συναλλαγές';go(ST.page);toast('Φορτώθηκε ο τιμοκατάλογος: '+IT.length+' είδη')}catch(e){console.warn('liveCatalog',e)}}
+if(window.TagoIO&&window.parent!==window){try{TagoIO.onStart(w=>liveCatalog(w));TagoIO.onRealtime(p=>liveCatalog(p));TagoIO.ready()}catch(e){console.warn(e)}}
 go('dash');
 </script>
 </body>

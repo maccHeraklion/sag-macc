@@ -39,14 +39,7 @@ for p in pk:
     its = [{'q': i['q'], 'n': (bysku.get(i['sku']) or [i['sku']] * 6)[5], 'p': (bysku.get(i['sku']) or [0] * 6)[4]} for i in p.get('it', [])]
     catpk.append({'n': p['n'], 'it': its, 'sum': sum(i['q'] * (i['p'] or 0) for i in its)})
 data = {'IT': IT, 'MAP': MAP, 'SUBSYS': subsys, 'CATPK': catpk, 'u': head['u']}
-JS = r"""(function(){const D=__DATA__;
-const sp=v=>v==='AGROHUM'?'SA':'SC';const mfOf=x=>/^CyRIC/.test(x[3])?(/Milesight|EM320/i.test(x[0]+x[5])?'Milesight':'CyRIC IoT'):x[3];const pr=c=>c?Math.round(c*(1+MARKUP)*100)/100:0;
-const G={Καιρός:'Αισθητήρες',Έδαφος:'Αισθητήρες',Φυτό:'Αισθητήρες',Κλίμα:'Αισθητήρες',Άρδευση:'Ελεγκτές & Διεπαφές',Αυτοματισμός:'Ελεγκτές & Διεπαφές',Πύλες:'Πύλες Δικτύου (Gateways)',Υλικά:'Υλικά εγκατάστασης',Άλλο:'Άλλο'};
-const by={};D.IT.forEach(x=>by[x[0]]=x);const used=new Set();
-for(const p of EQ){p.cost=null;const sku=D.MAP[p.k];const x=sku&&by[sku];if(x){used.add(sku);p.sku=sku;p.n=x[5];p.cost=x[4]||null;p.price=pr(x[4]);p.mf=mfOf(x);p.sup=sp(x[3]);p.grp=x[1];p.app=x[2]}else{p.grp=p.k==='meter'?'Μετρητές':(G[p.grp]||p.grp);p.price=0;p.app=p.k==='kit'||p.k==='solar'?'Υλικό εγκατάστασης (πλασματικό)':'Εκτός τιμοκαταλόγου · υπάρχει στο TagoIO'}}
-const tt=s=>/101990961/.test(s)?'s2120':/^SE0|^SE01|^SE02/.test(s)?'se0x':/LMS01/.test(s)?'lms01_ls':/SPH01/.test(s)?'sph01':/EM320/.test(s)?'em320_th':/EM300/.test(s)?'em300_th':/UC511/.test(s)?'uc511':/UC501/.test(s)?'uc501':/WS558/.test(s)?'ws558':'—';
-let i=0;for(const x of D.IT){if(used.has(x[0])||x[1]==='Συνδρομές')continue;EQ.push({k:'c'+(i++),sku:x[0],n:x[5],tt:x[1].startsWith('Πύλες')?'gateway':tt(x[0]),mf:mfOf(x),sup:sp(x[3]),cost:x[4]||null,price:pr(x[4]),min:0,grp:x[1],app:x[2],kind:'eq'})}
-const IR=[[/^LMS01/,'lms01'],[/^SE01/,'se01'],[/^SE02|^SE0X/,'se0x'],[/SPH01/,'sph01'],[/^EM320/,'em320'],[/^EM300/,'em300'],[/^UC511|^UC512/,'uc511'],[/^UC50/,'uc501'],[/^WS558-/,'ws558'],[/^SG50/,'sg50'],[/^PDTIOT-ISS/,'istation'],[/^PDTIOT-IFE/,'ifemto'],[/^DLOS8N/,'dlos8n'],[/^LPS8N/,'lps8n']];for(const p of EQ){if(!p.img&&p.sku){const r=IR.find(z=>z[0].test(p.sku));if(r)p.img=IMG[r[1]]||null}}SUBITEMS.length=0;for(const x of D.IT){if(x[1]!=='Συνδρομές')continue;const lw=/TAGO|Actility/i.test(x[0]);const y=(x[0].match(/(\d)Y/)||[])[1];SUBITEMS.push({k:'s_'+x[0].replace(/\W+/g,'_'),sku:x[0],n:x[5],cls:lw?'lorawan':'network',cost:x[4],yrs:lw?1:+(y||1)})}for(const z of D.SUBSYS){if(!/Ετήσια/.test(z.src))continue;const sp=SUBPK.find(s=>s.key===z.k);if(sp){sp.price=z.p;sp.renew=z.p}}window.SUBSYS=D.SUBSYS.filter(z=>!z.src.startsWith('Τιμοκατάλογος'));window.CATPK=D.CATPK;window.CATU=D.u;})();"""
+JS = r"""window.__REAL=__DATA__;"""
 s = open(os.path.join(ROOT, 'reports/demo/kentro_diaxeirisis_demo.html'), encoding='utf-8').read()
 a, b = '/*@@REAL*/', '/*@@REAL_END*/'
 assert s.count(a) == 1 and s.count(b) == 1

@@ -1,0 +1,11 @@
+// Ελέγχει τη ζωντανή φόρτωση: ξαναφτιάχνει costing_list v4 (zlib base64) από τον κατάλογο και το περνά στη σελίδα όπως το TagoIO.
+const fs=require('fs'),zlib=require('zlib');
+const head={u:'2026-01-01T00:00:00Z',ct:['Αισθητήρες','Ελεγκτές & Διεπαφές','Συνδρομές'],in:['Γενικής Χρήσης'],vn:['Milesight','AGROHUM','MACC']};const items=[['UC511-DI-868M',1,0,0,100,'Ελεγκτής UC511'],['agrohum-Valve-BSP-1inch-FC',1,0,1,20,'Βάνα 1'],['TAGO-Actility 3',2,0,2,10,'LoRaWAN 3 σήματα'],['X-NEW',0,0,0,50,'Νέο είδος']],pk=[{n:'Π',it:[{sku:'UC511-DI-868M',q:1}]}];
+const v4={v:4,u:head.u,c:'EUR',ct:head.ct,in:head.in,vn:head.vn,i:items.map(x=>x.slice(0,6)),pk,sb:[]};const cl=zlib.deflateSync(Buffer.from(JSON.stringify(v4))).toString('base64');
+const js=fs.readFileSync(__dirname+'/../../reports/demo/kentro_diaxeirisis_demo.html','utf8').match(/<script>([\s\S]*)<\/script>/)[1].replace('"use strict";','');
+const el=()=>({innerHTML:'',textContent:'',value:'',classList:{add(){},remove(){},toggle(){}},addEventListener(){},style:{},dataset:{}});const EE={};global.__E=EE;
+global.document={querySelector:s=>EE[s]||(EE[s]=el()),querySelectorAll:()=>[],documentElement:{dataset:{}},addEventListener(){}};global.matchMedia=()=>({matches:false});global.window={scrollTo(){}};
+global.__CL=cl;
+eval(js+`;(async()=>{const before=EQ.length;await liveCatalog([{id:'x',data:[{variable:'costing_list',value:'catalog_v4',metadata:{cl:__CL,v:4}}]}]);
+global.u=EQ.find(p=>p.sku==='UC511-DI-868M');const u=global.u;console.log('πριν',before,'μετά',EQ.length,'PROD',PROD.length,'UC511',u&&u.cost,'→',u&&u.price,'LIVE',JSON.stringify(LIVE),'banner',__E['.demo']?__E['.demo'].textContent:'-');
+await liveCatalog([{data:[{variable:'costing_list',metadata:{cl:__CL}}]}]);console.log('δεύτερη φόρτωση (ίδιο πλήθος;)',EQ.length);for(const p of Object.keys(PAGES)){go(p);if(/undefined|NaN|object Object/.test(__E['#content'].innerHTML))throw new Error('σελίδα '+p)}const ok=u&&u.cost===100&&Math.abs(u.price-170)<0.01&&EQ.some(p=>p.sku==='X-NEW')&&SUBITEMS.some(x=>x.sku==='TAGO-Actility 3'&&x.price===40)&&EQ.find(p=>p.sku==='agrohum-Valve-BSP-1inch-FC').sup==='SA';console.log(ok?'erp_live_catalog_check: όλα εντάξει':'ΑΠΟΤΥΧΙΑ');if(!ok)process.exit(1)})().catch(e=>{console.error(e);process.exit(1)})`);
