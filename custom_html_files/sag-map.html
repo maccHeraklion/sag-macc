@@ -137,9 +137,13 @@ details > summary { cursor: pointer; font-weight: 680; }
 .ln.d { border-top: 2px dashed var(--tx3); }
 
 /* πινέζες */
-.pin { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+.pin { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
   font-size: 13px; font-weight: 800; line-height: 1; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.45); position: relative; }
-.pin.gw { border-radius: 5px; width: 28px; height: 28px; border-color: #111; }
+.pin.gw { border-radius: 5px; width: 30px; height: 30px; border-color: #111; }
+.pin svg { width: 18px; height: 18px; display: block; }
+.pin.gw svg { width: 21px; height: 21px; }
+.pin.mini { display: inline-flex; flex: none; width: 22px; height: 22px; box-shadow: none; }
+.pin.mini svg { width: 14px; height: 14px; }
 .pin.grp { width: 32px; height: 32px; font-size: 13px; }
 .pin.p-visit { background: #d03b3b; color: #fff; } .pin.p-check { background: #ec835a; color: #111; }
 .pin.p-office { background: #fab219; color: #111; } .pin.p-ok { background: #0ca30c; color: #fff; }
@@ -205,6 +209,15 @@ var GSTATE = {
   g_storage: { k: 'g_storage', w: 'ΑΠΟΘΗΚΗ', ic: '▣', c: 'grey' }
 };
 
+/* T-GWMAP-08: τι είναι το σημείο. Τα σχέδια είναι σταθερά, γράφονται ως έχουν στην πινέζα. */
+var KIND = {
+  field: { k: 'field', w: 'Αγρός', d: 'αγρός με αισθητήρες', svg: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-9" fill="none"/><path d="M12 13C12 8.5 8.5 6 4 6c0 4.5 3.5 7 8 7z"/><path d="M12 10c0-3.5 3-6 8-6 0 4-3.5 6-8 6z"/></svg>' },
+  station: { k: 'station', w: 'Σταθμός καιρού', d: 'μόνο σταθμός καιρού', svg: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 19.5a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 10a4.75 4.75 0 0 1-.5 9.5z"/></svg>' },
+  valve: { k: 'valve', w: 'Βάνα', d: 'βάνα χωρίς αισθητήρες εδάφους ή φύλλου', svg: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5c3.6 4.7 6.7 8 6.7 12a6.7 6.7 0 0 1-13.4 0c0-4 3.1-7.3 6.7-12z"/></svg>' },
+  none: { k: 'none', w: 'Χωρίς όργανο', d: 'εγγραφή χωρίς όργανο', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-dasharray="4 3.4"><circle cx="12" cy="12" r="7.5"/></svg>' }
+};
+var GW_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="10" r="2.3" fill="currentColor" stroke="none"/><path d="M12 12v10"/><path d="M8 6a6 6 0 0 0 0 8M16 6a6 6 0 0 1 0 8"/><path d="M4.6 2.6a10.6 10.6 0 0 0 0 14.8M19.4 2.6a10.6 10.6 0 0 1 0 14.8"/></svg>';
+
 /* Από τον πίνακα στόλου (Ε5): άγνωστη σοβαρότητα ΔΕΝ σημαίνει «εντάξει», ανεβαίνει σε ΕΛΕΓΧΟ. */
 function sev(v) {
   var n;
@@ -262,6 +275,21 @@ function typeLabel(t) {
   if (/em300|em320/.test(s)) return 'Θερμοϋγρόμετρο';
   if (/uc5|ws558/.test(s)) return 'Ελεγκτής βανών';
   return s.toUpperCase();
+}
+/* Από τα όργανα, ποτέ από το όνομα. Αισθητήρας εδάφους, φύλλου ή αέρα κάνει την εγγραφή αγρό, όποια άλλα όργανα κι αν έχει.
+   Άγνωστος τύπος μένει αγρός: το συνηθέστερο είδος, και δεν κρύβει τίποτα αφού το χρώμα μένει το ίδιο. */
+function kindOf(devs) {
+  var ts = (devs || []).map(function (d) { return String(d.t == null ? '' : d.t).toLowerCase(); });
+  if (!ts.length) return KIND.none;
+  if (ts.some(function (t) { return /lse0|se0|lms01|em3|sph01|aglwpp/.test(t); })) return KIND.field;
+  if (ts.some(function (t) { return /uc5|ws558/.test(t); })) return KIND.valve;
+  if (ts.every(function (t) { return /s2120/.test(t); })) return KIND.station;
+  return KIND.field;
+}
+/* Το σήμα στη γωνία: κενά ή σιωπή υπερισχύουν, αλλιώς η ίδια η κατάσταση. Όταν όλα είναι εντάξει δεν μπαίνει τίποτα. */
+function badgeOf(s, ss) {
+  if (ss) return ss.ic;
+  return (s.c === 'ok' || s.k === 'nocalc' || s.k === 'noinst') ? null : s.ic;
 }
 function instrState(d) {
   if (d.q) return ISTATE.silent;
@@ -436,7 +464,7 @@ function makeField(row, fl, newestMap) {
   return { key: md ? 'f:' + id : 'x:' + i6 + ':' + rec.f, id: id, i6: i6, name: md ? String(md.n || id) : String(rec.f), altName: rec ? String(rec.f) : '',
     client: (md && md.c) ? String(md.c) : '', p: p, ps: md ? (md.ps || null) : (p ? 'form' : null), pq: md ? (md.pq || 'ok') : null,
     noMapRow: !md, absent: !!(md && newestMap - tnum(row.time) > 3 * 36e5), s: rec ? rec.s : null, computed: computed, reason: reason,
-    rec: rec, devs: devs, dc: (md && md.dc) || 0, keys: keys, suspect: false, gws: {} };
+    rec: rec, devs: devs, kind: kindOf(devs), dc: (md && md.dc) || 0, keys: keys, suspect: false, gws: {} };
 }
 function buildFields(raw) {
   var byI6 = {};
@@ -799,10 +827,10 @@ function initMap() {
   UI.over = L.layerGroup().addTo(UI.map);
   setTimeout(function () { try { UI.map.invalidateSize(); } catch (e) {} }, 250);
 }
-function pinIcon(s, cls, text, sub, suspect, selected) {
-  var html = '<div class="pin ' + cls + ' p-' + s.c + (selected ? ' sel' : '') + '">' + esc(text)
+function pinIcon(s, cls, text, sub, suspect, selected, glyph) {
+  var html = '<div class="pin ' + cls + ' p-' + s.c + (selected ? ' sel' : '') + '">' + (glyph || esc(text))
     + (sub ? '<i class="sub">' + esc(sub) + '</i>' : '') + (suspect ? '<i class="sus">!</i>' : '') + '</div>';
-  var size = cls === 'grp' ? 32 : (cls === 'gw' ? 28 : 26);
+  var size = cls === 'grp' ? 32 : (cls === 'gw' ? 30 : 28);
   return L.divIcon({ className: '', html: html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
 }
 /* Η χειρότερη κατάσταση της ομάδας ορίζει το χρώμα, το πλήθος μπαίνει στη θέση του εικονιδίου. */
@@ -828,13 +856,13 @@ function drawMap(v) {
   MODEL.groups.forEach(function (grp) {
     var list = grp.fields.filter(function (f) { return show[f.key]; });
     if (!list.length) return;
-    var single = list.length === 1 && grp.fields.length === 1, s, sub = null, text;
+    var single = list.length === 1 && grp.fields.length === 1, s, sub = null, text, kind = null;
     var isSel = !!sel && ((sel.kind === 'group' && sel.key === grp.key) || (selF && selF.groupKey === grp.key));
-    if (single) { s = primaryState(list[0]); text = s.ic; var ss = subState(list[0]); sub = ss ? ss.ic : null; }
-    else { s = groupState(list); text = String(list.length); }
-    var label = single ? (list[0].name + ': ' + s.w) : (list.length + ' εγγραφές στο ίδιο σημείο, χειρότερη: ' + s.w);
+    if (single) { s = primaryState(list[0]); kind = list[0].kind; text = kind.w; sub = badgeOf(s, subState(list[0])); }
+    else { s = groupState(list); text = String(list.length); sub = badgeOf(s, null); }
+    var label = single ? (kind.w + ' ' + list[0].name + ': ' + s.w) : (list.length + ' εγγραφές στο ίδιο σημείο, χειρότερη: ' + s.w);
     if (grp.suspect) label += ' · ύποπτη θέση';
-    var m = L.marker([grp.p.lat, grp.p.lng], { icon: pinIcon(s, single ? 'f' : 'grp', text, sub, grp.suspect, isSel), title: label, alt: label, riseOnHover: true });
+    var m = L.marker([grp.p.lat, grp.p.lng], { icon: pinIcon(s, single ? 'f' : 'grp', text, sub, grp.suspect, isSel, kind ? kind.svg : null), title: label, alt: label, riseOnHover: true });
     m.on('click', function () { select_(single ? { kind: 'field', key: list[0].key } : { kind: 'group', key: grp.key }); reveal('panel'); });
     m.addTo(UI.layer);
     pts.push([grp.p.lat, grp.p.lng]);
@@ -845,7 +873,7 @@ function drawMap(v) {
   gshow.forEach(function (g) {
     if (!g.p) return;
     var label = g.name + ': ' + g.st.w + (g.posKind === 'suspect' ? ' · ύποπτη θέση' : '');
-    var m = L.marker([g.p.lat, g.p.lng], { icon: pinIcon(g.st, 'gw', g.st.ic, null, g.posKind === 'suspect', !!selGw && selGw === g),
+    var m = L.marker([g.p.lat, g.p.lng], { icon: pinIcon(g.st, 'gw', 'Πύλη', badgeOf(g.st, null), g.posKind === 'suspect', !!selGw && selGw === g, GW_SVG),
       title: label, alt: label, zIndexOffset: 1000, riseOnHover: true });
     m.on('click', function () { select_({ kind: 'gw', key: g.key }); reveal('panel'); });
     m.addTo(UI.layer);
@@ -1142,9 +1170,13 @@ function refresh() { MODEL = buildModel(RAW, Date.now()); renderAll(); }
 
 function renderLegend() {
   var items = SEV.slice().reverse().concat([FSTATE.silent, FSTATE.gaps, FSTATE.noinst, FSTATE.nocalc, GSTATE.g_alive, GSTATE.g_sparse, GSTATE.g_nowit, GSTATE.g_unid, GSTATE.g_storage]);
-  var h = items.map(function (s) { return '<div class="i">' + chip(s) + '</div>'; }).join('');
+  var mini = function (cls, svg, w) { return '<div class="i"><span class="pin mini ' + cls + ' p-grey">' + svg + '</span> ' + esc(w) + '</div>'; };
+  var h = '<div class="i"><b>Το σχέδιο λέει τι είναι:</b></div>' + mini('gw', GW_SVG, 'πύλη')
+    + [KIND.field, KIND.station, KIND.valve, KIND.none].map(function (k) { return mini('f', k.svg, k.d); }).join('')
+    + '<div class="i"><b>Το χρώμα λέει πώς είναι:</b></div>'
+    + items.map(function (s) { return '<div class="i">' + chip(s) + '</div>'; }).join('');
   h += '<div class="i"><span class="ln"></span> επιβεβαιωμένη λήψη</div><div class="i"><span class="ln d"></span> κοντά, χωρίς επιβεβαίωση</div>'
-    + '<div class="i">στρογγυλή πινέζα: αγρός</div><div class="i">τετράγωνη πινέζα: πύλη</div><div class="i">αριθμός στην πινέζα: εγγραφές στο ίδιο σημείο</div><div class="i">! : ύποπτη θέση</div>'
+    + '<div class="i">σήμα στη γωνία: κάτι δεν πάει καλά· χωρίς σήμα, κανένα θέμα</div><div class="i">αριθμός στην πινέζα: εγγραφές στο ίδιο σημείο</div><div class="i">! : ύποπτη θέση</div>'
     + '<div class="i">Κάποιοι σταθμοί σιωπούν κάθε νύχτα: οι ώρες αυτές είναι πραγματικές και φαίνονται ως ΜΕ ΚΕΝΑ.</div>';
   $('legend').innerHTML = h;
 }
