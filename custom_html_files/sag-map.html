@@ -415,6 +415,7 @@ function buildGateways(raw) {
     if (!n) return;
     n.linkedRoster = true; r.merged = true;
     n.storage = r.storage; n.conflict = r.conflict; n.dev = r.dev; n.off = r.off; n.lrr = r.lrr;
+    if (!n.p && r.p) { n.p = r.p; n.posKind = 'ok'; n.posWhy = ''; n.sharedP = null; }
     if (!n.nameSure) { n.name = r.name; n.nameGuess = ''; }
   });
   var pairs = [];
