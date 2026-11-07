@@ -159,6 +159,7 @@ const EQ=[
  E('kit','Κιτ στήριξης & καλωδίωσης','—','S9',18,45,15,'Υλικά')];
 const MFN={S1:'Seeed Studio (SenseCAP)',S2:'Dragino',S3:'Milesight',S4:'Kerlink',S5:'Makerfabs',S6:'MClimate',S7:'Talkpool',S8:'GreenProjects',S9:'—'};
 EQ.forEach(p=>{p.mf=MFN[p.sup]||p.sup;p.sup=p.k==='valve'?'SA':'SC';if(p.cost!=null)p.price=Math.round(p.cost*(1+MARKUP)*100)/100});
+/* Σύνθεση προτύπων (bom): επιβεβαιωμένη από τον Μιχάλη 8/11/2026. */
 const P=(k,n,cat,setup,renew,bom,inc,src,unit)=>({k,n,cats:[cat],price:setup,renew,bom,inc,src,unit:unit||'εγκατάσταση',kind:'plan'});
 const PLANS=[
  P('fito','Φυτοπροστασία','field',349.99,49,['lms01','em300','kit'],['Αισθητήρες αέρα & περιβάλλοντος','Πρόβλεψη ασθενειών','Ειδοποιήσεις καιρού','Εφαρμογή & web'],'macc.gr'),
