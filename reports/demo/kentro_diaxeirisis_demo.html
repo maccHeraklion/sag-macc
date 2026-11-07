@@ -3,187 +3,369 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Κέντρο Διαχείρισης SAG</title>
+<title>SAG ERP · CRM</title>
 <style>
-:root{--bg:#f6f7f4;--panel:#fff;--ink:#1d2420;--mute:#5d6862;--line:#dfe3dc;--acc:#2f6f4e;--acc2:#e8f1ec;--ok:#2f7d4f;--warn:#b86e00;--bad:#b3261e;--info:#2a5d8f;--chip:#eef1ec;
---c-field:#3f7d3a;--c-greenhouse:#2b7a78;--c-landscape:#7a5aa6;--c-station:#2a5d8f;--c-automation:#a2671c}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121614;--panel:#1b211e;--ink:#e6ebe7;--mute:#9aa6a0;--line:#2c3430;--acc:#6cc191;--acc2:#1f2d26;--ok:#6cc191;--warn:#e0a23c;--bad:#ef7b70;--info:#7fb1e3;--chip:#232b27}}
-:root[data-theme="dark"]{--bg:#121614;--panel:#1b211e;--ink:#e6ebe7;--mute:#9aa6a0;--line:#2c3430;--acc:#6cc191;--acc2:#1f2d26;--ok:#6cc191;--warn:#e0a23c;--bad:#ef7b70;--info:#7fb1e3;--chip:#232b27}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-header{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
-header h1{font-size:17px;margin:0}.demo{background:var(--warn);color:#fff;font-size:12px;padding:2px 8px;border-radius:10px}
-nav{display:flex;gap:4px;overflow-x:auto;padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
-nav button{border:0;background:none;color:var(--mute);padding:8px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;font-size:14px}
-nav button.on{background:var(--acc2);color:var(--acc);font-weight:600}
-main{max-width:1180px;margin:0 auto;padding:16px}
-.grid{display:grid;gap:12px}.k4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.k2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
-.card h3{margin:0 0 10px;font-size:15px}.kpi .v{font-size:26px;font-weight:700}.kpi .l{color:var(--mute);font-size:13px}
-table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:middle}th{color:var(--mute);font-weight:600;font-size:12px}
-tr.click{cursor:pointer}tr.click:hover{background:var(--acc2)}
-.wrap{overflow-x:auto}
-.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;background:var(--chip);white-space:nowrap}
-.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}.info{color:var(--info)}
-.pill.ok{background:color-mix(in srgb,var(--ok) 15%,transparent)}.pill.warn{background:color-mix(in srgb,var(--warn) 18%,transparent)}.pill.bad{background:color-mix(in srgb,var(--bad) 15%,transparent)}.pill.info{background:color-mix(in srgb,var(--info) 15%,transparent)}
-.cat{display:inline-flex;align-items:center;gap:6px;font-size:13px}.cat i{width:10px;height:10px;border-radius:50%;display:inline-block}
-.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 12px;border-radius:8px;cursor:pointer;font-size:14px}
-.btn.p{background:var(--acc);border-color:var(--acc);color:#fff}.btn.s{padding:4px 9px;font-size:13px}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.sp{flex:1}
-.chips button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:16px;padding:4px 10px;cursor:pointer;font-size:13px}.chips button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
-input,select{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:14px}
-.steps{display:flex;gap:3px}.steps span{flex:1;height:7px;border-radius:4px;background:var(--line);min-width:14px}.steps span.d{background:var(--acc)}.steps span.c{background:var(--warn)}
-.bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;background:var(--acc)}
-.note{font-size:13px;color:var(--mute)}.sec{margin:18px 0 8px;font-size:13px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
-dialog{border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink);width:min(720px,94vw);padding:0}
-dialog::backdrop{background:rgba(0,0,0,.4)}.dh{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center}.db{padding:16px}.df{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
-.wz{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}.wz span{font-size:12px;padding:4px 8px;border-radius:12px;background:var(--chip);color:var(--mute)}.wz span.on{background:var(--acc);color:#fff}.wz span.d{color:var(--acc)}
-.opts{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}.opt{border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer}.opt.on{border-color:var(--acc);background:var(--acc2)}.opt b{display:block;margin-bottom:2px}
-.f{display:grid;gap:4px;margin-bottom:10px}.f label{font-size:13px;color:var(--mute)}
-.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:14px;opacity:0;transition:.25s;pointer-events:none}.toast.on{opacity:1}
-@media (max-width:640px){main{padding:12px}.kpi .v{font-size:22px}header h1{font-size:15px}}
+:root{
+--bg:#f4f6f8;--panel:#ffffff;--panel2:#f9fafb;--ink:#101828;--ink2:#344054;--mute:#667085;--line:#e4e7ec;--line2:#eef0f3;
+--acc:#17734f;--acc-ink:#ffffff;--acc-weak:#e7f4ee;--side:#0f1f19;--side-ink:#c9d6d0;--side-mute:#7f948b;--side-on:#1c3a2e;
+--ok:#12805c;--ok-bg:#e6f4ee;--warn:#b54708;--warn-bg:#fef0e6;--bad:#b42318;--bad-bg:#fdecea;--info:#175cd3;--info-bg:#eaf1fd;--neu-bg:#f2f4f7;
+--c-field:#3f8f3a;--c-greenhouse:#16857e;--c-landscape:#7a5aa6;--c-station:#2f6fb3;--c-automation:#b7791f;
+--r:10px;--sh:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+--bg:#0d1210;--panel:#151b18;--panel2:#1a221e;--ink:#e8eeeb;--ink2:#c8d2cd;--mute:#8d9a94;--line:#26302b;--line2:#1f2824;
+--acc:#3fbf88;--acc-ink:#0b1410;--acc-weak:#173327;--side:#0a0f0d;--side-on:#173327;
+--ok:#4cc38a;--ok-bg:#16301f;--warn:#f0a35b;--warn-bg:#352414;--bad:#f2786d;--bad-bg:#3a1a17;--info:#7fb0ff;--info-bg:#17253d;--neu-bg:#1f2824;--sh:none}}
+:root[data-theme="dark"]{--bg:#0d1210;--panel:#151b18;--panel2:#1a221e;--ink:#e8eeeb;--ink2:#c8d2cd;--mute:#8d9a94;--line:#26302b;--line2:#1f2824;
+--acc:#3fbf88;--acc-ink:#0b1410;--acc-weak:#173327;--side:#0a0f0d;--side-on:#173327;
+--ok:#4cc38a;--ok-bg:#16301f;--warn:#f0a35b;--warn-bg:#352414;--bad:#f2786d;--bad-bg:#3a1a17;--info:#7fb0ff;--info-bg:#17253d;--neu-bg:#1f2824;--sh:none}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}a{color:var(--acc);text-decoration:none;font-weight:500}a:hover{text-decoration:underline}
+.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+aside{background:var(--side);color:var(--side-ink);padding:14px 10px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 10px 16px}.logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#3fbf88,#17734f);display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px}
+.brand b{color:#fff;font-size:15px}.brand small{display:block;color:var(--side-mute);font-size:11px}
+.grp{margin:14px 10px 4px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--side-mute)}
+.nav{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;color:var(--side-ink);padding:7px 10px;border-radius:7px;cursor:pointer;text-align:left;font-size:13.5px}
+.nav:hover{background:rgba(255,255,255,.05)}.nav.on{background:var(--side-on);color:#fff;font-weight:600}
+.nav svg{width:16px;height:16px;flex:none;opacity:.85}.nav .cnt{margin-left:auto;font-size:11px;background:rgba(255,255,255,.1);padding:0 7px;border-radius:9px}
+.nav .cnt.alert{background:#b42318;color:#fff}
+.main{min-width:0;display:flex;flex-direction:column}
+.top{height:58px;display:flex;align-items:center;gap:12px;padding:0 22px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.icon-btn.burger{display:none}.search{position:relative;flex:1;max-width:460px}
+.search input{width:100%;height:36px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);padding:0 12px 0 34px}
+.search svg{position:absolute;left:10px;top:10px;width:16px;height:16px;color:var(--mute)}
+.res{position:absolute;top:40px;left:0;right:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 24px rgba(16,24,40,.14);max-height:360px;overflow:auto;display:none}
+.res.on{display:block}.res a{display:flex;gap:10px;padding:8px 12px;cursor:pointer;color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line2)}.res a:hover{background:var(--panel2)}.res small{color:var(--mute);margin-left:auto}
+.demo{font-size:11px;font-weight:600;color:var(--warn);background:var(--warn-bg);padding:3px 9px;border-radius:20px;white-space:nowrap}
+.icon-btn{width:34px;height:34px;border:1px solid var(--line);background:var(--panel);border-radius:8px;cursor:pointer;display:grid;place-items:center}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--acc-weak);color:var(--acc);display:grid;place-items:center;font-weight:700;font-size:12px}
+.content{padding:22px;max-width:1320px;width:100%;margin:0 auto}
+.ph{display:flex;align-items:flex-end;gap:12px;margin-bottom:18px;flex-wrap:wrap}.ph h2{margin:0;font-size:21px;letter-spacing:-.01em}.ph p{margin:3px 0 0;color:var(--mute)}.ph .sp{flex:1}
+.crumb{font-size:12px;color:var(--mute);margin-bottom:2px}
+.btn{height:34px;padding:0 13px;border-radius:8px;border:1px solid var(--line);background:var(--panel);cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-weight:500;white-space:nowrap}
+.btn:hover{background:var(--panel2)}.btn.p{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}.btn.p:hover{filter:brightness(.95)}
+.btn.s{height:28px;padding:0 10px;font-size:12.5px}.btn.ghost{border-color:transparent;background:none}.btn[disabled]{opacity:.45;pointer-events:none}
+.grid{display:grid;gap:14px}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g21{grid-template-columns:2fr 1fr}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
+.card .hd{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--line2)}.card .hd h3{margin:0;font-size:14px}.card .hd .sp{flex:1}.card .bd{padding:14px 16px}
+.kpi{padding:15px 16px}.kpi .l{color:var(--mute);font-size:12.5px;display:flex;gap:6px;align-items:center}.kpi .v{font-size:24px;font-weight:700;margin-top:4px;letter-spacing:-.02em}.kpi .d{font-size:12px;margin-top:2px}
+.tbl{width:100%;border-collapse:separate;border-spacing:0}.tbl th{font-size:11.5px;font-weight:600;color:var(--mute);text-align:left;padding:9px 12px;background:var(--panel2);border-bottom:1px solid var(--line);position:sticky;top:0;white-space:nowrap}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--line2);vertical-align:middle}.tbl td:first-child{min-width:170px}.tbl tr:last-child td{border-bottom:0}
+.tbl tr.c{cursor:pointer}.tbl tr.c:hover td{background:var(--panel2)}.tbl .num{text-align:right;font-variant-numeric:tabular-nums}
+.tw{overflow-x:auto}.sub{color:var(--mute);font-size:12px}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;white-space:nowrap}
+.b{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;padding:2px 9px;border-radius:20px;white-space:nowrap;background:var(--neu-bg);color:var(--ink2)}
+.b.ok{background:var(--ok-bg);color:var(--ok)}.b.warn{background:var(--warn-bg);color:var(--warn)}.b.bad{background:var(--bad-bg);color:var(--bad)}.b.info{background:var(--info-bg);color:var(--info)}
+.b::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.8}.b.plain::before{display:none}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}.cat{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.toolbar .sp{flex:1}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}.seg button{border:0;background:none;padding:6px 11px;cursor:pointer;font-size:12.5px;color:var(--mute)}.seg button.on{background:var(--acc-weak);color:var(--acc);font-weight:600}
+.inp{height:34px;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:0 10px}
+.prog{display:flex;gap:3px}.prog i{flex:1;height:6px;border-radius:3px;background:var(--line);min-width:10px}.prog i.d{background:var(--acc)}.prog i.c{background:var(--warn)}
+.bar{height:8px;border-radius:4px;background:var(--line2);overflow:hidden}.bar i{display:block;height:100%;background:var(--acc);border-radius:4px}
+.kan{display:grid;grid-template-columns:repeat(5,minmax(230px,1fr));gap:12px;overflow-x:auto;padding-bottom:6px}
+.col{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);padding:10px;min-height:200px}.col h4{margin:2px 4px 10px;font-size:12.5px;display:flex;gap:6px}.col h4 span{margin-left:auto;color:var(--mute);font-weight:500}
+.deal{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px;margin-bottom:8px;box-shadow:var(--sh);cursor:pointer}.deal .t{font-weight:600;font-size:13px;line-height:1.3}.deal .v{font-weight:700;font-size:13px;white-space:nowrap}.deal .row{margin-top:6px}
+.row{display:flex;gap:8px;align-items:center}.row .sp{flex:1}
+.tl{position:relative;margin:4px 0 0 6px;padding-left:18px;border-left:2px solid var(--line)}.tl div{position:relative;margin-bottom:12px}.tl div::before{content:"";position:absolute;left:-24px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--panel);border:2px solid var(--acc)}
+.tl b{display:block;font-size:13px}.tl span{color:var(--mute);font-size:12px}
+.flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12.5px}.flow span{background:var(--panel2);border:1px solid var(--line);padding:5px 10px;border-radius:20px}.flow em{color:var(--mute);font-style:normal}
+.drawer-bg{position:fixed;inset:0;background:rgba(16,24,40,.35);opacity:0;pointer-events:none;transition:.2s;z-index:40}.drawer-bg.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(620px,100%);background:var(--panel);border-left:1px solid var(--line);transform:translateX(100%);transition:.22s ease;z-index:41;display:flex;flex-direction:column}
+.drawer.on{transform:none}.drawer .dh{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:flex-start}.drawer .dh h3{margin:0;font-size:17px}.drawer .dh .sp{flex:1}
+.drawer .db{padding:18px 20px;overflow-y:auto;flex:1}.drawer .df{padding:12px 20px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.sec{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--mute);margin:18px 0 8px;font-weight:600}.sec:first-child{margin-top:0}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;font-size:13.5px}.kv dt{color:var(--mute)}.kv dd{margin:0}
+.fld{display:grid;gap:5px;margin-bottom:12px}.fld label{font-size:12.5px;color:var(--ink2);font-weight:500}.fld input,.fld select,.fld textarea{height:36px;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:0 10px}
+.steps{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.steps span{font-size:12px;padding:4px 10px;border-radius:20px;background:var(--neu-bg);color:var(--mute)}.steps span.on{background:var(--acc);color:var(--acc-ink)}.steps span.d{background:var(--acc-weak);color:var(--acc)}
+.opts{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}.opt{border:1px solid var(--line);border-radius:10px;padding:11px 12px;cursor:pointer;background:var(--panel)}.opt:hover{border-color:var(--acc)}.opt.on{border-color:var(--acc);background:var(--acc-weak)}.opt b{display:flex;gap:7px;align-items:center;margin-bottom:3px}
+.empty{padding:28px;text-align:center;color:var(--mute)}
+.alert{display:flex;gap:10px;padding:10px 12px;border-radius:9px;background:var(--warn-bg);color:var(--warn);font-size:13px;margin-bottom:12px}.alert.info{background:var(--info-bg);color:var(--info)}
+.toast{position:fixed;bottom:20px;left:50%;transform:translate(-50%,20px);background:var(--ink);color:var(--panel);padding:10px 16px;border-radius:10px;font-size:13.5px;opacity:0;transition:.25s;z-index:60;pointer-events:none;box-shadow:0 10px 24px rgba(0,0,0,.2)}.toast.on{opacity:1;transform:translate(-50%,0)}
+svg.chart text{fill:var(--mute);font-size:10px}
+@media (max-width:1100px){.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.g21,.g3{grid-template-columns:1fr}}
+@media (max-width:860px){.app{grid-template-columns:1fr}aside{position:fixed;left:0;top:0;z-index:50;width:250px;transform:translateX(-100%);transition:.2s}aside.on{transform:none}.icon-btn.burger{display:grid}.content{padding:16px}.top{padding:0 12px}.g2{grid-template-columns:1fr}.demo{display:none}.kv{grid-template-columns:110px 1fr}}
+@media (max-width:520px){.g4{grid-template-columns:1fr 1fr}.kpi .v{font-size:20px}.ph h2{font-size:18px}}
 </style>
 </head>
 <body>
-<header><h1>Κέντρο Διαχείρισης SAG</h1><span class="demo">DEMO · πλασματικά δεδομένα</span><span class="sp"></span><button class="btn s" id="theme">◐</button></header>
-<nav id="nav"></nav>
-<main id="main"></main>
-<dialog id="dlg"><div class="dh"><b id="dt"></b><span class="sp"></span><button class="btn s" onclick="dlg.close()">✕</button></div><div class="db" id="db"></div><div class="df" id="df"></div></dialog>
+<div class="app">
+<aside id="side"></aside>
+<div class="main">
+ <div class="top">
+  <button class="icon-btn burger" id="burger" aria-label="Μενού">☰</button>
+  <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" placeholder="Αναζήτηση: πελάτης, σειριακός, παραγγελία, προσφορά…" autocomplete="off"><div class="res" id="res"></div></div>
+  <span class="sp" style="flex:1"></span><span class="demo">DEMO · πλασματικά δεδομένα</span>
+  <button class="icon-btn" id="theme" title="Φωτεινό / σκοτεινό">◐</button><div class="avatar" title="Γραφείο MACC">ΜΚ</div>
+ </div>
+ <div class="content" id="content"></div>
+</div>
+</div>
+<div class="drawer-bg" id="dbg"></div>
+<div class="drawer" id="drw"><div class="dh"><div><div class="crumb" id="dcr"></div><h3 id="dtt"></h3></div><span class="sp"></span><button class="icon-btn" onclick="closeD()" aria-label="Κλείσιμο">✕</button></div><div class="db" id="dbd"></div><div class="df" id="dft"></div></div>
 <div class="toast" id="toast"></div>
 <script>
-/* ═══ ΔΕΔΟΜΕΝΑ DEMO — όλα πλασματικά, δεν προέρχονται από πελάτες ═══ */
-const TODAY=new Date('2026-11-07');
-const CAT={field:{n:'Τυπικός αγρός',c:'--c-field'},greenhouse:{n:'Θερμοκήπιο',c:'--c-greenhouse'},landscape:{n:'Ξενοδοχείο / χώρος πρασίνου',c:'--c-landscape'},station:{n:'Μετεωρολογικός σταθμός',c:'--c-station'},automation:{n:'Αυτοματισμός',c:'--c-automation'}};
+"use strict";
+/* ════════════ ΔΕΔΟΜΕΝΑ DEMO (πλασματικά) ════════════ */
+const TODAY=new Date('2026-11-08T12:00:00');const ISO=d=>d.toISOString().slice(0,10);const T=ISO(TODAY);
+const addD=(n,b=TODAY)=>{const d=new Date(b);d.setDate(d.getDate()+n);return ISO(d)};
+const CAT={field:{n:'Τυπικός αγρός',c:'var(--c-field)',d:'Θρέψη, φυτοπροστασία, άρδευση'},greenhouse:{n:'Θερμοκήπιο',c:'var(--c-greenhouse)',d:'Καλυμμένη καλλιέργεια, κλίμα εσωτερικού'},landscape:{n:'Ξενοδοχείο / πράσινο',c:'var(--c-landscape)',d:'Ζώνες άρδευσης με αισθητήρες'},station:{n:'Μετεωρολογικός σταθμός',c:'var(--c-station)',d:'Μόνο μετρήσεις καιρού'},automation:{n:'Αυτοματισμός',c:'var(--c-automation)',d:'Βάνες χωρίς αισθητήρες'}};
 const STEPS=['Προσφορά','Πελάτης','Εγκατάσταση','Όργανα','Παραμετροποίηση','Έλεγχος υγείας','Συνδρομή'];
-const CATALOG=[
- {k:'sense',n:'Sense — σταθμός + έδαφος',kind:'Πακέτο συνδρομής',p:290,cats:['field']},
- {k:'sensePlus',n:'Sense Plus — + φύλλο',kind:'Πακέτο συνδρομής',p:390,cats:['field','greenhouse']},
- {k:'sagFull',n:'SAG Full — πλήρης γεωπονική υποστήριξη',kind:'Πακέτο συνδρομής',p:520,cats:['field','greenhouse']},
- {k:'waterPro',n:'WaterPro — ζώνες άρδευσης & βάνες',kind:'Πακέτο συνδρομής',p:240,cats:['landscape','automation']},
- {k:'s2120',n:'Μετεωρολογικός σταθμός',kind:'Πακέτο συνδρομής',p:150,cats:['station']},
- {k:'soilone',n:'Αισθητήρας εδάφους 1 βάθους',kind:'Εξοπλισμός',p:180,cats:[]},
- {k:'soildouble',n:'Αισθητήρας εδάφους 2 βαθών',kind:'Εξοπλισμός',p:260,cats:[]},
- {k:'leaf',n:'Αισθητήρας φύλλου',kind:'Εξοπλισμός',p:150,cats:[]},
- {k:'uc511',n:'Ελεγκτής βάνας',kind:'Εξοπλισμός',p:210,cats:[]},
- {k:'install',n:'Εγκατάσταση & ρύθμιση',kind:'Υπηρεσία',p:120,cats:[]},
- {k:'visit',n:'Επίσκεψη τεχνικού',kind:'Υπηρεσία',p:60,cats:[]}];
+const STAGES=['Νέα','Επαφή','Προσφορά','Διαπραγμάτευση','Κερδήθηκε'];const PROB={Νέα:.1,Επαφή:.25,Προσφορά:.5,Διαπραγμάτευση:.75,Κερδήθηκε:1};
+const SUP=[
+ {id:'S1',n:'Seeed Studio (SenseCAP)',co:'Κίνα',terms:'Προπληρωμή 100 %',lead:21,ct:'sales@… (demo)',rate:4.5},
+ {id:'S2',n:'Dragino Technology',co:'Κίνα',terms:'Προπληρωμή 50 %',lead:28,ct:'sales@… (demo)',rate:4.0},
+ {id:'S3',n:'Milesight IoT',co:'Κίνα',terms:'Προπληρωμή 100 %',lead:18,ct:'sales@… (demo)',rate:4.6},
+ {id:'S4',n:'Kerlink',co:'Γαλλία',terms:'30 ημέρες',lead:14,ct:'orders@… (demo)',rate:4.2},
+ {id:'S5',n:'Ηλεκτροτεχνική Κρήτης Α.Ε.',co:'Ελλάδα',terms:'60 ημέρες',lead:3,ct:'2810 … (demo)',rate:4.8}];
+const PROD=[
+ {k:'s2120',n:'Μετεωρολογικός σταθμός S2120',kind:'eq',sup:'S1',sku:'SC-S2120',cost:265,price:420,min:4},
+ {k:'lse01',n:'Αισθητήρας εδάφους 1 βάθους (LSE01)',kind:'eq',sup:'S2',sku:'DR-LSE01',cost:72,price:180,min:6},
+ {k:'se0x',n:'Αισθητήρας εδάφους 2 βαθών (SE0X)',kind:'eq',sup:'S2',sku:'DR-SE01',cost:118,price:260,min:6},
+ {k:'lms01',n:'Αισθητήρας φύλλου (LMS01)',kind:'eq',sup:'S2',sku:'DR-LMS01',cost:64,price:150,min:5},
+ {k:'em320',n:'Θερμο-υγρασιόμετρο θερμοκηπίου (EM320)',kind:'eq',sup:'S3',sku:'MS-EM320',cost:58,price:140,min:4},
+ {k:'uc511',n:'Ελεγκτής βάνας (UC511)',kind:'eq',sup:'S3',sku:'MS-UC511',cost:96,price:210,min:6},
+ {k:'gw',n:'Πύλη LoRaWAN (iStation)',kind:'eq',sup:'S4',sku:'KL-ISTN',cost:690,price:980,min:2},
+ {k:'kit',n:'Κιτ στήριξης & καλωδίωσης',kind:'eq',sup:'S5',sku:'HK-KIT1',cost:18,price:45,min:15},
+ {k:'sense',n:'Sense — σταθμός + έδαφος',kind:'plan',price:290,cats:['field']},
+ {k:'sensePlus',n:'Sense Plus — + φύλλο',kind:'plan',price:390,cats:['field','greenhouse']},
+ {k:'sagFull',n:'SAG Full — πλήρης γεωπονική υποστήριξη',kind:'plan',price:520,cats:['field','greenhouse']},
+ {k:'waterPro',n:'WaterPro — ζώνες άρδευσης & βάνες',kind:'plan',price:240,cats:['landscape','automation']},
+ {k:'weather',n:'Weather — μετεωρολογικός σταθμός',kind:'plan',price:150,cats:['station']},
+ {k:'install',n:'Εγκατάσταση & ρύθμιση',kind:'svc',price:120},{k:'visit',n:'Επίσκεψη τεχνικού',kind:'svc',price:60},{k:'agro',n:'Γεωπονική συμβουλή (ώρα)',kind:'svc',price:45}];
 const CUST=[
- {id:'C1',n:'Παπαδάκης Γεώργιος',t:'Αγρότης',vat:'0xxxxxxx1',ph:'69xx xxx xx1',st:'Ενεργός'},
- {id:'C2',n:'Αγροτικός Συνεταιρισμός Μεσαράς',t:'Οργάνωση',vat:'0xxxxxxx2',ph:'2810 xxx xx2',st:'Ενεργός'},
- {id:'C3',n:'Ξενοδοχείο Αιγαίο Resort',t:'Ξενοδοχείο',vat:'0xxxxxxx3',ph:'2897 xxx xx3',st:'Ενεργός'},
- {id:'C4',n:'Δήμος Ανατολικής Κρήτης',t:'Δήμος',vat:'0xxxxxxx4',ph:'2841 xxx xx4',st:'Ενεργός'},
- {id:'C5',n:'Μανωλάκη Ελένη',t:'Αγρότης',vat:'',ph:'69xx xxx xx5',st:'Σε onboarding'},
- {id:'C6',n:'ΕΠΑΛ Νότιας Πεδιάδας',t:'Σχολείο',vat:'0xxxxxxx6',ph:'2891 xxx xx6',st:'Ενεργός'}];
+ {id:'C1',n:'Παπαδάκης Γεώργιος',t:'Αγρότης',vat:'0xxxxxx41',city:'Αγ. Βαρβάρα',ct:'Γ. Παπαδάκης',ph:'69xx…41',st:'Ενεργός',since:'2025-03-12',owner:'Μιχάλης'},
+ {id:'C2',n:'Αγροτικός Συν/σμός Μεσαράς',t:'Οργάνωση',vat:'0xxxxxx52',city:'Τυμπάκι',ct:'Ε. Σταυρουλάκη',ph:'2892…52',st:'Ενεργός',since:'2025-09-01',owner:'Μιχάλης'},
+ {id:'C3',n:'Αιγαίο Resort & Spa',t:'Ξενοδοχείο',vat:'0xxxxxx63',city:'Χερσόνησος',ct:'Τεχνικός διευθυντής',ph:'2897…63',st:'Ενεργός',since:'2026-02-20',owner:'Κώστας'},
+ {id:'C4',n:'Δήμος Ανατολικής Κρήτης',t:'Δήμος',vat:'0xxxxxx74',city:'Άγ. Νικόλαος',ct:'Τμ. Πρασίνου',ph:'2841…74',st:'Ενεργός',since:'2025-11-30',owner:'Κώστας'},
+ {id:'C5',n:'Μανωλάκη Ελένη',t:'Αγρότης',vat:'',city:'Φαλάσαρνα',ct:'Ε. Μανωλάκη',ph:'69xx…85',st:'Onboarding',since:'2026-10-28',owner:'Μιχάλης'},
+ {id:'C6',n:'ΕΠΑΛ Νότιας Πεδιάδας',t:'Σχολείο',vat:'0xxxxxx96',city:'Αρκαλοχώρι',ct:'Διευθυντής',ph:'2891…96',st:'Ενεργός',since:'2026-03-11',owner:'Μιχάλης'}];
+const LEADS=[
+ {id:'L1',n:'Οινοποιείο Ζαχαριουδάκη',t:'Αγρότης',stage:'Διαπραγμάτευση',val:2850,cat:'field',owner:'Μιχάλης',next:'Τηλέφωνο για τελική τιμή',due:addD(1),src:'Έκθεση Agrotica'},
+ {id:'L2',n:'Θερμοκήπια Ιεράπετρας ΙΚΕ',t:'Οργάνωση',stage:'Προσφορά',val:4600,cat:'greenhouse',owner:'Μιχάλης',next:'Αποστολή προσφοράς 4 θερμοκηπίων',due:addD(2),src:'Σύσταση πελάτη'},
+ {id:'L3',n:'Hotel Kalimera Beach',t:'Ξενοδοχείο',stage:'Επαφή',val:3200,cat:'landscape',owner:'Κώστας',next:'Αυτοψία κήπων',due:addD(5),src:'Ιστοσελίδα'},
+ {id:'L4',n:'Δήμος Φαιστού',t:'Δήμος',stage:'Νέα',val:1900,cat:'station',owner:'Κώστας',next:'Πρώτη επαφή',due:addD(7),src:'Πρόσκληση δήμου'},
+ {id:'L5',n:'Κτήμα Λυράκη',t:'Αγρότης',stage:'Επαφή',val:980,cat:'field',owner:'Μιχάλης',next:'Επίδειξη ταμπλό',due:addD(-1),src:'Γεωπόνος συνεργάτης'},
+ {id:'L6',n:'Μανωλάκη Ελένη',t:'Αγρότης',stage:'Κερδήθηκε',val:1100,cat:'field',owner:'Μιχάλης',next:'—',due:null,src:'Ιστοσελίδα',cust:'C5'}];
+const ACT=[
+ {d:addD(-1),who:'Μιχάλης',k:'Κλήση',ref:'L1',t:'Συζήτηση για έκπτωση στο πακέτο SAG Full'},
+ {d:addD(-2),who:'Κώστας',k:'Επίσκεψη',ref:'C3',t:'Έλεγχος πύλης ξενοδοχείου, εκτός από 4/11'},
+ {d:addD(-3),who:'Μιχάλης',k:'Email',ref:'L2',t:'Αποστολή τεχνικού φυλλαδίου'},
+ {d:addD(-6),who:'Μιχάλης',k:'Συνάντηση',ref:'C2',t:'Ετήσια ανασκόπηση συνεταιρισμού'}];
 const INST=[
- {id:'I1',c:'C1',n:'Ελαιώνας Αγ. Βαρβάρας',cat:'field',step:7,h:'ok',plan:'sagFull',end:'2027-03-31',dev:['s2120','soildouble','leaf']},
- {id:'I2',c:'C1',n:'Αμπέλι Πεζών',cat:'field',step:7,h:'visit',plan:'sense',end:'2026-11-28',dev:['s2120','soilone']},
- {id:'I3',c:'C2',n:'Θερμοκήπιο Τυμπακίου 1',cat:'greenhouse',step:7,h:'ok',plan:'sensePlus',end:'2027-01-15',dev:['em320','soildouble','leaf']},
- {id:'I4',c:'C2',n:'Θερμοκήπιο Τυμπακίου 2',cat:'greenhouse',step:5,h:'office',plan:'sensePlus',end:null,dev:['em320','soildouble']},
- {id:'I5',c:'C3',n:'Κήπος υποδοχής',cat:'landscape',step:7,h:'visit',plan:'waterPro',end:'2027-05-01',dev:['soilone','uc511'],note:'Πύλη εκτός από 4/11'},
- {id:'I6',c:'C3',n:'Γκαζόν πισίνας',cat:'landscape',step:7,h:'visit',plan:'waterPro',end:'2027-05-01',dev:['soilone','uc511'],note:'Πύλη εκτός από 4/11'},
- {id:'I7',c:'C4',n:'Σταθμός Δημαρχείου',cat:'station',step:7,h:'ok',plan:'s2120',end:'2026-12-02',dev:['s2120']},
- {id:'I8',c:'C4',n:'Πάρκο κεντρικής πλατείας',cat:'automation',step:4,h:'office',plan:'waterPro',end:null,dev:['uc511']},
- {id:'I9',c:'C5',n:'Αβοκάντο Φαλάσαρνας',cat:'field',step:2,h:'office',plan:'sense',end:null,dev:[]},
- {id:'I10',c:'C6',n:'Σχολικός κήπος',cat:'automation',step:7,h:'visit',plan:'waterPro',end:'2026-10-30',dev:['uc511'],note:'Ελεγκτής σιωπά 93 ημ.'}];
+ {id:'I1',c:'C1',n:'Ελαιώνας Αγ. Βαρβάρας',cat:'field',step:7,h:'ok',plan:'sagFull',start:'2026-03-31',end:'2027-03-31',need:['s2120','se0x','lms01']},
+ {id:'I2',c:'C1',n:'Αμπέλι Πεζών',cat:'field',step:7,h:'visit',plan:'sense',start:'2025-11-28',end:addD(20),need:['s2120','lse01']},
+ {id:'I3',c:'C2',n:'Θερμοκήπιο Τυμπακίου 1',cat:'greenhouse',step:7,h:'ok',plan:'sensePlus',start:'2026-01-15',end:'2027-01-15',need:['em320','se0x','lms01']},
+ {id:'I4',c:'C2',n:'Θερμοκήπιο Τυμπακίου 2',cat:'greenhouse',step:5,h:'office',plan:'sensePlus',start:null,end:null,need:['em320','se0x']},
+ {id:'I5',c:'C3',n:'Κήπος υποδοχής',cat:'landscape',step:7,h:'visit',plan:'waterPro',start:'2026-05-01',end:'2027-05-01',need:['lse01','uc511','gw'],note:'Πύλη εκτός από 4/11'},
+ {id:'I6',c:'C3',n:'Γκαζόν πισίνας',cat:'landscape',step:7,h:'visit',plan:'waterPro',start:'2026-05-01',end:'2027-05-01',need:['lse01','uc511'],note:'Πύλη εκτός από 4/11'},
+ {id:'I7',c:'C4',n:'Σταθμός Δημαρχείου',cat:'station',step:7,h:'ok',plan:'weather',start:'2025-12-02',end:addD(24),need:['s2120']},
+ {id:'I8',c:'C4',n:'Πάρκο κεντρικής πλατείας',cat:'automation',step:3,h:'office',plan:'waterPro',start:null,end:null,need:['uc511','uc511']},
+ {id:'I9',c:'C5',n:'Αβοκάντο Φαλάσαρνας',cat:'field',step:2,h:'office',plan:'sense',start:null,end:null,need:['s2120','lse01']},
+ {id:'I10',c:'C6',n:'Σχολικός κήπος',cat:'automation',step:7,h:'visit',plan:'waterPro',start:'2025-10-30',end:addD(-9),need:['uc511'],note:'Ελεγκτής σιωπά 93 ημέρες'}];
 const OFFERS=[
- {id:'Π-2026-031',c:'C5',st:'Αποδεκτή',d:'2026-10-28',lines:[['sense',1],['soilone',1],['install',1]]},
- {id:'Π-2026-033',c:'C2',st:'Στάλθηκε',d:'2026-11-03',lines:[['sensePlus',2],['soildouble',2],['leaf',2]]},
- {id:'Π-2026-034',c:'C4',st:'Πρόχειρη',d:'2026-11-06',lines:[['waterPro',3],['uc511',3],['install',1]]}];
-const PAY=[
- {i:'I1',inv:'ΤΠΥ 1182',amt:520,d:'2026-03-30',paid:true},{i:'I3',inv:'ΤΠΥ 1201',amt:390,d:'2026-01-14',paid:true},
- {i:'I5',inv:'ΤΠΥ 1240',amt:240,d:'2026-05-02',paid:true},{i:'I6',inv:'ΤΠΥ 1241',amt:240,d:'2026-05-02',paid:false},
- {i:'I7',inv:'ΤΠΥ 1103',amt:150,d:'2025-12-01',paid:true}];
-const DEV=[
- {m:'S2120',st:'Αποθήκη',n:4},{m:'S2120',st:'Εγκατεστημένο',n:38},{m:'LSE01',st:'Αποθήκη',n:9},{m:'LSE01',st:'Εγκατεστημένο',n:24},{m:'SE0X',st:'Αποθήκη',n:6},{m:'SE0X',st:'Δεσμευμένο',n:2},{m:'SE0X',st:'Εγκατεστημένο',n:15},
- {m:'LMS01',st:'Εγκατεστημένο',n:26},{m:'LMS01',st:'Σε επισκευή',n:2},{m:'EM320',st:'Αποθήκη',n:3},{m:'EM320',st:'Εγκατεστημένο',n:23},{m:'UC511',st:'Αποθήκη',n:5},{m:'UC511',st:'Δεσμευμένο',n:3},{m:'UC511',st:'Εγκατεστημένο',n:37},{m:'Πύλη',st:'Αποθήκη',n:6},{m:'Πύλη',st:'Εγκατεστημένο',n:22}];
-const MOVES=[['2026-11-06','SE0X ·5eb6','Αποθήκη → Δεσμευμένο','Π-2026-031'],['2026-11-05','LMS01 ·784e','Εγκατεστημένο → Σε επισκευή','βλάβη αισθητήρα'],['2026-11-03','UC511 ·9341','Αποθήκη → Εγκατεστημένο','Σχολικός κήπος']];
+ {id:'ΠΡ-26-031',c:'C5',st:'Αποδεκτή',d:'2026-10-28',valid:'2026-11-27',inst:'I9',lines:[['sense',1],['s2120',1],['lse01',1],['kit',2],['install',1]],disc:5},
+ {id:'ΠΡ-26-033',c:'C2',st:'Στάλθηκε',d:'2026-11-03',valid:'2026-12-03',lines:[['sensePlus',2],['em320',2],['se0x',2],['lms01',2],['kit',4],['install',2]],disc:8},
+ {id:'ΠΡ-26-034',c:'C4',st:'Πρόχειρη',d:'2026-11-06',valid:'2026-12-06',lines:[['waterPro',3],['uc511',3],['kit',3],['install',1]],disc:0}];
+const PO=[
+ {id:'ΠΑ-26-012',sup:'S2',d:'2026-09-20',st:'Παραλήφθηκε',eta:'2026-10-18',rec:'2026-10-17',lines:[['lse01',10,72],['se0x',8,118],['lms01',6,64]]},
+ {id:'ΠΑ-26-014',sup:'S3',d:'2026-10-10',st:'Παραλήφθηκε',eta:'2026-10-28',rec:'2026-10-29',lines:[['uc511',10,96],['em320',6,58]]},
+ {id:'ΠΑ-26-015',sup:'S1',d:'2026-10-30',st:'Σε μεταφορά',eta:addD(12),lines:[['s2120',4,265]]},
+ {id:'ΠΑ-26-016',sup:'S5',d:'2026-11-05',st:'Στάλθηκε',eta:addD(2),lines:[['kit',30,18]]}];
+const INV=[
+ {id:'ΤΠΥ-1182',c:'C1',i:'I1',d:'2026-03-31',due:'2026-04-30',amt:644.8,paid:'2026-04-12',k:'Συνδρομή'},
+ {id:'ΤΠΥ-1201',c:'C2',i:'I3',d:'2026-01-15',due:'2026-02-14',amt:483.6,paid:'2026-02-10',k:'Συνδρομή'},
+ {id:'ΤΔΑ-0412',c:'C2',i:'I3',d:'2026-01-15',due:'2026-02-14',amt:806,paid:'2026-02-10',k:'Εξοπλισμός'},
+ {id:'ΤΠΥ-1240',c:'C3',i:'I5',d:'2026-05-02',due:'2026-06-01',amt:297.6,paid:'2026-05-20',k:'Συνδρομή'},
+ {id:'ΤΠΥ-1241',c:'C3',i:'I6',d:'2026-05-02',due:'2026-06-01',amt:297.6,paid:null,k:'Συνδρομή'},
+ {id:'ΤΠΥ-1103',c:'C4',i:'I7',d:'2025-12-02',due:'2026-01-01',amt:186,paid:'2025-12-20',k:'Συνδρομή'},
+ {id:'ΤΔΑ-0455',c:'C5',i:'I9',d:'2026-10-30',due:'2026-11-29',amt:1120.3,paid:null,k:'Εξοπλισμός'},
+ {id:'ΤΠΥ-1109',c:'C6',i:'I10',d:'2025-10-30',due:'2025-11-29',amt:297.6,paid:'2025-11-15',k:'Συνδρομή'}];
 const TICK=[
- {id:'Α-118',i:'I5',k:'Βλάβη',src:'Εποπτεία (αυτόματα)',t:'Πύλη ξενοδοχείου εκτός · 9 αισθητήρες + 13 ελεγκτές σιωπούν',st:'Ανοιχτό',who:'Τεχνικός'},
- {id:'Α-117',i:'I10',k:'Βλάβη',src:'Εποπτεία (αυτόματα)',t:'Ελεγκτής βάνας σιωπά 93 ημέρες',st:'Ανοιχτό',who:'—'},
- {id:'Α-115',i:'I2',k:'Επίσκεψη',src:'Πελάτης',t:'Ο αισθητήρας εδάφους δείχνει σταθερή τιμή',st:'Προγραμματισμένο',who:'Τεχνικός'},
- {id:'Α-112',i:'I3',k:'Αίτημα',src:'Πελάτης',t:'Εξαγωγή ιστορικού σε Excel',st:'Κλειστό',who:'Γραφείο'}];
-/* ═══ ΒΟΗΘΗΤΙΚΑ ═══ */
-const $=s=>document.querySelector(s);const cust=id=>CUST.find(c=>c.id===id);const inst=id=>INST.find(x=>x.id===id);const cat=k=>CATALOG.find(c=>c.k===k);
-const eur=v=>v.toLocaleString('el-GR',{style:'currency',currency:'EUR',maximumFractionDigits:0});
-const days=d=>d?Math.round((new Date(d)-TODAY)/864e5):null;const dfmt=d=>d?new Date(d).toLocaleDateString('el-GR'):'—';
-const catTag=k=>`<span class="cat"><i style="background:var(${CAT[k].c})"></i>${CAT[k].n}</span>`;
-function subState(x){if(x.step<7||!x.end)return['Δεν ξεκίνησε','info'];const d=days(x.end);if(d<0)return['Ληγμένη','bad'];if(d<=30)return['Σε λήξη ('+d+' ημ.)','warn'];return['Ενεργή','ok']}
+ {id:'ΑΙΤ-118',i:'I5',k:'Βλάβη',src:'Εποπτεία',t:'Πύλη ξενοδοχείου εκτός · 9 αισθητήρες + 13 ελεγκτές σιωπούν',st:'Ανοιχτό',who:'Κώστας',pr:'Υψηλή',d:'2026-11-04'},
+ {id:'ΑΙΤ-117',i:'I10',k:'Βλάβη',src:'Εποπτεία',t:'Ελεγκτής βάνας σιωπά 93 ημέρες',st:'Ανοιχτό',who:'—',pr:'Μέτρια',d:'2026-11-07'},
+ {id:'ΑΙΤ-115',i:'I2',k:'RMA',src:'Τεχνικός',t:'Αισθητήρας εδάφους με σταθερή τιμή, επιστροφή στον προμηθευτή',st:'Σε εξέλιξη',who:'Κώστας',pr:'Μέτρια',d:'2026-11-02'},
+ {id:'ΑΙΤ-112',i:'I3',k:'Αίτημα',src:'Πελάτης',t:'Εξαγωγή ιστορικού σε Excel',st:'Κλειστό',who:'Μιχάλης',pr:'Χαμηλή',d:'2026-10-21'}];
+/* Μονάδες εξοπλισμού (σειριακά) — παράγονται από τις παραλαβές */
+const UNITS=[],MOVES=[];let SNC=4100;
+function mkUnit(k,po,rec){const u={sn:'A84'+(SNC++).toString(16).toUpperCase().padStart(5,'0'),k,po,rec,st:'Απόθεμα',inst:null,res:null,hist:[{d:rec,t:'Παραλαβή από '+supN(prod(k).sup)+' ('+po+')'}]};UNITS.push(u);return u}
+function seed(){
+ const legacy={s2120:5,lse01:4,se0x:3,lms01:2,em320:2,uc511:5,gw:2,kit:14};
+ for(const[k,n]of Object.entries(legacy))for(let j=0;j<n;j++)mkUnit(k,'ΠΑ-25-'+(k==='gw'?'004':'007'),'2025-06-15');
+ for(const p of PO.filter(p=>p.st==='Παραλήφθηκε'))for(const[k,q]of p.lines)for(let j=0;j<q;j++)mkUnit(k,p.id,p.rec);
+ for(const x of INST){x.units=[];if(x.step<4)continue;for(const k of x.need){const u=UNITS.find(u=>u.k===k&&u.st==='Απόθεμα');if(u){u.st='Εγκατεστημένο';u.inst=x.id;u.hist.push({d:x.start||'2026-10-01',t:'Εγκατάσταση: '+x.n});x.units.push(u.sn)}}}
+ const bad=UNITS.find(u=>u.inst==='I2'&&u.k==='lse01');if(bad){bad.st='RMA';bad.hist.push({d:'2026-11-02',t:'Αποστολή για επισκευή (ΑΙΤ-115)'})}
+ const off=OFFERS[0];for(const[k,q]of off.lines)if(prod(k).kind==='eq')for(let j=0;j<q;j++){const u=UNITS.find(u=>u.k===k&&u.st==='Απόθεμα');if(u){u.st='Δεσμευμένο';u.res=off.id;u.hist.push({d:off.d,t:'Δέσμευση για '+off.id})}}
+ MOVES.push(...[['2026-11-02','RMA','lse01','Αμπέλι Πεζών → Dragino (επισκευή)'],['2026-10-29','Παραλαβή','uc511','ΠΑ-26-014 · 10 τεμ.'],['2026-10-29','Παραλαβή','em320','ΠΑ-26-014 · 6 τεμ.'],['2026-10-28','Δέσμευση','s2120','ΠΡ-26-031 · Μανωλάκη'],['2026-10-17','Παραλαβή','lse01','ΠΑ-26-012 · 10 τεμ.']].map(([d,k,p,t])=>({d,k,p,t})));}
+/* ════════════ ΒΟΗΘΗΤΙΚΑ ════════════ */
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const prod=k=>PROD.find(p=>p.k===k),cust=id=>CUST.find(c=>c.id===id),inst=id=>INST.find(x=>x.id===id),sup=id=>SUP.find(s=>s.id===id),supN=id=>(sup(id)||{}).n||'—';
+const eur=(v,d=0)=>(v||0).toLocaleString('el-GR',{style:'currency',currency:'EUR',minimumFractionDigits:d,maximumFractionDigits:d});
+const fd=d=>d?new Date(d).toLocaleDateString('el-GR',{day:'2-digit',month:'2-digit',year:'numeric'}):'—';
+const days=d=>d?Math.round((new Date(d)-TODAY)/864e5):null;
+const b=(t,tone='',plain)=>`<span class="b ${tone} ${plain?'plain':''}">${t}</span>`;
+const catT=k=>`<span class="cat"><i class="dot" style="background:${CAT[k].c}"></i>${CAT[k].n}</span>`;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function subSt(x){if(x.step<7||!x.end)return['Δεν ενεργοποιήθηκε','info'];const d=days(x.end);if(d<0)return['Ληγμένη','bad'];if(d<=30)return['Λήγει σε '+d+' ημ.','warn'];return['Ενεργή','ok']}
 const HL={ok:['Εντάξει','ok'],visit:['Επίσκεψη','bad'],office:['Γραφείο','info']};
-const pill=(t,c)=>`<span class="pill ${c}">${t}</span>`;
-function steps(n){return `<div class="steps" title="${n>=7?'Ολοκληρώθηκε':'Βήμα: '+STEPS[n]}">${STEPS.map((s,i)=>`<span class="${i<n?'d':i===n?'c':''}"></span>`).join('')}</div>`}
-function offerTotal(o){const net=o.lines.reduce((s,[k,q])=>s+cat(k).p*q,0);return{net,vat:net*.24,tot:net*1.24}}
-function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');setTimeout(()=>e.classList.remove('on'),2200)}
-function dialog(title,body,foot){$('#dt').textContent=title;$('#db').innerHTML=body;$('#df').innerHTML=foot||'<button class="btn" onclick="dlg.close()">Κλείσιμο</button>';$('#dlg').showModal()}
-/* ═══ ΚΑΡΤΕΛΕΣ ═══ */
-const TABS={
-home(){const act=INST.filter(x=>subState(x)[1]==='ok'||subState(x)[1]==='warn');const rev=act.reduce((s,x)=>s+cat(x.plan).p,0);
- const exp=INST.filter(x=>x.step>=7&&x.end&&days(x.end)<=30).sort((a,b)=>days(a.end)-days(b.end));const stuck=INST.filter(x=>x.step<7);const visit=INST.filter(x=>x.h==='visit');
- const stock=DEV.filter(d=>d.st==='Αποθήκη').reduce((s,d)=>s+d.n,0);const byCat=Object.keys(CAT).map(k=>[k,INST.filter(x=>x.cat===k).length]);const mx=Math.max(...byCat.map(b=>b[1]));
- return `<div class="grid k4">
- ${[['Ενεργοί πελάτες',CUST.filter(c=>c.st==='Ενεργός').length],['Ενεργές συνδρομές',act.length],['Ετήσια έσοδα συνδρομών',eur(rev)],['Λήξεις σε 30 ημέρες',exp.length],['Σε onboarding',stuck.length],['Χρειάζονται επίσκεψη',visit.length],['Όργανα στην αποθήκη',stock],['Ανοιχτά αιτήματα',TICK.filter(t=>t.st!=='Κλειστό').length]].map(([l,v])=>`<div class="card kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('')}
- </div><div class="grid k2" style="margin-top:12px">
- <div class="card"><h3>Λήγουν ή έληξαν</h3><table>${exp.map(x=>`<tr class="click" onclick="openInst('${x.id}')"><td>${x.n}<div class="note">${cust(x.c).n}</div></td><td>${pill(...subState(x))}</td><td><button class="btn s" onclick="event.stopPropagation();renew('${x.id}')">Ανανέωση</button></td></tr>`).join('')||'<tr><td class="note">Καμία</td></tr>'}</table></div>
- <div class="card"><h3>Κολλημένες στο onboarding</h3><table>${stuck.map(x=>`<tr class="click" onclick="openInst('${x.id}')"><td>${x.n}<div class="note">επόμενο: ${STEPS[x.step]}</div></td><td style="width:42%">${steps(x.step)}</td></tr>`).join('')}</table></div>
- <div class="card"><h3>Εγκαταστάσεις ανά περίπτωση</h3>${byCat.map(([k,n])=>`<div style="margin:6px 0"><div class="row">${catTag(k)}<span class="sp"></span><b>${n}</b></div><div class="bar"><i style="width:${mx?100*n/mx:0}%;background:var(${CAT[k].c})"></i></div></div>`).join('')}<p class="note">Κάθε περίπτωση έχει δικό της πρωτόκολλο: δειγματοληψία, όρια σιωπής, ενδείξεις.</p></div>
- <div class="card"><h3>Χρειάζονται επίσκεψη (από την Εποπτεία)</h3><table>${visit.map(x=>`<tr class="click" onclick="openInst('${x.id}')"><td>${x.n}<div class="note">${x.note||'σιωπηλό όργανο'}</div></td><td>${catTag(x.cat)}</td></tr>`).join('')}</table></div></div>`},
-cust(){return `<div class="row" style="margin-bottom:10px"><input id="q" placeholder="Αναζήτηση πελάτη…" oninput="filterRows(this.value)"><span class="sp"></span><button class="btn p" onclick="wizard()">+ Νέος πελάτης / εγκατάσταση</button></div>
- <div class="card wrap"><table id="tbl"><tr><th>Πελάτης</th><th>Τύπος</th><th>Εγκαταστάσεις</th><th>Ετήσια αξία</th><th>Κατάσταση</th></tr>${CUST.map(c=>{const ii=INST.filter(x=>x.c===c.id);return `<tr class="click" data-q="${c.n.toLowerCase()}" onclick="openCust('${c.id}')"><td><b>${c.n}</b>${!c.vat?'<div class="note warn">Λείπει ΑΦΜ</div>':''}</td><td>${c.t}</td><td>${ii.length}</td><td>${eur(ii.filter(x=>x.step>=7).reduce((s,x)=>s+cat(x.plan).p,0))}</td><td>${pill(c.st,c.st==='Ενεργός'?'ok':'info')}</td></tr>`}).join('')}</table></div>`},
-inst(){return `<div class="row chips" id="chips" style="margin-bottom:10px"><button class="on" data-k="">Όλες</button>${Object.keys(CAT).map(k=>`<button data-k="${k}">${CAT[k].n}</button>`).join('')}<span class="sp"></span><button class="btn p" onclick="wizard()">+ Νέα εγκατάσταση</button></div>
- <div class="card wrap"><table id="tbl"><tr><th>Εγκατάσταση</th><th>Περίπτωση</th><th>Πελάτης</th><th style="min-width:150px">Onboarding</th><th>Υγεία</th><th>Συνδρομή</th></tr>${INST.map(x=>`<tr class="click" data-k="${x.cat}" onclick="openInst('${x.id}')"><td><b>${x.n}</b></td><td>${catTag(x.cat)}</td><td>${cust(x.c).n}</td><td>${steps(x.step)}<div class="note">${x.step>=7?'Ολοκληρώθηκε':'Επόμενο: '+STEPS[x.step]}</div></td><td>${pill(...HL[x.h])}</td><td>${pill(...subState(x))}</td></tr>`).join('')}</table></div>`},
-subs(){const rows=INST.filter(x=>x.step>=6);return `<div class="grid k4" style="margin-bottom:12px">${[['Ενεργές','ok'],['Σε λήξη','warn'],['Ληγμένες','bad']].map(([l,c])=>`<div class="card kpi"><div class="v ${c}">${rows.filter(x=>subState(x)[0].startsWith(l.slice(0,5))).length}</div><div class="l">${l}</div></div>`).join('')}<div class="card kpi"><div class="v bad">${eur(PAY.filter(p=>!p.paid).reduce((s,p)=>s+p.amt,0))}</div><div class="l">Ανεξόφλητα</div></div></div>
- <div class="card wrap"><h3>Συνδρομές</h3><table><tr><th>Εγκατάσταση</th><th>Πακέτο</th><th>Τιμή/έτος</th><th>Λήξη</th><th>Κατάσταση</th><th></th></tr>${rows.map(x=>`<tr><td>${x.n}<div class="note">${cust(x.c).n}</div></td><td>${cat(x.plan).n}</td><td>${eur(cat(x.plan).p)}</td><td>${dfmt(x.end)}</td><td>${pill(...subState(x))}</td><td><button class="btn s" onclick="renew('${x.id}')">Ανανέωση</button></td></tr>`).join('')}</table>
- <p class="note">Κύκλος: ειδοποίηση στις 30 / 10 / 0 ημέρες → ανανέωση ή 15 ημέρες χάρη → παύση με έγκριση γραφείου (υπάρχων μηχανισμός T-SUBS-01).</p></div>
- <div class="card wrap" style="margin-top:12px"><h3>Χρεώσεις & πληρωμές</h3><table><tr><th>Παραστατικό</th><th>Εγκατάσταση</th><th>Ποσό</th><th>Ημερομηνία</th><th>Πληρωμή</th></tr>${PAY.map((p,k)=>`<tr><td>${p.inv}</td><td>${inst(p.i).n}</td><td>${eur(p.amt)}</td><td>${dfmt(p.d)}</td><td>${p.paid?pill('Εξοφλήθηκε','ok'):`<button class="btn s" onclick="PAY[${k}].paid=true;go('subs');toast('Καταγράφηκε η πληρωμή')">Καταγραφή πληρωμής</button>`}</td></tr>`).join('')}</table><p class="note">Το παραστατικό το κόβει το λογιστικό πρόγραμμα· εδώ κρατάμε αριθμό και εξόφληση.</p></div>`},
-offers(){return `<div class="row" style="margin-bottom:10px"><span class="sp"></span><button class="btn p" onclick="newOffer()">+ Νέα προσφορά</button></div>
- <div class="card wrap"><table><tr><th>Αριθμός</th><th>Πελάτης</th><th>Ημερομηνία</th><th>Σύνολο με ΦΠΑ</th><th>Κατάσταση</th><th></th></tr>${OFFERS.map((o,k)=>`<tr class="click" onclick="showOffer(${k})"><td><b>${o.id}</b></td><td>${cust(o.c).n}</td><td>${dfmt(o.d)}</td><td>${eur(offerTotal(o).tot)}</td><td>${pill(o.st,{Αποδεκτή:'ok',Στάλθηκε:'info',Πρόχειρη:'warn',Απορρίφθηκε:'bad'}[o.st])}</td><td>${o.st==='Στάλθηκε'?`<button class="btn s" onclick="event.stopPropagation();accept(${k})">Αποδοχή</button>`:''}</td></tr>`).join('')}</table>
- <p class="note">Η προσφορά αποθηκεύεται και συνδέεται με τον πελάτη. Η αποδοχή ξεκινά αυτόματα το onboarding και δεσμεύει όργανα από την αποθήκη.</p></div>`},
-catalog(){const kinds=[...new Set(CATALOG.map(c=>c.kind))];return kinds.map(k=>`<div class="sec">${k}</div><div class="card wrap"><table><tr><th>Κωδικός</th><th>Περιγραφή</th><th>Τιμή (χωρίς ΦΠΑ)</th><th>Για περιπτώσεις</th></tr>${CATALOG.filter(c=>c.kind===k).map(c=>`<tr><td><code>${c.k}</code></td><td>${c.n}</td><td>${eur(c.p)}${k==='Πακέτο συνδρομής'?' / έτος':''}</td><td>${c.cats.map(catTag).join('<br>')||'—'}</td></tr>`).join('')}</table></div>`).join('')+'<p class="note">Ενδεικτικές τιμές για το demo. Ένα μοντέλο τιμής: τα πακέτα του καταλόγου. Το «5 € ανά μεταβλητή» μένει μόνο ως υπολογισμός κόστους.</p>'},
-stock(){const models=[...new Set(DEV.map(d=>d.m))],sts=['Αποθήκη','Δεσμευμένο','Εγκατεστημένο','Σε επισκευή','Αποσυρμένο'];
- return `<div class="card wrap"><h3>Όργανα ανά κατάσταση</h3><table><tr><th>Μοντέλο</th>${sts.map(s=>`<th>${s}</th>`).join('')}</tr>${models.map(m=>`<tr><td><b>${m}</b></td>${sts.map(s=>{const n=(DEV.find(d=>d.m===m&&d.st===s)||{}).n||0;return `<td class="${s==='Αποθήκη'&&n<4?'warn':''}">${n||'·'}</td>`}).join('')}</tr>`).join('')}</table><p class="note">Κύκλος οργάνου: αποθήκη → δεσμευμένο (από προσφορά) → εγκατεστημένο → επισκευή → απόσυρση. Πορτοκαλί = χαμηλό απόθεμα.</p></div>
- <div class="card wrap" style="margin-top:12px"><h3>Τελευταίες κινήσεις</h3><table><tr><th>Ημερομηνία</th><th>Όργανο</th><th>Κίνηση</th><th>Αιτία</th></tr>${MOVES.map(m=>`<tr>${m.map(v=>`<td>${v}</td>`).join('')}</tr>`).join('')}</table></div>`},
-fleet(){return `<div class="card"><h3>Εποπτεία</h3><p>Μένει όπως είναι σήμερα (Στόλος · Πύλες · Χάρτης). Από το Κέντρο Διαχείρισης ανοίγει με ένα κλικ, και οι βλάβες της γίνονται αυτόματα αιτήματα.</p>
- <div class="grid k4">${[['ΕΠΙΣΚΕΨΗ',31,'bad'],['ΕΛΕΓΧΟΣ',1,'warn'],['ΓΡΑΦΕΙΟ',7,'info'],['ΕΝΤΑΞΕΙ',26,'ok']].map(([l,v,c])=>`<div class="card kpi"><div class="v ${c}">${v}</div><div class="l">${l}</div></div>`).join('')}</div><p class="note">Ενδεικτικοί αριθμοί από τον παλμό 7/11 21:21.</p></div>`},
-tickets(){return `<div class="card wrap"><table><tr><th>#</th><th>Εγκατάσταση</th><th>Είδος</th><th>Περιγραφή</th><th>Πηγή</th><th>Ανάθεση</th><th>Κατάσταση</th></tr>${TICK.map(t=>`<tr><td>${t.id}</td><td>${inst(t.i).n}</td><td>${t.k}</td><td>${t.t}</td><td>${t.src}</td><td>${t.who}</td><td>${pill(t.st,t.st==='Κλειστό'?'ok':t.st==='Ανοιχτό'?'bad':'info')}</td></tr>`).join('')}</table></div>`}};
-const TABN={home:'Αρχική',cust:'Πελάτες',inst:'Εγκαταστάσεις',subs:'Συνδρομές & χρεώσεις',offers:'Προσφορές',catalog:'Κατάλογος',stock:'Αποθήκη',fleet:'Εποπτεία',tickets:'Αιτήματα'};
-function go(t){$('#nav').innerHTML=Object.keys(TABN).map(k=>`<button class="${k===t?'on':''}" onclick="go('${k}')">${TABN[k]}</button>`).join('');$('#main').innerHTML=TABS[t]();cur=t;
- if(t==='inst')document.querySelectorAll('#chips button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#chips button').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('#tbl tr[data-k]').forEach(r=>r.style.display=!b.dataset.k||r.dataset.k===b.dataset.k?'':'none')})}
-let cur='home';function filterRows(q){q=q.toLowerCase();document.querySelectorAll('#tbl tr[data-q]').forEach(r=>r.style.display=r.dataset.q.includes(q)?'':'none')}
-/* ═══ ΚΑΡΤΕΛΑ ΠΕΛΑΤΗ / ΕΓΚΑΤΑΣΤΑΣΗΣ ═══ */
-function openCust(id){const c=cust(id),ii=INST.filter(x=>x.c===id),oo=OFFERS.filter(o=>o.c===id),pp=PAY.filter(p=>ii.some(x=>x.id===p.i)),tt=TICK.filter(t=>ii.some(x=>x.id===t.i));
- dialog(c.n,`<div class="row" style="margin-bottom:10px">${pill(c.t,'info')} ${pill(c.st,c.st==='Ενεργός'?'ok':'info')}<span class="sp"></span><span class="note">ΑΦΜ ${c.vat||'<span class="warn">λείπει</span>'} · ${c.ph}</span></div>
- <div class="sec">Εγκαταστάσεις</div><table>${ii.map(x=>`<tr class="click" onclick="openInst('${x.id}')"><td>${x.n}</td><td>${catTag(x.cat)}</td><td>${pill(...subState(x))}</td></tr>`).join('')||'<tr><td class="note">Καμία</td></tr>'}</table>
- <div class="sec">Προσφορές</div><table>${oo.map(o=>`<tr><td>${o.id}</td><td>${eur(offerTotal(o).tot)}</td><td>${o.st}</td></tr>`).join('')||'<tr><td class="note">Καμία</td></tr>'}</table>
- <div class="sec">Πληρωμές</div><table>${pp.map(p=>`<tr><td>${p.inv}</td><td>${eur(p.amt)}</td><td>${p.paid?pill('Εξοφλήθηκε','ok'):pill('Ανεξόφλητο','bad')}</td></tr>`).join('')||'<tr><td class="note">Καμία</td></tr>'}</table>
- <div class="sec">Αιτήματα</div><table>${tt.map(t=>`<tr><td>${t.id}</td><td>${t.t}</td><td>${t.st}</td></tr>`).join('')||'<tr><td class="note">Κανένα</td></tr>'}</table>`)}
-function openInst(id){const x=inst(id),c=cust(x.c);dialog(x.n,`<div class="row" style="margin-bottom:10px">${catTag(x.cat)}<span class="sp"></span>${pill(...HL[x.h])} ${pill(...subState(x))}</div>
- <p class="note">Πελάτης: <b>${c.n}</b> · Πακέτο: ${cat(x.plan).n} (${eur(cat(x.plan).p)}/έτος) · Λήξη: ${dfmt(x.end)}</p>
- <div class="sec">Onboarding</div>${STEPS.map((s,i)=>`<div class="row" style="margin:4px 0"><span class="${i<x.step?'ok':i===x.step?'warn':'note'}">${i<x.step?'✔':i===x.step?'●':'○'}</span> ${s}</div>`).join('')}
- <div class="sec">Όργανα</div><p>${x.dev.join(' · ')||'<span class="note">Δεν έχουν ανατεθεί</span>'}</p>${x.note?`<p class="bad">${x.note}</p>`:''}
- <div class="sec">Τι παρακολουθείται σε αυτή την περίπτωση</div><p class="note">${{field:'Άρδευση, ασθένειες, έντομα· όριο σιωπής ανά κύκλο οργάνου.',greenhouse:'Ίδια με αγρό, αέρας εσωτερικού χώρου, χωρίς βροχή υπαίθρου, υπόστρωμα χωριστά.',landscape:'Ζώνη ποτίζει ή όχι, βάνα απαντά, πύλη ζωντανή· καμία ειδοποίηση ψεκασμού.',station:'Όλα τα κανάλια του σταθμού και ο μετρητής βροχής· κανάλι που σταματά = βλάβη.',automation:'Ελεγκτής απαντά, εντολή εκτελείται, νερό από μετρητή· όριο σιωπής 6 ώρες.'}[x.cat]}</p>`,
- `${x.step<7?`<button class="btn p" onclick="x_adv('${id}')">Επόμενο βήμα: ${STEPS[x.step]}</button>`:''}<button class="btn" onclick="dlg.close()">Κλείσιμο</button>`)}
-function x_adv(id){const x=inst(id);x.step++;if(x.step===7){x.end='2027-11-07';x.h='ok'}dlg.close();go(cur);toast(x.step===7?'Η συνδρομή ενεργοποιήθηκε':'Ολοκληρώθηκε το βήμα')}
-function renew(id){const x=inst(id);const d=new Date(x.end&&days(x.end)>0?x.end:TODAY);d.setFullYear(d.getFullYear()+1);x.end=d.toISOString().slice(0,10);PAY.unshift({i:id,inv:'(νέο)',amt:cat(x.plan).p,d:TODAY.toISOString().slice(0,10),paid:false});go(cur);toast('Ανανεώθηκε ως '+dfmt(x.end)+' · δημιουργήθηκε χρέωση')}
-/* ═══ ΠΡΟΣΦΟΡΕΣ ═══ */
-function showOffer(k){const o=OFFERS[k],t=offerTotal(o);dialog(o.id+' · '+cust(o.c).n,`<table><tr><th>Είδος</th><th>Ποσ.</th><th>Τιμή</th><th>Σύνολο</th></tr>${o.lines.map(([c,q])=>`<tr><td>${cat(c).n}</td><td>${q}</td><td>${eur(cat(c).p)}</td><td>${eur(cat(c).p*q)}</td></tr>`).join('')}<tr><td colspan="3">Καθαρό</td><td>${eur(t.net)}</td></tr><tr><td colspan="3">ΦΠΑ 24 %</td><td>${eur(t.vat)}</td></tr><tr><td colspan="3"><b>Σύνολο</b></td><td><b>${eur(t.tot)}</b></td></tr></table>`)}
-function accept(k){const o=OFFERS[k];o.st='Αποδεκτή';const p=o.lines.find(([c])=>cat(c).kind==='Πακέτο συνδρομής');const id='I'+(INST.length+1);INST.push({id,c:o.c,n:'Νέα εγκατάσταση από '+o.id,cat:(cat(p[0]).cats[0]),step:2,h:'office',plan:p[0],end:null,dev:[]});go('offers');toast('Αποδεκτή · άνοιξε onboarding και δεσμεύτηκαν όργανα')}
-function newOffer(){dialog('Νέα προσφορά',`<div class="f"><label>Πελάτης</label><select id="oc">${CUST.map(c=>`<option value="${c.id}">${c.n}</option>`).join('')}</select></div>
- ${CATALOG.map(c=>`<div class="row" style="margin:4px 0"><span style="flex:1">${c.n}<div class="note">${c.kind} · ${eur(c.p)}</div></span><input type="number" min="0" value="0" style="width:70px" data-k="${c.k}" oninput="sumOffer()"></div>`).join('')}<p id="osum"><b>Σύνολο με ΦΠΑ: ${eur(0)}</b></p>`,
- `<button class="btn" onclick="dlg.close()">Άκυρο</button><button class="btn p" onclick="saveOffer()">Αποθήκευση & αποστολή</button>`)}
-function sumOffer(){let n=0;document.querySelectorAll('#db input[data-k]').forEach(i=>n+=cat(i.dataset.k).p*(+i.value||0));$('#osum').innerHTML='<b>Σύνολο με ΦΠΑ: '+eur(n*1.24)+'</b>'}
-function saveOffer(){const lines=[...document.querySelectorAll('#db input[data-k]')].filter(i=>+i.value>0).map(i=>[i.dataset.k,+i.value]);if(!lines.length){toast('Πρόσθεσε τουλάχιστον ένα είδος');return}
- OFFERS.unshift({id:'Π-2026-0'+(35+OFFERS.length),c:$('#oc').value,st:'Στάλθηκε',d:TODAY.toISOString().slice(0,10),lines});dlg.close();go('offers');toast('Η προσφορά αποθηκεύτηκε')}
-/* ═══ ΟΔΗΓΟΣ ΝΕΑΣ ΕΓΚΑΤΑΣΤΑΣΗΣ ═══ */
-let W;function wizard(){W={s:0,c:'',newc:'',cat:'',name:'',plan:''};wz()}
-function wz(){const L=['Πελάτης','Περίπτωση','Στοιχεία','Πακέτο','Επιβεβαίωση'];let b=`<div class="wz">${L.map((l,i)=>`<span class="${i===W.s?'on':i<W.s?'d':''}">${i+1}. ${l}</span>`).join('')}</div>`;
- if(W.s===0)b+=`<div class="f"><label>Υπάρχων πελάτης</label><select onchange="W.c=this.value"><option value="">— νέος πελάτης —</option>${CUST.map(c=>`<option value="${c.id}" ${W.c===c.id?'selected':''}>${c.n}</option>`).join('')}</select></div><div class="f"><label>ή επωνυμία νέου πελάτη (ΑΦΜ υποχρεωτικό)</label><input value="${W.newc}" oninput="W.newc=this.value"></div>`;
- if(W.s===1)b+=`<p class="note">Η περίπτωση ορίζει τι ρωτά η παραμετροποίηση και τι παρακολουθεί το σύστημα. Δεν βγαίνει από τα όργανα, δηλώνεται.</p><div class="opts">${Object.keys(CAT).map(k=>`<div class="opt ${W.cat===k?'on':''}" onclick="W.cat='${k}';wz()"><b>${catTag(k)}</b><span class="note">${{field:'Θρέψη, φυτοπροστασία, άρδευση',greenhouse:'Καλυμμένη καλλιέργεια, κλίμα εσωτερικού χώρου',landscape:'Ζώνες άρδευσης με αισθητήρες, χωρίς φυτοπροστασία',station:'Μόνο μετρήσεις καιρού',automation:'Βάνες χωρίς αισθητήρες'}[k]}</span></div>`).join('')}</div>`;
- if(W.s===2)b+=`<div class="f"><label>Όνομα εγκατάστασης</label><input value="${W.name}" oninput="W.name=this.value"></div><div class="f"><label>Θέση (αντιγραφή από Google Maps)</label><input placeholder="35.xxxx, 25.xxxx"></div>`;
- if(W.s===3){const ps=CATALOG.filter(c=>c.cats.includes(W.cat));b+=`<div class="opts">${ps.map(p=>`<div class="opt ${W.plan===p.k?'on':''}" onclick="W.plan='${p.k}';wz()"><b>${p.n}</b><span class="note">${eur(p.p)} / έτος</span></div>`).join('')}</div><p class="note">Ο κατάλογος δείχνει μόνο τα πακέτα που ταιριάζουν στην περίπτωση.</p>`}
- if(W.s===4)b+=`<table><tr><td>Πελάτης</td><td><b>${W.c?cust(W.c).n:W.newc}</b></td></tr><tr><td>Περίπτωση</td><td>${catTag(W.cat)}</td></tr><tr><td>Εγκατάσταση</td><td>${W.name}</td></tr><tr><td>Πακέτο</td><td>${cat(W.plan).n}</td></tr></table><p class="note">Με την επιβεβαίωση: δημιουργείται πελάτης/χρήστης αν χρειάζεται, καλείται το createField με την περίπτωση, και η εγκατάσταση μπαίνει στο βήμα «Όργανα».</p>`;
- const okNext=[W.c||W.newc.trim(),W.cat,W.name.trim(),W.plan,true][W.s];
- dialog('Νέα εγκατάσταση',b,`${W.s?'<button class="btn" onclick="W.s--;wz()">Πίσω</button>':''}<span class="sp"></span><button class="btn p" ${okNext?'':'disabled style="opacity:.5"'} onclick="${W.s<4?'W.s++;wz()':'finishW()'}">${W.s<4?'Επόμενο':'Δημιουργία'}</button>`)}
-function finishW(){let c=W.c;if(!c){c='C'+(CUST.length+1);CUST.push({id:c,n:W.newc,t:'Αγρότης',vat:'',ph:'—',st:'Σε onboarding'})}INST.push({id:'I'+(INST.length+1),c,n:W.name,cat:W.cat,step:3,h:'office',plan:W.plan,end:null,dev:[]});dlg.close();go('inst');toast('Δημιουργήθηκε · επόμενο βήμα: Όργανα')}
-$('#theme').onclick=()=>{const r=document.documentElement,d=r.dataset.theme==='dark'||(!r.dataset.theme&&matchMedia('(prefers-color-scheme: dark)').matches);r.dataset.theme=d?'light':'dark'};
-go('home');
+function prog(n){return `<div class="prog" title="${n>=7?'Ολοκληρώθηκε':'Επόμενο: '+STEPS[n]}">${STEPS.map((s,i)=>`<i class="${i<n?'d':i===n?'c':''}"></i>`).join('')}</div>`}
+function offTot(o){const net=o.lines.reduce((s,[k,q])=>s+prod(k).price*q,0),dis=net*(o.disc||0)/100,base=net-dis;return{net,dis,base,vat:base*.24,tot:base*1.24,cost:o.lines.reduce((s,[k,q])=>s+(prod(k).cost||0)*q,0)}}
+const poTot=p=>p.lines.reduce((s,[,q,c])=>s+q*c,0);
+const stockOf=k=>UNITS.filter(u=>u.k===k&&u.st==='Απόθεμα').length,resOf=k=>UNITS.filter(u=>u.k===k&&u.st==='Δεσμευμένο').length;
+const inbound=k=>PO.filter(p=>p.st==='Σε μεταφορά'||p.st==='Στάλθηκε').reduce((s,p)=>s+p.lines.filter(l=>l[0]===k).reduce((a,l)=>a+l[1],0),0);
+const arr=()=>INST.filter(x=>['ok','warn'].includes(subSt(x)[1])).reduce((s,x)=>s+prod(x.plan).price,0);
+const overdue=()=>INV.filter(i=>!i.paid&&days(i.due)<0);
+const lowStock=()=>PROD.filter(p=>p.kind==='eq'&&stockOf(p.k)+inbound(p.k)<p.min);
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2600)}
+function openD(crumb,title,body,foot){$('#dcr').textContent=crumb;$('#dtt').textContent=title;$('#dbd').innerHTML=body;$('#dft').innerHTML=foot||'<button class="btn" onclick="closeD()">Κλείσιμο</button>';$('#drw').classList.add('on');$('#dbg').classList.add('on')}
+function closeD(){$('#drw').classList.remove('on');$('#dbg').classList.remove('on')}
+const kv=o=>`<dl class="kv">${o.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`;
+const tbl=(head,rows,empty='Καμία εγγραφή')=>`<div class="tw"><table class="tbl"><thead><tr>${head.map(h=>`<th class="${h.startsWith('#')?'num':''}">${h.replace(/^#/,'')}</th>`).join('')}</tr></thead><tbody>${rows.join('')||`<tr><td colspan="${head.length}"><div class="empty">${empty}</div></td></tr>`}</tbody></table></div>`;
+/* ════════════ ΜΕΝΟΥ ════════════ */
+const IC={dash:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z"/>',pipe:'<path d="M3 5h18M6 12h12M10 19h4"/>',cust:'<circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M17 11a3 3 0 1 0 0-6M22 21c0-3-2-5-5-5.5"/>',act:'<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/>',off:'<path d="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6"/>',sub:'<path d="M4 12a8 8 0 0 1 14-5l2 2M20 12a8 8 0 0 1-14 5l-2-2M20 4v5h-5M4 20v-5h5"/>',inv:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3"/>',inst:'<path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',supp:'<path d="M3 7h11v10H3zM14 10h4l3 3v4h-7M7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM17 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>',po:'<path d="M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6M9 11h6M9 15h4"/>',stock:'<path d="M21 8 12 3 3 8v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/>',unit:'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h5"/>',mov:'<path d="M4 7h14l-3-3M20 17H6l3 3"/>',tick:'<path d="M4 4h16v12H8l-4 4z"/>',cat:'<path d="M4 6h16M4 12h16M4 18h10"/>',fleet:'<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>'};
+const NAV=[['Επισκόπηση',[['dash','Πίνακας ελέγχου','dash']]],['CRM',[['pipeline','Ευκαιρίες','pipe'],['customers','Πελάτες','cust'],['activities','Δραστηριότητες','act']]],['Πωλήσεις',[['offers','Προσφορές','off'],['subs','Συνδρομές','sub'],['invoices','Τιμολόγηση & εισπράξεις','inv']]],['Υλοποίηση',[['installs','Εγκαταστάσεις','inst'],['tickets','Αιτήματα & RMA','tick'],['fleet','Εποπτεία στόλου','fleet']]],['Αγορές',[['suppliers','Προμηθευτές','supp'],['pos','Παραγγελίες αγοράς','po']]],['Αποθήκη',[['stock','Απόθεμα','stock'],['units','Μονάδες & ιχνηλάτηση','unit'],['moves','Κινήσεις','mov']]],['Ρυθμίσεις',[['catalog','Κατάλογος & τιμές','cat']]]];
+function counts(){return{pipeline:LEADS.filter(l=>l.stage!=='Κερδήθηκε').length,invoices:overdue().length,installs:INST.filter(x=>x.step<7).length,tickets:TICK.filter(t=>t.st!=='Κλειστό').length,stock:lowStock().length,pos:PO.filter(p=>p.st!=='Παραλήφθηκε').length}}
+function side(){const c=counts(),alert={invoices:1,stock:1,tickets:1};$('#side').innerHTML=`<div class="brand"><div class="logo">SAG</div><div><b>Smart AgroGenius</b><small>ERP · CRM · MACC</small></div></div>`+NAV.map(([g,items])=>`<div class="grp">${g}</div>`+items.map(([k,n,ic])=>`<button class="nav ${S.page===k?'on':''}" onclick="go('${k}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${IC[ic]}</svg>${n}${c[k]?`<span class="cnt ${alert[k]?'alert':''}">${c[k]}</span>`:''}</button>`).join('')).join('')}
+const S={page:'dash',f:{}};
+function go(p){S.page=p;side();$('#content').innerHTML=PAGES[p]();$('#side').classList.remove('on');window.scrollTo(0,0)}
+const ph=(crumb,title,desc,actions='')=>`<div class="ph"><div><div class="crumb">${crumb}</div><h2>${title}</h2>${desc?`<p>${desc}</p>`:''}</div><span class="sp"></span>${actions}</div>`;
+const kpi=(l,v,d='',tone='')=>`<div class="card kpi"><div class="l">${l}</div><div class="v ${tone}">${v}</div>${d?`<div class="kpi d sub" style="padding:0">${d}</div>`:''}</div>`;
+/* ════════════ ΣΕΛΙΔΕΣ ════════════ */
+const PAGES={
+dash(){const pipeW=LEADS.filter(l=>l.stage!=='Κερδήθηκε').reduce((s,l)=>s+l.val*PROB[l.stage],0),stockV=UNITS.filter(u=>u.st==='Απόθεμα').reduce((s,u)=>s+prod(u.k).cost,0),od=overdue();
+ const months=['Ιουν','Ιουλ','Αυγ','Σεπ','Οκτ','Νοε'],rev=[1420,1980,1650,2410,3120,1890],mx=Math.max(...rev);
+ const exp=INST.filter(x=>x.step>=7&&x.end&&days(x.end)<=30).sort((a,b)=>days(a.end)-days(b.end));
+ return ph('Επισκόπηση','Πίνακας ελέγχου','Κυριακή 8 Νοεμβρίου 2026 · όλα τα νούμερα είναι πλασματικά',`<button class="btn" onclick="wizard()">+ Νέα εγκατάσταση</button><button class="btn p" onclick="leadForm()">+ Νέα ευκαιρία</button>`)+
+ `<div class="grid g4">${kpi('Ετήσια έσοδα συνδρομών (ARR)',eur(arr()),INST.filter(x=>subSt(x)[1]!=='info').length+' εγκαταστάσεις')}${kpi('Σταθμισμένη αξία ευκαιριών',eur(pipeW),LEADS.filter(l=>l.stage!=='Κερδήθηκε').length+' ανοιχτές ευκαιρίες')}${kpi('Ληξιπρόθεσμες απαιτήσεις',eur(od.reduce((s,i)=>s+i.amt,0),2),od.length+' παραστατικά',od.length?'bad':'')}${kpi('Αξία αποθέματος (κόστος)',eur(stockV),(lowStock().length===1?'1 είδος':lowStock().length+' είδη')+' κάτω από το ελάχιστο')}</div>
+ <div class="grid g21" style="margin-top:14px"><div class="card"><div class="hd"><h3>Τιμολογήσεις ανά μήνα</h3><span class="sp"></span><span class="sub">χωρίς ΦΠΑ</span></div><div class="bd"><svg class="chart" viewBox="0 0 600 190" width="100%" height="190" role="img" aria-label="Τιμολογήσεις ανά μήνα">${rev.map((v,i)=>{const h=v/mx*140,x=30+i*95;return `<rect x="${x}" y="${160-h}" width="54" height="${h}" rx="6" fill="var(--acc)" opacity="${i===5?.55:1}"/><text x="${x+27}" y="178" text-anchor="middle">${months[i]}</text><text x="${x+27}" y="${152-h}" text-anchor="middle">${(v/1000).toFixed(1)}k</text>`}).join('')}</svg></div></div>
+ <div class="card"><div class="hd"><h3>Ροή ευκαιριών</h3></div><div class="bd">${STAGES.map(s=>{const L=LEADS.filter(l=>l.stage===s),v=L.reduce((a,l)=>a+l.val,0);return `<div style="margin-bottom:11px"><div class="row"><span>${s}</span><span class="sp"></span><span class="sub">${L.length} · ${eur(v)}</span></div><div class="bar"><i style="width:${Math.min(100,v/50)}%"></i></div></div>`}).join('')}</div></div></div>
+ <div class="grid g3" style="margin-top:14px">
+ <div class="card"><div class="hd"><h3>Συνδρομές που λήγουν</h3><span class="sp"></span><button class="btn s ghost" onclick="go('subs')">Όλες →</button></div>${tbl(['Εγκατάσταση','Κατάσταση'],exp.map(x=>`<tr class="c" onclick="dInst('${x.id}')"><td>${x.n}<div class="sub">${cust(x.c).n}</div></td><td>${b(...subSt(x))}</td></tr>`),'Καμία λήξη σε 30 ημέρες')}</div>
+ <div class="card"><div class="hd"><h3>Χρειάζονται ενέργεια</h3></div>${tbl(['Θέμα','Πού'],[...TICK.filter(t=>t.st!=='Κλειστό').map(t=>`<tr class="c" onclick="dTick('${t.id}')"><td>${t.t}<div class="sub">${t.id} · ${t.src}</div></td><td>${b(t.pr,t.pr==='Υψηλή'?'bad':'warn')}</td></tr>`),...INST.filter(x=>x.step<7).map(x=>`<tr class="c" onclick="dInst('${x.id}')"><td>Onboarding: ${x.n}<div class="sub">επόμενο βήμα: ${STEPS[x.step]}</div></td><td>${b('Onboarding','info')}</td></tr>`)])}</div>
+ <div class="card"><div class="hd"><h3>Απόθεμα προς παραγγελία</h3><span class="sp"></span><button class="btn s ghost" onclick="go('stock')">Απόθεμα →</button></div>${tbl(['Είδος','#Διαθέσιμα',''],lowStock().map(p=>`<tr><td>${p.n}<div class="sub">${supN(p.sup)}</div></td><td class="num">${stockOf(p.k)} / ${p.min}</td><td><button class="btn s" onclick="poForm('${p.sup}','${p.k}')">Παραγγελία</button></td></tr>`),'Όλα πάνω από το ελάχιστο')}</div></div>
+ <div class="card" style="margin-top:14px"><div class="hd"><h3>Πώς συνδέονται όλα</h3></div><div class="bd"><div class="flow"><span>Προμηθευτής</span><em>→</em><span>Παραγγελία αγοράς</span><em>→</em><span>Παραλαβή & σειριακά</span><em>→</em><span>Απόθεμα</span><em>→</em><span>Δέσμευση από προσφορά</span><em>→</em><span>Εγκατάσταση στον πελάτη</span><em>→</em><span>Συνδρομή & τιμολόγηση</span><em>→</em><span>Αίτημα / RMA προς προμηθευτή</span></div><p class="sub" style="margin:10px 0 0">Κάθε μονάδα εξοπλισμού έχει ιστορικό από τον προμηθευτή ως τον πελάτη. Κάθε εγκατάσταση έχει περίπτωση (5 είδη), που ορίζει πακέτα, παραμετροποίηση και παρακολούθηση.</p></div></div>`},
+pipeline(){const open=LEADS.filter(l=>l.stage!=='Κερδήθηκε');return ph('CRM','Ευκαιρίες',`${open.length} ανοιχτές · συνολική αξία ${eur(open.reduce((s,l)=>s+l.val,0))} · σταθμισμένη ${eur(open.reduce((s,l)=>s+l.val*PROB[l.stage],0))}`,`<button class="btn p" onclick="leadForm()">+ Νέα ευκαιρία</button>`)+
+ `<div class="kan">${STAGES.map(s=>{const L=LEADS.filter(l=>l.stage===s);return `<div class="col"><h4>${s}<span>${L.length} · ${eur(L.reduce((a,l)=>a+l.val,0))}</span></h4>${L.map(l=>`<div class="deal" onclick="dLead('${l.id}')"><div class="row" style="margin:0;align-items:flex-start"><span class="t">${l.n}</span><span class="sp"></span><span class="v">${eur(l.val)}</span></div><div class="sub" style="margin-top:3px">${l.next}</div><div class="row sub">${catT(l.cat)}</div><div class="row sub">${l.owner}${l.due?`<span class="sp"></span><span class="${days(l.due)<0?'bad':''}">${fd(l.due)}</span>`:''}</div></div>`).join('')||'<div class="empty">—</div>'}</div>`}).join('')}</div>`},
+customers(){const f=S.f.ct||'';const L=CUST.filter(c=>!f||c.t===f);return ph('CRM','Πελάτες',CUST.length+' πελάτες · 360° καρτέλα με εγκαταστάσεις, συνδρομές, πληρωμές, αιτήματα',`<button class="btn p" onclick="wizard()">+ Νέος πελάτης</button>`)+
+ `<div class="toolbar"><div class="seg">${['','Αγρότης','Οργάνωση','Ξενοδοχείο','Δήμος','Σχολείο'].map(t=>`<button class="${f===t?'on':''}" onclick="S.f.ct='${t}';go('customers')">${t||'Όλοι'}</button>`).join('')}</div></div>
+ <div class="card">${tbl(['Πελάτης','Τύπος','Περιοχή','#Εγκαταστάσεις','#Ετήσια αξία','Υπόλοιπο','Υπεύθυνος','Κατάσταση'],L.map(c=>{const ii=INST.filter(x=>x.c===c.id),bal=INV.filter(i=>i.c===c.id&&!i.paid).reduce((s,i)=>s+i.amt,0);return `<tr class="c" onclick="dCust('${c.id}')"><td><b>${c.n}</b>${!c.vat?'<div class="sub warn">Λείπει ΑΦΜ</div>':''}</td><td>${c.t}</td><td>${c.city}</td><td class="num">${ii.length}</td><td class="num">${eur(ii.filter(x=>x.step>=7).reduce((s,x)=>s+prod(x.plan).price,0))}</td><td>${bal?b(eur(bal,2),'warn'):'<span class="sub">—</span>'}</td><td>${c.owner}</td><td>${b(c.st,c.st==='Ενεργός'?'ok':'info')}</td></tr>`}))}</div>`},
+activities(){return ph('CRM','Δραστηριότητες','Κλήσεις, επισκέψεις, συναντήσεις, email — συνδεδεμένα με πελάτη ή ευκαιρία',`<button class="btn p" onclick="actForm()">+ Καταγραφή</button>`)+
+ `<div class="grid g21"><div class="card">${tbl(['Ημερομηνία','Είδος','Αφορά','Σημείωση','Ποιος'],ACT.slice().sort((a,b)=>b.d.localeCompare(a.d)).map(a=>`<tr><td>${fd(a.d)}</td><td>${b(a.k,'',1)}</td><td>${refName(a.ref)}</td><td>${a.t}</td><td>${a.who}</td></tr>`))}</div>
+ <div class="card"><div class="hd"><h3>Επόμενες ενέργειες</h3></div>${tbl(['Ενέργεια','Λήξη'],LEADS.filter(l=>l.due).sort((a,b)=>a.due.localeCompare(b.due)).map(l=>`<tr class="c" onclick="dLead('${l.id}')"><td>${l.next}<div class="sub">${l.n}</div></td><td>${b(fd(l.due),days(l.due)<0?'bad':days(l.due)<=2?'warn':'')}</td></tr>`))}</div></div>`},
+offers(){return ph('Πωλήσεις','Προσφορές','Αποθηκεύονται, έχουν ισχύ και περιθώριο. Η αποδοχή ανοίγει εγκατάσταση και δεσμεύει απόθεμα.',`<button class="btn p" onclick="offerForm()">+ Νέα προσφορά</button>`)+
+ `<div class="card">${tbl(['Αριθμός','Πελάτης','Ημερομηνία','Ισχύς','#Σύνολο με ΦΠΑ','#Περιθώριο','Κατάσταση',''],OFFERS.map((o,k)=>{const t=offTot(o),m=t.base?Math.round(100*(t.base-t.cost)/t.base):0;return `<tr class="c" onclick="dOffer(${k})"><td class="mono">${o.id}</td><td>${cust(o.c).n}</td><td>${fd(o.d)}</td><td>${fd(o.valid)}</td><td class="num">${eur(t.tot,2)}</td><td class="num">${m} %</td><td>${b(o.st,{Αποδεκτή:'ok',Στάλθηκε:'info',Πρόχειρη:'',Απορρίφθηκε:'bad'}[o.st])}</td><td>${o.st==='Στάλθηκε'?`<button class="btn s" onclick="event.stopPropagation();accept(${k})">Αποδοχή</button>`:o.st==='Πρόχειρη'?`<button class="btn s" onclick="event.stopPropagation();OFFERS[${k}].st='Στάλθηκε';go('offers');toast('Η προσφορά στάλθηκε')">Αποστολή</button>`:''}</td></tr>`}))}</div>`},
+subs(){const f=S.f.ss||'';const rows=INST.filter(x=>x.step>=6).filter(x=>!f||subSt(x)[1]===f);return ph('Πωλήσεις','Συνδρομές','Κύκλος: ειδοποίηση 30 / 10 / 0 ημέρες → ανανέωση ή 15 ημέρες χάρη → παύση με έγκριση γραφείου')+
+ `<div class="grid g4" style="margin-bottom:14px">${kpi('Ενεργές',INST.filter(x=>subSt(x)[1]==='ok').length,'','ok')}${kpi('Λήγουν σε 30 ημέρες',INST.filter(x=>subSt(x)[1]==='warn').length,'','warn')}${kpi('Ληγμένες',INST.filter(x=>subSt(x)[1]==='bad').length,'','bad')}${kpi('ARR',eur(arr()))}</div>
+ <div class="toolbar"><div class="seg">${[['','Όλες'],['ok','Ενεργές'],['warn','Λήγουν'],['bad','Ληγμένες']].map(([k,n])=>`<button class="${f===k?'on':''}" onclick="S.f.ss='${k}';go('subs')">${n}</button>`).join('')}</div></div>
+ <div class="card">${tbl(['Εγκατάσταση','Περίπτωση','Πακέτο','#Τιμή / έτος','Έναρξη','Λήξη','Κατάσταση',''],rows.map(x=>`<tr class="c" onclick="dInst('${x.id}')"><td><b>${x.n}</b><div class="sub">${cust(x.c).n}</div></td><td>${catT(x.cat)}</td><td>${prod(x.plan).n.split(' — ')[0]}</td><td class="num">${eur(prod(x.plan).price)}</td><td>${fd(x.start)}</td><td>${fd(x.end)}</td><td>${b(...subSt(x))}</td><td><button class="btn s" onclick="event.stopPropagation();renew('${x.id}')">Ανανέωση</button></td></tr>`))}</div>`},
+invoices(){const od=overdue(),open=INV.filter(i=>!i.paid);return ph('Πωλήσεις','Τιμολόγηση & εισπράξεις','Τα παραστατικά εκδίδονται στο λογιστικό πρόγραμμα· εδώ κρατάμε αριθμό, λήξη και εξόφληση')+
+ `<div class="grid g4" style="margin-bottom:14px">${kpi('Ανεξόφλητα',eur(open.reduce((s,i)=>s+i.amt,0),2),open.length+' παραστατικά','warn')}${kpi('Ληξιπρόθεσμα',eur(od.reduce((s,i)=>s+i.amt,0),2),od.length+' παραστατικά','bad')}${kpi('Εισπράξεις έτους',eur(INV.filter(i=>i.paid&&i.paid>='2026').reduce((s,i)=>s+i.amt,0),2))}${kpi('Μέσος χρόνος είσπραξης','17 ημ.','τελευταίοι 12 μήνες')}</div>
+ <div class="card">${tbl(['Παραστατικό','Είδος','Πελάτης','Εγκατάσταση','Έκδοση','Λήξη','#Ποσό','Κατάσταση',''],INV.slice().sort((a,b)=>b.d.localeCompare(a.d)).map(i=>{const st=i.paid?['Εξοφλήθηκε','ok']:days(i.due)<0?['Ληξιπρόθεσμο '+(-days(i.due))+' ημ.','bad']:['Ανοιχτό','warn'];return `<tr><td class="mono">${i.id}</td><td>${i.k}</td><td>${cust(i.c).n}</td><td>${i.i?inst(i.i).n:'—'}</td><td>${fd(i.d)}</td><td>${fd(i.due)}</td><td class="num">${eur(i.amt,2)}</td><td>${b(...st)}</td><td>${i.paid?'':`<button class="btn s" onclick="pay('${i.id}')">Καταγραφή είσπραξης</button>`}</td></tr>`}))}</div>`},
+installs(){const f=S.f.ic||'';const L=INST.filter(x=>!f||x.cat===f);return ph('Υλοποίηση','Εγκαταστάσεις','Κάθε εγκατάσταση ανήκει σε μία από τις 5 περιπτώσεις, με δικό της πρωτόκολλο',`<button class="btn p" onclick="wizard()">+ Νέα εγκατάσταση</button>`)+
+ `<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-bottom:14px">${Object.keys(CAT).map(k=>`<div class="card kpi" style="cursor:pointer;${f===k?'outline:2px solid var(--acc)':''}" onclick="S.f.ic=S.f.ic==='${k}'?'':'${k}';go('installs')"><div class="l">${catT(k)}</div><div class="v">${INST.filter(x=>x.cat===k).length}</div></div>`).join('')}</div>
+ <div class="card">${tbl(['Εγκατάσταση','Περίπτωση','Πελάτης','Onboarding','Όργανα','Υγεία','Συνδρομή'],L.map(x=>`<tr class="c" onclick="dInst('${x.id}')"><td><b>${x.n}</b>${x.note?`<div class="sub bad">${x.note}</div>`:''}</td><td>${catT(x.cat)}</td><td>${cust(x.c).n}</td><td style="min-width:150px">${prog(x.step)}<div class="sub">${x.step>=7?'Ολοκληρώθηκε':'Επόμενο: '+STEPS[x.step]}</div></td><td class="num">${x.units.length}/${x.need.length}</td><td>${b(...HL[x.h])}</td><td>${b(...subSt(x))}</td></tr>`))}</div>`},
+tickets(){return ph('Υλοποίηση','Αιτήματα & RMA','Βλάβες από την Εποπτεία γίνονται αυτόματα αιτήματα. Το RMA στέλνει τη μονάδα στον προμηθευτή και φαίνεται στην ιχνηλάτηση.',`<button class="btn p" onclick="toast('Στο demo τα αιτήματα δημιουργούνται από την Εποπτεία')">+ Νέο αίτημα</button>`)+
+ `<div class="card">${tbl(['#','Εγκατάσταση','Είδος','Περιγραφή','Πηγή','Προτεραιότητα','Ανάθεση','Κατάσταση'],TICK.map(t=>`<tr class="c" onclick="dTick('${t.id}')"><td class="mono">${t.id}</td><td>${inst(t.i).n}<div class="sub">${cust(inst(t.i).c).n}</div></td><td>${b(t.k,t.k==='RMA'?'info':'',1)}</td><td>${t.t}</td><td>${t.src}</td><td>${b(t.pr,t.pr==='Υψηλή'?'bad':t.pr==='Μέτρια'?'warn':'')}</td><td>${t.who}</td><td>${b(t.st,t.st==='Κλειστό'?'ok':t.st==='Ανοιχτό'?'bad':'info')}</td></tr>`))}</div>`},
+fleet(){return ph('Υλοποίηση','Εποπτεία στόλου','Η υπάρχουσα σελίδα Εποπτείας (Στόλος · Πύλες · Χάρτης) μένει ως έχει· εδώ η σύνοψη')+
+ `<div class="grid g4">${kpi('Επίσκεψη','31','σιωπηλά όργανα ή βλάβες','bad')}${kpi('Έλεγχος','1','','warn')}${kpi('Γραφείο','7','ελλείψεις ρύθμισης')}${kpi('Εντάξει','26','','ok')}</div><div class="alert info" style="margin-top:14px">Ενδεικτικοί αριθμοί από τον παλμό 7/11 21:21 (v50.188). Κάθε «Επίσκεψη» ανοίγει αυτόματα αίτημα στη σωστή εγκατάσταση και πελάτη.</div>`},
+suppliers(){return ph('Αγορές','Προμηθευτές','Κατασκευαστές και διανομείς εξοπλισμού · όροι, χρόνοι παράδοσης, είδη, αξία αγορών',`<button class="btn p" onclick="toast('Στο demo οι προμηθευτές είναι σταθεροί')">+ Νέος προμηθευτής</button>`)+
+ `<div class="card">${tbl(['Προμηθευτής','Χώρα','Όροι πληρωμής','#Χρόνος παράδοσης','Είδη','#Αγορές έτους','Ανοιχτές παραγγελίες','Αξιολόγηση'],SUP.map(s=>{const ps=PO.filter(p=>p.sup===s.id);return `<tr class="c" onclick="dSup('${s.id}')"><td><b>${s.n}</b></td><td>${s.co}</td><td>${s.terms}</td><td class="num">${s.lead} ημ.</td><td>${PROD.filter(p=>p.sup===s.id).map(p=>p.sku).join(', ')}</td><td class="num">${eur(ps.reduce((a,p)=>a+poTot(p),0))}</td><td>${ps.filter(p=>p.st!=='Παραλήφθηκε').length||'<span class="sub">—</span>'}</td><td>${'★'.repeat(Math.round(s.rate))}<span class="sub"> ${s.rate}</span></td></tr>`}))}</div>`},
+pos(){return ph('Αγορές','Παραγγελίες αγοράς','Πρόχειρη → Στάλθηκε → Σε μεταφορά → Παραλήφθηκε. Η παραλαβή δημιουργεί σειριακά στην αποθήκη.',`<button class="btn p" onclick="poForm()">+ Νέα παραγγελία</button>`)+
+ `<div class="card">${tbl(['Αριθμός','Προμηθευτής','Ημερομηνία','Αναμενόμενη','Είδη','#Αξία','Κατάσταση',''],PO.slice().sort((a,b)=>b.d.localeCompare(a.d)).map(p=>`<tr class="c" onclick="dPO('${p.id}')"><td class="mono">${p.id}</td><td>${supN(p.sup)}</td><td>${fd(p.d)}</td><td>${fd(p.rec||p.eta)}</td><td>${p.lines.map(([k,q])=>q+'× '+prod(k).sku).join(', ')}</td><td class="num">${eur(poTot(p))}</td><td>${b(p.st,{Παραλήφθηκε:'ok','Σε μεταφορά':'info',Στάλθηκε:'warn',Πρόχειρη:''}[p.st])}</td><td>${p.st==='Παραλήφθηκε'?'':`<button class="btn s" onclick="event.stopPropagation();receive('${p.id}')">Παραλαβή</button>`}</td></tr>`))}</div>`},
+stock(){const eq=PROD.filter(p=>p.kind==='eq');return ph('Αποθήκη','Απόθεμα','Διαθέσιμο, δεσμευμένο από προσφορές, εισερχόμενο από παραγγελίες, σημείο αναπαραγγελίας')+
+ `<div class="card">${tbl(['Είδος','Κωδικός','Προμηθευτής','#Διαθέσιμα','#Δεσμευμένα','#Εγκατεστημένα','#Σε RMA','#Εισερχόμενα','#Ελάχιστο','#Αξία κόστους',''],eq.map(p=>{const av=stockOf(p.k),low=av+inbound(p.k)<p.min;return `<tr><td><b>${p.n}</b></td><td class="mono">${p.sku}</td><td>${supN(p.sup)}</td><td class="num ${low?'bad':''}">${av}</td><td class="num">${resOf(p.k)}</td><td class="num">${UNITS.filter(u=>u.k===p.k&&u.st==='Εγκατεστημένο').length}</td><td class="num">${UNITS.filter(u=>u.k===p.k&&u.st==='RMA').length}</td><td class="num">${inbound(p.k)||'·'}</td><td class="num">${p.min}</td><td class="num">${eur(av*p.cost)}</td><td>${low?`<button class="btn s" onclick="poForm('${p.sup}','${p.k}')">Παραγγελία</button>`:''}</td></tr>`}))}</div>`},
+units(){const f=S.f.us||'';const L=UNITS.filter(u=>u.k!=='kit'&&(!f||u.st===f));return ph('Αποθήκη','Μονάδες & ιχνηλάτηση','Κάθε σειριακό από τον προμηθευτή ως τον πελάτη · πάτα μια γραμμή για το ιστορικό της')+
+ `<div class="toolbar"><div class="seg">${['','Απόθεμα','Δεσμευμένο','Εγκατεστημένο','RMA'].map(s=>`<button class="${f===s?'on':''}" onclick="S.f.us='${s}';go('units')">${s||'Όλες'}</button>`).join('')}</div><span class="sp"></span><span class="sub">${L.length} μονάδες</span></div>
+ <div class="card">${tbl(['Σειριακός','Είδος','Προμηθευτής','Παραγγελία','Παραλαβή','Κατάσταση','Θέση'],L.slice(0,60).map(u=>`<tr class="c" onclick="dUnit('${u.sn}')"><td class="mono">${u.sn}</td><td>${prod(u.k).n}</td><td>${supN(prod(u.k).sup)}</td><td class="mono">${u.po}</td><td>${fd(u.rec)}</td><td>${b(u.st,{Απόθεμα:'',Δεσμευμένο:'info',Εγκατεστημένο:'ok',RMA:'warn'}[u.st])}</td><td>${u.inst?inst(u.inst).n+'<div class="sub">'+cust(inst(u.inst).c).n+'</div>':u.res?'για '+u.res:'Αποθήκη Ηρακλείου'}</td></tr>`))}</div>`},
+moves(){return ph('Αποθήκη','Κινήσεις','Παραλαβές, δεσμεύσεις, εγκαταστάσεις, επιστροφές')+`<div class="card">${tbl(['Ημερομηνία','Κίνηση','Είδος','Λεπτομέρεια'],MOVES.slice().sort((a,b)=>b.d.localeCompare(a.d)).map(m=>`<tr><td>${fd(m.d)}</td><td>${b(m.k,{Παραλαβή:'ok',Δέσμευση:'info',Εγκατάσταση:'ok',RMA:'warn'}[m.k])}</td><td>${prod(m.p).n}</td><td>${m.t}</td></tr>`))}</div>`},
+catalog(){const grp=[['plan','Πακέτα συνδρομής'],['eq','Εξοπλισμός'],['svc','Υπηρεσίες']];return ph('Ρυθμίσεις','Κατάλογος & τιμές','Ένα μοντέλο τιμής: τα πακέτα του καταλόγου, ανά περίπτωση εγκατάστασης. Ενδεικτικές τιμές.')+grp.map(([k,n])=>`<div class="sec" style="margin-top:16px">${n}</div><div class="card">${tbl(k==='eq'?['Είδος','Κωδικός','Προμηθευτής','#Κόστος','#Τιμή','#Περιθώριο']:k==='plan'?['Πακέτο','Κωδικός','#Τιμή / έτος','Για περιπτώσεις']:['Υπηρεσία','Κωδικός','#Τιμή'],PROD.filter(p=>p.kind===k).map(p=>k==='eq'?`<tr><td>${p.n}</td><td class="mono">${p.sku}</td><td>${supN(p.sup)}</td><td class="num">${eur(p.cost)}</td><td class="num">${eur(p.price)}</td><td class="num">${Math.round(100*(p.price-p.cost)/p.price)} %</td></tr>`:k==='plan'?`<tr><td>${p.n}</td><td class="mono">${p.k}</td><td class="num">${eur(p.price)}</td><td>${p.cats.map(catT).join(' ')}</td></tr>`:`<tr><td>${p.n}</td><td class="mono">${p.k}</td><td class="num">${eur(p.price)}</td></tr>`))}</div>`).join('')}};
+function refName(r){if(!r)return'—';if(r[0]==='L'){const l=LEADS.find(x=>x.id===r);return l?l.n+' <span class="sub">(ευκαιρία)</span>':r}const c=cust(r);return c?c.n:r}
+/* ════════════ ΚΑΡΤΕΛΕΣ ΛΕΠΤΟΜΕΡΕΙΩΝ ════════════ */
+function dCust(id){const c=cust(id),ii=INST.filter(x=>x.c===id),oo=OFFERS.filter(o=>o.c===id),vv=INV.filter(i=>i.c===id),tt=TICK.filter(t=>ii.some(x=>x.id===t.i)),aa=ACT.filter(a=>a.ref===id);
+ openD('Πελάτες',c.n,`<div class="row" style="margin-bottom:14px">${b(c.t,'',1)}${b(c.st,c.st==='Ενεργός'?'ok':'info')}<span class="sp"></span><span class="sub">Πελάτης από ${fd(c.since)}</span></div>${!c.vat?'<div class="alert">Λείπει ΑΦΜ: δεν μπορεί να εκδοθεί παραστατικό.</div>':''}
+ ${kv([['ΑΦΜ',c.vat||'—'],['Επαφή',c.ct],['Τηλέφωνο',c.ph],['Περιοχή',c.city],['Υπεύθυνος',c.owner],['Ετήσια αξία',eur(ii.filter(x=>x.step>=7).reduce((s,x)=>s+prod(x.plan).price,0))]])}
+ <div class="sec">Εγκαταστάσεις (${ii.length})</div>${tbl(['Εγκατάσταση','Περίπτωση','Συνδρομή'],ii.map(x=>`<tr class="c" onclick="dInst('${x.id}')"><td>${x.n}</td><td>${catT(x.cat)}</td><td>${b(...subSt(x))}</td></tr>`))}
+ <div class="sec">Προσφορές</div>${tbl(['Αριθμός','#Σύνολο','Κατάσταση'],oo.map(o=>`<tr class="c" onclick="dOffer(${OFFERS.indexOf(o)})"><td class="mono">${o.id}</td><td class="num">${eur(offTot(o).tot,2)}</td><td>${o.st}</td></tr>`))}
+ <div class="sec">Παραστατικά</div>${tbl(['Αριθμός','#Ποσό','Κατάσταση'],vv.map(i=>`<tr><td class="mono">${i.id}</td><td class="num">${eur(i.amt,2)}</td><td>${i.paid?b('Εξοφλήθηκε','ok'):b('Ανοιχτό','warn')}</td></tr>`))}
+ <div class="sec">Αιτήματα</div>${tbl(['#','Περιγραφή','Κατάσταση'],tt.map(t=>`<tr class="c" onclick="dTick('${t.id}')"><td class="mono">${t.id}</td><td>${t.t}</td><td>${t.st}</td></tr>`))}
+ <div class="sec">Δραστηριότητα</div><div class="tl">${aa.map(a=>`<div><b>${a.k}: ${a.t}</b><span>${fd(a.d)} · ${a.who}</span></div>`).join('')||'<span class="sub">Καμία</span>'}</div>`,
+ `<button class="btn" onclick="offerForm('${id}')">Νέα προσφορά</button><button class="btn" onclick="actForm('${id}')">Καταγραφή επαφής</button><button class="btn p" onclick="wizard('${id}')">Νέα εγκατάσταση</button>`)}
+function dLead(id){const l=LEADS.find(x=>x.id===id),i=STAGES.indexOf(l.stage);openD('CRM · Ευκαιρίες',l.n,`<div class="row" style="margin-bottom:14px">${b(l.stage,l.stage==='Κερδήθηκε'?'ok':'info')}${catT(l.cat)}<span class="sp"></span><b>${eur(l.val)}</b></div>
+ ${kv([['Τύπος',l.t],['Πηγή',l.src],['Υπεύθυνος',l.owner],['Πιθανότητα',Math.round(PROB[l.stage]*100)+' %'],['Επόμενη ενέργεια',l.next],['Προθεσμία',fd(l.due)]])}
+ <div class="sec">Στάδια</div><div class="steps">${STAGES.map((s,k)=>`<span class="${k===i?'on':k<i?'d':''}">${s}</span>`).join('')}</div>
+ <div class="sec">Δραστηριότητα</div><div class="tl">${ACT.filter(a=>a.ref===id).map(a=>`<div><b>${a.k}: ${a.t}</b><span>${fd(a.d)} · ${a.who}</span></div>`).join('')||'<span class="sub">Καμία</span>'}</div>`,
+ l.stage==='Κερδήθηκε'?'<button class="btn" onclick="closeD()">Κλείσιμο</button>':`${i>0?`<button class="btn" onclick="stage('${id}',-1)">← Πίσω</button>`:''}<button class="btn" onclick="actForm('${id}')">Καταγραφή επαφής</button>${i<3?`<button class="btn p" onclick="stage('${id}',1)">Επόμενο στάδιο →</button>`:`<button class="btn p" onclick="win('${id}')">Κερδήθηκε → πελάτης & προσφορά</button>`}`)}
+function dInst(id){const x=inst(id),c=cust(x.c);openD('Υλοποίηση · Εγκαταστάσεις',x.n,`<div class="row" style="margin-bottom:14px">${catT(x.cat)}<span class="sp"></span>${b(...HL[x.h])}${b(...subSt(x))}</div>${x.note?`<div class="alert">${x.note}</div>`:''}
+ ${kv([['Πελάτης',`<a href="#" onclick="dCust('${c.id}');return false">${c.n}</a>`],['Πακέτο',prod(x.plan).n+' · '+eur(prod(x.plan).price)+'/έτος'],['Συνδρομή',fd(x.start)+' → '+fd(x.end)],['Παρακολούθηση',{field:'Άρδευση, ασθένειες, έντομα· όριο σιωπής ανά κύκλο οργάνου',greenhouse:'Ίδια με αγρό· αέρας εσωτερικού, χωρίς βροχή υπαίθρου',landscape:'Ζώνη ποτίζει, βάνα απαντά, πύλη ζωντανή· χωρίς ψεκασμούς',station:'Όλα τα κανάλια και ο μετρητής βροχής',automation:'Ελεγκτής απαντά, εντολή εκτελείται· σιωπή > 6 ώρες = βλάβη'}[x.cat]]])}
+ <div class="sec">Onboarding</div><div class="tl">${STEPS.map((s,i)=>`<div style="opacity:${i<=x.step?1:.45}"><b>${i<x.step?'✓ ':i===x.step?'● ':''}${s}</b><span>${i<x.step?'ολοκληρώθηκε':i===x.step?'σε εξέλιξη':'—'}</span></div>`).join('')}</div>
+ <div class="sec">Όργανα (${x.units.length}/${x.need.length})</div>${tbl(['Σειριακός','Είδος','Προμηθευτής'],x.units.map(sn=>{const u=UNITS.find(u=>u.sn===sn);return `<tr class="c" onclick="dUnit('${sn}')"><td class="mono">${sn}</td><td>${prod(u.k).n}</td><td>${supN(prod(u.k).sup)}</td></tr>`}),'Δεν έχουν τοποθετηθεί ακόμη')}`,
+ `${x.step>=6?`<button class="btn" onclick="renew('${id}')">Ανανέωση συνδρομής</button>`:''}${x.step<7?`<button class="btn p" onclick="adv('${id}')">Ολοκλήρωση: ${STEPS[x.step]}</button>`:''}`)}
+function dOffer(k){const o=OFFERS[k],t=offTot(o);openD('Πωλήσεις · Προσφορές',o.id+' · '+cust(o.c).n,`<div class="row" style="margin-bottom:12px">${b(o.st,o.st==='Αποδεκτή'?'ok':'info')}<span class="sp"></span><span class="sub">Ισχύς έως ${fd(o.valid)}</span></div>
+ ${tbl(['Είδος','#Ποσ.','#Τιμή','#Σύνολο','Διαθεσιμότητα'],o.lines.map(([kk,q])=>{const p=prod(kk);const av=p.kind==='eq'?stockOf(kk):null;return `<tr><td>${p.n}</td><td class="num">${q}</td><td class="num">${eur(p.price)}</td><td class="num">${eur(p.price*q)}</td><td>${p.kind!=='eq'?'<span class="sub">—</span>':o.st==='Αποδεκτή'?b('Δεσμεύτηκε','info'):av>=q?b(av+' σε απόθεμα','ok'):b('Λείπουν '+(q-av),'bad')}</td></tr>`}))}
+ <div style="margin-top:12px">${kv([['Καθαρή αξία',eur(t.net,2)],['Έκπτωση '+(o.disc||0)+' %','−'+eur(t.dis,2)],['ΦΠΑ 24 %',eur(t.vat,2)],['<b>Σύνολο</b>','<b>'+eur(t.tot,2)+'</b>'],['Κόστος εξοπλισμού',eur(t.cost)],['Μικτό περιθώριο',eur(t.base-t.cost)+' ('+(t.base?Math.round(100*(t.base-t.cost)/t.base):0)+' %)']])}</div>`,
+ o.st==='Στάλθηκε'?`<button class="btn" onclick="OFFERS[${k}].st='Απορρίφθηκε';closeD();go('offers')">Απόρριψη</button><button class="btn p" onclick="accept(${k})">Αποδοχή</button>`:'<button class="btn" onclick="closeD()">Κλείσιμο</button>')}
+function dSup(id){const s=sup(id),ps=PO.filter(p=>p.sup===id),pr=PROD.filter(p=>p.sup===id);openD('Αγορές · Προμηθευτές',s.n,kv([['Χώρα',s.co],['Όροι',s.terms],['Χρόνος παράδοσης',s.lead+' ημέρες'],['Επικοινωνία',s.ct],['Αξιολόγηση','★'.repeat(Math.round(s.rate))+' '+s.rate]])+
+ `<div class="sec">Είδη</div>${tbl(['Είδος','#Κόστος','#Απόθεμα','#Εγκατεστημένα σε πελάτες'],pr.map(p=>`<tr><td>${p.n}</td><td class="num">${eur(p.cost)}</td><td class="num">${stockOf(p.k)}</td><td class="num">${UNITS.filter(u=>u.k===p.k&&u.st==='Εγκατεστημένο').length}</td></tr>`))}
+ <div class="sec">Παραγγελίες</div>${tbl(['Αριθμός','Ημερομηνία','#Αξία','Κατάσταση'],ps.map(p=>`<tr class="c" onclick="dPO('${p.id}')"><td class="mono">${p.id}</td><td>${fd(p.d)}</td><td class="num">${eur(poTot(p))}</td><td>${p.st}</td></tr>`))}
+ <div class="sec">Πελάτες με εξοπλισμό του</div><p>${[...new Set(UNITS.filter(u=>u.inst&&prod(u.k).sup===id).map(u=>cust(inst(u.inst).c).n))].join(' · ')||'<span class="sub">—</span>'}</p>`,`<button class="btn p" onclick="poForm('${id}')">Νέα παραγγελία</button>`)}
+function dPO(id){const p=PO.find(x=>x.id===id);openD('Αγορές · Παραγγελίες',p.id+' · '+supN(p.sup),`<div class="row" style="margin-bottom:12px">${b(p.st,p.st==='Παραλήφθηκε'?'ok':'info')}<span class="sp"></span><span class="sub">Αναμενόμενη ${fd(p.eta)}</span></div>`+tbl(['Είδος','#Ποσ.','#Κόστος','#Σύνολο'],p.lines.map(([k,q,c])=>`<tr><td>${prod(k).n}</td><td class="num">${q}</td><td class="num">${eur(c)}</td><td class="num">${eur(q*c)}</td></tr>`))+`<p class="sub" style="margin-top:10px">Σύνολο ${eur(poTot(p))}. Με την παραλαβή δημιουργούνται ${p.lines.filter(l=>l[0]!=='kit').reduce((s,l)=>s+l[1],0)} σειριακά στην αποθήκη.</p>`,p.st==='Παραλήφθηκε'?'':`${p.st==='Πρόχειρη'?`<button class="btn" onclick="PO.find(x=>x.id==='${id}').st='Στάλθηκε';closeD();go('pos')">Αποστολή</button>`:''}<button class="btn p" onclick="receive('${id}')">Παραλαβή</button>`)}
+function dUnit(sn){const u=UNITS.find(x=>x.sn===sn),p=prod(u.k);openD('Αποθήκη · Ιχνηλάτηση',sn,`<div class="row" style="margin-bottom:12px">${b(u.st,{Εγκατεστημένο:'ok',Δεσμευμένο:'info',RMA:'warn'}[u.st]||'')}<span class="sp"></span><span class="sub">${p.n}</span></div>`+
+ kv([['Προμηθευτής',`<a href="#" onclick="dSup('${p.sup}');return false">${supN(p.sup)}</a>`],['Παραγγελία',u.po],['Παραλαβή',fd(u.rec)],['Κόστος',eur(p.cost)],['Θέση',u.inst?inst(u.inst).n:u.res?'Δεσμευμένο για '+u.res:'Αποθήκη Ηρακλείου'],['Πελάτης',u.inst?`<a href="#" onclick="dCust('${inst(u.inst).c}');return false">${cust(inst(u.inst).c).n}</a>`:'—']])+`<div class="sec">Ιστορικό</div><div class="tl">${u.hist.slice().reverse().map(h=>`<div><b>${h.t}</b><span>${fd(h.d)}</span></div>`).join('')}</div>`)}
+function dTick(id){const t=TICK.find(x=>x.id===id),x=inst(t.i),units=x.units.map(sn=>UNITS.find(u=>u.sn===sn));openD('Υλοποίηση · Αιτήματα',t.id,`<div class="row" style="margin-bottom:12px">${b(t.k,'',1)}${b(t.pr,t.pr==='Υψηλή'?'bad':'warn')}<span class="sp"></span>${b(t.st,t.st==='Κλειστό'?'ok':'info')}</div><p><b>${t.t}</b></p>`+kv([['Εγκατάσταση',`<a href="#" onclick="dInst('${x.id}');return false">${x.n}</a>`],['Πελάτης',cust(x.c).n],['Πηγή',t.src],['Ανάθεση',t.who],['Άνοιξε',fd(t.d)]])+`<div class="sec">Όργανα της εγκατάστασης</div>`+tbl(['Σειριακός','Είδος','Κατάσταση',''],units.map(u=>`<tr><td class="mono">${u.sn}</td><td>${prod(u.k).n}</td><td>${u.st}</td><td>${t.st!=='Κλειστό'&&u.st==='Εγκατεστημένο'?`<button class="btn s" onclick="rma('${t.id}','${u.sn}')">RMA</button>`:''}</td></tr>`)),
+ t.st==='Κλειστό'?'':`<button class="btn" onclick="toast('Ανατέθηκε σε τεχνικό')">Ανάθεση</button><button class="btn p" onclick="TICK.find(x=>x.id==='${id}').st='Κλειστό';closeD();go(S.page);toast('Το αίτημα έκλεισε')">Κλείσιμο αιτήματος</button>`)}
+/* ════════════ ΕΝΕΡΓΕΙΕΣ ════════════ */
+function stage(id,d){const l=LEADS.find(x=>x.id===id);l.stage=STAGES[Math.max(0,Math.min(3,STAGES.indexOf(l.stage)+d))];closeD();go('pipeline');toast('Στάδιο: '+l.stage)}
+function win(id){const l=LEADS.find(x=>x.id===id);l.stage='Κερδήθηκε';l.due=null;l.next='—';let c=CUST.find(c=>c.n===l.n);if(!c){c={id:'C'+(CUST.length+1),n:l.n,t:l.t,vat:'',city:'—',ct:'—',ph:'—',st:'Onboarding',since:T,owner:l.owner};CUST.push(c)}l.cust=c.id;const plan=PROD.find(p=>p.kind==='plan'&&p.cats.includes(l.cat));OFFERS.unshift({id:'ΠΡ-26-0'+(35+OFFERS.length),c:c.id,st:'Πρόχειρη',d:T,valid:addD(30),lines:[[plan.k,1],['install',1]],disc:0});closeD();go('offers');toast('Δημιουργήθηκε πελάτης και πρόχειρη προσφορά')}
+function accept(k){const o=OFFERS[k];if(o.st!=='Στάλθηκε'){toast('Η προσφορά πρέπει πρώτα να σταλεί');return}const plan=o.lines.find(([kk])=>prod(kk).kind==='plan');const cat0=plan?prod(plan[0]).cats[0]:'field';const id='I'+(INST.length+1);
+ const x={id,c:o.c,n:'Νέα εγκατάσταση ('+o.id+')',cat:cat0,step:3,h:'office',plan:plan?plan[0]:'sense',start:null,end:null,need:[],units:[]};let miss=0;
+ for(const[kk,q]of o.lines)if(prod(kk).kind==='eq'&&kk!=='kit')for(let j=0;j<q;j++){x.need.push(kk);const u=UNITS.find(u=>u.k===kk&&u.st==='Απόθεμα');if(u){u.st='Δεσμευμένο';u.res=o.id;u.hist.push({d:T,t:'Δέσμευση για '+o.id});MOVES.push({d:T,k:'Δέσμευση',p:kk,t:o.id+' · '+cust(o.c).n})}else miss++}
+ o.st='Αποδεκτή';o.inst=id;INST.push(x);const c=cust(o.c);if(c.st!=='Ενεργός')c.st='Onboarding';closeD();go('installs');toast(miss?'Άνοιξε onboarding · λείπουν '+miss+' τεμάχια, δες «Απόθεμα»':'Άνοιξε onboarding · όλο το υλικό δεσμεύτηκε')}
+function adv(id){const x=inst(id);if(x.step>=7)return;if(x.step===3){const off=OFFERS.find(o=>o.inst===id);for(const k of x.need.slice(x.units.length)){const u=UNITS.find(u=>u.k===k&&(u.st==='Δεσμευμένο'&&u.res===(off&&off.id)))||UNITS.find(u=>u.k===k&&u.st==='Απόθεμα');if(!u){toast('Λείπει '+prod(k).n+' — δημιουργήστε παραγγελία');return}u.st='Εγκατεστημένο';u.inst=id;u.res=null;u.hist.push({d:T,t:'Εγκατάσταση: '+x.n});x.units.push(u.sn);MOVES.push({d:T,k:'Εγκατάσταση',p:k,t:x.n})}}
+ x.step++;if(x.step===7){x.start=T;x.end=addD(365);x.h='ok';INV.unshift({id:'(νέο)',c:x.c,i:id,d:T,due:addD(30),amt:prod(x.plan).price*1.24,paid:null,k:'Συνδρομή'});const c=cust(x.c);c.st='Ενεργός'}closeD();go(S.page);toast(x.step===7?'Η συνδρομή ενεργοποιήθηκε και εκδόθηκε χρέωση':'Επόμενο βήμα: '+STEPS[x.step])}
+function renew(id){const x=inst(id);const base=x.end&&days(x.end)>0?x.end:T;const d=new Date(base);d.setFullYear(d.getFullYear()+1);x.end=ISO(d);INV.unshift({id:'(νέο)',c:x.c,i:id,d:T,due:addD(30),amt:prod(x.plan).price*1.24,paid:null,k:'Συνδρομή'});closeD();go(S.page);toast('Ανανεώθηκε έως '+fd(x.end)+' · εκδόθηκε χρέωση')}
+function pay(id){const i=INV.find(x=>x.id===id);i.paid=T;go('invoices');toast('Καταγράφηκε η είσπραξη')}
+function receive(id){const p=PO.find(x=>x.id===id);p.st='Παραλήφθηκε';p.rec=T;let n=0;for(const[k,q]of p.lines){for(let j=0;j<q;j++){mkUnit(k,p.id,T);n++}MOVES.push({d:T,k:'Παραλαβή',p:k,t:p.id+' · '+q+' τεμ.'})}closeD();go('pos');toast('Παραλήφθηκαν '+n+' τεμάχια, μπήκαν στην αποθήκη')}
+function rma(tid,sn){const u=UNITS.find(x=>x.sn===sn),x=inst(u.inst);u.st='RMA';x.units=x.units.filter(s=>s!==sn);u.hist.push({d:T,t:'RMA προς '+supN(prod(u.k).sup)+' ('+tid+')'});MOVES.push({d:T,k:'RMA',p:u.k,t:x.n+' → '+supN(prod(u.k).sup)});const t=TICK.find(x=>x.id===tid);t.st='Σε εξέλιξη';t.k='RMA';x.step=Math.min(x.step,7);closeD();go('units');toast('Η μονάδα στάλθηκε για επισκευή · η εγκατάσταση χρειάζεται αντικατάσταση')}
+/* ════════════ ΦΟΡΜΕΣ ════════════ */
+function leadForm(){openD('CRM','Νέα ευκαιρία',`<div class="fld"><label>Επωνυμία</label><input id="ln"></div><div class="fld"><label>Τύπος</label><select id="lt">${['Αγρότης','Οργάνωση','Ξενοδοχείο','Δήμος','Σχολείο'].map(t=>`<option>${t}</option>`).join('')}</select></div><div class="fld"><label>Περίπτωση εγκατάστασης</label><select id="lc">${Object.keys(CAT).map(k=>`<option value="${k}">${CAT[k].n}</option>`).join('')}</select></div><div class="fld"><label>Εκτιμώμενη αξία (€)</label><input id="lv" type="number" value="1000"></div><div class="fld"><label>Επόμενη ενέργεια</label><input id="lx" value="Πρώτη επαφή"></div>`,
+ `<button class="btn" onclick="closeD()">Άκυρο</button><button class="btn p" onclick="if(!$('#ln').value.trim()){toast('Συμπλήρωσε επωνυμία');return}LEADS.push({id:'L'+(LEADS.length+1),n:$('#ln').value.trim(),t:$('#lt').value,stage:'Νέα',val:+$('#lv').value||0,cat:$('#lc').value,owner:'Μιχάλης',next:$('#lx').value,due:addD(3),src:'Χειροκίνητα'});closeD();go('pipeline');toast('Η ευκαιρία καταχωρίστηκε')">Αποθήκευση</button>`)}
+function actForm(ref){const opts=[...CUST.map(c=>[c.id,c.n]),...LEADS.filter(l=>l.stage!=='Κερδήθηκε').map(l=>[l.id,l.n+' (ευκαιρία)'])];openD('CRM','Καταγραφή επαφής',`<div class="fld"><label>Αφορά</label><select id="ar">${opts.map(([v,n])=>`<option value="${v}" ${v===ref?'selected':''}>${n}</option>`).join('')}</select></div><div class="fld"><label>Είδος</label><select id="ak">${['Κλήση','Επίσκεψη','Συνάντηση','Email'].map(t=>`<option>${t}</option>`).join('')}</select></div><div class="fld"><label>Σημείωση</label><input id="at"></div>`,
+ `<button class="btn" onclick="closeD()">Άκυρο</button><button class="btn p" onclick="ACT.push({d:T,who:'Μιχάλης',k:$('#ak').value,ref:$('#ar').value,t:$('#at').value||'—'});closeD();go('activities');toast('Καταγράφηκε')">Αποθήκευση</button>`)}
+function offerForm(c0){const sell=PROD.filter(p=>p.kind!=='x');openD('Πωλήσεις','Νέα προσφορά',`<div class="fld"><label>Πελάτης</label><select id="oc">${CUST.map(c=>`<option value="${c.id}" ${c.id===c0?'selected':''}>${c.n}</option>`).join('')}</select></div><div class="fld"><label>Έκπτωση (%)</label><input id="od" type="number" value="0" min="0" max="30" oninput="ofSum()"></div><div class="sec">Είδη</div>
+ ${tbl(['Είδος','#Τιμή','#Απόθεμα','#Ποσ.'],sell.map(p=>`<tr><td>${p.n}<div class="sub">${{plan:'Πακέτο',eq:'Εξοπλισμός',svc:'Υπηρεσία'}[p.kind]}</div></td><td class="num">${eur(p.price)}</td><td class="num">${p.kind==='eq'?stockOf(p.k):'—'}</td><td class="num"><input class="inp" style="width:64px;height:30px" type="number" min="0" value="0" data-k="${p.k}" oninput="ofSum()"></td></tr>`))}<div id="osum" style="margin-top:12px"></div>`,
+ `<button class="btn" onclick="closeD()">Άκυρο</button><button class="btn p" onclick="saveOffer()">Αποθήκευση</button>`);ofSum()}
+function ofLines(){return $$('#dbd input[data-k]').filter(i=>+i.value>0).map(i=>[i.dataset.k,+i.value])}
+function ofSum(){const t=offTot({lines:ofLines(),disc:+$('#od').value||0});$('#osum').innerHTML=kv([['Καθαρή αξία',eur(t.net,2)],['Μετά την έκπτωση',eur(t.base,2)],['<b>Σύνολο με ΦΠΑ</b>','<b>'+eur(t.tot,2)+'</b>'],['Μικτό περιθώριο',t.base?Math.round(100*(t.base-t.cost)/t.base)+' %':'—']])}
+function saveOffer(){const lines=ofLines();if(!lines.length){toast('Πρόσθεσε τουλάχιστον ένα είδος');return}OFFERS.unshift({id:'ΠΡ-26-0'+(35+OFFERS.length),c:$('#oc').value,st:'Πρόχειρη',d:T,valid:addD(30),lines,disc:+$('#od').value||0});closeD();go('offers');toast('Η προσφορά αποθηκεύτηκε ως πρόχειρη')}
+function poForm(s0,k0){const s=s0||SUP[0].id;openD('Αγορές','Νέα παραγγελία αγοράς',`<div class="fld"><label>Προμηθευτής</label><select id="ps" onchange="poForm(this.value)">${SUP.map(x=>`<option value="${x.id}" ${x.id===s?'selected':''}>${x.n}</option>`).join('')}</select></div><div class="alert info">Χρόνος παράδοσης ${sup(s).lead} ημέρες · ${sup(s).terms}</div>
+ ${tbl(['Είδος','#Διαθέσιμα','#Ελάχιστο','#Κόστος','#Ποσ.'],PROD.filter(p=>p.sup===s).map(p=>`<tr><td>${p.n}</td><td class="num">${stockOf(p.k)}</td><td class="num">${p.min}</td><td class="num">${eur(p.cost)}</td><td class="num"><input class="inp" style="width:64px;height:30px" type="number" min="0" value="${p.k===k0?Math.max(p.min*2-stockOf(p.k),p.min):0}" data-k="${p.k}"></td></tr>`))}`,
+ `<button class="btn" onclick="closeD()">Άκυρο</button><button class="btn p" onclick="savePO('${s}')">Αποστολή στον προμηθευτή</button>`)}
+function savePO(s){const lines=$$('#dbd input[data-k]').filter(i=>+i.value>0).map(i=>[i.dataset.k,+i.value,prod(i.dataset.k).cost]);if(!lines.length){toast('Πρόσθεσε ποσότητα');return}PO.unshift({id:'ΠΑ-26-0'+(17+PO.length),sup:s,d:T,st:'Στάλθηκε',eta:addD(sup(s).lead),lines});closeD();go('pos');toast('Η παραγγελία στάλθηκε')}
+/* Οδηγός νέας εγκατάστασης */
+let W;function wizard(c){W={s:0,c:c||'',nc:'',vat:'',cat:'',name:'',plan:''};wz()}
+function wz(){const L=['Πελάτης','Περίπτωση','Στοιχεία','Πακέτο','Επιβεβαίωση'];let h=`<div class="steps">${L.map((l,i)=>`<span class="${i===W.s?'on':i<W.s?'d':''}">${i+1}. ${l}</span>`).join('')}</div>`;
+ if(W.s===0)h+=`<div class="fld"><label>Υπάρχων πελάτης</label><select onchange="W.c=this.value;wz()"><option value="">— νέος πελάτης —</option>${CUST.map(c=>`<option value="${c.id}" ${W.c===c.id?'selected':''}>${c.n}</option>`).join('')}</select></div>${W.c?'':`<div class="fld"><label>Επωνυμία νέου πελάτη</label><input value="${esc(W.nc)}" oninput="W.nc=this.value"></div><div class="fld"><label>ΑΦΜ</label><input value="${esc(W.vat)}" oninput="W.vat=this.value"></div><p class="sub">Χρήστες TagoRUN: 59 / 100. Ο νέος πελάτης μπορεί να μπει σε υπάρχουσα οργάνωση αντί για νέο χρήστη.</p>`}`;
+ if(W.s===1)h+=`<p class="sub" style="margin-top:0">Η περίπτωση δηλώνεται, δεν βγαίνει από τα όργανα. Ορίζει πακέτα, παραμετροποίηση και παρακολούθηση.</p><div class="opts">${Object.keys(CAT).map(k=>`<div class="opt ${W.cat===k?'on':''}" onclick="W.cat='${k}';W.plan='';wz()"><b><i class="dot" style="background:${CAT[k].c}"></i>${CAT[k].n}</b><span class="sub">${CAT[k].d}</span></div>`).join('')}</div>`;
+ if(W.s===2)h+=`<div class="fld"><label>Όνομα εγκατάστασης</label><input value="${esc(W.name)}" oninput="W.name=this.value"></div><div class="fld"><label>Θέση (αντιγραφή από Google Maps)</label><input placeholder="35.xxxxx, 25.xxxxx"></div>`;
+ if(W.s===3)h+=`<div class="opts">${PROD.filter(p=>p.kind==='plan'&&p.cats.includes(W.cat)).map(p=>`<div class="opt ${W.plan===p.k?'on':''}" onclick="W.plan='${p.k}';wz()"><b>${p.n.split(' — ')[0]}</b><span class="sub">${p.n.split(' — ')[1]||''} · ${eur(p.price)}/έτος</span></div>`).join('')}</div><p class="sub">Εμφανίζονται μόνο τα πακέτα που ταιριάζουν στην περίπτωση.</p>`;
+ if(W.s===4)h+=kv([['Πελάτης',W.c?cust(W.c).n:W.nc],['Περίπτωση',catT(W.cat)],['Εγκατάσταση',esc(W.name)],['Πακέτο',prod(W.plan).n]])+`<div class="alert info" style="margin-top:14px">Με τη δημιουργία: πελάτης και χρήστης αν χρειάζεται → createField με την περίπτωση → η εγκατάσταση περιμένει όργανα από την αποθήκη.</div>`;
+ const ok=[W.c||(W.nc.trim()&&W.vat.trim()),W.cat,W.name.trim(),W.plan,true][W.s];
+ openD('Υλοποίηση','Νέα εγκατάσταση',h,`${W.s?'<button class="btn" onclick="W.s--;wz()">← Πίσω</button>':''}<span style="flex:1"></span><button class="btn p" ${ok?'':'disabled'} onclick="${W.s<4?'W.s++;wz()':'finishW()'}">${W.s<4?'Επόμενο →':'Δημιουργία'}</button>`)}
+function finishW(){let c=W.c;if(!c){c='C'+(CUST.length+1);CUST.push({id:c,n:W.nc.trim(),t:'Αγρότης',vat:W.vat.trim(),city:'—',ct:'—',ph:'—',st:'Onboarding',since:T,owner:'Μιχάλης'})}
+ const need={field:['s2120','lse01'],greenhouse:['em320','se0x'],landscape:['lse01','uc511'],station:['s2120'],automation:['uc511']}[W.cat];INST.push({id:'I'+(INST.length+1),c,n:W.name.trim(),cat:W.cat,step:3,h:'office',plan:W.plan,start:null,end:null,need,units:[]});closeD();go('installs');toast('Δημιουργήθηκε · επόμενο βήμα: Όργανα')}
+/* ════════════ ΑΝΑΖΗΤΗΣΗ ════════════ */
+function search(q){q=q.trim().toLowerCase();const r=$('#res');if(q.length<2){r.classList.remove('on');return}const out=[];
+ CUST.forEach(c=>{if(c.n.toLowerCase().includes(q))out.push([`dCust('${c.id}')`,c.n,'Πελάτης'])});INST.forEach(x=>{if(x.n.toLowerCase().includes(q))out.push([`dInst('${x.id}')`,x.n,'Εγκατάσταση'])});
+ UNITS.forEach(u=>{if(u.sn.toLowerCase().includes(q))out.push([`dUnit('${u.sn}')`,u.sn+' · '+prod(u.k).sku,'Μονάδα'])});PO.forEach(p=>{if(p.id.toLowerCase().includes(q))out.push([`dPO('${p.id}')`,p.id+' · '+supN(p.sup),'Παραγγελία'])});
+ OFFERS.forEach((o,k)=>{if(o.id.toLowerCase().includes(q))out.push([`dOffer(${k})`,o.id+' · '+cust(o.c).n,'Προσφορά'])});SUP.forEach(s=>{if(s.n.toLowerCase().includes(q))out.push([`dSup('${s.id}')`,s.n,'Προμηθευτής'])});LEADS.forEach(l=>{if(l.n.toLowerCase().includes(q))out.push([`dLead('${l.id}')`,l.n,'Ευκαιρία'])});
+ r.innerHTML=out.slice(0,12).map(([f,n,k])=>`<a onclick="${f};$('#res').classList.remove('on')">${n}<small>${k}</small></a>`).join('')||'<div class="empty">Κανένα αποτέλεσμα</div>';r.classList.add('on')}
+/* ════════════ ΕΚΚΙΝΗΣΗ ════════════ */
+seed();
+$('#q').addEventListener('input',e=>search(e.target.value));document.addEventListener('click',e=>{if(!e.target.closest('.search'))$('#res').classList.remove('on')});
+$('#dbg').onclick=closeD;document.addEventListener('keydown',e=>{if(e.key==='Escape')closeD()});
+$('#burger').onclick=()=>$('#side').classList.toggle('on');
+$('#theme').onclick=()=>{const r=document.documentElement,dk=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;r.dataset.theme=dk?'light':'dark'};
+go('dash');
 </script>
 </body>
 </html>
