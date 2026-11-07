@@ -423,7 +423,7 @@ const MUT_A = [
   ["χωρίς σημάδι ασυμφωνίας", 'pq = "diff";', 'pq = "ok";'],
   ["ίδιος παραγωγός = ύποπτος", '.size > 1) m.pq = "shared"', '.size > 0) m.pq = "shared"'],
   ["χωρίς παραγωγό μετρά ως δεύτερος", 'if (m.y == null || !m.c) continue;', 'if (m.y == null) continue;'],
-  ["χάνεται η πύλη", "g: (gwOf && gwOf.get(x.id)) || null", "g: null"],
+  ["χάνεται η πύλη", "let g = (gwOf && gwOf.get(x.id)) || null;", "let g = null;"],
   ["χάνεται ο τύπος", "t: (typeOf && typeOf.get(x.id)) || null", "t: null"],
   ["ποτέ = 0 ώρες", "? Math.round(Math.max(0, h) * 10) / 10 : null", "? Math.round(Math.max(0, h) * 10) / 10 : 0"],
   ["όνομα από τη συσκευή αντί ετικέτας", 'n: mapTagAll(tags, "name")[0] || String(f.name || f.id)', "n: String(f.name || f.id)"],
