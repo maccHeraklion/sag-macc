@@ -93,7 +93,7 @@ function run(src, w) {
   ok(r12.status && /^Ενεργές · \d+ μύκητ/.test(String(r12.status.value)), "Α9 infection_model_status ενεργό με αριθμό (" + (r12.status && r12.status.value) + ")");
   // ── Β. περονόσπορος κολοκυνθοειδών (pseudoperonospora_cubensis): 6 ω, T 5–30, RH ≥ 95, ΜΕ διαβροχή ──
   st = { data: {} }; let rB = null; for (let h = 1; h <= 6; h++) rB = tick(K, st, h, { T: 19, RH: 97, lm: 60, lt: 18.5 });
-  ok(rB.cnt("pseudoperonospora_cubensis") === 6 && rB.firOf("pseudoperonospora_cubensis") >= 0.99 && (rB.msg("pseudoperonospora_cubensis") || {}).value === "Υψηλός κίνδυνος", "Β1 6 ω υγρό φύλλο (αισθητήρας 60 %) + RH 97 + 19 °C -> Υψηλός περονόσπορος με επιθεώρηση, T-LEAFWET-RH-01 (" + rB.cnt("pseudoperonospora_cubensis") + " ω, fir " + rB.firOf("pseudoperonospora_cubensis") + ")");
+  ok(rB.cnt("pseudoperonospora_cubensis") === 6 && rB.firOf("pseudoperonospora_cubensis") >= 0.49 && (rB.msg("pseudoperonospora_cubensis") || {}).value === "Υψηλός κίνδυνος", "Β1 6 ω υγρό φύλλο (αισθητήρας 60 %) + RH 97 + 19 °C -> Υψηλός περονόσπορος με επιθεώρηση, T-LEAFWET-RH-01 (" + rB.cnt("pseudoperonospora_cubensis") + " ω, fir " + rB.firOf("pseudoperonospora_cubensis") + ")");
   ok(rB.lws && rB.lws.value === "Αισθητήρας φύλλου", "Β2 η πηγή διαβροχής είναι ο αισθητήρας φύλλου (" + (rB.lws && rB.lws.value) + ")");
   ok(/υγρά φύλλα/.test(String((rB.msg("pseudoperonospora_cubensis") || {}).metadata.text)), "Β3 το μήνυμα λέει «υγρά φύλλα»");
   // Β4 χωρίς αισθητήρα φύλλου: RH 96 -> δρόσος εκτίμηση ή RH -> ΠΑΛΙ μετρά (ευαισθησία χωρίς όργανο)
@@ -103,7 +103,7 @@ function run(src, w) {
   const lw1 = K._sagLeafWetness({ T_air: 19, RH: 91 }), lw2 = K._sagLeafWetness({ T_air: 19, RH: 89 });
   ok(lw1.wet === true && lw1.source === "rh" && lw2.wet === false && lw2.source === "none", "Β5 εφεδρεία RH ≥ 90: 91 -> υγρό (rh), 89 -> στεγνό");
   // Β6 T-LWS-SHADED-DRY-01 (v50.156): στεγνός ΣΚΙΑΣΜΕΝΟΣ αισθητήρας υπερισχύει της ΕΚΤΙΜΗΣΗΣ δρόσου και της εφεδρείας RH
-  ok(src.includes("const SAG_KERNEL_VERSION = 'v50.183 · 2026-11-07';"), "έκδοση v50.156");
+  ok(src.includes("const SAG_KERNEL_VERSION = 'v50.184 · 2026-11-07';"), "έκδοση v50.156");
   const lw3 = K._sagLeafWetness({ leafMoisture: 0, leafShaded: true, leafTemp: 22, T_air: 19, RH: 96, dewPoint: 18.4 });
   ok(lw3.wet === false && lw3.source === "sensor_dry", "Β6 στεγνός σκιασμένος αισθητήρας + RH 96/εκτίμηση δρόσου -> ΣΤΕΓΝΟ (η μέτρηση υπερισχύει της εκτίμησης) — " + lw3.source);
   const lw4 = K._sagLeafWetness({ leafMoisture: 0, leafShaded: false, leafTemp: 22, T_air: 19, RH: 96, dewPoint: 18.4 });
@@ -214,7 +214,7 @@ const MUT = [
   ["m11 ωίδιο αμπελιού ξανά στο αγγούρι", "    (c) => c && c.cultivation_type_general === \"vineCrops\"", "    (c) => true", "c"],
   ["m12 θερμοκήπιο δεν σιωπά", "    if (_SAG_COVERED_ACTIVE) return [];\n    const RH = Array.isArray(fcs.rh)", "    if (false) return [];\n    const RH = Array.isArray(fcs.rh)", "c"],
   ["m13 ο σκιασμένος στεγνός αισθητήρας ξανά πίσω από τη δρόσο", "  if (hasLm && o.leafShaded === true)\n    return { wet: false, weight: 0, source: 'sensor_dry', confidence: 'HIGH', lm: lmOut };\n  if (Number.isFinite(dp) && Number.isFinite(T)", "  if (hasLm && o.leafShaded === true && !Number.isFinite(dp) && !(RH >= 90))\n    return { wet: false, weight: 0, source: 'sensor_dry', confidence: 'HIGH', lm: lmOut };\n  if (Number.isFinite(dp) && Number.isFinite(T)", "c"],
-  ["m14 παλιά έκδοση", "'v50.183 · 2026-11-07'", "'v50.159 · 2026-10-04'", "c"],
+  ["m14 παλιά έκδοση", "'v50.184 · 2026-11-07'", "'v50.159 · 2026-10-04'", "c"],
   ["W1 widget χάνει το «σοβαρ»", 'function Ba(t){const s=String(t||"").toLowerCase();return s.includes("χαμηλ")?1:s.includes("μέτρι")||s.includes("μετρι")?2:s.includes("υψηλ")?3:s.includes("σοβαρ")?4:0}', 'function Ba(t){const s=String(t||"").toLowerCase();return s.includes("χαμηλ")?1:s.includes("μέτρι")||s.includes("μετρι")?2:s.includes("υψηλ")?3:0}', "w"],
   ["W2 κύρια κάρτα μόνο Σοβαρός", 'if(R<3&&!Vc)continue;const X=R===4?"b-red"', 'if(R<4&&!Vc)continue;const X=R===4?"b-red"', "w"],
 ];

@@ -56,7 +56,7 @@ function run(src, w) {
   let K; try { K = loadCore(src); } catch (e) { return ["φόρτωση πυρήνα: " + e.message]; }
   try {
     const BC = "botrytis_cinerea";
-    ok(K.SAG_KERNEL_VERSION === "v50.183 · 2026-11-07", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.184 · 2026-11-07", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     const p = Object.values(K.PATHOGEN_PROFILE).map((c) => c && c[BC]).find(Boolean);
     const has = (g, c) => p.crops.some((x) => x.cultivation_type_general === g && x.cultivation_type === c);
     ok(NEW.every(([g, c]) => has(g, c)), "Π1 οι 7 νέοι ξενιστές στο προφίλ (λείπουν: " + NEW.filter(([g, c]) => !has(g, c)).map((x) => x[1]).join(",") + ")");
@@ -65,7 +65,7 @@ function run(src, w) {
     ok(!has("olive", "koroneiki") && !has("vegetableCrops", "watermelon") && !has("stoneFruits", "apricot"), "Π4 καμία καλλιέργεια πέρα από τις εγκεκριμένες");
     // Α. αγγούρι θερμοκηπίου, 18 °C, RH 92, μετρημένο υγρό φύλλο, 10 ώρες → μετρητής 10, κάρτα «Υψηλός» με επιθεώρηση
     const a = series(K, T_NOV, 10, { T: 18, RH: 92, lm: 60, lt: 17.5 }, CUC);
-    ok(a.cnt(BC) === 10 && a.firOf(BC) >= 0.99, "Α1 αγγούρι: 10 ώρες βοτρύτη, FIR 1 (" + a.cnt(BC) + "/" + a.firOf(BC) + ")");
+    ok(a.cnt(BC) === 10 && a.firOf(BC) >= 0.49, "Α1 αγγούρι: 10 ώρες βοτρύτη, FIR ≥ 0,5 (κλάσεις W(T), v50.184) (" + a.cnt(BC) + "/" + a.firOf(BC) + ")");
     const am = a.msg(BC);
     ok(am && am.value === "Υψηλός κίνδυνος" && /βοτρύτη/.test(am.metadata.text) && /[Εε]πιθεωρήστε/.test(am.metadata.text), "Α2 αγγούρι: «Υψηλός» με επιθεώρηση για βοτρύτη (" + JSON.stringify(am) + ")");
     const a0 = series(K, T_NOV, 4, { T: 18, RH: 60 }, CUC);

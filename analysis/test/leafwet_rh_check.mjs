@@ -56,7 +56,7 @@ function run(src) {
     const PC = "pseudoperonospora_cubensis", PI = "phytophthora_infestans", BC = "botrytis_cinerea", PX = "podosphaera_xanthii", AS = "alternaria_solani";
     // Α. Κουτσάκης: T 19, RH 92 (κάτω από το όριο 95), αισθητήρας φύλλου 60 % → μετρά
     const a = series(K, 6, { T: 19, RH: 92, lm: 60, lt: 18.5 }, CUKE);
-    ok(a.cnt(PC) === 6 && a.firOf(PC) >= 0.99, "Α1 RH 92 < 95 με μετρημένο υγρό φύλλο: 6 ώρες, FIR 1 (" + a.cnt(PC) + "/" + a.firOf(PC) + ")");
+    ok(a.cnt(PC) === 6 && a.firOf(PC) >= 0.49, "Α1 RH 92 < 95 με μετρημένο υγρό φύλλο: 6 ώρες, FIR ≥ 0,5 (κλάσεις W(T), v50.184) (" + a.cnt(PC) + "/" + a.firOf(PC) + ")");
     ok(a.lws && a.lws.value === "Αισθητήρας φύλλου", "Α2 πηγή: αισθητήρας φύλλου (" + (a.lws && a.lws.value) + ")");
     const am = a.msg(PC);
     ok(am && am.value === "Υψηλός κίνδυνος" && am.metadata.color === "orange" && /για περονόσπορο \(6ω υγρά φύλλα/.test(am.metadata.text) && /επιθεωρήστε το φύλλωμα/.test(am.metadata.text) && !/Σοβαρός|το συντομότερο/.test(am.metadata.text), "Α3 μήνυμα: Υψηλός/πορτοκαλί με επιθεώρηση για περονόσπορο (" + JSON.stringify(am) + ")");
