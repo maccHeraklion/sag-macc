@@ -20,7 +20,7 @@ function build(c) {
 }
 function run(c) {
   const f = []; const ok = (x, m) => { if (!x) f.push(m); };
-  ok(c.includes("const SAG_KERNEL_VERSION = 'v50.184 · 2026-11-07';"), "Ε0 έκδοση v50.161");
+  ok(c.includes("const SAG_KERNEL_VERSION = 'v50.185 · 2026-11-07';"), "Ε0 έκδοση v50.161");
   let X; try { X = build(c); } catch (e) { f.push("εξαγωγή: " + e.message); return f; }
   // πραγματικά ονόματα από τα ημερολόγια 14/10
   const want = [["karate", "lambda_cyhalothrin"], ["Neemazal", "azadirachtin"], ["Azadiraktinh", "azadirachtin"], ["Azadiraktini", "azadirachtin"],
@@ -34,7 +34,9 @@ function run(c) {
   for (const n of ["deltamethrin", "sulfur", "spinosad", "azadirachtin", "Θείο", "Spinosad"]) ok(X.f(n) !== null, "Γ γνωστό «" + n + "» αναγνωρίζεται όπως πριν");
   ok(X.k("sulfur") === "sulfur" && X.k("Θείο") === "sulfur", "Γ2 ακριβές κλειδί και όνομα καταλόγου προηγούνται");
   // ΚΑΜΙΑ νέα δραστική: άγνωστα μένουν άγνωστα (χρειάζονται έγκριση)
-  for (const n of ["Surround wp", "Sivanto", "Revyona", "Lainsect", "Myclobutanil", "Ραουνταπ", "", "ab"]) ok(X.f(n) === null && X.k(n) === null, "Δ «" + n + "» μένει άγνωστο");
+  for (const n of ["Surround wp", "Revyona", "Myclobutanil", "Ραουνταπ", "", "ab"]) ok(X.f(n) === null && X.k(n) === null, "Δ «" + n + "» μένει άγνωστο");
+  // T-APPROVAL-01 (v50.185, 7/11/2026): Sivanto → flupyradifurone (έγκριση ΥΠΑΑΤ 14670), Lainsect → abamectin (ΑΑΔΑ 14.631). Revyona μένει άγνωστο (χωρίς απόφαση ΥΠΑΑΤ).
+  ok(X.k("Sivanto") === "flupyradifurone" && X.k("Lainsect") === "abamectin", "Δ2 Sivanto/Lainsect αναγνωρίζονται από 7/11 (έγκριση)");
   // κάθε συνώνυμο οδηγεί σε υπάρχον κλειδί καταλόγου
   const keys = new Set(Object.values(X.P).flatMap(o => o && typeof o === "object" && !Array.isArray(o) ? Object.keys(o) : []));
   for (const [al, k] of Object.entries(X.A)) ok(keys.has(k), "Ε συνώνυμο «" + al + "» → υπαρκτό κλειδί (" + k + ")");
@@ -50,7 +52,7 @@ const base = run(C);
 if (base.length) { console.log("ΑΠΟΤΥΧΙΑ ΒΑΣΗΣ:\n  " + base.join("\n  ")); process.exit(1); }
 console.log("ΒΑΣΗ: όλοι οι έλεγχοι πέρασαν");
 const MUT = [
-  ["m1 παλιά έκδοση", "'v50.184 · 2026-11-07'", "'v50.160 · 2026-10-05'"],
+  ["m1 παλιά έκδοση", "'v50.185 · 2026-11-07'", "'v50.160 · 2026-10-05'"],
   ["m2 χωρίς συνώνυμα στο σκεύασμα", "  const _ak = _sagPestAliasKey(key);   // T-PEST-ALIAS-01\n  if (_ak) { for", "  const _ak = null;\n  if (_ak) { for"],
   ["m3 χωρίς συνώνυμα στο κλειδί", "  const _ak = _sagPestAliasKey(key);   // T-PEST-ALIAS-01\n  if (_ak) return _ak;", "  const _ak = null;\n  if (_ak) return _ak;"],
   ["m4 karate σε λάθος σκεύασμα", "'karate': 'lambda_cyhalothrin',", "'karate': 'deltamethrin',"],
