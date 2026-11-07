@@ -110,3 +110,6 @@ myenv
 scripts/device_data
 
 .DS_Store
+
+# Ιδιωτικά δεδομένα (τιμές, πελάτες): ποτέ στο δημόσιο repo
+reports/demo/private/
