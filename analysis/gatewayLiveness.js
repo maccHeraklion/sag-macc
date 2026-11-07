@@ -31,6 +31,8 @@
 // (`gateway_summary`). Με 10 gateways και ωριαία εκτέλεση: **264 εγγραφές/ημέρα.**
 // + T-GWFIELDS-01 (7/11/2026): κάθε κάρτα πύλης λέει ΠΟΙΟΥΣ ΑΓΡΟΥΣ/αισθητήρες ακούει (`metadata.fields`) και γράφεται
 //   ΜΙΑ εγγραφή `tech_tasks` (εργασίες τεχνικού: σίγηση αγρού, λάθος αγρός, σιωπηλά όργανα) — +24 εγγραφές/ημέρα, +1 ανάγνωση/ώρα.
+// + T-GWMAP-04 (7/11/2026): μία γραμμή `map_field` ανά εγγραφή αγρού για τον ενιαίο χάρτη (sag-map.html): +65 εγγραφές/ώρα
+//   = 1.560/ημέρα, 0 νέες αναγνώσεις δεδομένων, +1 POST ανά εκτέλεση.
 // ΔΕΝ γράφει ΤΙΠΟΤΑ σε συσκευές πελατών και ΔΕΝ αγγίζει τον πυρήνα.
 
 const TOKEN = process.env.T_ANALYSIS_TOKEN;
@@ -262,6 +264,143 @@ function computeTechTasks({ live, fieldOf, gw, pos, now }) {
 }
 // ═══ T-GWFIELDS-01 (ΤΕΛΟΣ) ════════════════════════════════════════════════════════════════════════════════
 
+// ═══ T-GWMAP-04 (7/11/2026) · ΕΝΙΑΙΟΣ ΧΑΡΤΗΣ: ΜΙΑ ΓΡΑΜΜΗ map_field ΑΝΑ ΕΓΓΡΑΦΗ ΑΓΡΟΥ (ΑΡΧΗ) ════════════════════
+// Ο χάρτης πρέπει να δείχνει ΚΑΙ όσους αγρούς δεν υπολογίζονται, ενώ το fleet_field έχει μόνο τους υπολογισμένους.
+// Εδώ όλα βγαίνουν από ό,τι έχει ήδη φορτωθεί: 0 αναγνώσεις δεδομένων. Μετρημένα 7/11: 65 εγγραφές, όλες με ετικέτα
+// coordinates, 42 με θέση στη φόρμα, 64 με clientName, διπλά κλειδιά ετικετών υπάρχουν.
+// ΠΟΤΕ δεν τυπώνονται τιμές ετικετών: οι ετικέτες αισθητήρων έχουν κλειδιά συσκευών.
+const MAP_ROW_MAX = 1500;           // χαρακτήρες: κάθε metadata μένει ΚΑΤΩ από αυτό
+const MAP_DIFF_KM = 1;              // km: φόρμα και ετικέτα πιο μακριά από αυτό = ασυμφωνία
+const MAP_NAME_STEPS = [24, 14, 8, 0];   // πρώτα κόβονται τα ονόματα οργάνων, μόνο μετά φεύγουν όργανα
+
+function mapTagAll(tags, key) {
+  const k = String(key).toLowerCase(), out = [];
+  for (const t of Array.isArray(tags) ? tags : []) {
+    if (!t || String(t.key).toLowerCase() !== k) continue;
+    const v = String(t.value == null ? "" : t.value).trim();
+    if (v) out.push(v);
+  }
+  return out;
+}
+/* Number(null) === 0 και το 0 είναι πεπερασμένο: χωρίς αυτόν τον φράχτη άδειο πεδίο γίνεται σημείο στον ωκεανό. */
+function mapNum(v) {
+  if (typeof v === "number") return Number.isFinite(v) ? v : NaN;
+  if (typeof v === "string" && v.trim() !== "") return Number(v);
+  return NaN;
+}
+function mapPoint(a, b) {
+  const lat = mapNum(a), lng = mapNum(b);
+  if (!(lat >= GR_BOX.latMin && lat <= GR_BOX.latMax && lng >= GR_BOX.lngMin && lng <= GR_BOX.lngMax)) return null;
+  return { lat: Math.round(lat * 1e5) / 1e5, lng: Math.round(lng * 1e5) / 1e5 };
+}
+/* Θέση αγρού: φόρμα, μετά ετικέτα. ps = πηγή, pq = ποιότητα:
+     ok · dup (διπλή ετικέτα, διαφορετικές τιμές) · diff (φόρμα και ετικέτα διαφέρουν > 1 km) · none (καμία θέση)
+   Το shared (ίδιο σημείο με άλλον παραγωγό) το βάζει η buildMapFieldRows, που βλέπει όλες τις εγγραφές. */
+function mapFieldPosition(tags) {
+  const tagPts = [];
+  for (const raw of mapTagAll(tags, "coordinates")) {
+    const m = raw.match(/^\s*(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)\s*$/);
+    const p = m ? mapPoint(m[1], m[2]) : null;
+    if (p && !tagPts.some((q) => haversineKm(p.lat, p.lng, q.lat, q.lng) < 0.01)) tagPts.push(p);
+  }
+  let form = null;
+  try {
+    const c = JSON.parse(mapTagAll(tags, "configuration")[0] || "{}");
+    if (c && typeof c === "object") form = mapPoint(c.latitude, c.longitude);
+  } catch (e) { form = null; }   // χαλασμένη φόρμα: μένει η ετικέτα. Το μήνυμα ΔΕΝ τυπώνεται, περιέχει την τιμή.
+  const p = form || tagPts[0] || null;
+  if (!p) return { y: null, x: null, ps: null, pq: "none" };
+  let pq = "ok";
+  if (tagPts.length > 1) pq = "dup";
+  else if (form && tagPts.length && haversineKm(form.lat, form.lng, tagPts[0].lat, tagPts[0].lng) > MAP_DIFF_KM) pq = "diff";
+  return { y: p.lat, x: p.lng, ps: form ? "form" : "tag", pq };
+}
+/* Ποια όργανα δηλώνει ο αγρός. Το `devices` είναι JSON {όνομα: id}· ίδια ανοχή με την buildFieldOf, και κρατάμε το
+   όνομα γιατί συσκευή εκτός Actility δεν υπάρχει στον κατάλογο. Διπλή ετικέτα: ενώνονται και οι δύο. */
+function mapFieldDevices(tags) {
+  const out = [], seen = new Set();
+  const add = (id, name) => {
+    id = String(id);
+    if (!/^[0-9a-f]{24}$/.test(id) || seen.has(id)) return;
+    seen.add(id);
+    out.push({ id, name: String(name || "") });
+  };
+  for (const raw of mapTagAll(tags, "devices")) {
+    let o = null;
+    try { o = JSON.parse(raw); } catch (e) { o = null; }
+    if (Array.isArray(o)) o.forEach((id) => add(id, ""));
+    else if (o && typeof o === "object") Object.keys(o).forEach((k) => add(o[k], k));
+    else (raw.match(/[0-9a-f]{24}/g) || []).forEach((id) => add(id, ""));
+  }
+  return out;
+}
+/* Κρατά ΜΟΝΟ την ετικέτα `type` και σβήνει όλες τις ετικέτες από τον κατάλογο, ώστε κανένα κλειδί συσκευής να μη
+   μείνει στη μνήμη της εκτέλεσης και να μη φτάσει ποτέ σε log. */
+function mapDeviceTypes(devs) {
+  const typeOf = new Map();
+  for (const d of devs || []) {
+    if (!d) continue;
+    const t = mapTagAll(d.tags, "type")[0];
+    if (t) typeOf.set(d.id, t.toLowerCase());
+    delete d.tags;
+  }
+  return typeOf;
+}
+/* Από τα gateways αυτής της εκτέλεσης στο «ποια πύλη άκουσε ποια συσκευή». Όσοι δεν στέλνουν lrrid μένουν null:
+   άγνωστη πύλη, όχι «καμία πύλη». */
+function mapGatewayOf(gw) {
+  const out = new Map();
+  for (const [code, g] of (gw || new Map()).entries()) for (const s of (g && g.list) || []) out.set(s.id, code);
+  return out;
+}
+/* Όριο μεγέθους. Σειρά: ονόματα οργάνων, μετά τα όργανα από το τέλος (η λίστα έχει τα χειρότερα πρώτα) με μέτρηση
+   στο `dc`, ώστε η σελίδα να πει πόσα έφυγαν. Τέλος, για παθολογικά μεγάλο όνομα, το όνομα αγρού και παραγωγού. */
+function mapFitRow(md) {
+  const fits = () => JSON.stringify(md).length < MAP_ROW_MAX;
+  if (fits()) return md;
+  for (const n of MAP_NAME_STEPS) {
+    for (const d of md.dv) d.n = n ? truncName(d.n, n) : "";
+    if (fits()) return md;
+  }
+  while (md.dv.length && !fits()) { md.dv.pop(); md.dc = (md.dc || 0) + 1; }
+  if (!fits()) { md.n = truncName(md.n, 60); md.c = md.c == null ? null : truncName(md.c, 40); }
+  return md;
+}
+/* ΚΑΘΑΡΗ: ό,τι χρειάζεται της δίνεται. fields = εγγραφές αγρών με tags, devs = κατάλογος χωρίς tags. */
+function buildMapFieldRows({ fields, devs, typeOf, gwOf, now }) {
+  now = now || Date.now();
+  const byId = new Map((devs || []).map((d) => [d.id, d]));
+  const metas = [];
+  for (const f of fields || []) {
+    if (!f || !f.id) continue;
+    const tags = Array.isArray(f.tags) ? f.tags : [];
+    const dv = mapFieldDevices(tags).map((x) => {
+      const d = byId.get(x.id) || {};
+      const h = ageHours(d.last_input, now);
+      return { i: x.id.slice(-6), n: String(d.name || x.name || ""), t: (typeOf && typeOf.get(x.id)) || null,
+        h: Number.isFinite(h) ? Math.round(Math.max(0, h) * 10) / 10 : null, g: (gwOf && gwOf.get(x.id)) || null };
+    });
+    // Τα χειρότερα πρώτα: αν χρειαστεί να φύγει όργανο, φεύγει το πιο υγιές.
+    dv.sort((a, b) => (b.h == null ? Infinity : b.h) - (a.h == null ? Infinity : a.h));
+    const pos = mapFieldPosition(tags);
+    metas.push({ i: String(f.id), n: mapTagAll(tags, "name")[0] || String(f.name || f.id),
+      c: mapTagAll(tags, "clientName")[0] || null, y: pos.y, x: pos.x, ps: pos.ps, pq: pos.pq, dv });
+  }
+  // Ίδιο σημείο με ΑΛΛΟΝ παραγωγό = ύποπτη θέση. Ίδιος παραγωγός στο ίδιο σημείο είναι θεμιτό (π.χ. ξενοδοχείο).
+  const owners = new Map();
+  for (const m of metas) {
+    if (m.y == null || !m.c) continue;
+    const k = m.y.toFixed(5) + "," + m.x.toFixed(5);
+    owners.set(k, (owners.get(k) || new Set()).add(m.c));
+  }
+  for (const m of metas) {
+    if (m.y != null && (owners.get(m.y.toFixed(5) + "," + m.x.toFixed(5)) || new Set()).size > 1) m.pq = "shared";
+  }
+  const time = new Date(now).toISOString();   // ΙΔΙΑ ώρα σε όλη την παρτίδα: έτσι ο χάρτης ξεχωρίζει τον τελευταίο κύκλο
+  return metas.map((m) => ({ variable: "map_field", value: m.dv.length, time, metadata: mapFitRow(m) }));
+}
+// ═══ T-GWMAP-04 (ΤΕΛΟΣ) ═══════════════════════════════════════════════════════════════════════════════════
+
 /* Η ΜΝΗΜΗ: ποιες συσκευές ξέρουμε ότι στέλνουν lrrid, και πού σταμάτησε η ανακάλυψη.
    Ζει σε ΜΙΑ μεταβλητή της συσκευής εποπτείας. Αν λείπει ή είναι χαλασμένη, δεν ρίχνει
    την εκτέλεση — απλώς κάνουμε πλήρη σάρωση και την ξαναχτίζουμε. */
@@ -302,12 +441,15 @@ async function loadState() {
   // 1 · Ο κατάλογος των συσκευών του δικτύου Actility (1 ανάγνωση ανά σελίδα).
   let devs = [];
   for (let page = 1; page <= 4; page++) {
-    const c = await api(`/device?amount=200&page=${page}&fields[]=id&fields[]=name`
+    const c = await api(`/device?amount=200&page=${page}&fields[]=id&fields[]=name&fields[]=tags`
       + `&fields[]=last_input&filter[network]=${ACTILITY_NET}`);
     reads++;
     devs = devs.concat(c || []);
     if (!c || c.length < 200) break;
   }
+  // T-GWMAP-04: μένει μόνο ο τύπος· οι ετικέτες σβήνονται εδώ, πριν από οτιδήποτε άλλο.
+  let typeOf = new Map();
+  try { typeOf = mapDeviceTypes(devs); } catch (e) { for (const d of devs) if (d) delete d.tags; console.log("ΧΑΡΤΗΣ|τύποι: σφάλμα"); }
   const live = devs.filter((d) => d.last_input);
   const byId = new Map(live.map((d) => [d.id, d]));
 
@@ -325,11 +467,13 @@ async function loadState() {
   // 1γ · T-GWFIELDS-01: οι αγροί (isField=yes) ΜΙΑ φορά (1 ανάγνωση) → ποια συσκευή ανήκει σε ποιον αγρό και πού
   //      είναι ο αγρός. Αποτυχία ΔΕΝ ρίχνει την εκτέλεση: συνεχίζουμε με άδειο χάρτη (οι κάρτες πύλης βγαίνουν όπως πριν).
   let fieldOf = new Map();
+  let fieldRecs = [];   // T-GWMAP-04: οι ίδιες εγγραφές τροφοδοτούν και το map_field
   try {
     const f = await api(`/device?amount=200&page=1&fields[]=id&fields[]=name&fields[]=tags`
       + `&filter[tags][0][key]=isField&filter[tags][0][value]=yes`);
     reads++;
-    fieldOf = buildFieldOf((f || []).filter((d) => (d.tags || []).some((t) => t && t.key === "isField" && t.value === "yes")));
+    fieldRecs = (f || []).filter((d) => (d.tags || []).some((t) => t && t.key === "isField" && t.value === "yes"));
+    fieldOf = buildFieldOf(fieldRecs);
     console.log(`ΑΓΡΟΙ|${(f || []).length} αγροί · ${fieldOf.size} συσκευές με αγρό`);
   } catch (e) { console.log("ΑΓΡΟΙ|σφάλμα " + ((e && e.message) || e)); }
 
@@ -495,6 +639,14 @@ async function loadState() {
   } catch (e) { console.log("ΕΡΓΑΣΙΕΣ|σφάλμα " + ((e && e.message) || e)); }
 
   await api(`/device/${OVERSEER}/data`, { method: "POST", body: JSON.stringify(out) });
+
+  // 4δ · T-GWMAP-04: ο ενιαίος χάρτης. Τρέχει ΑΦΟΥ γραφτούν οι κάρτες πύλης, άρα δεν μπορεί να τις σταματήσει ούτε
+  //      σφάλμα ούτε απόρριψη της εγγραφής. Χωρίς αγρούς δεν γράφει τίποτα: ο χάρτης θα δείξει ότι τα δεδομένα παλιώνουν.
+  try {
+    const mapRows = fieldRecs.length ? buildMapFieldRows({ fields: fieldRecs, devs, typeOf, gwOf: mapGatewayOf(gw), now }) : [];
+    if (mapRows.length) await api(`/device/${OVERSEER}/data`, { method: "POST", body: JSON.stringify(mapRows) });
+    console.log(`ΧΑΡΤΗΣ|${mapRows.length} γραμμές map_field`);
+  } catch (e) { console.log("ΧΑΡΤΗΣ|σφάλμα " + ((e && e.name) || "άγνωστο")); }
 
   console.log(`ΕΡΓΑΣΙΕΣ|${techN}|site_silence=${techCounts.site_silence}|wrong_field=${techCounts.wrong_field}|silent=${techCounts.silent_in_field}`);
   for (const [id, g] of rows.slice(0, 12)) {
