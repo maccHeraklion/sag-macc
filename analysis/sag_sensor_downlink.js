@@ -12,7 +12,9 @@
  *   • Dragino (LMS01/LSE01/SE01/SE02/LSE02/SPH01): 01 + 3 bytes δευτερόλεπτα (big-endian), οποιοδήποτε FPort (2).
  *   • Milesight EM320/EM300: ff02 <UINT16 LE s> (collect) + ff03 <UINT16 LE s> (report), FPort 85.
  *
- * ΠΕΡΙΒΑΛΛΟΝ: ACCOUNT_TOKEN (account token με δικαιώματα devices/network — το βάζει ο Μιχάλης στην κονσόλα).
+ * ΠΕΡΙΒΑΛΛΟΝ: κανένα (από 7/11). Τρέχει με το token του analysis + πολιτική πρόσβασης
+ *   «[Analysis] SAG sensor downlink» (device access/token_access ανά ετικέτα type, network access στο Actility).
+ *   Προαιρετικά ACCOUNT_TOKEN αν ποτέ χρειαστεί — προτιμάται όταν υπάρχει.
  * RUNTIME: node-rt2025 (χωρίς SDK — ό,τι κάνει το Utils.sendDownlink του SDK γίνεται εδώ με fetch:
  *   device info → network middleware_endpoint → device token (serie_number + last_authorization) →
  *   POST https://<middleware>/downlink {device, authorization, payload, port, confirmed}).
@@ -30,6 +32,8 @@ const PFX = "SDL|";
 const ALLOWED_TYPES = ["s2120", "lms01_ls", "lse01", "lse01_shallow", "lse01_deep", "lse02", "se0x", "se01", "se02", "em320_th", "em300_th", "sph01"];
 const DENY_NAME = /uc5|ws558|volta|lwl02|am107|talkpool|mclimate|greenprojects|_0298$|_03C4$|_0495$|_04F8$/i;
 // Σταθμοί καιρού Δήμων (απόφαση Michalis: δεν πειράζουμε τις ρυθμίσεις τους) + ξενοδοχείο.
+// Δημόσια δίκτυα TagoIO → middleware (εφεδρεία όταν η /integration/network δεν απαντά υπό πολιτική).
+const KNOWN_MIDDLEWARE = { "5ede22a7427104001c248b08": "actility.middleware.tago.io" };
 const DENY_EXACT = new Set(["sensecap_s2120_047e", "sensecap_s2120_049e", "sensecap_s2120_0138", "sensecap_s2120_057C", "sensecap_s2120_04e8", "sensecap_s2120_00d8-1", "milesight_em300_th_7768"]);
 
 function crc16Kermit(bytes) {
@@ -90,18 +94,28 @@ async function api(token, path, opts) {
 
 async function resolveDevice(token, ref) {
   if (/^[0-9a-f]{24}$/i.test(ref)) return api(token, "/device/" + ref);
-  const list = await api(token, "/device?filter[name]=" + encodeURIComponent(ref) + "&amount=20&fields=id,name");
-  const exact = (list || []).filter((d) => d.name === ref);
-  if (exact.length !== 1) throw new Error("όνομα «" + ref + "»: " + exact.length + " ακριβείς αντιστοιχίες");
+  // Με πολιτική πρόσβασης ανά ετικέτα, η λίστα πρέπει να ζητά και τα tags για να αξιολογηθεί ο κανόνας (7/11: με fields=id,name → 0 αποτελέσματα).
+  const list = await api(token, "/device?filter[name]=" + encodeURIComponent(ref) + "&amount=50&fields[]=id&fields[]=name&fields[]=tags");
+  const norm = (x) => String(x || "").trim().toLowerCase();
+  const exact = (list || []).filter((d) => norm(d.name) === norm(ref));
+  if (exact.length !== 1) throw new Error("όνομα «" + ref + "»: " + exact.length + " αντιστοιχίες (λίστα " + (list || []).length + ": " + (list || []).map((d) => JSON.stringify(d.name) + "/" + Object.keys(d || {}).join("+")).join(",").slice(0, 160) + ")");
   return api(token, "/device/" + exact[0].id);
 }
 
 // Ό,τι κάνει το Utils.sendDownlink του @tago-io/sdk.
 async function sendDownlink(token, dev, cmd) {
   if (!dev.network) throw new Error("η συσκευή δεν έχει δίκτυο");
-  const net = await api(token, "/integration/network/" + dev.network + "?fields=id,name,middleware_endpoint");
-  if (!net || !net.middleware_endpoint) throw new Error("το δίκτυο δεν έχει middleware_endpoint");
-  const toks = await api(token, "/device/token/" + dev.id + "?page=1&amount=20&fields=name,serie_number,last_authorization");
+  // Το δίκτυο Actility (5ede22a7…) είναι δημόσιο δίκτυο του TagoIO — με token analysis υπό πολιτική η /integration/network
+  // απαντά «Network can't be found» (7/11). Γι' αυτό γνωστό middleware ως εφεδρεία.
+  let net = null;
+  try { net = await api(token, "/integration/network/" + dev.network + "?fields=id,name,middleware_endpoint"); } catch (e) { net = null; }
+  if (!net || !net.middleware_endpoint) {
+    const known = KNOWN_MIDDLEWARE[dev.network];
+    if (!known) throw new Error("το δίκτυο " + dev.network + " δεν διαβάζεται και δεν είναι γνωστό");
+    net = { id: dev.network, middleware_endpoint: known };
+  }
+  // fields σε μορφή πίνακα (fields[]=) — με «fields=a,b» το API απαντά Internal Error (7/11).
+  const toks = await api(token, "/device/token/" + dev.id + "?page=1&amount=20&fields[]=name&fields[]=serie_number&fields[]=last_authorization");
   const t = (toks || []).find((x) => x.serie_number && x.last_authorization);
   if (!t) throw new Error("κανένα token συσκευής με serie_number + last_authorization (η συσκευή δεν έχει εξουσιοδότηση δικτύου)");
   const r = await fetch("https://" + net.middleware_endpoint + "/downlink", {
@@ -113,18 +127,22 @@ async function sendDownlink(token, dev, cmd) {
   return txt.slice(0, 160);
 }
 
+// 7/11 (Μιχάλης: «κάνε εσύ ό,τι αφορά τα tokens»): ΧΩΡΙΣ ACCOUNT_TOKEN — το analysis τρέχει με το ΔΙΚΟ ΤΟΥ token
+// (T_ANALYSIS_TOKEN) και πολιτική πρόσβασης που δίνει ΜΟΝΟ device/access + device/token_access στους αισθητήρες
+// αγρών (ανά ετικέτα type) και network/access στο δίκτυο Actility. Κανένα account token δεν περνά από χέρια ή κώδικα.
+// Αν κάποτε μπει ACCOUNT_TOKEN στο περιβάλλον, προτιμάται.
 function readEnv() {
   try {
     const e = JSON.parse(process.env.T_ANALYSIS_ENV || "null");
-    if (Array.isArray(e)) { const h = e.find((x) => x && x.key === "ACCOUNT_TOKEN"); return h ? h.value : null; }
-    if (e && typeof e === "object") return e.ACCOUNT_TOKEN || null;
+    if (Array.isArray(e)) { const h = e.find((x) => x && x.key === "ACCOUNT_TOKEN"); if (h && h.value) return h.value; }
+    else if (e && typeof e === "object" && e.ACCOUNT_TOKEN) return e.ACCOUNT_TOKEN;
   } catch (err) { /* κενό */ }
-  return null;
+  return process.env.T_ANALYSIS_TOKEN || null;
 }
 
 (async () => {
   const token = readEnv();
-  if (!token) return console.log(PFX + "FATAL|λείπει ACCOUNT_TOKEN στο περιβάλλον του analysis");
+  if (!token) return console.log(PFX + "FATAL|λείπει token (ούτε ACCOUNT_TOKEN ούτε T_ANALYSIS_TOKEN)");
   let scope = null; try { scope = JSON.parse(process.env.T_ANALYSIS_DATA || "null"); } catch (e) { scope = null; }
   const s = parseScope(scope);
   console.log(PFX + "=== " + new Date().toISOString() + " | συσκευές=" + s.devices.length + " | λεπτά=" + s.minutes + " | confirm=" + s.confirm + (s.payload ? " | ρητή εντολή " + s.payload + "/" + s.port : ""));
