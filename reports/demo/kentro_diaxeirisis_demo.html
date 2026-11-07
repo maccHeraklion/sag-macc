@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Κέντρο Διαχείρισης SAG</title>
+<style>
+:root{--bg:#f6f7f4;--panel:#fff;--ink:#1d2420;--mute:#5d6862;--line:#dfe3dc;--acc:#2f6f4e;--acc2:#e8f1ec;--ok:#2f7d4f;--warn:#b86e00;--bad:#b3261e;--info:#2a5d8f;--chip:#eef1ec;
+--c-field:#3f7d3a;--c-greenhouse:#2b7a78;--c-landscape:#7a5aa6;--c-station:#2a5d8f;--c-automation:#a2671c}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121614;--panel:#1b211e;--ink:#e6ebe7;--mute:#9aa6a0;--line:#2c3430;--acc:#6cc191;--acc2:#1f2d26;--ok:#6cc191;--warn:#e0a23c;--bad:#ef7b70;--info:#7fb1e3;--chip:#232b27}}
+:root[data-theme="dark"]{--bg:#121614;--panel:#1b211e;--ink:#e6ebe7;--mute:#9aa6a0;--line:#2c3430;--acc:#6cc191;--acc2:#1f2d26;--ok:#6cc191;--warn:#e0a23c;--bad:#ef7b70;--info:#7fb1e3;--chip:#232b27}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+header h1{font-size:17px;margin:0}.demo{background:var(--warn);color:#fff;font-size:12px;padding:2px 8px;border-radius:10px}
+nav{display:flex;gap:4px;overflow-x:auto;padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+nav button{border:0;background:none;color:var(--mute);padding:8px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;font-size:14px}
+nav button.on{background:var(--acc2);color:var(--acc);font-weight:600}
+main{max-width:1180px;margin:0 auto;padding:16px}
+.grid{display:grid;gap:12px}.k4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.k2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.card h3{margin:0 0 10px;font-size:15px}.kpi .v{font-size:26px;font-weight:700}.kpi .l{color:var(--mute);font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:middle}th{color:var(--mute);font-weight:600;font-size:12px}
+tr.click{cursor:pointer}tr.click:hover{background:var(--acc2)}
+.wrap{overflow-x:auto}
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;background:var(--chip);white-space:nowrap}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}.info{color:var(--info)}
+.pill.ok{background:color-mix(in srgb,var(--ok) 15%,transparent)}.pill.warn{background:color-mix(in srgb,var(--warn) 18%,transparent)}.pill.bad{background:color-mix(in srgb,var(--bad) 15%,transparent)}.pill.info{background:color-mix(in srgb,var(--info) 15%,transparent)}
+.cat{display:inline-flex;align-items:center;gap:6px;font-size:13px}.cat i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 12px;border-radius:8px;cursor:pointer;font-size:14px}
+.btn.p{background:var(--acc);border-color:var(--acc);color:#fff}.btn.s{padding:4px 9px;font-size:13px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.sp{flex:1}
+.chips button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:16px;padding:4px 10px;cursor:pointer;font-size:13px}.chips button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+input,select{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:14px}
+.steps{display:flex;gap:3px}.steps span{flex:1;height:7px;border-radius:4px;background:var(--line);min-width:14px}.steps span.d{background:var(--acc)}.steps span.c{background:var(--warn)}
+.bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;background:var(--acc)}
+.note{font-size:13px;color:var(--mute)}.sec{margin:18px 0 8px;font-size:13px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink);width:min(720px,94vw);padding:0}
+dialog::backdrop{background:rgba(0,0,0,.4)}.dh{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center}.db{padding:16px}.df{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+.wz{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}.wz span{font-size:12px;padding:4px 8px;border-radius:12px;background:var(--chip);color:var(--mute)}.wz span.on{background:var(--acc);color:#fff}.wz span.d{color:var(--acc)}
+.opts{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}.opt{border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer}.opt.on{border-color:var(--acc);background:var(--acc2)}.opt b{display:block;margin-bottom:2px}
+.f{display:grid;gap:4px;margin-bottom:10px}.f label{font-size:13px;color:var(--mute)}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:14px;opacity:0;transition:.25s;pointer-events:none}.toast.on{opacity:1}
+@media (max-width:640px){main{padding:12px}.kpi .v{font-size:22px}header h1{font-size:15px}}
+</style>
+</head>
+<body>
+<header><h1>Κέντρο Διαχείρισης SAG</h1><span class="demo">DEMO · πλασματικά δεδομένα</span><span class="sp"></span><button class="btn s" id="theme">◐</button></header>
+<nav id="nav"></nav>
+<main id="main"></main>
+<dialog id="dlg"><div class="dh"><b id="dt"></b><span class="sp"></span><button class="btn s" onclick="dlg.close()">✕</button></div><div class="db" id="db"></div><div class="df" id="df"></div></dialog>
+<div class="toast" id="toast"></div>
+<script>
+/* ═══ ΔΕΔΟΜΕΝΑ DEMO — όλα πλασματικά, δεν προέρχονται από πελάτες ═══ */
+const TODAY=new Date('2026-11-07');
+const CAT={field:{n:'Τυπικός αγρός',c:'--c-field'},greenhouse:{n:'Θερμοκήπιο',c:'--c-greenhouse'},landscape:{n:'Ξενοδοχείο / χώρος πρασίνου',c:'--c-landscape'},station:{n:'Μετεωρολογικός σταθμός',c:'--c-station'},automation:{n:'Αυτοματισμός',c:'--c-automation'}};
+const STEPS=['Προσφορά','Πελάτης','Εγκατάσταση','Όργανα','Παραμετροποίηση','Έλεγχος υγείας','Συνδρομή'];
+const CATALOG=[
+ {k:'sense',n:'Sense — σταθμός + έδαφος',kind:'Πακέτο συνδρομής',p:290,cats:['field']},
+ {k:'sensePlus',n:'Sense Plus — + φύλλο',kind:'Πακέτο συνδρομής',p:390,cats:['field','greenhouse']},
+ {k:'sagFull',n:'SAG Full — πλήρης γεωπονική υποστήριξη',kind:'Πακέτο συνδρομής',p:520,cats:['field','greenhouse']},
+ {k:'waterPro',n:'WaterPro — ζώνες άρδευσης & βάνες',kind:'Πακέτο συνδρομής',p:240,cats:['landscape','automation']},
+ {k:'s2120',n:'Μετεωρολογικός σταθμός',kind:'Πακέτο συνδρομής',p:150,cats:['station']},
+ {k:'soilone',n:'Αισθητήρας εδάφους 1 βάθους',kind:'Εξοπλισμός',p:180,cats:[]},
+ {k:'soildouble',n:'Αισθητήρας εδάφους 2 βαθών',kind:'Εξοπλισμός',p:260,cats:[]},
+ {k:'leaf',n:'Αισθητήρας φύλλου',kind:'Εξοπλισμός',p:150,cats:[]},
+ {k:'uc511',n:'Ελεγκτής βάνας',kind:'Εξοπλισμός',p:210,cats:[]},
+ {k:'install',n:'Εγκατάσταση & ρύθμιση',kind:'Υπηρεσία',p:120,cats:[]},
+ {k:'visit',n:'Επίσκεψη τεχνικού',kind:'Υπηρεσία',p:60,cats:[]}];
+const CUST=[
+ {id:'C1',n:'Παπαδάκης Γεώργιος',t:'Αγρότης',vat:'0xxxxxxx1',ph:'69xx xxx xx1',st:'Ενεργός'},
+ {id:'C2',n:'Αγροτικός Συνεταιρισμός Μεσαράς',t:'Οργάνωση',vat:'0xxxxxxx2',ph:'2810 xxx xx2',st:'Ενεργός'},
+ {id:'C3',n:'Ξενοδοχείο Αιγαίο Resort',t:'Ξενοδοχείο',vat:'0xxxxxxx3',ph:'2897 xxx xx3',st:'Ενεργός'},
+ {id:'C4',n:'Δήμος Ανατολικής Κρήτης',t:'Δήμος',vat:'0xxxxxxx4',ph:'2841 xxx xx4',st:'Ενεργός'},
+ {id:'C5',n:'Μανωλάκη Ελένη',t:'Αγρότης',vat:'',ph:'69xx xxx xx5',st:'Σε onboarding'},
+ {id:'C6',n:'ΕΠΑΛ Νότιας Πεδιάδας',t:'Σχολείο',vat:'0xxxxxxx6',ph:'2891 xxx xx6',st:'Ενεργός'}];
+const INST=[
+ {id:'I1',c:'C1',n:'Ελαιώνας Αγ. Βαρβάρας',cat:'field',step:7,h:'ok',plan:'sagFull',end:'2027-03-31',dev:['s2120','soildouble','leaf']},
+ {id:'I2',c:'C1',n:'Αμπέλι Πεζών',cat:'field',step:7,h:'visit',plan:'sense',end:'2026-11-28',dev:['s2120','soilone']},
+ {id:'I3',c:'C2',n:'Θερμοκήπιο Τυμπακίου 1',cat:'greenhouse',step:7,h:'ok',plan:'sensePlus',end:'2027-01-15',dev:['em320','soildouble','leaf']},
+ {id:'I4',c:'C2',n:'Θερμοκήπιο Τυμπακίου 2',cat:'greenhouse',step:5,h:'office',plan:'sensePlus',end:null,dev:['em320','soildouble']},
+ {id:'I5',c:'C3',n:'Κήπος υποδοχής',cat:'landscape',step:7,h:'visit',plan:'waterPro',end:'2027-05-01',dev:['soilone','uc511'],note:'Πύλη εκτός από 4/11'},
+ {id:'I6',c:'C3',n:'Γκαζόν πισίνας',cat:'landscape',step:7,h:'visit',plan:'waterPro',end:'2027-05-01',dev:['soilone','uc511'],note:'Πύλη εκτός από 4/11'},
+ {id:'I7',c:'C4',n:'Σταθμός Δημαρχείου',cat:'station',step:7,h:'ok',plan:'s2120',end:'2026-12-02',dev:['s2120']},
+ {id:'I8',c:'C4',n:'Πάρκο κεντρικής πλατείας',cat:'automation',step:4,h:'office',plan:'waterPro',end:null,dev:['uc511']},
+ {id:'I9',c:'C5',n:'Αβοκάντο Φαλάσαρνας',cat:'field',step:2,h:'office',plan:'sense',end:null,dev:[]},
+ {id:'I10',c:'C6',n:'Σχολικός κήπος',cat:'automation',step:7,h:'visit',plan:'waterPro',end:'2026-10-30',dev:['uc511'],note:'Ελεγκτής σιωπά 93 ημ.'}];
+const OFFERS=[
+ {id:'Π-2026-031',c:'C5',st:'Αποδεκτή',d:'2026-10-28',lines:[['sense',1],['soilone',1],['install',1]]},
+ {id:'Π-2026-033',c:'C2',st:'Στάλθηκε',d:'2026-11-03',lines:[['sensePlus',2],['soildouble',2],['leaf',2]]},
+ {id:'Π-2026-034',c:'C4',st:'Πρόχειρη',d:'2026-11-06',lines:[['waterPro',3],['uc511',3],['install',1]]}];
+const PAY=[
+ {i:'I1',inv:'ΤΠΥ 1182',amt:520,d:'2026-03-30',paid:true},{i:'I3',inv:'ΤΠΥ 1201',amt:390,d:'2026-01-14',paid:true},
+ {i:'I5',inv:'ΤΠΥ 1240',amt:240,d:'2026-05-02',paid:true},{i:'I6',inv:'ΤΠΥ 1241',amt:240,d:'2026-05-02',paid:false},
+ {i:'I7',inv:'ΤΠΥ 1103',amt:150,d:'2025-12-01',paid:true}];
+const DEV=[
+ {m:'S2120',st:'Αποθήκη',n:4},{m:'S2120',st:'Εγκατεστημένο',n:38},{m:'LSE01',st:'Αποθήκη',n:9},{m:'LSE01',st:'Εγκατεστημένο',n:24},{m:'SE0X',st:'Αποθήκη',n:6},{m:'SE0X',st:'Δεσμευμένο',n:2},{m:'SE0X',st:'Εγκατεστημένο',n:15},
+ {m:'LMS01',st:'Εγκατεστημένο',n:26},{m:'LMS01',st:'Σε επισκευή',n:2},{m:'EM320',st:'Αποθήκη',n:3},{m:'EM320',st:'Εγκατεστημένο',n:23},{m:'UC511',st:'Αποθήκη',n:5},{m:'UC511',st:'Δεσμευμένο',n:3},{m:'UC511',st:'Εγκατεστημένο',n:37},{m:'Πύλη',st:'Αποθήκη',n:6},{m:'Πύλη',st:'Εγκατεστημένο',n:22}];
+const MOVES=[['2026-11-06','SE0X ·5eb6','Αποθήκη → Δεσμευμένο','Π-2026-031'],['2026-11-05','LMS01 ·784e','Εγκατεστημένο → Σε επισκευή','βλάβη αισθητήρα'],['2026-11-03','UC511 ·9341','Αποθήκη → Εγκατεστημένο','Σχολικός κήπος']];
+const TICK=[
+ {id:'Α-118',i:'I5',k:'Βλάβη',src:'Εποπτεία (αυτόματα)',t:'Πύλη ξενοδοχείου εκτός · 9 αισθητήρες + 13 ελεγκτές σιωπούν',st:'Ανοιχτό',who:'Τεχνικός'},
+ {id:'Α-117',i:'I10',k:'Βλάβη',src:'Εποπτεία (αυτόματα)',t:'Ελεγκτής βάνας σιωπά 93 ημέρες',st:'Ανοιχτό',who:'—'},
+ {id:'Α-115',i:'I2',k:'Επίσκεψη',src:'Πελάτης',t:'Ο αισθητήρας εδάφους δείχνει σταθερή τιμή',st:'Προγραμματισμένο',who:'Τεχνικός'},
+ {id:'Α-112',i:'I3',k:'Αίτημα',src:'Πελάτης',t:'Εξαγωγή ιστορικού σε Excel',st:'Κλειστό',who:'Γραφείο'}];
+/* ═══ ΒΟΗΘΗΤΙΚΑ ═══ */
+const $=s=>document.querySelector(s);const cust=id=>CUST.find(c=>c.id===id);const inst=id=>INST.find(x=>x.id===id);const cat=k=>CATALOG.find(c=>c.k===k);
+const eur=v=>v.toLocaleString('el-GR',{style:'currency',currency:'EUR',maximumFractionDigits:0});
+const days=d=>d?Math.round((new Date(d)-TODAY)/864e5):null;const dfmt=d=>d?new Date(d).toLocaleDateString('el-GR'):'—';
+const catTag=k=>`<span class="cat"><i style="background:var(${CAT[k].c})"></i>${CAT[k].n}</span>`;
+function subState(x){if(x.step<7||!x.end)return['Δεν ξεκίνησε','info'];const d=days(x.end);if(d<0)return['Ληγμένη','bad'];if(d<=30)return['Σε λήξη ('+d+' ημ.)','warn'];return['Ενεργή','ok']}
+const HL={ok:['Εντάξει','ok'],visit:['Επίσκεψη','bad'],office:['Γραφείο','info']};
+const pill=(t,c)=>`<span class="pill ${c}">${t}</span>`;
+function steps(n){return `<div class="steps" title="${n>=7?'Ολοκληρώθηκε':'Βήμα: '+STEPS[n]}">${STEPS.map((s,i)=>`<span class="${i<n?'d':i===n?'c':''}"></span>`).join('')}</div>`}
+function offerTotal(o){const net=o.lines.reduce((s,[k,q])=>s+cat(k).p*q,0);return{net,vat:net*.24,tot:net*1.24}}
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');setTimeout(()=>e.classList.remove('on'),2200)}
+function dialog(title,body,foot){$('#dt').textContent=title;$('#db').innerHTML=body;$('#df').innerHTML=foot||'<button class="btn" onclick="dlg.close()">Κλείσιμο</button>';$('#dlg').showModal()}
+/* ═══ ΚΑΡΤΕΛΕΣ ═══ */
+const TABS={
+home(){const act=INST.filter(x=>subState(x)[1]==='ok'||subState(x)[1]==='warn');const rev=act.reduce((s,x)=>s+cat(x.plan).p,0);
+ const exp=INST.filter(x=>x.step>=7&&x.end&&days(x.end)<=30).sort((a,b)=>days(a.end)-days(b.end));const stuck=INST.filter(x=>x.step<7);const visit=INST.filter(x=>x.h==='visit');
+ const stock=DEV.filter(d=>d.st==='Αποθήκη').reduce((s,d)=>s+d.n,0);const byCat=Object.keys(CAT).map(k=>[k,INST.filter(x=>x.cat===k).length]);const mx=Math.max(...byCat.map(b=>b[1]));
+ return `<div class="grid k4">
+ ${[['Ενεργοί πελάτες',CUST.filter(c=>c.st==='Ενεργός').length],['Ενεργές συνδρομές',act.length],['Ετήσια έσοδα συνδρομών',eur(rev)],['Λήξεις σε 30 ημέρες',exp.length],['Σε onboarding',stuck.length],['Χρειάζονται επίσκεψη',visit.length],['Όργανα στην αποθήκη',stock],['Ανοιχτά αιτήματα',TICK.filter(t=>t.st!=='Κλειστό').length]].map(([l,v])=>`<div class="card kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('')}
+ </div><div class="grid k2" style="margin-top:12px">
+ <div class="card"><h3>Λήγουν ή έληξαν</h3><table>${exp.map(x=>`<tr class="click" onclick="openInst('${x.id}')"><td>${x.n}<div class="note">${cust(x.c).n}</div></td><td>${pill(...subState(x))}</td><td><button class="btn s" onclick="event.stopPropagation();renew('${x.id}')">Ανανέωση</button></td></tr>`).join('')||'<tr><td class="note">Καμία</td></tr>'}</table></div>
+ <div class="card"><h3>Κολλημένες στο onboarding</h3><table>${stuck.map(x=>`<tr class="click" onclick="openInst('${x.id}')"><td>${x.n}<div class="note">επόμενο: ${STEPS[x.step]}</div></td><td style="width:42%">${steps(x.step)}</td></tr>`).join('')}</table></div>
+ <div class="card"><h3>Εγκαταστάσεις ανά περίπτωση</h3>${byCat.map(([k,n])=>`<div style="margin:6px 0"><div class="row">${catTag(k)}<span class="sp"></span><b>${n}</b></div><div class="bar"><i style="width:${mx?100*n/mx:0}%;background:var(${CAT[k].c})"></i></div></div>`).join('')}<p class="note">Κάθε περίπτωση έχει δικό της πρωτόκολλο: δειγματοληψία, όρια σιωπής, ενδείξεις.</p></div>
+ <div class="card"><h3>Χρειάζονται επίσκεψη (από την Εποπτεία)</h3><table>${visit.map(x=>`<tr class="click" onclick="openInst('${x.id}')"><td>${x.n}<div class="note">${x.note||'σιωπηλό όργανο'}</div></td><td>${catTag(x.cat)}</td></tr>`).join('')}</table></div></div>`},
+cust(){return `<div class="row" style="margin-bottom:10px"><input id="q" placeholder="Αναζήτηση πελάτη…" oninput="filterRows(this.value)"><span class="sp"></span><button class="btn p" onclick="wizard()">+ Νέος πελάτης / εγκατάσταση</button></div>
+ <div class="card wrap"><table id="tbl"><tr><th>Πελάτης</th><th>Τύπος</th><th>Εγκαταστάσεις</th><th>Ετήσια αξία</th><th>Κατάσταση</th></tr>${CUST.map(c=>{const ii=INST.filter(x=>x.c===c.id);return `<tr class="click" data-q="${c.n.toLowerCase()}" onclick="openCust('${c.id}')"><td><b>${c.n}</b>${!c.vat?'<div class="note warn">Λείπει ΑΦΜ</div>':''}</td><td>${c.t}</td><td>${ii.length}</td><td>${eur(ii.filter(x=>x.step>=7).reduce((s,x)=>s+cat(x.plan).p,0))}</td><td>${pill(c.st,c.st==='Ενεργός'?'ok':'info')}</td></tr>`}).join('')}</table></div>`},
+inst(){return `<div class="row chips" id="chips" style="margin-bottom:10px"><button class="on" data-k="">Όλες</button>${Object.keys(CAT).map(k=>`<button data-k="${k}">${CAT[k].n}</button>`).join('')}<span class="sp"></span><button class="btn p" onclick="wizard()">+ Νέα εγκατάσταση</button></div>
+ <div class="card wrap"><table id="tbl"><tr><th>Εγκατάσταση</th><th>Περίπτωση</th><th>Πελάτης</th><th style="min-width:150px">Onboarding</th><th>Υγεία</th><th>Συνδρομή</th></tr>${INST.map(x=>`<tr class="click" data-k="${x.cat}" onclick="openInst('${x.id}')"><td><b>${x.n}</b></td><td>${catTag(x.cat)}</td><td>${cust(x.c).n}</td><td>${steps(x.step)}<div class="note">${x.step>=7?'Ολοκληρώθηκε':'Επόμενο: '+STEPS[x.step]}</div></td><td>${pill(...HL[x.h])}</td><td>${pill(...subState(x))}</td></tr>`).join('')}</table></div>`},
+subs(){const rows=INST.filter(x=>x.step>=6);return `<div class="grid k4" style="margin-bottom:12px">${[['Ενεργές','ok'],['Σε λήξη','warn'],['Ληγμένες','bad']].map(([l,c])=>`<div class="card kpi"><div class="v ${c}">${rows.filter(x=>subState(x)[0].startsWith(l.slice(0,5))).length}</div><div class="l">${l}</div></div>`).join('')}<div class="card kpi"><div class="v bad">${eur(PAY.filter(p=>!p.paid).reduce((s,p)=>s+p.amt,0))}</div><div class="l">Ανεξόφλητα</div></div></div>
+ <div class="card wrap"><h3>Συνδρομές</h3><table><tr><th>Εγκατάσταση</th><th>Πακέτο</th><th>Τιμή/έτος</th><th>Λήξη</th><th>Κατάσταση</th><th></th></tr>${rows.map(x=>`<tr><td>${x.n}<div class="note">${cust(x.c).n}</div></td><td>${cat(x.plan).n}</td><td>${eur(cat(x.plan).p)}</td><td>${dfmt(x.end)}</td><td>${pill(...subState(x))}</td><td><button class="btn s" onclick="renew('${x.id}')">Ανανέωση</button></td></tr>`).join('')}</table>
+ <p class="note">Κύκλος: ειδοποίηση στις 30 / 10 / 0 ημέρες → ανανέωση ή 15 ημέρες χάρη → παύση με έγκριση γραφείου (υπάρχων μηχανισμός T-SUBS-01).</p></div>
+ <div class="card wrap" style="margin-top:12px"><h3>Χρεώσεις & πληρωμές</h3><table><tr><th>Παραστατικό</th><th>Εγκατάσταση</th><th>Ποσό</th><th>Ημερομηνία</th><th>Πληρωμή</th></tr>${PAY.map((p,k)=>`<tr><td>${p.inv}</td><td>${inst(p.i).n}</td><td>${eur(p.amt)}</td><td>${dfmt(p.d)}</td><td>${p.paid?pill('Εξοφλήθηκε','ok'):`<button class="btn s" onclick="PAY[${k}].paid=true;go('subs');toast('Καταγράφηκε η πληρωμή')">Καταγραφή πληρωμής</button>`}</td></tr>`).join('')}</table><p class="note">Το παραστατικό το κόβει το λογιστικό πρόγραμμα· εδώ κρατάμε αριθμό και εξόφληση.</p></div>`},
+offers(){return `<div class="row" style="margin-bottom:10px"><span class="sp"></span><button class="btn p" onclick="newOffer()">+ Νέα προσφορά</button></div>
+ <div class="card wrap"><table><tr><th>Αριθμός</th><th>Πελάτης</th><th>Ημερομηνία</th><th>Σύνολο με ΦΠΑ</th><th>Κατάσταση</th><th></th></tr>${OFFERS.map((o,k)=>`<tr class="click" onclick="showOffer(${k})"><td><b>${o.id}</b></td><td>${cust(o.c).n}</td><td>${dfmt(o.d)}</td><td>${eur(offerTotal(o).tot)}</td><td>${pill(o.st,{Αποδεκτή:'ok',Στάλθηκε:'info',Πρόχειρη:'warn',Απορρίφθηκε:'bad'}[o.st])}</td><td>${o.st==='Στάλθηκε'?`<button class="btn s" onclick="event.stopPropagation();accept(${k})">Αποδοχή</button>`:''}</td></tr>`).join('')}</table>
+ <p class="note">Η προσφορά αποθηκεύεται και συνδέεται με τον πελάτη. Η αποδοχή ξεκινά αυτόματα το onboarding και δεσμεύει όργανα από την αποθήκη.</p></div>`},
+catalog(){const kinds=[...new Set(CATALOG.map(c=>c.kind))];return kinds.map(k=>`<div class="sec">${k}</div><div class="card wrap"><table><tr><th>Κωδικός</th><th>Περιγραφή</th><th>Τιμή (χωρίς ΦΠΑ)</th><th>Για περιπτώσεις</th></tr>${CATALOG.filter(c=>c.kind===k).map(c=>`<tr><td><code>${c.k}</code></td><td>${c.n}</td><td>${eur(c.p)}${k==='Πακέτο συνδρομής'?' / έτος':''}</td><td>${c.cats.map(catTag).join('<br>')||'—'}</td></tr>`).join('')}</table></div>`).join('')+'<p class="note">Ενδεικτικές τιμές για το demo. Ένα μοντέλο τιμής: τα πακέτα του καταλόγου. Το «5 € ανά μεταβλητή» μένει μόνο ως υπολογισμός κόστους.</p>'},
+stock(){const models=[...new Set(DEV.map(d=>d.m))],sts=['Αποθήκη','Δεσμευμένο','Εγκατεστημένο','Σε επισκευή','Αποσυρμένο'];
+ return `<div class="card wrap"><h3>Όργανα ανά κατάσταση</h3><table><tr><th>Μοντέλο</th>${sts.map(s=>`<th>${s}</th>`).join('')}</tr>${models.map(m=>`<tr><td><b>${m}</b></td>${sts.map(s=>{const n=(DEV.find(d=>d.m===m&&d.st===s)||{}).n||0;return `<td class="${s==='Αποθήκη'&&n<4?'warn':''}">${n||'·'}</td>`}).join('')}</tr>`).join('')}</table><p class="note">Κύκλος οργάνου: αποθήκη → δεσμευμένο (από προσφορά) → εγκατεστημένο → επισκευή → απόσυρση. Πορτοκαλί = χαμηλό απόθεμα.</p></div>
+ <div class="card wrap" style="margin-top:12px"><h3>Τελευταίες κινήσεις</h3><table><tr><th>Ημερομηνία</th><th>Όργανο</th><th>Κίνηση</th><th>Αιτία</th></tr>${MOVES.map(m=>`<tr>${m.map(v=>`<td>${v}</td>`).join('')}</tr>`).join('')}</table></div>`},
+fleet(){return `<div class="card"><h3>Εποπτεία</h3><p>Μένει όπως είναι σήμερα (Στόλος · Πύλες · Χάρτης). Από το Κέντρο Διαχείρισης ανοίγει με ένα κλικ, και οι βλάβες της γίνονται αυτόματα αιτήματα.</p>
+ <div class="grid k4">${[['ΕΠΙΣΚΕΨΗ',31,'bad'],['ΕΛΕΓΧΟΣ',1,'warn'],['ΓΡΑΦΕΙΟ',7,'info'],['ΕΝΤΑΞΕΙ',26,'ok']].map(([l,v,c])=>`<div class="card kpi"><div class="v ${c}">${v}</div><div class="l">${l}</div></div>`).join('')}</div><p class="note">Ενδεικτικοί αριθμοί από τον παλμό 7/11 21:21.</p></div>`},
+tickets(){return `<div class="card wrap"><table><tr><th>#</th><th>Εγκατάσταση</th><th>Είδος</th><th>Περιγραφή</th><th>Πηγή</th><th>Ανάθεση</th><th>Κατάσταση</th></tr>${TICK.map(t=>`<tr><td>${t.id}</td><td>${inst(t.i).n}</td><td>${t.k}</td><td>${t.t}</td><td>${t.src}</td><td>${t.who}</td><td>${pill(t.st,t.st==='Κλειστό'?'ok':t.st==='Ανοιχτό'?'bad':'info')}</td></tr>`).join('')}</table></div>`}};
+const TABN={home:'Αρχική',cust:'Πελάτες',inst:'Εγκαταστάσεις',subs:'Συνδρομές & χρεώσεις',offers:'Προσφορές',catalog:'Κατάλογος',stock:'Αποθήκη',fleet:'Εποπτεία',tickets:'Αιτήματα'};
+function go(t){$('#nav').innerHTML=Object.keys(TABN).map(k=>`<button class="${k===t?'on':''}" onclick="go('${k}')">${TABN[k]}</button>`).join('');$('#main').innerHTML=TABS[t]();cur=t;
+ if(t==='inst')document.querySelectorAll('#chips button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#chips button').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('#tbl tr[data-k]').forEach(r=>r.style.display=!b.dataset.k||r.dataset.k===b.dataset.k?'':'none')})}
+let cur='home';function filterRows(q){q=q.toLowerCase();document.querySelectorAll('#tbl tr[data-q]').forEach(r=>r.style.display=r.dataset.q.includes(q)?'':'none')}
+/* ═══ ΚΑΡΤΕΛΑ ΠΕΛΑΤΗ / ΕΓΚΑΤΑΣΤΑΣΗΣ ═══ */
+function openCust(id){const c=cust(id),ii=INST.filter(x=>x.c===id),oo=OFFERS.filter(o=>o.c===id),pp=PAY.filter(p=>ii.some(x=>x.id===p.i)),tt=TICK.filter(t=>ii.some(x=>x.id===t.i));
+ dialog(c.n,`<div class="row" style="margin-bottom:10px">${pill(c.t,'info')} ${pill(c.st,c.st==='Ενεργός'?'ok':'info')}<span class="sp"></span><span class="note">ΑΦΜ ${c.vat||'<span class="warn">λείπει</span>'} · ${c.ph}</span></div>
+ <div class="sec">Εγκαταστάσεις</div><table>${ii.map(x=>`<tr class="click" onclick="openInst('${x.id}')"><td>${x.n}</td><td>${catTag(x.cat)}</td><td>${pill(...subState(x))}</td></tr>`).join('')||'<tr><td class="note">Καμία</td></tr>'}</table>
+ <div class="sec">Προσφορές</div><table>${oo.map(o=>`<tr><td>${o.id}</td><td>${eur(offerTotal(o).tot)}</td><td>${o.st}</td></tr>`).join('')||'<tr><td class="note">Καμία</td></tr>'}</table>
+ <div class="sec">Πληρωμές</div><table>${pp.map(p=>`<tr><td>${p.inv}</td><td>${eur(p.amt)}</td><td>${p.paid?pill('Εξοφλήθηκε','ok'):pill('Ανεξόφλητο','bad')}</td></tr>`).join('')||'<tr><td class="note">Καμία</td></tr>'}</table>
+ <div class="sec">Αιτήματα</div><table>${tt.map(t=>`<tr><td>${t.id}</td><td>${t.t}</td><td>${t.st}</td></tr>`).join('')||'<tr><td class="note">Κανένα</td></tr>'}</table>`)}
+function openInst(id){const x=inst(id),c=cust(x.c);dialog(x.n,`<div class="row" style="margin-bottom:10px">${catTag(x.cat)}<span class="sp"></span>${pill(...HL[x.h])} ${pill(...subState(x))}</div>
+ <p class="note">Πελάτης: <b>${c.n}</b> · Πακέτο: ${cat(x.plan).n} (${eur(cat(x.plan).p)}/έτος) · Λήξη: ${dfmt(x.end)}</p>
+ <div class="sec">Onboarding</div>${STEPS.map((s,i)=>`<div class="row" style="margin:4px 0"><span class="${i<x.step?'ok':i===x.step?'warn':'note'}">${i<x.step?'✔':i===x.step?'●':'○'}</span> ${s}</div>`).join('')}
+ <div class="sec">Όργανα</div><p>${x.dev.join(' · ')||'<span class="note">Δεν έχουν ανατεθεί</span>'}</p>${x.note?`<p class="bad">${x.note}</p>`:''}
+ <div class="sec">Τι παρακολουθείται σε αυτή την περίπτωση</div><p class="note">${{field:'Άρδευση, ασθένειες, έντομα· όριο σιωπής ανά κύκλο οργάνου.',greenhouse:'Ίδια με αγρό, αέρας εσωτερικού χώρου, χωρίς βροχή υπαίθρου, υπόστρωμα χωριστά.',landscape:'Ζώνη ποτίζει ή όχι, βάνα απαντά, πύλη ζωντανή· καμία ειδοποίηση ψεκασμού.',station:'Όλα τα κανάλια του σταθμού και ο μετρητής βροχής· κανάλι που σταματά = βλάβη.',automation:'Ελεγκτής απαντά, εντολή εκτελείται, νερό από μετρητή· όριο σιωπής 6 ώρες.'}[x.cat]}</p>`,
+ `${x.step<7?`<button class="btn p" onclick="x_adv('${id}')">Επόμενο βήμα: ${STEPS[x.step]}</button>`:''}<button class="btn" onclick="dlg.close()">Κλείσιμο</button>`)}
+function x_adv(id){const x=inst(id);x.step++;if(x.step===7){x.end='2027-11-07';x.h='ok'}dlg.close();go(cur);toast(x.step===7?'Η συνδρομή ενεργοποιήθηκε':'Ολοκληρώθηκε το βήμα')}
+function renew(id){const x=inst(id);const d=new Date(x.end&&days(x.end)>0?x.end:TODAY);d.setFullYear(d.getFullYear()+1);x.end=d.toISOString().slice(0,10);PAY.unshift({i:id,inv:'(νέο)',amt:cat(x.plan).p,d:TODAY.toISOString().slice(0,10),paid:false});go(cur);toast('Ανανεώθηκε ως '+dfmt(x.end)+' · δημιουργήθηκε χρέωση')}
+/* ═══ ΠΡΟΣΦΟΡΕΣ ═══ */
+function showOffer(k){const o=OFFERS[k],t=offerTotal(o);dialog(o.id+' · '+cust(o.c).n,`<table><tr><th>Είδος</th><th>Ποσ.</th><th>Τιμή</th><th>Σύνολο</th></tr>${o.lines.map(([c,q])=>`<tr><td>${cat(c).n}</td><td>${q}</td><td>${eur(cat(c).p)}</td><td>${eur(cat(c).p*q)}</td></tr>`).join('')}<tr><td colspan="3">Καθαρό</td><td>${eur(t.net)}</td></tr><tr><td colspan="3">ΦΠΑ 24 %</td><td>${eur(t.vat)}</td></tr><tr><td colspan="3"><b>Σύνολο</b></td><td><b>${eur(t.tot)}</b></td></tr></table>`)}
+function accept(k){const o=OFFERS[k];o.st='Αποδεκτή';const p=o.lines.find(([c])=>cat(c).kind==='Πακέτο συνδρομής');const id='I'+(INST.length+1);INST.push({id,c:o.c,n:'Νέα εγκατάσταση από '+o.id,cat:(cat(p[0]).cats[0]),step:2,h:'office',plan:p[0],end:null,dev:[]});go('offers');toast('Αποδεκτή · άνοιξε onboarding και δεσμεύτηκαν όργανα')}
+function newOffer(){dialog('Νέα προσφορά',`<div class="f"><label>Πελάτης</label><select id="oc">${CUST.map(c=>`<option value="${c.id}">${c.n}</option>`).join('')}</select></div>
+ ${CATALOG.map(c=>`<div class="row" style="margin:4px 0"><span style="flex:1">${c.n}<div class="note">${c.kind} · ${eur(c.p)}</div></span><input type="number" min="0" value="0" style="width:70px" data-k="${c.k}" oninput="sumOffer()"></div>`).join('')}<p id="osum"><b>Σύνολο με ΦΠΑ: ${eur(0)}</b></p>`,
+ `<button class="btn" onclick="dlg.close()">Άκυρο</button><button class="btn p" onclick="saveOffer()">Αποθήκευση & αποστολή</button>`)}
+function sumOffer(){let n=0;document.querySelectorAll('#db input[data-k]').forEach(i=>n+=cat(i.dataset.k).p*(+i.value||0));$('#osum').innerHTML='<b>Σύνολο με ΦΠΑ: '+eur(n*1.24)+'</b>'}
+function saveOffer(){const lines=[...document.querySelectorAll('#db input[data-k]')].filter(i=>+i.value>0).map(i=>[i.dataset.k,+i.value]);if(!lines.length){toast('Πρόσθεσε τουλάχιστον ένα είδος');return}
+ OFFERS.unshift({id:'Π-2026-0'+(35+OFFERS.length),c:$('#oc').value,st:'Στάλθηκε',d:TODAY.toISOString().slice(0,10),lines});dlg.close();go('offers');toast('Η προσφορά αποθηκεύτηκε')}
+/* ═══ ΟΔΗΓΟΣ ΝΕΑΣ ΕΓΚΑΤΑΣΤΑΣΗΣ ═══ */
+let W;function wizard(){W={s:0,c:'',newc:'',cat:'',name:'',plan:''};wz()}
+function wz(){const L=['Πελάτης','Περίπτωση','Στοιχεία','Πακέτο','Επιβεβαίωση'];let b=`<div class="wz">${L.map((l,i)=>`<span class="${i===W.s?'on':i<W.s?'d':''}">${i+1}. ${l}</span>`).join('')}</div>`;
+ if(W.s===0)b+=`<div class="f"><label>Υπάρχων πελάτης</label><select onchange="W.c=this.value"><option value="">— νέος πελάτης —</option>${CUST.map(c=>`<option value="${c.id}" ${W.c===c.id?'selected':''}>${c.n}</option>`).join('')}</select></div><div class="f"><label>ή επωνυμία νέου πελάτη (ΑΦΜ υποχρεωτικό)</label><input value="${W.newc}" oninput="W.newc=this.value"></div>`;
+ if(W.s===1)b+=`<p class="note">Η περίπτωση ορίζει τι ρωτά η παραμετροποίηση και τι παρακολουθεί το σύστημα. Δεν βγαίνει από τα όργανα, δηλώνεται.</p><div class="opts">${Object.keys(CAT).map(k=>`<div class="opt ${W.cat===k?'on':''}" onclick="W.cat='${k}';wz()"><b>${catTag(k)}</b><span class="note">${{field:'Θρέψη, φυτοπροστασία, άρδευση',greenhouse:'Καλυμμένη καλλιέργεια, κλίμα εσωτερικού χώρου',landscape:'Ζώνες άρδευσης με αισθητήρες, χωρίς φυτοπροστασία',station:'Μόνο μετρήσεις καιρού',automation:'Βάνες χωρίς αισθητήρες'}[k]}</span></div>`).join('')}</div>`;
+ if(W.s===2)b+=`<div class="f"><label>Όνομα εγκατάστασης</label><input value="${W.name}" oninput="W.name=this.value"></div><div class="f"><label>Θέση (αντιγραφή από Google Maps)</label><input placeholder="35.xxxx, 25.xxxx"></div>`;
+ if(W.s===3){const ps=CATALOG.filter(c=>c.cats.includes(W.cat));b+=`<div class="opts">${ps.map(p=>`<div class="opt ${W.plan===p.k?'on':''}" onclick="W.plan='${p.k}';wz()"><b>${p.n}</b><span class="note">${eur(p.p)} / έτος</span></div>`).join('')}</div><p class="note">Ο κατάλογος δείχνει μόνο τα πακέτα που ταιριάζουν στην περίπτωση.</p>`}
+ if(W.s===4)b+=`<table><tr><td>Πελάτης</td><td><b>${W.c?cust(W.c).n:W.newc}</b></td></tr><tr><td>Περίπτωση</td><td>${catTag(W.cat)}</td></tr><tr><td>Εγκατάσταση</td><td>${W.name}</td></tr><tr><td>Πακέτο</td><td>${cat(W.plan).n}</td></tr></table><p class="note">Με την επιβεβαίωση: δημιουργείται πελάτης/χρήστης αν χρειάζεται, καλείται το createField με την περίπτωση, και η εγκατάσταση μπαίνει στο βήμα «Όργανα».</p>`;
+ const okNext=[W.c||W.newc.trim(),W.cat,W.name.trim(),W.plan,true][W.s];
+ dialog('Νέα εγκατάσταση',b,`${W.s?'<button class="btn" onclick="W.s--;wz()">Πίσω</button>':''}<span class="sp"></span><button class="btn p" ${okNext?'':'disabled style="opacity:.5"'} onclick="${W.s<4?'W.s++;wz()':'finishW()'}">${W.s<4?'Επόμενο':'Δημιουργία'}</button>`)}
+function finishW(){let c=W.c;if(!c){c='C'+(CUST.length+1);CUST.push({id:c,n:W.newc,t:'Αγρότης',vat:'',ph:'—',st:'Σε onboarding'})}INST.push({id:'I'+(INST.length+1),c,n:W.name,cat:W.cat,step:3,h:'office',plan:W.plan,end:null,dev:[]});dlg.close();go('inst');toast('Δημιουργήθηκε · επόμενο βήμα: Όργανα')}
+$('#theme').onclick=()=>{const r=document.documentElement,d=r.dataset.theme==='dark'||(!r.dataset.theme&&matchMedia('(prefers-color-scheme: dark)').matches);r.dataset.theme=d?'light':'dark'};
+go('home');
+</script>
+</body>
+</html>
