@@ -16,9 +16,9 @@ const slice = (c, a, b) => { const i = c.indexOf(a), j = c.indexOf(b, i + 1); re
 
 // Κ3: το μπλοκ ένεσης, με στελέχη
 function runIpsiAvg(core, { dailyTich, prevIpsiAvg, prevIpsiCount, newAvg }) {
-  const src = slice(core, "            // T-BPI-IPSIAVG-01 (v50.140", "            measurementsForCrop.data.ipsi_daily_avg = [{ value: _bpiAvg }];");
+  const src = slice(core, "  const _prevAvgN = Number(prevAvg)", "  return { emit: [{ variable: \"ipsi_running_avg\"");   // T-PHASEA-01: η λογική ζει στην _sagIpsiRunning
   if (!src) return null;
-  return new Function("dailyTich", "prevIpsiAvg", "prevIpsiCount", "newAvg", src + "\nreturn _bpiAvg;")(dailyTich, prevIpsiAvg, prevIpsiCount, newAvg);
+  return new Function("dailyTich", "prevAvg", "prevCount", "newAvg", src + "\nreturn dailyAvg;")(dailyTich, prevIpsiAvg, prevIpsiCount, newAvg);
 }
 // Κ9: η συνθήκη «η βροχή φτάνει ακόμη»
 function runRain(core, { rain1h, rzAvg, mNow }) {

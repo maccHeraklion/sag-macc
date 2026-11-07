@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.185 · 2026-11-07';   // T-APPROVAL-01 (SIVANTO PRIME από την έγκριση ΥΠΑΑΤ 14670: ουσία flupyradifurone, πίνακας χρήσεων ανά καλλιέργεια, PHI ανά καλλιέργεια από την έγκριση, συνώνυμα δηλώσεων) · T-PHASE1-01 (εποχικά παράθυρα εντόμων και ασθενειών ελιάς, θερινή παύση δάκου, ώρες διαβροχής ανά θερμοκρασία με κλάσεις, ευπάθεια ουδέτερη, προστασία ψεκασμού ως το μεσοδιάστημα, τζιτζικάκια + ανθράκνωση κολοκυνθοειδών + C. coccodes) · T-PHASE0B-01 (ώρα υγρή από ΟΛΑ τα δείγματα του αισθητήρα φύλλου, διαβροχή φύλλων σε θερμοκήπιο, πύλη ξενιστή ανά θέση καλλιέργειας) · T-PHASE0-01 (σφάλματα: ώρα βροχής και όριο RH, κρίση σκιάς στα μεσάνυχτα, αισθητήρας φύλλου εκτός χώρου ή με μηδενικά, ώρες στο κείμενο, διπλή μέτρηση μυκήτων) · T-BOTRYTIS-HOSTS-01 (βοτρύτης: +σταφίδα, αγγούρι, κολοκύθι, μελιτζάνα, πατάτα, λάχανο, ροδακινιά — μόνο ξενιστές) · T-SOILWOUND-01 (μελάνωση και γομμώσεις στο εδαφογενές μοντέλο, έλκος καστανιάς σε μοντέλο πληγών) · T-LITVALUES-01 (τιμές βιβλιογραφίας: αλτερνάρια, ωίδια, φώμοψη, ανθράκνωση + παράθυρα ΠΚΠΦΠ Ηρακλείου) · T-NONFOLIAR-01 (7 ασθένειες ριζών/φλοιού εκτός μηχανής φύλλου) · T-RH-CAP-90-01 (όριο RH ≤ 90 για ασθένειες υγρού φύλλου) · T-LEAFWET-RH-01 (μετρημένο υγρό φύλλο υπερισχύει του ορίου RH· περονόσποροι/βοτρύτης: επιθεώρηση) · T-MILDEW-INSPECT-01 (ωίδιο: επιθεώρηση αντί εντολής ψεκασμού) · T-ECE-NOFALLBACK-01 (χωρίς εφεδρεία ×2,5) · T-COVERED-WX-01 (κείμενα παγετού/καύσωνα σε θερμοκήπιο) · T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
+const SAG_KERNEL_VERSION = 'v50.186 · 2026-11-07';   // T-APPROVAL-01 (SIVANTO PRIME από την έγκριση ΥΠΑΑΤ 14670: ουσία flupyradifurone, πίνακας χρήσεων ανά καλλιέργεια, PHI ανά καλλιέργεια από την έγκριση, συνώνυμα δηλώσεων) · T-PHASE1-01 (εποχικά παράθυρα εντόμων και ασθενειών ελιάς, θερινή παύση δάκου, ώρες διαβροχής ανά θερμοκρασία με κλάσεις, ευπάθεια ουδέτερη, προστασία ψεκασμού ως το μεσοδιάστημα, τζιτζικάκια + ανθράκνωση κολοκυνθοειδών + C. coccodes) · T-PHASE0B-01 (ώρα υγρή από ΟΛΑ τα δείγματα του αισθητήρα φύλλου, διαβροχή φύλλων σε θερμοκήπιο, πύλη ξενιστή ανά θέση καλλιέργειας) · T-PHASE0-01 (σφάλματα: ώρα βροχής και όριο RH, κρίση σκιάς στα μεσάνυχτα, αισθητήρας φύλλου εκτός χώρου ή με μηδενικά, ώρες στο κείμενο, διπλή μέτρηση μυκήτων) · T-BOTRYTIS-HOSTS-01 (βοτρύτης: +σταφίδα, αγγούρι, κολοκύθι, μελιτζάνα, πατάτα, λάχανο, ροδακινιά — μόνο ξενιστές) · T-SOILWOUND-01 (μελάνωση και γομμώσεις στο εδαφογενές μοντέλο, έλκος καστανιάς σε μοντέλο πληγών) · T-LITVALUES-01 (τιμές βιβλιογραφίας: αλτερνάρια, ωίδια, φώμοψη, ανθράκνωση + παράθυρα ΠΚΠΦΠ Ηρακλείου) · T-NONFOLIAR-01 (7 ασθένειες ριζών/φλοιού εκτός μηχανής φύλλου) · T-RH-CAP-90-01 (όριο RH ≤ 90 για ασθένειες υγρού φύλλου) · T-LEAFWET-RH-01 (μετρημένο υγρό φύλλο υπερισχύει του ορίου RH· περονόσποροι/βοτρύτης: επιθεώρηση) · T-MILDEW-INSPECT-01 (ωίδιο: επιθεώρηση αντί εντολής ψεκασμού) · T-ECE-NOFALLBACK-01 (χωρίς εφεδρεία ×2,5) · T-COVERED-WX-01 (κείμενα παγετού/καύσωνα σε θερμοκήπιο) · T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -10898,6 +10898,27 @@ function _sagBpiLightEstimate(measurements, parameters) {
 }
 // ── End T-BPI-LIGHTEST-01 ─────────────────────────────────────────────────
 
+// T-PHASEA-01 (v50.186, Σ2): IPSI που λείπει ΔΕΝ μπαίνει στον μέσο της ημέρας. Παλιά μετρούσε ως 0: ο μέσος έπεφτε και το BPI ωραιοποιούνταν
+// (12 ώρες κενό: αποδοτικότητα 11 → 20 %). Κανόνας Κ1, άγνωστο ≠ 0. Στον ημερήσιο παλμό η μέρα κλείνει και χωρίς τιμή, αλλιώς ο επόμενος
+// μέσος θα απλωνόταν σε δύο ημέρες. Ίδια συμπεριφορά με πριν όταν το IPSI υπάρχει.
+function _sagIpsiRunning(ipsiRaw, dailyTich, prevAvg, prevCount) {
+  const v = (ipsiRaw === null || ipsiRaw === undefined || ipsiRaw === '') ? NaN : Number(ipsiRaw);
+  if (!Number.isFinite(v)) {
+    return { emit: dailyTich ? [{ variable: "ipsi_running_count", value: 0 }] : [], dailyAvg: null };
+  }
+  const baseCount = dailyTich ? 0 : Number(prevCount || 0);
+  const baseAvg = dailyTich ? null : prevAvg;
+  const newCount = baseCount + 1;
+  const newAvg = (baseAvg !== null && Number.isFinite(Number(baseAvg)))
+    ? (Number(baseAvg) * baseCount + v) / newCount
+    : v;
+  // T-BPI-IPSIAVG-01 (v50.140 · έλεγχος Κ3): στο ημερήσιο tick το BPI κρίνει ΤΗ ΧΘΕΣΙΝΗ ημέρα → παίρνει τον μέσο των ~23 ωρών που μόλις
+  // μηδενίστηκε, όχι τη μονόωρη τιμή των 03:20. Τις άλλες ώρες παίρνει τον τρέχοντα σωρευτικό. Με < 6 ώρες πέφτει στον τρέχοντα.
+  const _prevAvgN = Number(prevAvg), _prevCntN = Number(prevCount || 0);
+  const dailyAvg = (dailyTich && Number.isFinite(_prevAvgN) && _prevCntN >= 6) ? _prevAvgN : newAvg;
+  return { emit: [{ variable: "ipsi_running_avg", value: Number(newAvg.toFixed(2)) }, { variable: "ipsi_running_count", value: newCount }], dailyAvg };
+}
+
 function calculate_BPI(dailyTich, measurements, ipsi, parameters, ipsiError = "") {
   // Contextual BPI (Daily Efficiency vs Accumulated Potential) – per BPI correction spec
   if (!dailyTich) {
@@ -15963,8 +15984,8 @@ function _sagDetectFaults(dev, data, ctx) {
     out.push({ dev: nm, kill: false,
       title: 'Εκπέμπει πολύ αραιά',
       what: 'Η φρεσκότερη μέτρησή του είναι ' + (dev.ageMin / 60).toFixed(1)
-        + ' ωρών (όριο ' + (_stLim / 60).toFixed(1) + ' h) — τα μοντέλα δεν την '
-        + 'δέχονται πια ως τρέχουσα.',
+        + ' ωρών (όριο ' + (_stLim / 60).toFixed(1) + ' h). Οι υπολογισμοί συνεχίζουν με αυτή την '
+        + 'παλιά τιμή, άρα τα αποτελέσματα του αγρού μπορεί να μην ισχύουν.',
       act: '1) Μπαταρία — χωρίς μέτρηση τάσης (οι λιθίου κρατούν τάση '
         + 'νεκρές). 2) Εμβέλεια/gateway. 3) Στυπιοθλίπτης και επαφές για νερό.' });
   }
@@ -20466,33 +20487,11 @@ module.exports = new Analysis(async (context) => {
 
 
           // B4: Maintain a running IPSI daily average for BPI (accumulates each hour tick; resets when dailyTich fires)
-          const ipsiVal = Number(ipsi?.[0]?.value ?? 0);
           const prevIpsiAvg = getVal(measurementsForCrop, "ipsi_running_avg", null);
           const prevIpsiCount = getVal(measurementsForCrop, "ipsi_running_count", 0);
-
-          if (Number.isFinite(ipsiVal)) {
-            const baseCount = dailyTich ? 0 : Number(prevIpsiCount || 0);
-            const baseAvg = dailyTich ? null : prevIpsiAvg;
-
-            const newCount = baseCount + 1;
-            const newAvg = (baseAvg !== null && Number.isFinite(Number(baseAvg)))
-              ? (Number(baseAvg) * baseCount + ipsiVal) / newCount
-              : ipsiVal;
-
-            indicatorsForCrop.push(
-              { variable: "ipsi_running_avg", value: Number(newAvg.toFixed(2)) },
-              { variable: "ipsi_running_count", value: newCount }
-            );
-
-            // T-BPI-IPSIAVG-01 (v50.140 · έλεγχος Κ3): στο ημερήσιο tick το BPI κρίνει
-            // ΤΗ ΧΘΕΣΙΝΗ ημέρα → παίρνει τον μέσο των ~23 ωρών που μόλις μηδενίστηκε
-            // (prevIpsiAvg), όχι τη μονόωρη τιμή των 03:20 (νύχτα, χαμηλό VPD). Τις
-            // άλλες ώρες παίρνει τον τρέχοντα σωρευτικό. Με < 6 ώρες συσσώρευσης
-            // (πρώτη μέρα, κενό) πέφτει στον τρέχοντα.
-            const _prevAvgN = Number(prevIpsiAvg), _prevCntN = Number(prevIpsiCount || 0);
-            const _bpiAvg = (dailyTich && Number.isFinite(_prevAvgN) && _prevCntN >= 6) ? _prevAvgN : newAvg;
-            measurementsForCrop.data.ipsi_daily_avg = [{ value: _bpiAvg }];
-          }
+          const _ipsiRun = _sagIpsiRunning(ipsi?.[0]?.value, dailyTich, prevIpsiAvg, prevIpsiCount);
+          indicatorsForCrop.push(..._ipsiRun.emit);
+          if (_ipsiRun.dailyAvg !== null) measurementsForCrop.data.ipsi_daily_avg = [{ value: _ipsiRun.dailyAvg }];
           indicatorsForCrop = [...(indicatorsForCrop ?? []), ...(ipsi ?? [])];
 
           // T-ROOTZONE-WEIGHT-01: οι δείκτες ριζοστρώματος εκπέμπονται ΑΝΕΞΑΡΤΗΤΑ

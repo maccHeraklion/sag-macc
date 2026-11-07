@@ -45,7 +45,7 @@ function run(w) {
     ok(node && node.p && /0,4–1,2 καλό/.test(node.p.title), "Α2 επεξήγηση ζωνών στο title");
     ok(new Function("Le", "e", "return " + expr + ";")({ vpd: null }, e) === null, "Α3 χωρίς VPD → καμία γραμμή");
     ok(w.includes('(Le.perfPct!==null||Le.stomata||Le.bucketLabel||Le.vpd)&&e.jsxs("div",{className:"bpi-extra"'), "Α4 η περιοχή ανοίγει και μόνο με VPD");
-    ok(w.indexOf('Le.vpd&&e.jsxs("div",{title:') < w.indexOf('Le.stomata&&e.jsxs("div",{className:"muted"') && w.indexOf("Συνθήκες ανάπτυξης σήμερα") < w.indexOf('Le.vpd&&e.jsxs("div",{title:'), "Α5 μέσα στην κάρτα «Συνθήκες ανάπτυξης σήμερα»");
+    ok(w.indexOf('Le.vpd&&e.jsxs("div",{title:') < w.indexOf('Le.stomata&&e.jsxs("div",{className:"muted"') && w.indexOf("Συνθήκες ανάπτυξης · προηγούμενο 24ωρο") < w.indexOf('Le.vpd&&e.jsxs("div",{title:'), "Α5 μέσα στην κάρτα «Συνθήκες ανάπτυξης · προηγούμενο 24ωρο»");
   } catch (x) { f.push("εκτέλεση: " + x.message); }
   return f;
 }

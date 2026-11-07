@@ -122,7 +122,7 @@ function run(w) {
     ok(/Ευνοϊκός για 2 ασθένειες Άλλη μορφή κειμένου πυρήνα/.test(txt(card(o, "alertsCard"))), "Σ9 άγνωστη μορφή κειμένου → φαίνεται αυτούσιο");
     o = S({ irrigation_warning: { value: "ΑΚΑΤΑΛΛΗΛΟ ΝΕΡΟ: η αλατότητα υπερβαίνει το όριο" } });
     ok(/Νερό άρδευσης ΑΚΑΤΑΛΛΗΛΟ ΝΕΡΟ/.test(txt(card(o, "alertsCard"))), "Σ10 προειδοποίηση άρδευσης χωρίς χρώμα → φαίνεται");
-    o = S({ frost_warning: v("Παγετός απόψε", "red", "Ελάχιστη -1 °C") , salinity_stress: v("Μέτρια", "orange", "άλατα") });
+    o = S({ weather_alert_frost: v("emergency", "red", "Ελάχιστη -1 °C", { label_el: "Παγετός απόψε" }) , salinity_stress: v("Μέτρια", "orange", "άλατα") });
     ok(/4 ειδοποιήσεις/.test(sum(card(o, "alertsCard"))) && /Παγετός Παγετός απόψε/.test(txt(card(o, "alertsCard"))), "Σ11 παγετός + άλατα → ειδοποιήσεις");
     o = S({ pathogen_analysis_status: v("Ενεργή — χωρίς έδαφος", "orange", null, { _m: 1 }) });
     ok(/Τι λείπει για τις ασθένειες Ενεργή — χωρίς έδαφος Λείπει η υγρασία φύλλου για 2 μύκητες/.test(txt(card(o, "basisCard"))), "Σ12 τι λείπει για τις ασθένειες, από την κάρτα μεθόδου");
