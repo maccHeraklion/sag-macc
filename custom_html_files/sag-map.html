@@ -408,11 +408,20 @@ function buildGateways(raw) {
       posKind: p ? 'ok' : 'none', posWhy: p ? '' : (r.storage ? 'στην αποθήκη, χωρίς δηλωμένη θέση' : 'η ετικέτα coordinates δεν δίνει θέση'),
       rowFields: [], heard: {}, orphans: [], merged: false };
   });
+  /* T-GWMAP-10b: ο κωδικός του ThingPark είναι σίγουρη ταύτιση, άρα προηγείται της θέσης. */
+  ros.forEach(function (r) {
+    if (!r.lrr) return;
+    var n = nets.filter(function (x) { return x.code === r.lrr && !x.linkedRoster; })[0];
+    if (!n) return;
+    n.linkedRoster = true; r.merged = true;
+    n.storage = r.storage; n.conflict = r.conflict; n.dev = r.dev; n.off = r.off; n.lrr = r.lrr;
+    if (!n.nameSure) { n.name = r.name; n.nameGuess = ''; }
+  });
   var pairs = [];
   nets.forEach(function (n) {
     if (!n.p) return;
     ros.forEach(function (r) {
-      if (!r.p) return;
+      if (!r.p || r.merged || n.linkedRoster) return;
       var d = distKm(n.p, r.p) * 1000;
       if (d <= LINK_M) pairs.push({ n: n, r: r, d: d });
     });
@@ -957,6 +966,7 @@ function panelGw(g) {
   var h = '<div class="panelHead"><div><h2>' + esc(g.name) + '</h2></div><button type="button" class="x" data-close aria-label="Κλείσιμο">✕</button></div>'
     + '<div class="chips">' + chip(g.st) + (g.posKind === 'suspect' ? '<span class="st c-check">! ύποπτη θέση</span>' : '') + (g.storage && g.net ? '<span class="st c-grey">▣ ΔΗΛΩΜΕΝΗ ΣΤΗΝ ΑΠΟΘΗΚΗ</span>' : '') + '</div>';
   if (g.code) h += '<div class="meta">Κωδικός δικτύου <span class="mono">' + esc(g.code) + '</span></div>';
+  if (g.lrr && !g.code && !g.off) h += '<div class="meta">Κωδικός στο ThingPark <span class="mono">' + esc(g.lrr) + '</span> · κανένα όργανό μας δεν δηλώνει ότι περνά από αυτήν</div>';
   if (g.off) h += '<div class="meta">Τελευταίο πακέτο στο ThingPark: ' + esc(g.off.split('-').reverse().join('/')) + (g.lrr ? ' · <span class="mono">' + esc(g.lrr) + '</span>' : '') + '</div>';
   if (g.nameGuess) h += '<div class="meta">Πιθανόν: ' + esc(g.nameGuess) + ' (ανεπιβεβαίωτο)</div>';
   if (g.net) {
