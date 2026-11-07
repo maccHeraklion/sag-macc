@@ -19,7 +19,7 @@ function run(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let K; try { K = loadCore(src); } catch (e) { return ["φόρτωση πυρήνα: " + e.message]; }
   try {
-    ok(K.SAG_KERNEL_VERSION === "v50.186 · 2026-11-07", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.187 · 2026-11-07", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     // Α · συνώνυμα και ουσία
     ok(K._sagPesticideKeyByRef("Sivanto") === "flupyradifurone" && K._sagPesticideKeyByRef("SIVANTO PRIME") === "flupyradifurone"
       && K._sagPesticideKeyByRef("Sivanto Prime 200 SL") === "flupyradifurone" && K._sagPesticideKeyByRef("flupyradifurone") === "flupyradifurone",
@@ -65,7 +65,7 @@ function run(src) {
 const base = run(SRC);
 console.log(base.length === 0 ? "ΒΑΣΗ: ΟΛΑ ΟΚ" : "ΒΑΣΗ ΑΠΟΤΥΧΙΕΣ:\n - " + base.join("\n - "));
 const MUT = [
-  ["m1 έκδοση", (s) => s.replace("'v50.186 · 2026-11-07'", "'v50.183 · 2026-11-07'")],
+  ["m1 έκδοση", (s) => s.replace("'v50.187 · 2026-11-07'", "'v50.183 · 2026-11-07'")],
   ["m2 χωρίς συνώνυμα", (s) => s.replace("  'sivanto': 'flupyradifurone', 'sivanto prime': 'flupyradifurone', 'sivanto prime 200 sl': 'flupyradifurone',\n", "")],
   ["m3 λάθος PHI θερμοκηπίου", (s) => s.replace("max_apps: 2, interval_days: 10, phi_days: 3, covered: \"covered\" },\n              { crops: [\"vegetableCrops:lettuce\"]", "max_apps: 2, interval_days: 10, phi_days: 4, covered: \"covered\" },\n              { crops: [\"vegetableCrops:lettuce\"]")],
   ["m4 χωρίς πίνακα χρήσεων", (s) => s.replace("          approval: {\n            authority: \"ΥΠΑΑΤ\", number: \"14670\"", "          approvalX: {\n            authority: \"ΥΠΑΑΤ\", number: \"14670\"")],
