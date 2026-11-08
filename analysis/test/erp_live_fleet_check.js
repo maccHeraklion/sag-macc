@@ -11,7 +11,7 @@ const cItems = [{ k: 'c', i: 'c1', n: 'Πελάτης Α', m: 'a@x.gr', p: '69' 
 const fItems = [
   { k: 'f', i: 'aaaaaa111111', n: 'Αγρός 1', c: 'c1', s: 'active', e: '2027-03-01', cost: '120', list: '150', u: ['Χρήστης'], cat: 'field', sg: [['lse01', 2, 3, 3], ['s2120', 1, 8, 8]] },
   { k: 'f', i: 'bbbbbb222222', n: 'Ζώνη 2', c: 'c2', s: 'paused', e: '', cat: 'landscape', sg: [['uc511', 1, 2, 3], ['?', 1, null, null]], sh: [['s2120', 'Αγρός 1', 1]] },
-  { k: 'f', i: 'cccccc333333', n: 'Ορφανός', c: '', s: 'active', e: '2026-12-01', cat: 'weird', sg: [], sh: [['lse01', 'Αγρός 1', 0]], dup: 1 },
+  { k: 'f', i: 'cccccc333333', n: 'Ορφανός', c: '', s: 'active', e: '2026-12-01', cat: 'weird', sg: [], sh: [['lse01', 'Αγρός 1', 0], ['uc511', 'Ζώνη 2', 2]], dup: 1 },
 ];
 const rows = [
   { variable: 'subs_summary', group: G, time: '2026-11-08T00:37:58Z', metadata: { parts: 2, pricing: [{ n: 'subscriptionPricingNumbers', p: { sense: 59, sagFull: 219 } }, { n: 'itemsPricingNumbers', p: { sense: 1 } }] } },
@@ -46,6 +46,7 @@ eval(js + `;(async()=>{
  __ok('καλυμμένη εγγραφή: σημείωση, μηδενική ανανέωση', /διπλοεγγραφή/.test(o.note)&&renewOf(o)===0&&o.dup===1);
  dInst('bbbbbb222222');__ok('καρτέλα: κοινό όργανο και πού χρεώνεται', /s2120 → χρεώνεται στο «Αγρός 1»/.test(__E['#dbd'].innerHTML)&&/θέλει απόφαση/.test(__E['#dbd'].innerHTML));
  dInst('cccccc333333');__ok('καρτέλα καλυμμένης: χωρίς δικά της όργανα', /Κανένα δικό της/.test(__E['#dbd'].innerHTML)&&!/θέλει απόφαση/.test(__E['#dbd'].innerHTML));
+ __ok('κοινό με άλλον πελάτη ΜΕ απόφαση: «αποφασισμένο», χωρίς αίτημα', /uc511 → χρεώνεται στο «Ζώνη 2».{0,40}αποφασισμένο/.test(__E['#dbd'].innerHTML)&&!TICK.some(t=>t.i==='cccccc333333'));
  dInst('aaaaaa111111');__ok('καρτέλα χωρίς κοινά: καμία γραμμή κοινών', !/Κοινά όργανα/.test(__E['#dbd'].innerHTML));
  __ok('ΓΡΑΦΕΙΟ → γραφείο, χωρίς αίτημα', z.h==='office');
  __ok('παύση φαίνεται στην καρτέλα', /παύση/.test(z.note));

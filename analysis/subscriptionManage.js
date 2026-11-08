@@ -210,9 +210,26 @@ function deviceIdsOf(field) {
    είναι σε κάθε ζώνη). Εγγραφή «καλυμμένη» = όλα της τα όργανα υπάρχουν σε άλλη εγγραφή του ΙΔΙΟΥ πελάτη (ή
    εγγραφή χωρίς πελάτη), ίδια ή μεγαλύτερη· σε ίδιες, καλυμμένη η νεότερη. Χρεώνεται η παλαιότερη μη καλυμμένη
    εγγραφή που το δηλώνει· αν είναι άλλου πελάτη, το widget το δείχνει ως «θέλει απόφαση».
-   Επιστρέφει { owner: {id οργάνου → id αγρού}, covered: Set(id αγρών), client: {id αγρού → πελάτης} }. */
+   Με απόφαση στο BILLING_PAYS χρεώνεται η εγγραφή της απόφασης (decided), που τότε δεν λογίζεται καλυμμένη.
+   Επιστρέφει { owner: {id οργάνου → id αγρού}, covered: Set(id αγρών), client: {id αγρού → πελάτης}, decided: Set(id οργάνων) }. */
 const clientKeyOf = (f) => tagOf(f, "clientId_field") || tagOf(f, "clientName").trim();
-function billingOwners(fields) {
+
+/* ΑΠΟΦΑΣΕΙΣ ΧΡΕΩΣΗΣ (Μιχάλης, 8/11/2026) για όργανα δηλωμένα σε εγγραφές ΔΙΑΦΟΡΕΤΙΚΩΝ πελατών: εγγραφή αγρού → όργανα
+   που πληρώνει. Υπερισχύει της «παλαιότερης εγγραφής» και ισχύει μόνο όσο η εγγραφή δηλώνει το όργανο. Η θέση κρίθηκε από
+   την πύλη LoRaWAN που ακούει το όργανο (lrruuid/lrrid, 8/11), όχι από τις ετικέτες. Οι εγγραφές αγρών ΔΕΝ αλλάζουν εδώ. */
+const BILLING_PAYS = {
+  // αγόρασε τα όργανα που λειτουργούν σε σχολείο· τα δηλώνουν και οι δύο εγγραφές του σχολείου
+  "6a7462748acfb8000cd40c6e": ["6a313a9bb99739000d4aafa9", "69f85c07f79d76000a2baf05", "69f85d886b36a6000ab90fa4", "69f85e0aef3625000f9a9587",
+    "6a7446498acfb8000ccca926", "69f1c0c03766b6000ba2bdff", "6977952a05f6ae0009e7e211", "6a749040f99707000cb101f2"],
+  // μετεωρολογικός σταθμός δήμου (το δηλώνει και ιδιωτική εγγραφή)
+  "693814a57efb7e000b0d0d25": ["684c342a13af9d000a77bef3"],
+  // ελεγκτής βανών: ακούγεται από τις ίδιες πύλες με τα όργανα αυτού του αγρού· έμεινε δηλωμένος στον πειραματικό αγρό
+  "69b28228439c11000a7fb3aa": ["684c42522cbc3d000a4faae9"],
+  // πειραματικός αγρός: όργανα που ακούει η πύλη του (τα δηλώνουν και εγγραφές πελατών/συνεργατών)
+  "69277948c4e6a4000afcd3b4": ["684c2c4ddf4dd2000a10106a", "68d668ba47d533000a48f00e", "680e8a1c40a654000ac660de"],
+};
+
+function billingOwners(fields, pays = BILLING_PAYS) {
   const client = {};
   const sets = (fields || []).map((f) => { client[String(f.id)] = clientKeyOf(f); return { id: String(f.id), c: clientKeyOf(f), ids: deviceIdsOf(f) }; })
     .sort((a, b) => a.id.localeCompare(b.id));
@@ -225,11 +242,16 @@ function billingOwners(fields) {
     }
   }
   const owner = {};
+  const decided = new Set();
+  for (const a of sets) for (const x of (pays && pays[a.id]) || []) {
+    if (!a.ids.includes(x) || decided.has(x)) continue;
+    owner[x] = a.id; decided.add(x); covered.delete(a.id);
+  }
   for (const pass of [false, true]) for (const a of sets) {
     if (covered.has(a.id) !== pass) continue;
     for (const x of a.ids) if (!owner[x]) owner[x] = a.id;
   }
-  return { owner, covered, client };
+  return { owner, covered, client, decided };
 }
 
 /* Τα όργανα που χρεώνονται σε ΑΥΤΟΝ τον αγρό, ανά τύπο: [[τύπος, πλήθος, σήματα, κλίμακα], ...].
@@ -244,14 +266,15 @@ function signalsOf(field, typeById, owner) {
   return Object.keys(g).sort().map((t) => (SIGNALS[t] ? [t, g[t], SIGNALS[t], tierOf(SIGNALS[t])] : [t, g[t], null, null]));
 }
 
-/* Τα κοινά όργανα του αγρού που χρεώνονται αλλού: [[τύπος, όνομα εγγραφής που χρεώνεται, 1 αν άλλου πελάτη], ...]. */
-function sharedOf(field, typeById, owner, nameOf, client) {
+/* Τα κοινά όργανα του αγρού που χρεώνονται αλλού: [[τύπος, όνομα εγγραφής που χρεώνεται, x], ...] με x = 0 ίδιος
+   πελάτης, 1 άλλος πελάτης χωρίς απόφαση (το widget ανοίγει αίτημα), 2 άλλος πελάτης με απόφαση στο BILLING_PAYS. */
+function sharedOf(field, typeById, owner, nameOf, client, decided) {
   const out = [];
   const mine = client ? client[String(field.id)] : "";
   for (const id of deviceIdsOf(field)) {
     const o = owner && owner[id];
     if (!o || o === String(field.id)) continue;
-    const other = client && mine && client[o] && client[o] !== mine ? 1 : 0;
+    const other = client && mine && client[o] && client[o] !== mine ? (decided && decided.has(id) ? 2 : 1) : 0;
     out.push([String((typeById && typeById[id]) || "?").toLowerCase(), String((nameOf && nameOf[o]) || "—").slice(0, 80), other]);
   }
   return out.sort((a, b) => (a[0] + a[1]).localeCompare(b[0] + b[1]));
@@ -321,7 +344,7 @@ function buildItems(clients, fields, dashboards, users, typeById) {
     if (cn) it.cn = cn.slice(0, 80);
     if (bill) {
       it.sg = signalsOf(f, typeById, bill.owner);
-      const sh = sharedOf(f, typeById, bill.owner, nameOf, bill.client);
+      const sh = sharedOf(f, typeById, bill.owner, nameOf, bill.client, bill.decided);
       if (sh.length) it.sh = sh;
       if (bill.covered.has(String(f.id))) it.dup = 1;
     }
@@ -559,5 +582,5 @@ if (require.main === module || process.env.T_ANALYSIS_TOKEN) {
 }
 if (typeof module !== "undefined") {
   module.exports = { parseEnd, controllersOf, planAction, renewTags, chunkBySize, buildItems, customerAccess, tagOf,
-    siteClassOf, signalsOf, sharedOf, billingOwners, deviceIdsOf, tierOf, pricingOf, SIGNALS, TIERS };
+    siteClassOf, signalsOf, sharedOf, billingOwners, deviceIdsOf, tierOf, pricingOf, SIGNALS, TIERS, BILLING_PAYS };
 }

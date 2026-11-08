@@ -188,6 +188,38 @@ t("χρέωση: άλλου πελάτη δεν «καλύπτει» — χρε�
   assert.equal(b.covered.size, 0); assert.equal(b.owner.S, "a1");
   assert.deepEqual(sharedOf(F[1], { S: "s2120" }, b.owner, { a1: "Α" }, b.client), [["s2120", "Α", 1]]);
 });
+t("χρέωση: απόφαση (BILLING_PAYS) υπερισχύει της παλαιότερης και κλείνει το αίτημα", () => {
+  const z = (id, devs, c) => ({ id, tags: [tag("devices", JSON.stringify(devs)), tag("clientId_field", c)] });
+  const F = [z("a1", { v: "V", st: "S" }, "lab"), z("a2", { v: "V", x: "X" }, "q"), z("a3", { st: "S" }, "r")];
+  const b = billingOwners(F, { a2: ["V"], a3: ["Q"] });
+  assert.equal(b.owner.V, "a2"); assert.equal(b.owner.S, "a1"); assert.ok(b.decided.has("V") && !b.decided.has("Q"));
+  const types = { V: "uc511", S: "s2120" };
+  assert.deepEqual(sharedOf(F[0], types, b.owner, { a2: "Β" }, b.client, b.decided), [["uc511", "Β", 2]]);
+  assert.deepEqual(sharedOf(F[2], types, b.owner, { a1: "Α" }, b.client, b.decided), [["s2120", "Α", 1]]);
+  assert.deepEqual(signalsOf(F[0], types, b.owner), [["s2120", 1, 8, 8]]);
+  // απόφαση για όργανο που η εγγραφή ΔΕΝ δηλώνει αγνοείται
+  assert.equal(billingOwners(F, { a3: ["V"] }).owner.V, "a1");
+  // εγγραφή που πληρώνει με απόφαση δεν λογίζεται καλυμμένη
+  const c = billingOwners([z("c1", { v: "V", s: "S" }, "h"), z("c2", { v: "V" }, "h")], { c2: ["V"] });
+  assert.ok(!c.covered.has("c2")); assert.equal(c.owner.V, "c2");
+});
+t("χρέωση: ο πίνακας αποφάσεων είναι καθαρός (id 24 hex, κάθε όργανο σε ένα μόνο πληρωτή)", () => {
+  const hex = /^[0-9a-f]{24}$/, seen = new Set();
+  for (const [f, ds] of Object.entries(M.BILLING_PAYS)) {
+    assert.ok(hex.test(f), f);
+    for (const d of ds) { assert.ok(hex.test(d), d); assert.ok(!seen.has(d), "διπλό " + d); seen.add(d); }
+  }
+  assert.ok(seen.size >= 13);
+});
+t("εικόνα: η απόφαση του πίνακα φτάνει ως το sh (x=2) και στη χρέωση", () => {
+  const [pf, pd] = Object.entries(M.BILLING_PAYS).find(([, ds]) => ds.length === 1).map((v, i) => (i ? v[0] : v));
+  const older = "000000000000000000000001";
+  const f1 = { id: older, name: "Field_Ιδιώτης", tags: [tag("clientId_field", "p"), tag("devices", JSON.stringify({ s: pd }))] };
+  const f2 = { id: pf, name: "Field_Πληρωτής", tags: [tag("clientId_field", "q"), tag("devices", JSON.stringify({ s: pd }))] };
+  const by = Object.fromEntries(buildItems([], [f1, f2], [], [], { [pd]: "s2120" }).map((x) => [x.i, x]));
+  assert.deepEqual(by[older].sh, [["s2120", "Πληρωτής", 2]]); assert.deepEqual(by[older].sg, []);
+  assert.deepEqual(by[pf].sg, [["s2120", 1, 8, 8]]);
+});
 t("εικόνα: sh, dup και μοναδικά ονόματα αναφοράς", () => {
   const f1 = { id: "a1", name: "Field_Ζώνη", tags: [tag("name", "Ζώνη"), tag("clientId_field", "h"), tag("devices", JSON.stringify({ s: "S", v: "V1" }))] };
   const f2 = { id: "a2", name: "Field_Ζώνη", tags: [tag("name", "Ζώνη"), tag("clientId_field", "h"), tag("devices", JSON.stringify({ s: "S" }))] };
