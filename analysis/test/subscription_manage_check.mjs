@@ -209,7 +209,26 @@ t("χρέωση: ο πίνακας αποφάσεων είναι καθαρός 
     assert.ok(hex.test(f), f);
     for (const d of ds) { assert.ok(hex.test(d), d); assert.ok(!seen.has(d), "διπλό " + d); seen.add(d); }
   }
-  assert.ok(seen.size >= 13);
+  assert.ok(seen.size >= 5);
+  for (const f of M.BILLING_TEST) { assert.ok(hex.test(f), f); assert.ok(!M.BILLING_PAYS[f], "δοκιμαστική πληρώνει " + f); }
+  assert.ok(M.BILLING_TEST.size >= 4);
+});
+t("χρέωση: δοκιμαστική εγγραφή δεν πληρώνει, δεν καλύπτει, δεν ανοίγει αίτημα", () => {
+  const z = (id, devs, c) => ({ id, tags: [tag("devices", JSON.stringify(devs)), tag("clientId_field", c)] });
+  const F = [z("t1", { a: "A", b: "B", o: "O" }, "lab"), z("c1", { a: "A" }, "p"), z("c2", { b: "B" }, "q")];
+  const b = billingOwners(F, {}, new Set(["t1"]));
+  assert.equal(b.owner.A, "c1"); assert.equal(b.owner.B, "c2"); assert.equal(b.owner.O, undefined); assert.equal(b.covered.size, 0);
+  // ίδιος πελάτης: η δοκιμαστική (μεγαλύτερη) δεν κάνει την πραγματική «καλυμμένη»
+  const c = billingOwners([z("t1", { a: "A", b: "B" }, "h"), z("c1", { a: "A" }, "h")], {}, new Set(["t1"]));
+  assert.ok(!c.covered.has("c1")); assert.equal(c.owner.A, "c1");
+});
+t("εικόνα: δοκιμαστική εγγραφή του πίνακα → tst, χωρίς χρέωση, κοινά χωρίς αίτημα", () => {
+  const tid = [...M.BILLING_TEST][0];
+  const f1 = { id: tid, name: "Field_Δοκιμή", tags: [tag("clientId_field", "lab"), tag("devices", JSON.stringify({ s: "S", o: "O" }))] };
+  const f2 = { id: "ffffffffffffffffffffffff", name: "Field_Πελάτης", tags: [tag("clientId_field", "p"), tag("devices", JSON.stringify({ s: "S" }))] };
+  const by = Object.fromEntries(buildItems([], [f1, f2], [], [], { S: "s2120", O: "lse01" }).map((x) => [x.i, x]));
+  assert.equal(by[tid].tst, 1); assert.deepEqual(by[tid].sg, []); assert.deepEqual(by[tid].sh, [["s2120", "Πελάτης", 0]]);
+  assert.deepEqual(by.ffffffffffffffffffffffff.sg, [["s2120", 1, 8, 8]]); assert.equal(by.ffffffffffffffffffffffff.sh, undefined);
 });
 t("εικόνα: η απόφαση του πίνακα φτάνει ως το sh (x=2) και στη χρέωση", () => {
   const [pf, pd] = Object.entries(M.BILLING_PAYS).find(([, ds]) => ds.length === 1).map((v, i) => (i ? v[0] : v));

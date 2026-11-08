@@ -11,6 +11,7 @@ const cItems = [{ k: 'c', i: 'c1', n: 'Πελάτης Α', m: 'a@x.gr', p: '69' 
 const fItems = [
   { k: 'f', i: 'aaaaaa111111', n: 'Αγρός 1', c: 'c1', s: 'active', e: '2027-03-01', cost: '120', list: '150', u: ['Χρήστης'], cat: 'field', sg: [['lse01', 2, 3, 3], ['s2120', 1, 8, 8]] },
   { k: 'f', i: 'bbbbbb222222', n: 'Ζώνη 2', c: 'c2', s: 'paused', e: '', cat: 'landscape', sg: [['uc511', 1, 2, 3], ['?', 1, null, null]], sh: [['s2120', 'Αγρός 1', 1]] },
+  { k: 'f', i: 'dddddd444444', n: 'Δοκιμές', c: 'c1', s: 'active', e: '', cat: 'field', sg: [], sh: [['s2120', 'Αγρός 1', 0]], tst: 1 },
   { k: 'f', i: 'cccccc333333', n: 'Ορφανός', c: '', s: 'active', e: '2026-12-01', cat: 'weird', sg: [], sh: [['lse01', 'Αγρός 1', 0], ['uc511', 'Ζώνη 2', 2]], dup: 1 },
 ];
 const rows = [
@@ -36,7 +37,8 @@ eval(js + `;(async()=>{
  const fakeBefore=INV.length+OFFERS.length+UNITS.length;
  await liveAll([{id:'w',data:__ROWS}]);
  __ok('πραγματικοί πελάτες, όχι οι πλασματικοί, και «χωρίς πελάτη» για τον ορφανό', CUST.length===3&&CUST[0].id==='c1'&&CUST.some(c=>c.id==='_nc')&&!CUST.some(c=>c.id==='old'), CUST.map(c=>c.id).join(','));
- __ok('εγκαταστάσεις από το νεότερο σύνολο', INST.length===3, INST.length);
+ __ok('εγκαταστάσεις από το νεότερο σύνολο', INST.length===4, INST.length);
+ const tz=inst('dddddd444444');dInst('dddddd444444');__ok('δοκιμαστική: σημείωση, μηδενική ανανέωση, χωρίς αίτημα', /Δοκιμαστική εγγραφή/.test(tz.note)&&renewOf(tz)===0&&!TICK.some(t=>t.i==='dddddd444444')&&/Δοκιμαστική εγγραφή: δεν χρεώνεται/.test(__E['#dbd'].innerHTML)&&!/Κανένα δικό της/.test(__E['#dbd'].innerHTML));
  const a=inst('aaaaaa111111'),z=inst('bbbbbb222222'),o=inst('cccccc333333');
  __ok('περίπτωση: αγρός / ξενοδοχείο / άγνωστη → αγρός', a.cat==='field'&&z.cat==='landscape'&&o.cat==='field');
  __ok('LoRaWAN: 2×lse01 (κλίμακα 3) + 1×S2120 (κλίμακα 8) = 2×40 + 72', Math.abs(renewOf(a)-(2*40+72))<0.01, renewOf(a));
@@ -52,7 +54,7 @@ eval(js + `;(async()=>{
  __ok('παύση φαίνεται στην καρτέλα', /παύση/.test(z.note));
  __ok('πλασματικές συναλλαγές σβηστές', fakeBefore>0&&INV.length+OFFERS.length+UNITS.length+PO.length+BILLS.length+VISITS.length+LEADS.length===0);
  __ok('τιμές TagoIO μόνο από τη συσκευή subscriptionPricing', prod('sp_sense').price===59&&prod('sp_sagFull').price===219);
- __ok('ένδειξη', /Ζωντανά: 2 πελάτες · 3 εγκαταστάσεις [(]1 με όλα τα όργανα και σε άλλη εγγραφή[)] · τιμοκατάλογος 4 είδη/.test(__E['.demo'].textContent), __E['.demo'].textContent);
+ __ok('ένδειξη', /Ζωντανά: 2 πελάτες · 4 εγκαταστάσεις [(]1 με όλα τα όργανα και σε άλλη εγγραφή[)] · 1 δοκιμαστικές · τιμοκατάλογος 4 είδη/.test(__E['.demo'].textContent), __E['.demo'].textContent);
  for(const p of Object.keys(PAGES)){go(p);const h=__E['#content'].innerHTML;if(/undefined|NaN|object Object/.test(h)){__ok('σελίδα '+p,false,(h.match(/.{40}(undefined|NaN|object Object).{20}/)||[''])[0])}}
  __ok('όλες οι σελίδες χωρίς undefined/NaN', true);
  for(const x of INST){dInst(x.id);const h=__E['#dbd'].innerHTML;if(/undefined|NaN|object Object/.test(h))__ok('καρτέλα '+x.n,false,(h.match(/.{40}(undefined|NaN|object Object).{20}/)||[''])[0])}

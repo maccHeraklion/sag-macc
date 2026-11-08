@@ -218,9 +218,6 @@ const clientKeyOf = (f) => tagOf(f, "clientId_field") || tagOf(f, "clientName").
    που πληρώνει. Υπερισχύει της «παλαιότερης εγγραφής» και ισχύει μόνο όσο η εγγραφή δηλώνει το όργανο. Η θέση κρίθηκε από
    την πύλη LoRaWAN που ακούει το όργανο (lrruuid/lrrid, 8/11), όχι από τις ετικέτες. Οι εγγραφές αγρών ΔΕΝ αλλάζουν εδώ. */
 const BILLING_PAYS = {
-  // αγόρασε τα όργανα που λειτουργούν σε σχολείο· τα δηλώνουν και οι δύο εγγραφές του σχολείου
-  "6a7462748acfb8000cd40c6e": ["6a313a9bb99739000d4aafa9", "69f85c07f79d76000a2baf05", "69f85d886b36a6000ab90fa4", "69f85e0aef3625000f9a9587",
-    "6a7446498acfb8000ccca926", "69f1c0c03766b6000ba2bdff", "6977952a05f6ae0009e7e211", "6a749040f99707000cb101f2"],
   // μετεωρολογικός σταθμός δήμου (το δηλώνει και ιδιωτική εγγραφή)
   "693814a57efb7e000b0d0d25": ["684c342a13af9d000a77bef3"],
   // ελεγκτής βανών: ακούγεται από τις ίδιες πύλες με τα όργανα αυτού του αγρού· έμεινε δηλωμένος στον πειραματικό αγρό
@@ -229,9 +226,16 @@ const BILLING_PAYS = {
   "69277948c4e6a4000afcd3b4": ["684c2c4ddf4dd2000a10106a", "68d668ba47d533000a48f00e", "680e8a1c40a654000ac660de"],
 };
 
-function billingOwners(fields, pays = BILLING_PAYS) {
+/* ΔΟΚΙΜΑΣΤΙΚΕΣ ΕΓΓΡΑΦΕΣ (Μιχάλης, 8/11/2026): δεν χρεώνονται, δεν γίνονται πληρωτές οργάνων, δεν «καλύπτουν» άλλες
+   και δεν ανοίγουν αίτημα. Όργανο που το δηλώνουν ΜΟΝΟ δοκιμαστικές εγγραφές δεν χρεώνεται πουθενά (εσωτερικό). */
+const BILLING_TEST = new Set([
+  "6a7462748acfb8000cd40c6e", "6a424cb4eb6593000ca19fd0", "6a842421052bf2000ce17d3c", "6a54d1d7022c1b000b71f6a0",
+]);
+
+function billingOwners(fields, pays = BILLING_PAYS, test = BILLING_TEST) {
   const client = {};
   const sets = (fields || []).map((f) => { client[String(f.id)] = clientKeyOf(f); return { id: String(f.id), c: clientKeyOf(f), ids: deviceIdsOf(f) }; })
+    .filter((a) => !(test && test.has(a.id)))
     .sort((a, b) => a.id.localeCompare(b.id));
   const covered = new Set();
   for (const a of sets) {
@@ -343,9 +347,11 @@ function buildItems(clients, fields, dashboards, users, typeById) {
     const cn = tagOf(f, "clientName");
     if (cn) it.cn = cn.slice(0, 80);
     if (bill) {
-      it.sg = signalsOf(f, typeById, bill.owner);
-      const sh = sharedOf(f, typeById, bill.owner, nameOf, bill.client, bill.decided);
+      const tst = BILLING_TEST.has(String(f.id));
+      it.sg = tst ? [] : signalsOf(f, typeById, bill.owner);
+      const sh = sharedOf(f, typeById, bill.owner, nameOf, bill.client, bill.decided).map((x) => (tst ? [x[0], x[1], 0] : x));
       if (sh.length) it.sh = sh;
+      if (tst) it.tst = 1;
       if (bill.covered.has(String(f.id))) it.dup = 1;
     }
     return it;
@@ -582,5 +588,5 @@ if (require.main === module || process.env.T_ANALYSIS_TOKEN) {
 }
 if (typeof module !== "undefined") {
   module.exports = { parseEnd, controllersOf, planAction, renewTags, chunkBySize, buildItems, customerAccess, tagOf,
-    siteClassOf, signalsOf, sharedOf, billingOwners, deviceIdsOf, tierOf, pricingOf, SIGNALS, TIERS, BILLING_PAYS };
+    siteClassOf, signalsOf, sharedOf, billingOwners, deviceIdsOf, tierOf, pricingOf, SIGNALS, TIERS, BILLING_PAYS, BILLING_TEST };
 }
