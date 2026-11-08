@@ -119,4 +119,37 @@ t("εικόνα: χρήστες χωρίς MACC, σε παύση από το α�
   assert.deepEqual(c.ox, ["Εξαγωγή"]);
 });
 
+const { siteClassOf, signalsOf, tierOf, pricingOf } = M;
+t("σήματα: ελάχιστο 3, μετά κλίμακα 3/8/48, πάνω από 48 = χειρισμός", () => {
+  assert.deepEqual([0, 1, 2, 3, 4, 6, 8, 9, 48, 49].map(tierOf), [3, 3, 3, 3, 8, 8, 8, 48, 48, 0]);
+});
+t("σήματα: τρόπος Α (ό,τι μετρά το όργανο), ελεγκτής βανών 2", () => {
+  const typeById = { a: "s2120", b: "lse01", c: "lse01", d: "SE0X", e: "uc511", f: "ws558" };
+  const f = { tags: [tag("devices", JSON.stringify({ st: "a", s1: "b", s2: "c", s3: "d", v: "e", w: "f", z: "nope" }))] };
+  assert.deepEqual(signalsOf(f, typeById), [["?", 1, null, null], ["lse01", 2, 3, 3], ["s2120", 1, 8, 8], ["se0x", 1, 6, 8], ["uc511", 1, 2, 3], ["ws558", 1, null, null]]);
+});
+t("σήματα: χαλασμένο devices δεν ρίχνει το script", () => assert.deepEqual(signalsOf({ tags: [tag("devices", "{oops")] }, {}), []));
+t("περίπτωση: ξενοδοχείο, σταθμός, αυτοματισμός, θερμοκήπιο από ετικέτα ή φόρμα, αλλιώς αγρός", () => {
+  assert.equal(siteClassOf({ tags: [tag("clientName", "VOLTA Resort"), tag("field_purpose", "agronomy")] }), "landscape");
+  assert.equal(siteClassOf({ tags: [tag("clientName", "Ξενοδοχείο Χ")] }), "landscape");
+  assert.equal(siteClassOf({ tags: [tag("field_purpose", "weather")] }), "station");
+  assert.equal(siteClassOf({ tags: [tag("field_purpose", "automation")] }), "automation");
+  assert.equal(siteClassOf({ tags: [tag("covered_cultivation", "Ναι")] }), "greenhouse");
+  assert.equal(siteClassOf({ tags: [tag("configuration", JSON.stringify({ covered_cultivation: true }))] }), "greenhouse");
+  assert.equal(siteClassOf({ tags: [tag("configuration", "{oops"), tag("field_purpose", "agronomy")] }), "field");
+  assert.equal(siteClassOf({ tags: [tag("covered_cultivation", "όχι")] }), "field");
+});
+t("τιμές: μόνο αριθμητικές ετικέτες, όχι η σημαία", () => {
+  const d = { name: "subscriptionPricingNumbers", tags: [tag("subscriptionConfiguration", "yes"), tag("sense", "59"), tag("soilone", "21,86"), tag("note", "κείμενο"), tag("empty", "")] };
+  assert.deepEqual(pricingOf([d]), [{ n: "subscriptionPricingNumbers", p: { sense: 59, soilone: 21.86 } }]);
+  assert.deepEqual(pricingOf([{ name: "x", tags: [tag("subscriptionConfiguration", "1")] }]), [{ n: "x", p: {} }]);
+});
+t("εικόνα: κάθε αγρός έχει cat, cn και sg όταν δοθούν τύποι", () => {
+  const f = field([tag("clientName", "Π"), tag("devices", JSON.stringify({ x: "s1" }))]);
+  const [it] = buildItems([], [f], [dash()], [], { s1: "s2120" });
+  assert.equal(it.cat, "field"); assert.equal(it.cn, "Π"); assert.deepEqual(it.sg, [["s2120", 1, 8, 8]]);
+  const [it2] = buildItems([], [f], [dash()], []);
+  assert.equal(it2.sg, undefined);
+});
+
 console.log(`\n${n}/${n} OK`);

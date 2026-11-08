@@ -26,6 +26,9 @@
 // ΕΤΙΚΕΤΕΣ ΣΤΟΝ ΑΓΡΟ: subscriptionState (paused | stopped, καμία = ενεργή), subscriptionSavedAccess (JSON),
 // subscriptionStateAt. Η διακοπή βάζει και subscriptionActive=no. Η ετικέτα subscriptionEnd ΔΕΝ αλλάζει.
 //
+// ΦΑΣΗ 1Β (8/11, Μιχάλης): κάθε αγρός έχει και cat (περίπτωση), cn (πελάτης), sg (όργανα ανά τύπο με σήματα και
+// κλίμακα χρέωσης). Το subs_summary έχει και pricing (τιμές συνδρομών TagoIO), signals, tiers. Μόνο ανάγνωση.
+//
 // ΑΠΑΙΤΕΙ την πολιτική «[Analysis] SAG subscriptionManage». Χωρίς αυτήν το script αποτυγχάνει με Authorization Denied.
 
 const TOKEN = process.env.T_ANALYSIS_TOKEN;
@@ -165,6 +168,62 @@ function chunkBySize(items, limit) {
   return out;
 }
 
+/* ═══ ΧΡΕΩΣΗ ΣΥΝΔΕΣΗΣ LoRaWAN ανά αισθητήρα (απόφαση Μιχάλη 8/11) ═══
+   Σήμα = ό,τι ΜΕΤΡΑ το όργανο. Δεν μετρούν όσα υπολογίζει το σύστημα (σημείο δρόσου, αθροίσματα βροχής,
+   δείκτης γονιμότητας). Ελάχιστη χρέωση 3 σήματα, όσα κι αν έχει. Μετά η κλίμακα του τιμοκαταλόγου
+   (TAGO-Actility 3 / 8 / 48). Ο ελεγκτής βανών μετρά 2 σήματα. */
+const SIGNALS = {
+  em320: 2, em320_th: 2, em300_th: 2,   // θερμοκρασία, υγρασία
+  sph01: 2,                             // pH, θερμοκρασία εδάφους
+  lms01_ls: 2,                          // θερμοκρασία, υγρασία φύλλου
+  lse01: 3, lse01_shallow: 3, lse01_deep: 3, // υγρασία, θερμοκρασία, EC
+  se0x: 6, lse02: 6,                    // υγρασία, θερμοκρασία, EC × 2 βάθη
+  s2120: 8,                             // θερμ., υγρ., ταχύτητα & κατεύθυνση ανέμου, UV, φως, βροχή, πίεση
+  uc511: 2,                             // ελεγκτής βανών
+};
+const TIERS = [3, 8, 48];
+/* Η κλίμακα χρέωσης για n σήματα. 0 = πάνω από 48, θέλει χειρισμό με το χέρι. */
+const tierOf = (n) => { const x = Math.max(3, Number(n) || 0); return TIERS.find((t) => x <= t) || 0; };
+
+/* Περίπτωση εγκατάστασης (ΠΡΩΤΟΚΟΛΛΟ_ΤΕΣΣΑΡΩΝ_ΠΕΡΙΠΤΩΣΕΩΝ_2026-11-07): field | greenhouse | landscape | station | automation. */
+const COVERED = ["true", "yes", "ναι", "θερμοκήπιο", "θερμοκηπιο", "greenhouse", "1"];
+function siteClassOf(field) {
+  if (/volta|ξενοδοχ/i.test(tagOf(field, "clientName"))) return "landscape";
+  const p = tagOf(field, "field_purpose").toLowerCase();
+  if (p === "greenhouse" || p === "landscape" || p === "automation") return p;
+  if (p === "weather") return "station";
+  let cfg = null;
+  try { cfg = JSON.parse(tagOf(field, "configuration") || "null"); } catch (_) {}
+  const raw = tagOf(field, "covered_cultivation") || (cfg && cfg.covered_cultivation != null ? String(cfg.covered_cultivation) : "");
+  return COVERED.includes(raw.trim().toLowerCase()) ? "greenhouse" : "field";
+}
+
+/* Τα όργανα του αγρού ανά τύπο: [[τύπος, πλήθος, σήματα, κλίμακα], ...]. Άγνωστος τύπος → σήματα/κλίμακα null. */
+function signalsOf(field, typeById) {
+  let map;
+  try { map = JSON.parse(tagOf(field, "devices") || "{}") || {}; } catch (_) { map = {}; }
+  const g = {};
+  for (const id of Object.values(map)) {
+    if (typeof id !== "string") continue;
+    const t = String((typeById && typeById[id]) || "?").toLowerCase();
+    g[t] = (g[t] || 0) + 1;
+  }
+  return Object.keys(g).sort().map((t) => (SIGNALS[t] ? [t, g[t], SIGNALS[t], tierOf(SIGNALS[t])] : [t, g[t], null, null]));
+}
+
+/* Οι τιμές συνδρομών όπως είναι στο TagoIO (συσκευές με ετικέτα subscriptionConfiguration=yes): μόνο αριθμητικές ετικέτες. */
+function pricingOf(devices) {
+  return (devices || []).slice(0, 3).map((d) => {
+    const p = {};
+    for (const t of d.tags || []) {
+      const raw = String(t && t.value != null ? t.value : "").trim().replace(",", ".");
+      if (!t || t.key === "subscriptionConfiguration" || raw === "" || !isFinite(Number(raw))) continue;
+      p[t.key] = Number(raw);
+    }
+    return { n: String(d.name || "").slice(0, 60), p };
+  });
+}
+
 function hashOf(s) {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -172,7 +231,7 @@ function hashOf(s) {
 }
 
 /* Η εικόνα που διαβάζει το widget. Κάθε εγγραφή: k=c πελάτης, k=f αγρός. */
-function buildItems(clients, fields, dashboards, users) {
+function buildItems(clients, fields, dashboards, users, typeById) {
   const dash = new Map(dashboards.map((d) => [d.id, d]));
   const fieldDashIds = new Set(fields.map((f) => tagOf(f, "fieldId")).filter(Boolean));
   const accessOf = (tags) => (tags || []).filter((t) => t.key === "access").map((t) => String(t.value));
@@ -204,6 +263,10 @@ function buildItems(clients, fields, dashboards, users) {
     if (ctrl) it.ct = ctrl;
     const at = tagOf(f, "subscriptionStateAt");
     if (at) it.at = at;
+    it.cat = siteClassOf(f);
+    const cn = tagOf(f, "clientName");
+    if (cn) it.cn = cn.slice(0, 80);
+    if (typeById) it.sg = signalsOf(f, typeById);
     return it;
   }).sort((a, b) => a.n.localeCompare(b.n, "el"));
 
@@ -325,15 +388,28 @@ async function writeSnapshot(force) {
   const [clients, fields, dashboards, users] = await Promise.all([
     listDevicesByTag("isClient", "yes"), listDevicesByTag("isField", "yes"), listDashboards(), listUsers(),
   ]);
-  const items = buildItems(clients, fields, dashboards, users);
-  const hash = hashOf(JSON.stringify(items));
+  // Τύποι οργάνων και τιμές συνδρομών: μία λίστα συσκευών. Από τις ετικέτες κρατάμε ΜΟΝΟ τον τύπο και τις
+  // αριθμητικές τιμές της συσκευής τιμών· τίποτα άλλο δεν γράφεται ούτε τυπώνεται. Αν αποτύχει, η εικόνα γράφεται χωρίς αυτά.
+  let typeById = null, pricing = null;
+  try {
+    const all = await listAll("/device", ["id", "name", "tags"].map((f) => `fields[]=${f}`).join("&"));
+    typeById = {};
+    for (const d of all) { const t = tagOf(d, "type"); if (t) typeById[d.id] = t; }
+    pricing = pricingOf(all.filter((d) => tagOf(d, "subscriptionConfiguration") === "yes"));
+  } catch (e) { console.log("ΧΩΡΙΣ ΤΥΠΟΥΣ/ΤΙΜΕΣ|" + String((e && e.message) || e).slice(0, 120)); }
+  const items = buildItems(clients, fields, dashboards, users, typeById);
+  const hash = hashOf(JSON.stringify([items, pricing]));
 
   let prev = null;
   try { prev = ((await api(`/device/${OVERSEER}/data?variables[]=subs_summary&qty=1`)) || [])[0] || null; } catch (_) {}
   const prevHash = prev && prev.metadata && prev.metadata.hash;
   const ageH = prev ? (t0 - new Date(prev.time).getTime()) / 36e5 : Infinity;
   const fs = items.filter((x) => x.k === "f");
-  const counts = `πελάτες=${clients.length}|αγροί=${fs.length}|παύση=${fs.filter((x) => x.s === "paused").length}|διακοπή=${fs.filter((x) => x.s === "stopped").length}`;
+  const byCat = {};
+  for (const x of fs) byCat[x.cat] = (byCat[x.cat] || 0) + 1;
+  const unk = fs.reduce((a, x) => a + (x.sg || []).filter((g) => g[2] == null).reduce((b, g) => b + g[1], 0), 0);
+  const counts = `πελάτες=${clients.length}|αγροί=${fs.length}|παύση=${fs.filter((x) => x.s === "paused").length}|διακοπή=${fs.filter((x) => x.s === "stopped").length}` +
+    `|περιπτώσεις=${JSON.stringify(byCat)}|όργανα χωρίς κλίμακα=${unk}|τιμές=${pricing ? pricing.map((x) => Object.keys(x.p).length).join("+") : "-"}`;
   if (prevHash === hash && ageH < HEARTBEAT_H && !force) {
     console.log(`ΑΜΕΤΑΒΛΗΤΗ|${counts}|πριν ${ageH.toFixed(1)}ω`);
     return;
@@ -343,7 +419,7 @@ async function writeSnapshot(force) {
   const rows = chunks.map((list, idx) => ({ variable: "subs_chunk", value: idx, group, metadata: { items: list, part: idx, parts: chunks.length } }));
   rows.push({
     variable: "subs_summary", value: `${fs.length} αγροί`, group,
-    metadata: { hash, parts: chunks.length, clients: clients.length, fields: fs.length },
+    metadata: { hash, parts: chunks.length, clients: clients.length, fields: fs.length, pricing, signals: SIGNALS, tiers: TIERS },
   });
   await writeOverseer(rows);
   console.log(`ΓΡΑΦΤΗΚΕ|${counts}|εγγραφές=${rows.length}|hash=${hash}`);
@@ -424,5 +500,6 @@ if (require.main === module || process.env.T_ANALYSIS_TOKEN) {
   });
 }
 if (typeof module !== "undefined") {
-  module.exports = { parseEnd, controllersOf, planAction, renewTags, chunkBySize, buildItems, customerAccess, tagOf };
+  module.exports = { parseEnd, controllersOf, planAction, renewTags, chunkBySize, buildItems, customerAccess, tagOf,
+    siteClassOf, signalsOf, tierOf, pricingOf, SIGNALS, TIERS };
 }
