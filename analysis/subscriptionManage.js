@@ -180,6 +180,7 @@ const SIGNALS = {
   se0x: 6, lse02: 6,                    // υγρασία, θερμοκρασία, EC × 2 βάθη
   s2120: 8,                             // θερμ., υγρ., ταχύτητα & κατεύθυνση ανέμου, UV, φως, βροχή, πίεση
   uc511: 2,                             // ελεγκτής βανών
+  aglwpp01: 1,                          // πίεση σωλήνα άρδευσης (makerfabs)
 };
 const TIERS = [3, 8, 48];
 /* Η κλίμακα χρέωσης για n σήματα. 0 = πάνω από 48, θέλει χειρισμό με το χέρι. */
@@ -188,7 +189,7 @@ const tierOf = (n) => { const x = Math.max(3, Number(n) || 0); return TIERS.find
 /* Περίπτωση εγκατάστασης (ΠΡΩΤΟΚΟΛΛΟ_ΤΕΣΣΑΡΩΝ_ΠΕΡΙΠΤΩΣΕΩΝ_2026-11-07): field | greenhouse | landscape | station | automation. */
 const COVERED = ["true", "yes", "ναι", "θερμοκήπιο", "θερμοκηπιο", "greenhouse", "1"];
 function siteClassOf(field) {
-  if (/volta|ξενοδοχ/i.test(tagOf(field, "clientName"))) return "landscape";
+  if (/volta|ξενοδοχ/i.test(tagOf(field, "clientName")) || /volta|hotel/i.test(tagOf(field, "project"))) return "landscape";
   const p = tagOf(field, "field_purpose").toLowerCase();
   if (p === "greenhouse" || p === "landscape" || p === "automation") return p;
   if (p === "weather") return "station";
@@ -198,17 +199,62 @@ function siteClassOf(field) {
   return COVERED.includes(raw.trim().toLowerCase()) ? "greenhouse" : "field";
 }
 
-/* Τα όργανα του αγρού ανά τύπο: [[τύπος, πλήθος, σήματα, κλίμακα], ...]. Άγνωστος τύπος → σήματα/κλίμακα null. */
-function signalsOf(field, typeById) {
+/* Τα id οργάνων που δηλώνει ο αγρός (ετικέτα devices), χωρίς διπλά. */
+function deviceIdsOf(field) {
   let map;
   try { map = JSON.parse(tagOf(field, "devices") || "{}") || {}; } catch (_) { map = {}; }
+  return [...new Set(Object.values(map).filter((id) => typeof id === "string" && id))];
+}
+
+/* Ένα φυσικό όργανο χρεώνεται ΜΙΑ φορά, όσες εγγραφές κι αν το δηλώνουν (π.χ. ο σταθμός του ξενοδοχείου
+   είναι σε κάθε ζώνη). Εγγραφή «καλυμμένη» = όλα της τα όργανα υπάρχουν σε άλλη εγγραφή του ΙΔΙΟΥ πελάτη (ή
+   εγγραφή χωρίς πελάτη), ίδια ή μεγαλύτερη· σε ίδιες, καλυμμένη η νεότερη. Χρεώνεται η παλαιότερη μη καλυμμένη
+   εγγραφή που το δηλώνει· αν είναι άλλου πελάτη, το widget το δείχνει ως «θέλει απόφαση».
+   Επιστρέφει { owner: {id οργάνου → id αγρού}, covered: Set(id αγρών), client: {id αγρού → πελάτης} }. */
+const clientKeyOf = (f) => tagOf(f, "clientId_field") || tagOf(f, "clientName").trim();
+function billingOwners(fields) {
+  const client = {};
+  const sets = (fields || []).map((f) => { client[String(f.id)] = clientKeyOf(f); return { id: String(f.id), c: clientKeyOf(f), ids: deviceIdsOf(f) }; })
+    .sort((a, b) => a.id.localeCompare(b.id));
+  const covered = new Set();
+  for (const a of sets) {
+    if (!a.ids.length) continue;
+    for (const o of sets) {
+      if (o === a || (a.c && o.c && a.c !== o.c) || o.ids.length < a.ids.length || !a.ids.every((x) => o.ids.includes(x))) continue;
+      if (o.ids.length > a.ids.length || o.id < a.id) { covered.add(a.id); break; }
+    }
+  }
+  const owner = {};
+  for (const pass of [false, true]) for (const a of sets) {
+    if (covered.has(a.id) !== pass) continue;
+    for (const x of a.ids) if (!owner[x]) owner[x] = a.id;
+  }
+  return { owner, covered, client };
+}
+
+/* Τα όργανα που χρεώνονται σε ΑΥΤΟΝ τον αγρό, ανά τύπο: [[τύπος, πλήθος, σήματα, κλίμακα], ...].
+   Άγνωστος τύπος → σήματα/κλίμακα null. Με owner, όσα χρεώνονται σε άλλη εγγραφή μένουν έξω. */
+function signalsOf(field, typeById, owner) {
   const g = {};
-  for (const id of Object.values(map)) {
-    if (typeof id !== "string") continue;
+  for (const id of deviceIdsOf(field)) {
+    if (owner && owner[id] && owner[id] !== String(field.id)) continue;
     const t = String((typeById && typeById[id]) || "?").toLowerCase();
     g[t] = (g[t] || 0) + 1;
   }
   return Object.keys(g).sort().map((t) => (SIGNALS[t] ? [t, g[t], SIGNALS[t], tierOf(SIGNALS[t])] : [t, g[t], null, null]));
+}
+
+/* Τα κοινά όργανα του αγρού που χρεώνονται αλλού: [[τύπος, όνομα εγγραφής που χρεώνεται, 1 αν άλλου πελάτη], ...]. */
+function sharedOf(field, typeById, owner, nameOf, client) {
+  const out = [];
+  const mine = client ? client[String(field.id)] : "";
+  for (const id of deviceIdsOf(field)) {
+    const o = owner && owner[id];
+    if (!o || o === String(field.id)) continue;
+    const other = client && mine && client[o] && client[o] !== mine ? 1 : 0;
+    out.push([String((typeById && typeById[id]) || "?").toLowerCase(), String((nameOf && nameOf[o]) || "—").slice(0, 80), other]);
+  }
+  return out.sort((a, b) => (a[0] + a[1]).localeCompare(b[0] + b[1]));
 }
 
 /* Οι τιμές συνδρομών όπως είναι στο TagoIO (συσκευές με ετικέτα subscriptionConfiguration=yes): μόνο αριθμητικές ετικέτες. */
@@ -236,6 +282,13 @@ function buildItems(clients, fields, dashboards, users, typeById) {
   const fieldDashIds = new Set(fields.map((f) => tagOf(f, "fieldId")).filter(Boolean));
   const accessOf = (tags) => (tags || []).filter((t) => t.key === "access").map((t) => String(t.value));
   const customerUsers = users.filter((u) => !accessOf(u.tags).includes(MANAGER));
+  const bill = typeById ? billingOwners(fields) : null;
+  // Όνομα για αναφορά σε άλλη εγγραφή: το όνομα συσκευής (η ετικέτα name συμπίπτει μερικές φορές), και αν
+  // κι αυτό συμπίπτει, με τα 4 τελευταία του id.
+  const nameOf = {}, seen = {};
+  const devName = (f) => String(f.name || "").replace(/^Field_/, "").trim() || tagOf(f, "name");
+  for (const f of fields) seen[devName(f)] = (seen[devName(f)] || 0) + 1;
+  for (const f of fields) nameOf[String(f.id)] = devName(f) + (seen[devName(f)] > 1 ? " #" + String(f.id).slice(-4) : "");
 
   const fItems = fields.map((f) => {
     const did = tagOf(f, "fieldId");
@@ -266,7 +319,12 @@ function buildItems(clients, fields, dashboards, users, typeById) {
     it.cat = siteClassOf(f);
     const cn = tagOf(f, "clientName");
     if (cn) it.cn = cn.slice(0, 80);
-    if (typeById) it.sg = signalsOf(f, typeById);
+    if (bill) {
+      it.sg = signalsOf(f, typeById, bill.owner);
+      const sh = sharedOf(f, typeById, bill.owner, nameOf, bill.client);
+      if (sh.length) it.sh = sh;
+      if (bill.covered.has(String(f.id))) it.dup = 1;
+    }
     return it;
   }).sort((a, b) => a.n.localeCompare(b.n, "el"));
 
@@ -501,5 +559,5 @@ if (require.main === module || process.env.T_ANALYSIS_TOKEN) {
 }
 if (typeof module !== "undefined") {
   module.exports = { parseEnd, controllersOf, planAction, renewTags, chunkBySize, buildItems, customerAccess, tagOf,
-    siteClassOf, signalsOf, tierOf, pricingOf, SIGNALS, TIERS };
+    siteClassOf, signalsOf, sharedOf, billingOwners, deviceIdsOf, tierOf, pricingOf, SIGNALS, TIERS };
 }

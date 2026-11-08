@@ -152,4 +152,51 @@ t("εικόνα: κάθε αγρός έχει cat, cn και sg όταν δοθ�
   assert.equal(it2.sg, undefined);
 });
 
+const { billingOwners, sharedOf } = M;
+t("σήματα: αισθητήρας πίεσης σωλήνα 1 σήμα → κλίμακα 3", () => {
+  assert.deepEqual(signalsOf({ tags: [tag("devices", JSON.stringify({ p: "x" }))] }, { x: "aglwpp01" }), [["aglwpp01", 1, 1, 3]]);
+});
+t("περίπτωση: ετικέτα project του ξενοδοχείου χωρίς clientName", () => {
+  assert.equal(siteClassOf({ tags: [tag("project", "hotel_volta")] }), "landscape");
+});
+t("χρέωση: κοινό όργανο σε πολλές εγγραφές χρεώνεται μία φορά, στην παλαιότερη", () => {
+  const z = (id, devs, c) => ({ id, tags: [tag("devices", JSON.stringify(devs)), tag("clientId_field", c)] });
+  const F = [z("a2", { st: "S", v: "V2" }, "h"), z("a1", { st: "S", v: "V1" }, "h"), z("a3", { st: "S", v: "V3" }, "h")];
+  const { owner, covered } = billingOwners(F);
+  assert.equal(owner.S, "a1"); assert.equal(owner.V2, "a2"); assert.equal(covered.size, 0);
+  const types = { S: "s2120", V1: "uc511", V2: "uc511", V3: "uc511" };
+  assert.deepEqual(signalsOf(F[1], types, owner), [["s2120", 1, 8, 8], ["uc511", 1, 2, 3]]);
+  assert.deepEqual(signalsOf(F[0], types, owner), [["uc511", 1, 2, 3]]);
+  assert.deepEqual(sharedOf(F[0], types, owner, { a1: "Ζώνη 1" }), [["s2120", "Ζώνη 1", 0]]);
+});
+t("χρέωση: ίδιο όργανο δύο φορές στην ίδια εγγραφή μετρά μία", () => {
+  assert.deepEqual(signalsOf({ id: "f", tags: [tag("devices", JSON.stringify({ a: "x", b: "x" }))] }, { x: "lse01" }), [["lse01", 1, 3, 3]]);
+});
+t("χρέωση: εγγραφή υποσύνολο ίδιου πελάτη = καλυμμένη, και χρεώνεται η πλήρης ακόμη κι αν είναι νεότερη", () => {
+  const z = (id, devs, c) => ({ id, tags: [tag("devices", JSON.stringify(devs)), tag("clientId_field", c)] });
+  const { owner, covered } = billingOwners([z("a1", { v: "V" }, "h"), z("a2", { st: "S", v: "V" }, "h")]);
+  assert.ok(covered.has("a1")); assert.equal(owner.V, "a2");
+  const same = billingOwners([z("b1", { v: "V" }, "h"), z("b2", { v: "V" }, "h")]);
+  assert.ok(same.covered.has("b2") && !same.covered.has("b1"));
+  const orphan = billingOwners([z("c1", { v: "V" }, ""), z("c2", { st: "S", v: "V" }, "h")]);
+  assert.ok(orphan.covered.has("c1"));
+});
+t("χρέωση: άλλου πελάτη δεν «καλύπτει» — χρεώνεται μία φορά και σημειώνεται για απόφαση", () => {
+  const z = (id, devs, c) => ({ id, tags: [tag("devices", JSON.stringify(devs)), tag("clientId_field", c)] });
+  const F = [z("a1", { st: "S", x: "X" }, "p"), z("a2", { st: "S" }, "q")];
+  const b = billingOwners(F);
+  assert.equal(b.covered.size, 0); assert.equal(b.owner.S, "a1");
+  assert.deepEqual(sharedOf(F[1], { S: "s2120" }, b.owner, { a1: "Α" }, b.client), [["s2120", "Α", 1]]);
+});
+t("εικόνα: sh, dup και μοναδικά ονόματα αναφοράς", () => {
+  const f1 = { id: "a1", name: "Field_Ζώνη", tags: [tag("name", "Ζώνη"), tag("clientId_field", "h"), tag("devices", JSON.stringify({ s: "S", v: "V1" }))] };
+  const f2 = { id: "a2", name: "Field_Ζώνη", tags: [tag("name", "Ζώνη"), tag("clientId_field", "h"), tag("devices", JSON.stringify({ s: "S" }))] };
+  const f3 = { id: "a3", name: "Field_Άλλη", tags: [tag("name", "Άλλη"), tag("clientId_field", "h"), tag("devices", JSON.stringify({ s: "S", v: "V3" }))] };
+  const items = buildItems([], [f1, f2, f3], [], [], { S: "s2120", V1: "uc511", V3: "uc511" });
+  const by = Object.fromEntries(items.map((x) => [x.i, x]));
+  assert.equal(by.a2.dup, 1); assert.deepEqual(by.a2.sg, []); assert.deepEqual(by.a2.sh, [["s2120", "Ζώνη #a1", 0]]);
+  assert.deepEqual(by.a3.sh, [["s2120", "Ζώνη #a1", 0]]); assert.equal(by.a3.dup, undefined);
+  assert.deepEqual(by.a1.sg, [["s2120", 1, 8, 8], ["uc511", 1, 2, 3]]); assert.equal(by.a1.sh, undefined);
+});
+
 console.log(`\n${n}/${n} OK`);

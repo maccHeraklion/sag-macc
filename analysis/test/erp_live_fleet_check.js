@@ -10,8 +10,8 @@ const G = '1794098278760';
 const cItems = [{ k: 'c', i: 'c1', n: 'Πελάτης Α', m: 'a@x.gr', p: '69' }, { k: 'c', i: 'c2', n: 'Ξενοδοχείο Β' }];
 const fItems = [
   { k: 'f', i: 'aaaaaa111111', n: 'Αγρός 1', c: 'c1', s: 'active', e: '2027-03-01', cost: '120', list: '150', u: ['Χρήστης'], cat: 'field', sg: [['lse01', 2, 3, 3], ['s2120', 1, 8, 8]] },
-  { k: 'f', i: 'bbbbbb222222', n: 'Ζώνη 2', c: 'c2', s: 'paused', e: '', cat: 'landscape', sg: [['uc511', 1, 2, 3], ['?', 1, null, null]] },
-  { k: 'f', i: 'cccccc333333', n: 'Ορφανός', c: '', s: 'active', e: '2026-12-01', cat: 'weird', sg: [] },
+  { k: 'f', i: 'bbbbbb222222', n: 'Ζώνη 2', c: 'c2', s: 'paused', e: '', cat: 'landscape', sg: [['uc511', 1, 2, 3], ['?', 1, null, null]], sh: [['s2120', 'Αγρός 1', 1]] },
+  { k: 'f', i: 'cccccc333333', n: 'Ορφανός', c: '', s: 'active', e: '2026-12-01', cat: 'weird', sg: [], sh: [['lse01', 'Αγρός 1', 0]], dup: 1 },
 ];
 const rows = [
   { variable: 'subs_summary', group: G, time: '2026-11-08T00:37:58Z', metadata: { parts: 2, pricing: [{ n: 'subscriptionPricingNumbers', p: { sense: 59, sagFull: 219 } }, { n: 'itemsPricingNumbers', p: { sense: 1 } }] } },
@@ -41,19 +41,24 @@ eval(js + `;(async()=>{
  __ok('περίπτωση: αγρός / ξενοδοχείο / άγνωστη → αγρός', a.cat==='field'&&z.cat==='landscape'&&o.cat==='field');
  __ok('LoRaWAN: 2×lse01 (κλίμακα 3) + 1×S2120 (κλίμακα 8) = 2×40 + 72', Math.abs(renewOf(a)-(2*40+72))<0.01, renewOf(a));
  __ok('ελεγκτής βανών 2 σήματα → κλίμακα 3 · άγνωστο όργανο δεν χρεώνεται, σημειώνεται', Math.abs(renewOf(z)-40)<0.01&&z.miss===1, renewOf(z)+' / '+z.miss);
- __ok('πίνακας στόλου: νεότερη εγγραφή ΕΠΙΣΚΕΨΗ → αίτημα', a.h==='visit'&&TICK.length===1&&TICK[0].i==='aaaaaa111111');
+ __ok('πίνακας στόλου: νεότερη εγγραφή ΕΠΙΣΚΕΨΗ → αίτημα', a.h==='visit'&&TICK.filter(t=>t.k==='Βλάβη').length===1&&TICK.find(t=>t.k==='Βλάβη').i==='aaaaaa111111');
+ __ok('κοινό όργανο με άλλον πελάτη → αίτημα απόφασης, μόνο εκεί', TICK.filter(t=>t.k==='Αίτημα').length===1&&TICK.find(t=>t.k==='Αίτημα').i==='bbbbbb222222');
+ __ok('καλυμμένη εγγραφή: σημείωση, μηδενική ανανέωση', /διπλοεγγραφή/.test(o.note)&&renewOf(o)===0&&o.dup===1);
+ dInst('bbbbbb222222');__ok('καρτέλα: κοινό όργανο και πού χρεώνεται', /s2120 → χρεώνεται στο «Αγρός 1»/.test(__E['#dbd'].innerHTML)&&/θέλει απόφαση/.test(__E['#dbd'].innerHTML));
+ dInst('cccccc333333');__ok('καρτέλα καλυμμένης: χωρίς δικά της όργανα', /Κανένα δικό της/.test(__E['#dbd'].innerHTML)&&!/θέλει απόφαση/.test(__E['#dbd'].innerHTML));
+ dInst('aaaaaa111111');__ok('καρτέλα χωρίς κοινά: καμία γραμμή κοινών', !/Κοινά όργανα/.test(__E['#dbd'].innerHTML));
  __ok('ΓΡΑΦΕΙΟ → γραφείο, χωρίς αίτημα', z.h==='office');
  __ok('παύση φαίνεται στην καρτέλα', /παύση/.test(z.note));
  __ok('πλασματικές συναλλαγές σβηστές', fakeBefore>0&&INV.length+OFFERS.length+UNITS.length+PO.length+BILLS.length+VISITS.length+LEADS.length===0);
  __ok('τιμές TagoIO μόνο από τη συσκευή subscriptionPricing', prod('sp_sense').price===59&&prod('sp_sagFull').price===219);
- __ok('ένδειξη', /Ζωντανά: 2 πελάτες · 3 εγκαταστάσεις · τιμοκατάλογος 4 είδη/.test(__E['.demo'].textContent), __E['.demo'].textContent);
+ __ok('ένδειξη', /Ζωντανά: 2 πελάτες · 3 εγκαταστάσεις [(]1 με όλα τα όργανα και σε άλλη εγγραφή[)] · τιμοκατάλογος 4 είδη/.test(__E['.demo'].textContent), __E['.demo'].textContent);
  for(const p of Object.keys(PAGES)){go(p);const h=__E['#content'].innerHTML;if(/undefined|NaN|object Object/.test(h)){__ok('σελίδα '+p,false,(h.match(/.{40}(undefined|NaN|object Object).{20}/)||[''])[0])}}
  __ok('όλες οι σελίδες χωρίς undefined/NaN', true);
  for(const x of INST){dInst(x.id);const h=__E['#dbd'].innerHTML;if(/undefined|NaN|object Object/.test(h))__ok('καρτέλα '+x.n,false,(h.match(/.{40}(undefined|NaN|object Object).{20}/)||[''])[0])}
  dInst('aaaaaa111111');__ok('καρτέλα: όργανα, σήματα, χρέωση TagoIO, χρήστες', /2× lse01 · 3 σήματα → κλίμακα 3/.test(__E['#dbd'].innerHTML)&&/1× s2120 · 8 σήματα → κλίμακα 8/.test(__E['#dbd'].innerHTML)&&/120 · κατάλογος 150/.test(__E['#dbd'].innerHTML)&&/Χρήστης/.test(__E['#dbd'].innerHTML));
  for(const c of CUST){dCust(c.id);if(/undefined|NaN|object Object/.test(__E['#dbd'].innerHTML))__ok('πελάτης '+c.n,false)}
- const n1=INST.length,p1=PROD.length;await liveAll([{data:__ROWS}]);__ok('δεύτερη φόρτωση χωρίς διπλά', INST.length===n1&&PROD.length===p1&&TICK.length===1);
+ const n1=INST.length,p1=PROD.length;await liveAll([{data:__ROWS}]);__ok('δεύτερη φόρτωση χωρίς διπλά', INST.length===n1&&PROD.length===p1&&TICK.length===2);
  await liveAll([{data:__ROWS.filter(r=>r.variable!=='costing_list')}]);__ok('φόρτωση χωρίς τιμοκατάλογο χωρίς διπλά', INST.length===n1&&PROD.length===p1, PROD.length+' / '+p1);
- await liveAll([{data:[{variable:'fleet_field',time:'2026-11-08T01:21:00Z',metadata:{severity:0,text:JSON.stringify({i:'111111'})}}]}]);__ok('νέα εγγραφή στόλου μόνη της → ξαναϋπολογίζει', inst('aaaaaa111111').h==='ok'&&TICK.length===0);
+ await liveAll([{data:[{variable:'fleet_field',time:'2026-11-08T01:21:00Z',metadata:{severity:0,text:JSON.stringify({i:'111111'})}}]}]);__ok('νέα εγγραφή στόλου μόνη της → ξαναϋπολογίζει', inst('aaaaaa111111').h==='ok'&&TICK.length===1&&TICK[0].k==='Αίτημα');
  console.log(__bad()?'ΑΠΟΤΥΧΙΑ':'erp_live_fleet_check: όλα εντάξει');if(__bad())process.exit(1)})().catch(e=>{console.error(e);process.exit(1)})`);
 function __bad() { return bad; }
