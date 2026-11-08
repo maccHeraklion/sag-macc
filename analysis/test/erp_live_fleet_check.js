@@ -24,6 +24,11 @@ const rows = [
   { variable: 'fleet_field', time: '2026-11-07T00:21:00Z', metadata: { severity: 0, state: 'ΕΝΤΑΞΕΙ', text: JSON.stringify({ i: 'aaaaaa111111'.slice(-6) }) } },
   { variable: 'fleet_field', time: '2026-11-08T00:21:00Z', metadata: { severity: 1, state: 'ΓΡΑΦΕΙΟ', text: JSON.stringify({ i: 'bbbbbb222222'.slice(-6) }) } },
   { variable: 'costing_list', value: 'catalog_v4', metadata: { cl, v: 4 } },
+  { variable: 'warehouse_summary', group: 'W2', time: '2026-11-08T21:17:50Z', metadata: { parts: 2, total: 3, free: 2, in_field: 1 } },
+  { variable: 'warehouse_summary', group: 'W1', time: '2026-11-01T00:00:00Z', metadata: { parts: 1 } },
+  { variable: 'warehouse_chunk', group: 'W2', metadata: { part: 1, parts: 2, items: [{ i: 'w3', n: 'weird_zz9_0001', t: 'zz9', c: '2026-10-03', x: 1, l: new Date().toISOString(), k: 'σχόλιο' }, { i: 'w4', n: 'dragino_lms01_ls_cccc', t: 'lms01_ls', c: '2026-10-04' }] } },
+  { variable: 'warehouse_chunk', group: 'W2', metadata: { part: 0, parts: 2, items: [{ i: 'w1', n: 'dragino_se0x_aaaa', t: 'se0x', c: '2026-10-01' }, { i: 'w2', n: 'milesight_uc511_bbbb', t: 'uc511', c: '2026-10-02', f: [{ f: 'Αγρός 1', c: 'Πελάτης Α' }] }] } },
+  { variable: 'warehouse_chunk', group: 'W1', metadata: { part: 0, parts: 1, items: [{ i: 'old1', n: 'old', t: 'se0x' }] } },
 ];
 const js = fs.readFileSync(__dirname + '/../../reports/demo/kentro_diaxeirisis_demo.html', 'utf8').match(/<script>([\s\S]*)<\/script>/)[1].replace('"use strict";', '');
 const el = () => ({ innerHTML: '', textContent: '', value: '', classList: { add() {}, remove() {}, toggle() {} }, addEventListener() {}, style: {}, dataset: {} });
@@ -52,9 +57,20 @@ eval(js + `;(async()=>{
  dInst('aaaaaa111111');__ok('καρτέλα χωρίς κοινά: καμία γραμμή κοινών', !/Κοινά όργανα/.test(__E['#dbd'].innerHTML));
  __ok('ΓΡΑΦΕΙΟ → γραφείο, χωρίς αίτημα', z.h==='office');
  __ok('παύση φαίνεται στην καρτέλα', /παύση/.test(z.note));
- __ok('πλασματικές συναλλαγές σβηστές', fakeBefore>0&&INV.length+OFFERS.length+UNITS.length+PO.length+BILLS.length+VISITS.length+LEADS.length===0);
+ __ok('πλασματικές συναλλαγές σβηστές', fakeBefore>0&&INV.length+OFFERS.length+UNITS.filter(u=>!u.live).length+PO.length+BILLS.length+VISITS.length+LEADS.length===0);
  __ok('τιμές TagoIO μόνο από τη συσκευή subscriptionPricing', prod('sp_sense').price===59&&prod('sp_sagFull').price===219);
- __ok('ένδειξη', /Ζωντανά: 2 πελάτες · 4 εγκαταστάσεις [(]1 με όλα τα όργανα και σε άλλη εγγραφή[)] · 1 δοκιμαστικές · τιμοκατάλογος 4 είδη/.test(__E['.demo'].textContent), __E['.demo'].textContent);
+ __ok('ένδειξη', /Ζωντανά: 2 πελάτες · 4 εγκαταστάσεις [(]1 με όλα τα όργανα και σε άλλη εγγραφή[)] · 1 δοκιμαστικές · αποθήκη 3 ελεύθερα · τιμοκατάλογος 4 είδη/.test(__E['.demo'].textContent), __E['.demo'].textContent);
+ __ok('αποθήκη: μόνο το νεότερο πλήρες σύνολο', UNITS.length===4&&!UNITS.some(u=>u.sn==='old1'), UNITS.map(u=>u.sn).join(','));
+ __ok('αποθήκη: ελεύθερο SE0X = 1 διαθέσιμο', stockOf('se0x')===1&&stockOf('lms01')===1);
+ __ok('αποθήκη: δηλωμένο σε αγρό → εγκατεστημένο στη σωστή εγκατάσταση', UNITS.find(u=>u.sn==='w2').st==='Εγκατεστημένο'&&UNITS.find(u=>u.sn==='w2').inst==='aaaaaa111111');
+ __ok('αποθήκη: άγνωστο μοντέλο → δικό του είδος, όχι σφάλμα', !!prod('lt_zz9')&&stockOf('lt_zz9')===1);
+ __ok('εγκατεστημένα ανά είδος από τις εγκαταστάσεις (sg)', LIVEI.lse01===2&&LIVEI.s2120===1&&LIVEI.uc511===1, JSON.stringify(LIVEI));
+ __ok('σημείο αναπαραγγελίας μηδέν στα ζωντανά (καμία ψεύτικη «Παραγγελία»)', EQ.every(p=>!p.min));
+ __ok('κινήσεις: καταχωρήσεις από το TagoIO', MOVES.length===4&&MOVES.every(m=>m.k==='Καταχώρηση'));
+ go('stock');__ok('απόθεμα: μόνο είδη με όργανα', /Ζωντανά από το TagoIO: 3 όργανα/.test(__E['#content'].innerHTML)&&!/Θερμοστατική κεφαλή/.test(__E['#content'].innerHTML));
+ go('units');__ok('μονάδες: όνομα συσκευής, εκπομπή στην αποθήκη, ανενεργό', /dragino_se0x_aaaa/.test(__E['#content'].innerHTML)&&/εκπέμπει ενώ είναι στην αποθήκη/.test(__E['#content'].innerHTML)&&/ανενεργό στο TagoIO/.test(__E['#content'].innerHTML));
+ dUnit('w3');__ok('καρτέλα μονάδας: τελευταίο σήμα και σχόλιο', /Τελευταίο σήμα/.test(__E['#dbd'].innerHTML)&&/σχόλιο/.test(__E['#dbd'].innerHTML));
+ for(const u of UNITS){dUnit(u.sn);if(/undefined|NaN|object Object/.test(__E['#dbd'].innerHTML))__ok('καρτέλα μονάδας '+u.sn,false)}
  for(const p of Object.keys(PAGES)){go(p);const h=__E['#content'].innerHTML;if(/undefined|NaN|object Object/.test(h)){__ok('σελίδα '+p,false,(h.match(/.{40}(undefined|NaN|object Object).{20}/)||[''])[0])}}
  __ok('όλες οι σελίδες χωρίς undefined/NaN', true);
  for(const x of INST){dInst(x.id);const h=__E['#dbd'].innerHTML;if(/undefined|NaN|object Object/.test(h))__ok('καρτέλα '+x.n,false,(h.match(/.{40}(undefined|NaN|object Object).{20}/)||[''])[0])}
