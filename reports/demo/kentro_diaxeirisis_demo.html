@@ -295,7 +295,7 @@ const offerBom=o=>[].concat(...o.lines.map(([k,q])=>bomOf(k,q)));
 function offTot(o){const net=o.lines.reduce((s,[k,q])=>s+prod(k).price*q,0),dis=net*(o.disc||0)/100,base=net-dis,goods=o.lines.filter(([k])=>prod(k).kind!=='subpk'),gBase=goods.reduce((s,[k,q])=>s+prod(k).price*q,0)*(1-(o.disc||0)/100),cost=goods.some(([k])=>costOf(k)==null)?null:goods.reduce((s,[k,q])=>s+costOf(k)*q,0),renew=o.lines.reduce((s,[k,q])=>s+(prod(k).renew||0)*q,0);const pp=part((cust(o.c)||{}).p);const com=pp?base*pp.rSetup/100:0;return{net,dis,base,vat:base*.24,tot:base*1.24,cost,renew,com,gBase,margin:cost==null?null:gBase-cost-com}}
 const gross=i=>i.net*1.24,poTot=p=>p.lines.reduce((s,[,q,c])=>s+q*c,0);
 function subSt(x){if(x.step<7||!x.end)return['Δεν ενεργοποιήθηκε','info'];const d=days(x.end);if(d<0)return['Ληγμένη','bad'];if(d<=30)return['Λήγει σε '+d+' ημ.','warn'];return['Ενεργή','ok']}
-const HL={ok:['Εντάξει','ok'],visit:['Επίσκεψη','bad'],office:['Γραφείο','info']};
+const HL={ok:['Εντάξει','ok'],visit:['Επίσκεψη','bad'],office:['Γραφείο','info'],check:['Έλεγχος','warn']};
 const stockOf=k=>UNITS.filter(u=>u.k===k&&u.st==='Απόθεμα').length,resOf=k=>UNITS.filter(u=>u.k===k&&u.st==='Δεσμευμένο').length;
 const inbound=k=>PO.filter(p=>p.st==='Σε μεταφορά'||p.st==='Στάλθηκε').reduce((s,p)=>s+p.lines.filter(l=>l[0]===k).reduce((a,l)=>a+l[1],0),0);
 const renewOf=x=>(x.sub&&prod(x.sub)?prod(x.sub).price:(prod(x.plan).renew||0))*(x.qty||1);const arr=()=>INST.filter(x=>['ok','warn'].includes(subSt(x)[1])).reduce((s,x)=>s+renewOf(x),0);
@@ -390,7 +390,7 @@ finance(){const ar=aging(recv(),'due',gross),ap=aging(billOpen().filter(x=>x.ope
  <div class="grid g2" style="margin-top:14px"><div class="card"><div class="hd"><h3>Υπόλοιπα πελατών</h3></div>${tbl(['Πελάτης','#Ανοιχτά','#Ληξιπρόθεσμα'],CUST.map(c=>{const o=INV.filter(i=>i.c===c.id&&!i.paid);return o.length?`<tr class="c" onclick="dCust('${c.id}')"><td>${c.n}</td><td class="num">${eur(o.reduce((s,i)=>s+gross(i),0))}</td><td class="num bad">${eur(o.filter(i=>days(i.due)<0).reduce((s,i)=>s+gross(i),0))}</td></tr>`:''}).filter(Boolean))}</div>
  <div class="card"><div class="hd"><h3>Υπόλοιπα προμηθευτών</h3></div>${tbl(['Προμηθευτής','#Οφείλουμε'],SUP.filter(s=>billBal(s.id)>0.5).map(s=>`<tr class="c" onclick="dSup('${s.id}')"><td>${s.n}</td><td class="num">${eur(billBal(s.id))}</td></tr>`))}</div></div>
  <div class="card" style="margin-top:14px"><div class="hd"><h3>Ταμείο · κινήσεις</h3><span class="sp"></span><span class="sub">εισπράξεις, πληρωμές, προμήθειες</span></div>${tbl(['Ημερομηνία','Κίνηση','#Ποσό'],cash.map(m=>`<tr><td>${fd(m.d)}</td><td>${m.t}</td><td class="num ${m.amt<0?'bad':'ok'}">${eur(m.amt)}</td></tr>`))}</div>`},
-reports(){const byPlan={};for(const x of INST){const k=x.plan;byPlan[k]=byPlan[k]||{n:0,arr:0};byPlan[k].n++;byPlan[k].arr+=x.step>=7?renewOf(x):0}
+reports(){const byPlan={};for(const x of INST){const k=prod(x.plan).kind==='live'?'lvc_'+x.cat:x.plan;byPlan[k]=byPlan[k]||{n:0,arr:0};byPlan[k].n++;byPlan[k].arr+=x.step>=7?renewOf(x):0}
  const ch={Απευθείας:0};for(const p of PARTNERS)ch[p.n.split(' (')[0]]=0;for(const i of INV){const c=cust(i.c);ch[c.p?part(c.p).n.split(' (')[0]:'Απευθείας']+=i.net}const chMx=Math.max(...Object.values(ch));
  return ph('Οικονομικά','Αναφορές','Πωλήσεις ανά πακέτο και κανάλι, περιθώριο ανά είδος, ανανεώσεις ανά περίπτωση')+
  `<div class="grid g2"><div class="card"><div class="hd"><h3>Πακέτα σε λειτουργία</h3></div>${tbl(['Πακέτο','#Εγκαταστάσεις','#Ανανεώσεις / έτος'],Object.entries(byPlan).map(([k,v])=>`<tr><td>${prod(k).n}<div class="sub">${catT(prod(k).cats[0])}</div></td><td class="num">${v.n}</td><td class="num">${eur0(v.arr)}</td></tr>`))}</div>
@@ -429,7 +429,7 @@ function dLead(id){const l=LEADS.find(x=>x.id===id),i=STAGES.indexOf(l.stage);op
  <div class="sec">Δραστηριότητα</div><div class="tl">${ACT.filter(a=>a.ref===id).map(a=>`<div><b>${a.k}: ${a.t}</b><span>${fd(a.d)} · ${a.who}</span></div>`).join('')||'<span class="sub">Καμία</span>'}</div>`,
  l.stage==='Κερδήθηκε'?'':`${i>0?`<button class="btn" onclick="stage('${id}',-1)">← Πίσω</button>`:''}<button class="btn" onclick="actForm('${id}')">Καταγραφή</button>${i<3?`<button class="btn p" onclick="stage('${id}',1)">Επόμενο στάδιο →</button>`:`<button class="btn p" onclick="win('${id}')">Κερδήθηκε → πελάτης & προσφορά</button>`}`)}
 function dInst(id){const x=inst(id),c=cust(x.c);openD('Υλοποίηση · Εγκαταστάσεις',x.n,`<div class="row" style="margin-bottom:14px">${catT(x.cat)}<span class="sp"></span>${b(...HL[x.h])}${b(...subSt(x))}</div>${x.note?`<div class="alert">${x.note}</div>`:''}
- ${kv([['Πελάτης',`<a href="#" onclick="dCust('${c.id}');return false">${c.n}</a>`],['Πακέτο',prod(x.plan).n+(x.qty>1?' ×'+x.qty:'')],['Ανανέωση',eur(renewOf(x))+' / έτος'],['Συνδρομή',fd(x.start)+' → '+fd(x.end)],['Παρακολούθηση',{field:'Άρδευση, ασθένειες, έντομα · όριο σιωπής ανά κύκλο οργάνου',greenhouse:'Όπως ο αγρός, με αέρα εσωτερικού, χωρίς βροχή υπαίθρου',landscape:'Ζώνη ποτίζει, βάνα απαντά, πύλη ζωντανή · χωρίς ψεκασμούς',station:'Όλα τα κανάλια και ο μετρητής βροχής',automation:'Ελεγκτής απαντά, εντολή εκτελείται · σιωπή > 6 ώρες = βλάβη'}[x.cat]]])}
+ ${kv([['Πελάτης',`<a href="#" onclick="dCust('${c.id}');return false">${c.n}</a>`],['Πακέτο',prod(x.plan).n+(x.qty>1?' ×'+x.qty:'')],['Ανανέωση',eur(renewOf(x))+' / έτος'+(x.sg?' · σύνδεση LoRaWAN':'')],...(x.sg?[['Όργανα & σήματα',sgText(x.sg)+(x.miss?`<div class="sub">${x.miss} όργανα χωρίς κλίμακα: δεν μπαίνουν στην ανανέωση</div>`:'')],['Χρέωση στο TagoIO',(x.tcost||'—')+(x.tlist&&x.tlist!==x.tcost?' · κατάλογος '+x.tlist:'')],['Χρήστες',(x.u||[]).map(esc).join(', ')||'—']]:[]),['Συνδρομή',fd(x.start)+' → '+fd(x.end)],['Παρακολούθηση',{field:'Άρδευση, ασθένειες, έντομα · όριο σιωπής ανά κύκλο οργάνου',greenhouse:'Όπως ο αγρός, με αέρα εσωτερικού, χωρίς βροχή υπαίθρου',landscape:'Ζώνη ποτίζει, βάνα απαντά, πύλη ζωντανή · χωρίς ψεκασμούς',station:'Όλα τα κανάλια και ο μετρητής βροχής',automation:'Ελεγκτής απαντά, εντολή εκτελείται · σιωπή > 6 ώρες = βλάβη'}[x.cat]]])}
  <div class="sec">Onboarding</div><div class="tl">${STEPS.map((s,i)=>`<div style="opacity:${i<=x.step?1:.45}"><b>${i<x.step?'✓ ':i===x.step?'● ':''}${s}</b><span>${i<x.step?'ολοκληρώθηκε':i===x.step?'σε εξέλιξη':'—'}</span></div>`).join('')}</div>
  <div class="sec">Όργανα (${x.units.length}/${x.need.length})</div>${tbl(['Σειριακός','Είδος','Εγγύηση'],x.units.map(sn=>{const u=UNITS.find(u=>u.sn===sn);return `<tr class="c" onclick="dUnit('${sn}')"><td class="mono">${sn}</td><td>${prod(u.k).n}</td><td>${fd(u.war)}</td></tr>`}),'Δεν έχουν τοποθετηθεί ακόμη')}
  <div class="sec">Επισκέψεις</div>${tbl(['Ημερομηνία','Είδος','Τεχνικός'],VISITS.filter(v=>v.i===id).map(v=>`<tr><td>${fd(v.d)}</td><td>${v.k}</td><td>${v.who}</td></tr>`),'Καμία προγραμματισμένη')}`,
@@ -525,8 +525,42 @@ function findCL(src){if(!src||typeof src!=='object')return null;if(Array.isArray
 async function liveCatalog(src){try{const pt=findCL(src);if(!pt)return;const c=await inflateB64(pt.metadata.cl);if(!c||!Array.isArray(c.i))return;
  const IT=c.i.map(x=>Array.isArray(x)?[x[0],c.ct[x[1]],c.in[x[2]],c.vn[x[3]],x[4],x[5]]:[x.sku,x.cat,x.ind,x.ven,x.pr,x.d]),by={};IT.forEach(x=>by[x[0]]=x);
  const CP=(c.pk||[]).map(k=>{const it=(k.it||[]).map(i=>({q:i.q,n:(by[i.sku]||[,,,,,i.sku])[5],p:(by[i.sku]||[])[4]||0}));return{n:k.n,it,sum:it.reduce((s,i)=>s+i.q*i.p,0)}});
- applyRealCatalog({IT,SUBSYS:[],CATPK:CP,u:c.u});LIVE={n:IT.length,u:c.u};const d=$('.demo');if(d)d.textContent='Ζωντανός τιμοκατάλογος ('+IT.length+' είδη) · πλασματικές συναλλαγές';go(ST.page);toast('Φορτώθηκε ο τιμοκατάλογος: '+IT.length+' είδη')}catch(e){console.warn('liveCatalog',e)}}
-if(window.TagoIO&&window.parent!==window){try{TagoIO.onStart(w=>liveCatalog(w));TagoIO.onRealtime(p=>liveCatalog(p));TagoIO.ready()}catch(e){console.warn(e)}}
+ applyRealCatalog({IT,SUBSYS:[],CATPK:CP,u:c.u});LIVE={n:IT.length,u:c.u};banner();go(ST.page);toast('Φορτώθηκε ο τιμοκατάλογος: '+IT.length+' είδη')}catch(e){console.warn('liveCatalog',e)}}
+/* ══════════ ΖΩΝΤΑΝΑ: ΠΕΛΑΤΕΣ & ΕΓΚΑΤΑΣΤΑΣΕΙΣ (Φάση 1Β) ══════════
+   Από τη συσκευή «SAG Εποπτεία»: subs_chunk / subs_summary (analysis subscriptionManage, κάθε 30′) και fleet_field
+   (πίνακας στόλου του πυρήνα). Μέσα στο TagoIO οι πλασματικές συναλλαγές σβήνουν· όσα δεν έχουν ακόμη πηγή μένουν κενά.
+   Χρέωση σύνδεσης LoRaWAN ανά όργανο (Μιχάλης 8/11): σήματα = ό,τι μετρά το όργανο, ελάχιστο 3, κλίμακα 3 / 8 / 48. */
+let LIVEF=null,LASTF=null;const FL={};
+function findAll(src,name,out=[]){if(!src||typeof src!=='object')return out;if(Array.isArray(src)){for(const e of src)findAll(e,name,out);return out}if(src.variable===name&&src.metadata){out.push(src);return out}for(const v of Object.values(src))if(v&&typeof v==='object')findAll(v,name,out);return out}
+const tierPrice=t=>{const x=SUBITEMS.find(z=>z.sku==='TAGO-Actility '+t);return x?x.price:null};
+function sgCharge(sg){let sum=0,miss=0;for(const[t,n,sig,tier]of sg||[]){const pr=tier?tierPrice(tier):null;if(pr==null)miss+=n;else sum+=n*pr}return{sum,miss}}
+const sgText=sg=>(sg||[]).map(([t,n,sig,tier])=>`${n}× ${esc(t)} · ${sig==null?'άγνωστα σήματα':sig+' σήματα → κλίμακα '+(tier||'πάνω από 48')}`).join('<br>')||'—';
+function banner(){const d=$('.demo');if(!d)return;if(!LIVEF){if(LIVE)d.textContent='Ζωντανός τιμοκατάλογος ('+LIVE.n+' είδη) · πλασματικές συναλλαγές';return}
+ d.textContent='Ζωντανά: '+LIVEF.c+' πελάτες · '+LIVEF.f+' εγκαταστάσεις'+(LIVE?' · τιμοκατάλογος '+LIVE.n+' είδη':'')+' · συναλλαγές από τη Φάση 2'}
+function readFleet(src){
+ for(const r of findAll(src,'fleet_field')){let t={};try{t=JSON.parse(r.metadata.text||'{}')}catch(e){}if(!t.i)continue;const tm=String(r.time||'');if(!FL[t.i]||tm>=FL[t.i].tm)FL[t.i]={tm,sev:+r.metadata.severity||0}}
+ const sums=findAll(src,'subs_summary');if(!sums.length)return;
+ const sm=sums.sort((a,b)=>String(b.group||b.time||'').localeCompare(String(a.group||a.time||'')))[0],np=(sm.metadata||{}).parts||0;
+ const parts=findAll(src,'subs_chunk').filter(r=>String(r.group)===String(sm.group)).sort((a,b)=>(a.metadata.part||0)-(b.metadata.part||0));
+ if(!np||parts.length<np){console.warn('liveFleet: λείπουν κομμάτια',parts.length,'/',np);return}
+ LASTF={items:[].concat(...parts.map(r=>r.metadata.items||[])),pricing:(sm.metadata||{}).pricing||null}}
+function liveFleet(src){try{readFleet(src);if(!LASTF)return;
+ const cs=LASTF.items.filter(x=>x.k==='c'),fs=LASTF.items.filter(x=>x.k==='f');
+ CUST.length=0;for(const c of cs)CUST.push({id:c.i,n:c.n||'—',t:'Πελάτης',vat:'—',city:'—',st:'Ενεργός',since:'—',owner:'—',p:null,m:c.m||'',ph:c.p||''});
+ if(fs.some(f=>!CUST.some(c=>c.id===f.c)))CUST.push({id:'_nc',n:'Χωρίς δηλωμένο πελάτη',t:'—',vat:'—',city:'—',st:'Έλεγχος',since:'—',owner:'—',p:null});
+ for(let k=PROD.length-1;k>=0;k--)if(PROD[k].kind==='live')PROD.splice(k,1);
+ for(const A of [OFFERS,INV,VISITS,LEADS,ACT,PO,BILLS,SPAY,PAYOUT,UNITS,MOVES,TICK])A.length=0;
+ for(const k of Object.keys(CAT))PROD.push({k:'lvc_'+k,n:'Τρέχουσες συνδρομές · '+CAT[k].n,kind:'live',cats:[k],price:0});
+ INST.length=0;const today=ISO(new Date());
+ for(const f of fs){const id=f.i,c=CUST.some(x=>x.id===f.c)?f.c:'_nc',fv=FL[String(id).slice(-6)],h=fv?['ok','office','check','visit'][fv.sev]||'ok':'ok',ch=sgCharge(f.sg);
+  PROD.push({k:'lv_'+id,n:'Τρέχουσα συνδρομή (TagoIO)',kind:'live',cats:[CAT[f.cat]?f.cat:'field'],price:ch.sum,renew:ch.sum});
+  const note=f.s&&f.s!=='active'?'Συνδρομή σε '+(f.s==='paused'?'παύση':'διακοπή'):f.odd?'Η ημερομηνία λήξης δεν είναι σε καθαρή μορφή':f.nod?'Ο αγρός δεν έχει dashboard':'';
+  INST.push({id,c,n:f.n||'—',cat:CAT[f.cat]?f.cat:'field',step:7,h,plan:'lv_'+id,sub:'lv_'+id,qty:1,start:'',end:f.e||'',need:[],units:[],sg:f.sg||[],miss:ch.miss,u:f.u||[],tcost:f.cost||'',tlist:f.list||'',note});
+  if(h==='visit')TICK.push({id:'ΕΠ-'+String(id).slice(-4),i:id,k:'Βλάβη',src:'Εποπτεία',t:'Ο πίνακας στόλου ζητά επίσκεψη',st:'Ανοιχτό',who:'—',pr:'Υψηλή',d:today,sla:addD(2)})}
+ for(const pr of LASTF.pricing||[])if(/subscriptionPricing/i.test(pr.n))for(const[k,v]of Object.entries(pr.p||{})){const x=SUBPK.find(q=>q.key===k);if(x){x.price=v;x.renew=v}}
+ LIVEF={c:cs.length,f:fs.length};banner();go(ST.page)}catch(e){console.warn('liveFleet',e)}}
+async function liveAll(src){await liveCatalog(src);liveFleet(src)}
+if(window.TagoIO&&window.parent!==window){try{TagoIO.onStart(w=>liveAll(w));TagoIO.onRealtime(p=>liveAll(p));TagoIO.ready()}catch(e){console.warn(e)}}
 go('dash');
 </script>
 </body>
