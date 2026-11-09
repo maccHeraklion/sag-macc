@@ -66,7 +66,7 @@ async function run(src) {
   const blk = coreBlock(CORE);
   ok(blk && src.includes(blk), "U0 το τμήμα μετρητή είναι ΑΥΤΟΥΣΙΟ αντίγραφο του πυρήνα");
   let A; try { A = load(src); } catch (e) { return ["φόρτωση: " + e.message]; }
-  ok(A.RAIN_VERSION === "v34.2 · 2026-10-04", "U1 έκδοση v34.2");
+  ok(A.RAIN_VERSION === "v34.3 · 2026-11-09", "U1 έκδοση v34.3");
 
   // U2 · περίοδοι: γέφυρα και ώρα Ελλάδας
   const P = (u, t) => A.periodContaining(u, Z(t), TZ, cut);
@@ -170,6 +170,11 @@ async function run(src) {
   const d8 = A.readRecord(rec("rain_height", "2026-09-20T00:00:00.000Z", "2026-09-20T23:59:59.999Z", 0), rctx);
   const e8 = A.readRecord(rec("rain_height", "2026-09-10T00:00:00.000Z", "2026-09-10T23:59:59.999Z", 3), rctx);
   ok(d8 && d8.cov === 0 && e8 && e8.cov === 1 && e8.est, "U8δ σταθμός χωρίς μετρητή: «0» μετά τη σιωπή = άγνωστο, πριν = εκτίμηση");
+  // U8ε · Β-20 (v34.3): σταθμός χωρίς καμία πηγή βροχής — τα «0» της v33 είναι άγνωστο
+  const nctx = { accFirstMs: null, lastMs: null };
+  const f8 = A.readRecord(rec("rain_height", "2026-09-20T00:00:00.000Z", "2026-09-20T23:59:59.999Z", 0), nctx);
+  const g8 = A.readRecord(rec("rain_height_acc", "2026-09-20T00:00:00.000Z", "2026-09-20T23:59:59.999Z", 0), nctx);
+  ok(f8 && f8.cov === 0 && g8 && g8.cov === 0, "U8ε σταθμός που δεν μέτρησε ποτέ: v33 «0» = άγνωστο (" + JSON.stringify([f8 && f8.cov, g8 && g8.cov]) + ")");
   return f;
 }
 
@@ -190,7 +195,8 @@ const MUT = [
   ["m9 ξαναγράφει μερικές περιόδους", "    if (!res.known || (have && res.coverage <= have.cov + 0.01)) continue;\n    out.push(payload('rain_height_daily', p, res));", "    if (!res.known) continue;\n    out.push(payload('rain_height_daily', p, res));"],
   ["m10 φέτος χωρίς μερικό", "partial: coverage < FULL_COV, status: est ? 'estimate' : 'measured', method: 'sum_of_months'", "partial: false, status: est ? 'estimate' : 'measured', method: 'sum_of_months'"],
   ["m11 χρόνος στο τέλος", "const mid = Math.floor((p.s + p.e) / 2);", "const mid = p.e;"],
-  ["m12 σιωπηλός σταθμός v33 = μέτρηση", "  const silentCov = (ctx.lastMs != null && ctx.lastMs < e - _SAG_RAIN_ACC_FRESH_MIN * 60000)", "  const silentCov = (false)"],
+  ["m12 σιωπηλός σταθμός v33 = μέτρηση", "    : (ctx.lastMs < e - _SAG_RAIN_ACC_FRESH_MIN * 60000) ? clamp01((ctx.lastMs - s) / (e - s)) : 1;", "    : 1;"],
+  ["m14 Β-20 ποτέ πηγή = μέτρηση", "  const silentCov = (ctx.lastMs == null) ? 0", "  const silentCov = (ctx.lastMs == null) ? 1"],
   ["m13 σιωπηλός σταθμός ρυθμού v33 = μέτρηση", "    if (ctx.accFirstMs == null) return { s, e, mm: silentCov > 0 ? v : 0, cov: silentCov, est: true, alg: 'v33' };", "    if (ctx.accFirstMs == null) return { s, e, mm: v, cov: 1, est: true, alg: 'v33' };"],
 ];
 let k = 0;

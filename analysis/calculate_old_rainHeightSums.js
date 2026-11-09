@@ -33,7 +33,7 @@ const { Analysis, Resources, Account, Device } = require("@tago-io/sdk");
 const moment = require("moment-timezone");
 
 const RAIN_ALG = "v34";
-const RAIN_VERSION = "v34.2 · 2026-10-04";
+const RAIN_VERSION = "v34.3 · 2026-11-09";
 const DEFAULT_TZ = "Europe/Athens";
 const DEFAULT_CUTOVER = "2026-10-04T21:00:00.000Z";   // Δευτέρα 5/10/2026 00:00 ώρα Ελλάδας
 const HOURS_BACK = 24;          // κλειστές ώρες προς έλεγχο
@@ -204,7 +204,9 @@ function readRecord(rec, ctx) {
   }
   // v33: η «0» ενός σταθμού που σιωπούσε στο τέλος της περιόδου δεν είναι μέτρηση (Β-2) — κάλυψη ως την τελευταία τιμή
   if (!Number.isFinite(v)) return { s, e, mm: 0, cov: 0, est: false, alg: 'v33' };
-  const silentCov = (ctx.lastMs != null && ctx.lastMs < e - _SAG_RAIN_ACC_FRESH_MIN * 60000) ? clamp01((ctx.lastMs - s) / (e - s)) : 1;
+  // Β-20 (v34.3, 9/11): σταθμός χωρίς ΚΑΜΙΑ πηγή βροχής (lastMs == null) δεν έχει μετρήσει ποτέ — τα «0» της v33 είναι άγνωστο, όχι 0 mm.
+  const silentCov = (ctx.lastMs == null) ? 0
+    : (ctx.lastMs < e - _SAG_RAIN_ACC_FRESH_MIN * 60000) ? clamp01((ctx.lastMs - s) / (e - s)) : 1;
   if (m.source_variable === 'rain_height_acc') return { s, e, mm: silentCov > 0 ? v : 0, cov: silentCov, est: false, alg: 'v33' };
   if (m.source_variable === 'rain_height') {
     // σταθμός χωρίς μετρητή: εκτίμηση από ρυθμό (με τον ίδιο έλεγχο σιωπής)
