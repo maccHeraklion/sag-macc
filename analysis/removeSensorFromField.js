@@ -14,6 +14,9 @@ const { Analysis, Account, Resources } = require("@tago-io/sdk");
  *      display.variables) and refreshes the device_map param from the remaining devices.
  *   4. Removes the devices from the field device's `devices` tag (name -> id map).
  *
+ * T-MOVE-01 (10/11/2026): step 3 now strips the devices from ALL widgets of the dashboard (not only the AgroGenius one),
+ * except the valve tabs (valvesControl/valvesRules — Κώστας), which are only reported.
+ *
  * It does NOT delete the device, wipe its data, or recompute subscriptionCost. Re-adding a
  * removed sensor with addSensorsToField.js fully restores it.
  *
@@ -130,6 +133,72 @@ function removeSensorsFromWidget(widget, removedIds) {
   return changed;
 }
 
+/* ---------- T-MOVE-01 (10/11/2026): ένα όργανο σε ΕΝΑΝ αγρό ----------
+   Κύριο σημείο της ανάθεσης = η ετικέτα devices του αγρού. Όταν ένα όργανο δηλώνεται σε νέο αγρό, φεύγει από κάθε άλλον:
+   ετικέτα devices, πηγές δεδομένων και device_map ΟΛΩΝ των widget του ταμπλό του. Η κατάσταση του πυρήνα για το όργανο στον
+   παλιό αγρό σβήνει μόνη της (T-DEVSTATE-PRUNE-01). Η θέση του οργάνου είναι η θέση του αγρού του, άρα αλλάζει μαζί.
+   ΕΞΑΙΡΕΣΕΙΣ: (α) δηλωμένο κοινόχρηστο όργανο — ετικέτα shared_instrument=yes στη συσκευή (π.χ. ο σταθμός του ξενοδοχείου
+   σε όλες τις ζώνες)· (β) ελεγκτές βανών uc5xx και widget των καρτελών βανών (valvesControl/valvesRules) — ανήκουν στον Κώστα,
+   δεν αγγίζονται, μόνο αναφέρονται. */
+const SHARED_TAG = "shared_instrument";
+const VALVE_WIDGET_RE = /valvesControl|valvesRules/;
+const tagVal = (tags, key) => ((tags || []).find((t) => t && t.key === key) || {}).value;
+const devTypeOf = (dev) => String(((dev?.tags || []).find((t) => String(t?.key).toLowerCase() === "type") || {}).value || "").toLowerCase();
+const isController = (dev) => /^uc5\d\d/.test(devTypeOf(dev));
+const isSharedInstrument = (dev) => (dev?.tags || []).some((t) => t && t.key === SHARED_TAG && /^(yes|ναι|true|1)$/i.test(String(t.value || "").trim()));
+
+// Ο χάρτης name → id της ετικέτας devices· null όταν η ετικέτα υπάρχει αλλά δεν διαβάζεται (τότε ΔΕΝ ξαναγράφεται).
+function devicesMapOf(tags) {
+  const raw = tagVal(tags, "devices");
+  if (!raw) return {};
+  try { const m = JSON.parse(raw); return m && typeof m === "object" && !Array.isArray(m) ? m : null; } catch { return null; }
+}
+
+// Όλοι οι αγροί (συσκευές isField=yes), σε σελίδες.
+async function listFieldDevices() {
+  const out = [];
+  for (let page = 1; page <= 20; page++) {
+    const r = await account.devices.list({ page, amount: 200, fields: ["id", "name", "tags"], filter: { tags: [{ key: "isField", value: "yes" }] } });
+    const arr = Array.isArray(r) ? r : [];
+    out.push(...arr);
+    if (arr.length < 200) break;
+  }
+  return out;
+}
+
+// Βγάζει τα ids από ΟΛΑ τα widget ενός ταμπλό, εκτός από τα widget βανών. Επιστρέφει { touched, valve }.
+async function stripDevicesFromDashboard(dashboardId, ids) {
+  const res = { touched: 0, valve: 0 };
+  if (!dashboardId || !ids.size) return res;
+  let info;
+  try { info = await account.dashboards.info(dashboardId); } catch (e) { console.log(`T-MOVE-01: ταμπλό ${dashboardId} δεν διαβάστηκε: ${e && e.message}`); return res; }
+  for (const slot of (info?.arrangement || [])) {
+    const wid = slot?.widget_id;
+    if (!wid) continue;
+    let widget;
+    try { widget = await account.dashboards.widgets.info(dashboardId, wid); } catch { continue; }
+    const refs = JSON.stringify(widget || {});
+    if (![...ids].some((id) => refs.includes(id))) continue;
+    if (VALVE_WIDGET_RE.test(String(widget?.display?.url || ""))) { res.valve += 1; console.log(`T-MOVE-01: widget βανών ${wid} ΔΕΝ αγγίχτηκε (Κώστας)`); continue; }
+    let changed = removeSensorsFromWidget(widget, ids);
+    if (widget.display && (widget.display.parameters || []).some((p) => p?.key === "device_map")) {
+      const map = readDeviceMapParam(widget.display);
+      let pruned = false;
+      for (const rid of ids) if (rid in map) { delete map[rid]; pruned = true; }
+      if (pruned) { upsertDisplayParameter(widget.display, "device_map", JSON.stringify(map)); changed = true; }
+    }
+    if (!changed) continue;
+    try {
+      await account.dashboards.widgets.edit(dashboardId, wid, widget);
+      res.touched += 1;
+      console.log(`T-MOVE-01: widget ${wid} καθαρίστηκε`);
+    } catch (e) {
+      console.log(`T-MOVE-01: αποτυχία στο widget ${wid}: ${e && e.message}`);
+    }
+  }
+  return res;
+}
+
 /* ---------- main ---------- */
 async function myAnalysis(context, scope) {
   const tokenVar = context.environment.find((e) => e.key === "ACCOUNT_TOKEN");
@@ -202,33 +271,10 @@ async function myAnalysis(context, scope) {
   const label = foundDevices.map((d) => d.name || d.id).join(", ");
   console.log(`Detaching ${foundDevices.length} device(s): ${label}`);
 
-  // Strip from the AgroGenius custom widget(s) on the dashboard.
-  const info = await account.dashboards.info(dashboardId);
-  let widgetsTouched = 0;
-  for (const slot of (info?.arrangement || [])) {
-    const wid = slot?.widget_id;
-    if (!wid) continue;
-    let widget;
-    try { widget = await account.dashboards.widgets.info(dashboardId, wid); } catch { continue; }
-    if (!widgetReadsFieldBundle(widget)) continue; // only the AgroGenius custom widget
-    let changed = removeSensorsFromWidget(widget, removedIds);
-    if (widget.display) {
-      // Prune the removed ids from THIS widget's existing device_map (id → name), keeping the
-      // display names of the devices that remain.
-      const map = readDeviceMapParam(widget.display);
-      for (const rid of removedIds) delete map[rid];
-      upsertDisplayParameter(widget.display, "device_map", JSON.stringify(map));
-      changed = true;
-    }
-    if (!changed) continue;
-    try {
-      await account.dashboards.widgets.edit(dashboardId, wid, widget);
-      widgetsTouched += 1;
-      console.log(`Updated widget ${wid} (removed origins, device_map refreshed).`);
-    } catch (e) {
-      console.log(`Failed to edit widget ${wid}: ${e && e.message}`);
-    }
-  }
+  // T-MOVE-01: από ΟΛΑ τα widget του ταμπλό (όχι μόνο το AgroGenius), εκτός των καρτελών βανών.
+  const _st = await stripDevicesFromDashboard(dashboardId, removedIds);
+  const widgetsTouched = _st.touched;
+  const _valveNote = _st.valve ? ` ${_st.valve} widget βανών δεν αγγίχτηκαν (Κώστας).` : "";
 
   console.log(`Done. Detached ${foundDevices.length} device(s) from ${fieldInfo.name}; updated ${widgetsTouched} widget(s). Devices and their data were NOT deleted.`);
 
@@ -236,12 +282,12 @@ async function myAnalysis(context, scope) {
   if (widgetsTouched === 0) {
     await sendValidation(
       "warning",
-      `Οι συσκευές αφαιρέθηκαν από τον αγρό «${fieldInfo.name}», αλλά δεν βρέθηκε widget AgroGenius για ενημέρωση.`
+      `Οι συσκευές αφαιρέθηκαν από τον αγρό «${fieldInfo.name}», αλλά δεν βρέθηκε widget με αυτές για ενημέρωση.` + _valveNote
     );
   } else {
     await sendValidation(
       "success",
-      `Αφαιρέθηκαν ${foundDevices.length} συσκευές (${label}) από τον αγρό «${fieldInfo.name}». Οι συσκευές και τα δεδομένα τους δεν διαγράφηκαν.`
+      `Αφαιρέθηκαν ${foundDevices.length} συσκευές (${label}) από τον αγρό «${fieldInfo.name}». Οι συσκευές και τα δεδομένα τους δεν διαγράφηκαν.` + _valveNote
     );
   }
 }
