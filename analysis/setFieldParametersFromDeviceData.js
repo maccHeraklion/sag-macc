@@ -40,6 +40,9 @@
  **    καλλιέργεια, ο πυρήνας (FIR/PEI, γρ. 4635, 9729) τα διαβάζει ΜΟΝΟ
  **    από τη ρίζα. Μισές/μελλοντικές δηλώσεις αποκλείονται με προειδοποίηση.
  **
+ ** v19 · 9/11/2026 — T-COORD-SYNC-01: η θέση της φόρμας (latitude/longitude) ξαναγράφει την ετικέτα «coordinates» του αγρού
+ **   (μία τιμή «πλάτος, μήκος» σε δεκαδικές μοίρες· διπλές/παλιές τιμές φεύγουν). Πριν τη γράφε ΜΟΝΟ το createField στη δημιουργία,
+ **   άρα κάθε αλλαγή θέσης από την παραμετροποίηση άφηνε παλιά ετικέτα σε όποιον τη διαβάζει (πρόγνωση, έλεγχος «λάθος αγρός»).
  ** v18 · 3/11/2026 — T-ZONES-01: ζώνες άρδευσης σε δικό τους tag «irrigation_zones» (φόρμα v29· πυρήνας v50.170).
  ** v17 · 3/11/2026 — T-DEPTH1-02: +soil_depth_port (φόρμα v27: «ποια θύρα είναι στο έδαφος»· πυρήνας v50.168).
  ** v16 · 3/11/2026 — T-DEPTH1-01: +soil_depth_count (φόρμα v26: «ένα βάθος αισθητήρα»· πυρήνας v50.167).
@@ -835,6 +838,20 @@ async function runSync(context, scope, shared) {
     && (zonesTag === undefined || item.key !== "irrigation_zones"));
   newTags.push({ key: "configuration", value: serialized });
   if (typeof zonesTag === "string") newTags.push({ key: "irrigation_zones", value: zonesTag });
+  /* v19 · T-COORD-SYNC-01: η φόρμα είναι το ΚΥΡΙΟ σημείο της θέσης του αγρού. Μόνο έγκυρη θέση μέσα στην Ελλάδα·
+     αλλιώς η ετικέτα μένει όπως είναι (καμία διαγραφή θέσης από κενό πεδίο). */
+  {
+    const _lat = Number(tag.latitude), _lon = Number(tag.longitude);
+    if (Number.isFinite(_lat) && Number.isFinite(_lon) && _lat >= 33.5 && _lat <= 42.5 && _lon >= 19 && _lon <= 30.5) {
+      const _val = _lat.toFixed(6) + ", " + _lon.toFixed(6);
+      const _old = newTags.filter((t) => t.key === "coordinates").map((t) => String(t.value || ""));
+      if (!(_old.length === 1 && _old[0] === _val)) {
+        for (let _i = newTags.length - 1; _i >= 0; _i--) if (newTags[_i].key === "coordinates") newTags.splice(_i, 1);
+        newTags.push({ key: "coordinates", value: _val });
+        context.log("T-COORD-SYNC-01: coordinates [" + device_id + "]: " + (_old.join(" | ") || "—") + " → " + _val);
+      }
+    }
+  }
   await account.devices.edit(device_id, { tags: newTags });
 
   return { warnings: [...new Set(warnings)], notes: [...new Set(notes)], tagLength: serialized.length };

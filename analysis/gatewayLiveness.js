@@ -143,9 +143,10 @@ function buildFieldOf(fields) {
     const tags = Array.isArray(f && f.tags) ? f.tags : [];
     const tag = (k) => { const t = tags.find((x) => x && x.key === k); return t ? String(t.value || "").trim() : ""; };
     const fieldName = tag("name") || f.name || String(f.id);
+    // T-COORD-SYNC-02: ίδια σειρά με τον χάρτη — φόρμα (configuration) πρώτα, μετά η ετικέτα coordinates.
     let coords = null;
-    const cm = tag("coordinates").match(/^\s*(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)\s*$/);
-    if (cm) coords = { lat: Number(cm[1]), lon: Number(cm[2]) };
+    const _mp = mapFieldPosition(tags);
+    if (_mp && _mp.y != null && _mp.x != null) coords = { lat: _mp.y, lon: _mp.x };
     let ids = [];
     const raw = tag("devices");
     try {
@@ -569,6 +570,7 @@ async function tpProbe() {
 // συνδεδεμένη → φεύγει το `off`. Μία εγγραφή `tp_network` στην εποπτεία με τη σύνοψη. Αποτυχία ThingPark = παλιά συμπεριφορά.
 // Κόστος: ~5 κλήσεις στο ThingPark (όχι στο TagoIO), +1 εγγραφή/ώρα. Τιμές συσκευών ΩΜΕΣ (κλίμακα PER/μπαταρίας ΥΠΟ ΕΛΕΓΧΟ).
 const TP_SILENT_H = 24;
+const TP_POS_DIFF_M = 500;   // T-COORD-SYNC-02: απόσταση δηλωμένης θέσης από τη θέση του ThingPark πάνω από την οποία βγαίνει σήμα
 async function tpReadNetwork(env) {
   const { token } = await tpToken(env);
   const bs = new Map();
@@ -577,7 +579,8 @@ async function tpReadNetwork(env) {
     for (const b of (j && j.briefs) || []) {
       const up = b.upFrame && b.upFrame.last && b.upFrame.last.date;
       bs.set(String(b.lrrID || "").toUpperCase(), { l: String(b.lrrID || "").toUpperCase(), n: String(b.name || "").slice(0, 40),
-        c: b.cnxState || null, h: b.healthState || null, s: Number(b.cnxStateSince) || null, u: Number(up) || null, a: 0 });
+        c: b.cnxState || null, h: b.healthState || null, s: Number(b.cnxStateSince) || null, u: Number(up) || null, a: 0,
+        la: Number.isFinite(Number(b.lat)) && Number(b.lat) !== 0 ? Number(b.lat) : null, lo: Number.isFinite(Number(b.lon)) && Number(b.lon) !== 0 ? Number(b.lon) : null });
     }
     if (!j || !j.more) break;
   }
@@ -607,6 +610,11 @@ function tpApplyRoster(roster, bs) {
     if (!b) continue;
     n++;
     r.tp = { c: b.c, h: b.h, s: b.s, u: b.u, a: b.a };
+    // T-COORD-SYNC-02: η δηλωμένη θέση είναι η κύρια· η θέση του ThingPark είναι έλεγχος. Διαφορά > 500 m → σήμα «διορθώστε στο ThingPark».
+    if (r.lat != null && r.lng != null && b.la != null && b.lo != null) {
+      const _d = Math.round(haversineKm(r.lat, r.lng, b.la, b.lo) * 1000);
+      if (_d > TP_POS_DIFF_M) r.tp.dm = _d;
+    }
     if (b.c === "DISC") { const d = b.u || b.s; if (d) r.off = new Date(d).toISOString().slice(0, 10); }
     else if (b.c === "CNX") delete r.off;
   }
@@ -759,9 +767,16 @@ function tpNetworkRecord(bs, devs, roster, now) {
 
   // 3β · T-GWID-02: θέση από τη μνήμη όταν αυτή η εκτέλεση δεν τη βρήκε· η μνήμη ενημερώνεται με κάθε νέα θέση.
   const pos = st.pos || {};
+  // T-COORD-SYNC-02: πύλη με δηλωμένη θέση (ετικέτα coordinates, μία τιμή) → αυτή μπαίνει στην κάρτα και στη μνήμη, όποια κι αν
+  // ήταν η παλιά. Έτσι η μεταφορά μιας πύλης ενημερώνεται παντού με μία αλλαγή της ετικέτας. Διπλή ετικέτα (conflict) δεν κρίνει.
+  for (const r of roster || []) {
+    if (!r || !r.lrr || r.lat == null || r.lng == null || r.conflict) continue;
+    const k = String(r.lrr).toUpperCase();
+    pos[k] = { lat: r.lat, lon: r.lng, decl: 1 };
+  }
   for (const [id, g] of gw.entries()) {
-    if (g.lat != null && g.lon != null) pos[id] = { lat: Number(g.lat), lon: Number(g.lon) };
-    else if (pos[id]) { g.lat = pos[id].lat; g.lon = pos[id].lon; g.posMem = true; }
+    if (g.lat != null && g.lon != null && !(pos[id] && pos[id].decl)) pos[id] = { lat: Number(g.lat), lon: Number(g.lon) };
+    else if (pos[id]) { g.lat = pos[id].lat; g.lon = pos[id].lon; g.posMem = !pos[id].decl; g.posDecl = !!pos[id].decl; }
   }
 
   // 4 · Οι κάρτες. ΜΙΑ ανά gateway.

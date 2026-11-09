@@ -419,7 +419,8 @@ function buildGateways(raw) {
     n.linkedRoster = true; r.merged = true;
     n.storage = r.storage; n.conflict = r.conflict; n.dev = r.dev; n.off = r.off; n.lrr = r.lrr;
     n.tp = r.tp;   // T-TPREAD-02
-    if (!n.p && r.p) { n.p = r.p; n.posKind = 'ok'; n.posWhy = ''; n.sharedP = null; }
+    if (r.p && !r.conflict) { n.p = r.p; n.posKind = 'ok'; n.posWhy = 'δηλωμένη θέση'; n.sharedP = null; }   // T-COORD-SYNC-02: η δηλωμένη θέση κερδίζει
+    else if (!n.p && r.p) { n.p = r.p; n.posKind = 'ok'; n.posWhy = ''; n.sharedP = null; }
     if (!n.nameSure) { n.name = r.name; n.nameGuess = ''; }
   });
   var pairs = [];
@@ -992,6 +993,7 @@ function panelGw(g) {
     h += '<div class="meta">ThingPark: ' + tpWord + (g.tp.s ? ' από ' + esc(new Date(g.tp.s).toLocaleString('el-GR', { hour12: false, timeZone: 'Europe/Athens' })) : '')
       + ' · τελευταίο πακέτο ' + esc(tpUpH == null ? 'ποτέ' : ageWords(tpUpH)) + (g.tp.a ? ' · ' + g.tp.a + ' ενεργοί συναγερμοί' : '') + '</div>';
     if (g.tp.c === 'CNX' && (tpUpH == null || tpUpH > 24)) h += '<div class="note">Η πύλη είναι συνδεδεμένη στο δίκτυο, αλλά δεν έχει περάσει κανένα πακέτο από αυτήν (' + esc(tpUpH == null ? 'ποτέ' : ageWords(tpUpH)) + '): δεν ακούει κανένα όργανο.</div>';
+    if (g.tp.dm) h += '<div class="note">Η θέση στο ThingPark απέχει ' + (g.tp.dm >= 1000 ? (g.tp.dm / 1000).toFixed(1).replace('.', ',') + ' km' : g.tp.dm + ' m') + ' από τη δηλωμένη. Ο χάρτης δείχνει τη δηλωμένη· διορθώστε τη θέση στο ThingPark (ή την ετικέτα, αν λάθος είναι αυτή).</div>';
     if (g.tp.c === 'DISC') h += '<div class="note">Η πύλη έχασε τη σύνδεσή της με το δίκτυο (internet ή ρεύμα), όχι απαραίτητα η κεραία. Τα όργανα που ακούγονται μόνο από αυτήν δεν φτάνουν.</div>';
   }
   h += '<div class="meta">Θέση: ' + (g.p ? '<span class="mono">' + g.p.lat.toFixed(5) + ', ' + g.p.lng.toFixed(5) + '</span>' : 'άγνωστη')

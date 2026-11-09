@@ -62,13 +62,13 @@ async function scenarios(src) {
 const base = await scenarios(SRC);
 console.log(base.length ? "✗ " + base.join("\n✗ ") : "ΒΑΣΗ ✓");
 const MUT = [
-  ["χωρίς χρήση μνήμης", "else if (pos[id]) { g.lat = pos[id].lat; g.lon = pos[id].lon; g.posMem = true; }", ""],
+  ["χωρίς χρήση μνήμης", "else if (pos[id]) { g.lat = pos[id].lat; g.lon = pos[id].lon; g.posMem = !pos[id].decl; g.posDecl = !!pos[id].decl; }", ""],
   ["η μνήμη δεν αποθηκεύεται", "cursor, pos,", "cursor,"],
   ["χωρίς σπορά", "if (!Object.keys(pos).length) {", "if (false) {"],
   ["χωρίς θέση από lrrid", "else { const lp = locOf(idRow); if (lp) { g.lat = lp.lat; g.lon = lp.lng; } }", ""],
   ["GeoJSON χωρίς αναστροφή", "if (inGR(c[1], c[0])) return { lat: c[1], lng: c[0] };", ""],
   ["χωρίς έλεγχο Ελλάδας", "return inGR(la, lo) ? { lat: la, lng: lo } : null;", "return { lat: la, lng: lo };"],
-  ["η μνήμη δεν ενημερώνεται", "if (g.lat != null && g.lon != null) pos[id] = { lat: Number(g.lat), lon: Number(g.lon) };\n    else if", "if (false) {}\n    else if"],
+  ["η μνήμη δεν ενημερώνεται", "if (g.lat != null && g.lon != null && !(pos[id] && pos[id].decl)) pos[id] = { lat: Number(g.lat), lon: Number(g.lon) };\n    else if", "if (false) {}\n    else if"],
 ];
 let k = 0;
 for (const [n, a, b] of MUT) {
