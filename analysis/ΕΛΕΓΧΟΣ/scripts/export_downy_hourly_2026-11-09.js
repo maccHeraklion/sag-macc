@@ -1,7 +1,8 @@
-// SAG — PROBE ΑΝΑΓΝΩΣΗΣ (ΜΟΝΟ ΑΝΑΓΝΩΣΗ) · 9/11/2026 · Ωριαία εξαγωγή 7 ημερών για επανάληψη περονοσπόρου (πρόθεμα DH9).
+// SAG — PROBE ΑΝΑΓΝΩΣΗΣ (ΜΟΝΟ ΑΝΑΓΝΩΣΗ) · 9/11/2026 · Ωριαία εξαγωγή για επανάληψη ασθενειών (πρόθεμα DH9). scope {days, only, all, from, n}.
 // Για κάθε αγρό με καλλιέργεια-ξενιστή περονοσπόρου και ζωντανό όργανο αέρα: ανά ώρα Ελλάδας
 //   [ώρα, T s2120, RH s2120, T em3xx, RH em3xx, RH μέγ. ώρας, φύλλο μέγ. ώρας, φύλλο τελευταίο, θερμ. φύλλου, βροχή μέγ.].
 // Μία γραμμή ανά αγρό-ημέρα. Χωρίς ταυτότητες οργάνων. Δεν γράφει τίποτα.
+const zlib = require("zlib");
 const TOKEN = process.env.T_ANALYSIS_TOKEN; const API = "https://api.us-e1.tago.io"; const P = "DH9|";
 async function get(path) { const r = await fetch(API + path, { headers: { Authorization: TOKEN } }); const j = await r.json().catch(() => ({})); if (!j.status) throw new Error(JSON.stringify(j.message || j).slice(0, 120)); return j.result; }
 const tag = (d, k) => ((d.tags || []).find((t) => String(t.key).toLowerCase() === k.toLowerCase()) || {}).value;
@@ -13,10 +14,14 @@ const loc = (iso) => { const d = new Date(Date.parse(iso) + 2 * 3600e3); return 
   console.log(P + "=== " + new Date().toISOString() + " days=" + DAYS);
   const fields = await get("/device?filter[tags][0][key]=isField&filter[tags][0][value]=yes&amount=200&fields=id,name,tags");
   const st = new Date(Date.now() - DAYS * 864e5).toISOString();
-  for (const f of fields) {
+  // S.from / S.n: παρτίδα αγρών (η κονσόλα κρατά ~64 KB ανά ανάγνωση). Η σειρά είναι σταθερή (κατά id).
+  fields.sort((a, b) => (a.id < b.id ? -1 : 1));
+  const _from = Number(S.from) || 0, _n = Number(S.n) || 999;
+  console.log(P + "N|" + fields.length);
+  for (const f of fields.slice(_from, _from + _n)) {
     let c = {}; try { c = JSON.parse(tag(f, "configuration") || "{}"); } catch (_e) {}
     const crops = (Array.isArray(c.crops) && c.crops.length ? c.crops : [c]).map((x) => x.cultivation_type || "");
-    if (!crops.some((x) => HOSTS.test(x))) continue;
+    if (!S.all && !crops.some((x) => HOSTS.test(x))) continue;   // S.all: όλοι οι αγροί (αναδρομικές ειδοποιήσεις όλων των ασθενειών)
     if (S.only && !String(S.only).split("|").some((x) => String(tag(f, "name") || f.name).includes(x))) continue;
     let dv = {}; try { dv = JSON.parse(tag(f, "devices") || "{}") || {}; } catch (_e) {}
     const H = {}; const cell = (iso) => { const [d, h] = loc(iso); const k = d + "|" + h; return H[k] || (H[k] = { d, h }); };
@@ -33,7 +38,11 @@ const loc = (iso) => { const d = new Date(Date.parse(iso) + 2 * 3600e3); return 
     }
     if (!have) continue;
     const name = String(tag(f, "name") || f.name).slice(0, 30);
-    console.log(P + "F|" + name + "|cov=" + c.covered_cultivation + "|crops=" + crops.join(","));
+    const pairs = (Array.isArray(c.crops) && c.crops.length ? c.crops : [c]).map((x) => (x.cultivation_type_general || "") + ":" + (x.cultivation_type || ""));
+    let ceil = "";   // η οροφή υγρασιομέτρου που βρήκε ο ζωντανός πυρήνας (T-RH-CEILING-01) — για πιστή επανάληψη
+    try { const b = (await get(`/device/${f.id}/data?variables=field_bundle&qty=1`))[0]; const o = JSON.parse(zlib.inflateRawSync(Buffer.from(String(b.metadata.data), "base64")).toString("utf8"));
+      for (const box of [o.shared || {}, ...(o.crops || []).map((x) => x.indicators || {})]) { const v = box.rh_instrument_ceiling; if (v !== undefined) ceil = String(v && typeof v === "object" ? v.value : v); } } catch (_e) {}
+    console.log(P + "F|" + name + "|cov=" + c.covered_cultivation + "|crops=" + pairs.join(",") + "|ceil=" + ceil + "|id=" + f.id);
     const byDay = {};
     for (const e of Object.values(H)) (byDay[e.d] = byDay[e.d] || []).push(e);
     const n = (x) => (x === undefined ? "" : +Number(x).toFixed(1));

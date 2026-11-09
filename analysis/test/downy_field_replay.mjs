@@ -22,14 +22,19 @@ export function replayField(src, fx, o) {
   const [gen, typ] = o.crop.split(":");
   const CROP = { cultivation_type_general: gen, cultivation_type: typ, stage: "fruiting", name: "R", soil_type: "loam", area: 1000, irrigation_system: "dripIrrigation", covered_cultivation: !!o.covered };
   const KEY = o.key;
-  const all = fx.rows.map((r) => Object.assign({ t: Date.parse(r.d + "T" + String(r.h).padStart(2, "0") + ":30:00Z") - 2 * 36e5 }, r))
-    .filter((r) => Number.isFinite(r.T) && Number.isFinite(r.RH)).sort((a, b) => a.t - b.t);
+  // Ώρες χωρίς σταθμό ΔΕΝ πετιούνται: ο πυρήνας διαβάζει την τελευταία τιμή με την ηλικία της και ΠΑΓΩΝΕΙ τον μετρητή
+  // όταν περάσει το όριο ηλικίας (T-IHFREEZE-01). Το ίδιο εδώ — αλλιώς η επανάληψη μετρά ώρες που κανείς δεν μέτρησε.
+  const all = []; let lastAir = null;
+  for (const r0 of fx.rows.map((r) => Object.assign({ t: Date.parse(r.d + "T" + String(r.h).padStart(2, "0") + ":30:00Z") - 2 * 36e5 }, r)).sort((a, b) => a.t - b.t)) {
+    if (Number.isFinite(r0.T) && Number.isFinite(r0.RH)) { lastAir = { T: r0.T, RH: r0.RH, t: r0.t }; all.push(Object.assign(r0, { airAge: 5 })); }
+    else if (lastAir && r0.t - lastAir.t <= 24 * 36e5) all.push(Object.assign(r0, { T: lastAir.T, RH: lastAir.RH, airAge: Math.round((r0.t - lastAir.t) / 6e4) + 30 }));
+  }
   const inv = [];
   if (o.ceil) inv.push({ t: "em320_th", rhc: { clip: true, top: o.ceil } });
   if (o.stuck) inv.push({ t: "lms01_ls", lst: { stuck: true, max: 4, n: 10 } });
   let state = Object.assign({}, o.initState || {}); let prevT = null; const nights = {};
   for (const r of all) {
-    const win = all.filter((x) => x.t > r.t - 24 * 36e5 && x.t <= r.t);
+    const win = all.filter((x) => x.t > r.t - 24 * 36e5 && x.t <= r.t && x.airAge <= 90);
     const data = Object.assign({}, state);
     data.air_temperature = [{ value: r.T }]; data.air_humidity = [{ value: r.RH }]; data.temperature = [{ value: r.T }]; data.humidity = [{ value: r.RH }];
     data.dew_point = [{ value: dp(r.T, r.RH) }]; data.air_temperature_avg = [{ value: win.reduce((a, x) => a + x.T, 0) / win.length }]; data.ipsi_avg = [{ value: 2 }];
@@ -38,9 +43,9 @@ export function replayField(src, fx, o) {
     if (Number.isFinite(r.LT)) data.leaf_temperature = [{ value: r.LT }];
     if (!o.norain && Number.isFinite(r.R)) data.rain_height_hourly = [{ value: r.R / 6 }];
     data._sagDevInv = inv;
-    data._sagAges = { temperature: 5, humidity: 5, air_temperature: 5, air_humidity: 5, dew_point: 5, leaf_temperature: Number.isFinite(r.LT) ? 5 : 999, leaf_moisture: hasL ? 5 : 999 };
+    data._sagAges = { temperature: r.airAge, humidity: r.airAge, air_temperature: r.airAge, air_humidity: r.airAge, dew_point: r.airAge, leaf_temperature: Number.isFinite(r.LT) ? 5 : 999, leaf_moisture: hasL ? 5 : 999 };
     const meas = { timezone: "Europe/Athens", now: new Date(r.t), _prevBundleTime: new Date(prevT === null ? r.t - 36e5 : prevT).toISOString(), data };
-    K.setTick(Math.round((prevT === null ? 36e5 : Math.min(3 * 36e5, r.t - prevT)) / 6e4)); K.setCovered(!!o.covered);
+    K.setTick(Math.round((prevT === null ? 36e5 : r.t - prevT) / 6e4)); K.setCovered(!!o.covered);
     const ih = K.calculate_InfectionHours(true, meas, CROP) || [];
     for (const x of ih) meas.data[x.variable] = [{ value: x.value }];
     const fir = K.calculate_FIR(true, r.h === 2, meas, [{ variable: "ipsi", value: 2 }], CROP) || [];
@@ -55,12 +60,13 @@ export function replayField(src, fx, o) {
     const c = Number((g(ih, "infection_hours_counter_" + KEY) || {}).value) || 0; n.c = Math.max(n.c, c);
     const f = Number((g(fir, "fir_" + KEY) || {}).value); if (Number.isFinite(f)) n.f = Math.max(n.f, f);
     const s = g(ih, "leaf_wetness_source"); const h = loc.getUTCHours();
+    if (r.airAge > 90 && (h >= 18 || h < 9)) n.blind = (n.blind || 0) + 1;
     if (s && (h >= 18 || h < 9)) { n.src[s.value] = (n.src[s.value] || 0) + 1; if (/Αισθητήρας φύλλου$|Βροχή|Δρόσος|Σχετική/.test(s.value)) n.wet++; }
     const m = g(msgs, "fir_message_" + KEY) || g(fir, "fir_message_" + KEY); if (m) n.lv[m.value] = (n.lv[m.value] || 0) + 1;
     const cs = state["case_" + KEY]; if (cs) { try { n.cs = JSON.parse(cs[0].value).s; } catch (_e) {} }
     prevT = r.t;
   }
-  return { version: K.SAG_KERNEL_VERSION, nights };
+  return { version: K.SAG_KERNEL_VERSION, nights, state };
 }
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   const a = process.argv.slice(2); const arg = (k, d) => { const i = a.indexOf(k); return i >= 0 ? a[i + 1] : d; };
@@ -69,5 +75,5 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   const o = { crop: arg("--crop", "vegetableCrops:tomato"), key: arg("--key", "phytophthora_infestans"), covered: a.includes("--covered"), ceil: Number(arg("--ceil", "")) || null, stuck: a.includes("--stuck"), norain: a.includes("--norain") };
   const r = replayField(src, fx, o);
   console.log(r.version, JSON.stringify(o));
-  for (const [d, x] of Object.entries(r.nights)) console.log(d, "υγρές(νύχτα)", x.wet, "μετρητής", x.c, "FIR", x.f.toFixed(2), JSON.stringify(x.lv), "υπόθεση", x.cs || "-", JSON.stringify(x.src));
+  for (const [d, x] of Object.entries(r.nights)) console.log(d, "υγρές(νύχτα)", x.wet, "μετρητής", x.c, "FIR", x.f.toFixed(2), JSON.stringify(x.lv), "υπόθεση", x.cs || "-", "τυφλές", x.blind || 0, JSON.stringify(x.src));
 }

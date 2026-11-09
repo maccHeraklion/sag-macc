@@ -60,7 +60,7 @@ function run(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let K; try { K = loadCore(src); } catch (e) { return ["φόρτωση πυρήνα: " + e.message]; }
   try {
-    ok(K.SAG_KERNEL_VERSION === "v50.190 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.191 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     const p = (k) => Object.values(K.PATHOGEN_PROFILE).map((c) => c && c[k]).find(Boolean);
     ok(p("asymmetrasca_decedens") && p("asymmetrasca_decedens").pestBaseTemp === 8.7 && p("empoasca_decipiens") && p("colletotrichum_orbiculare") && p("colletotrichum_coccodes"), "Ε2 τα 4 νέα προφίλ υπάρχουν");
     // keymap: ίδια 4 κλειδιά, ίδια σειρά, στο τέλος, και στο widget
