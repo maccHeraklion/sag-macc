@@ -51,7 +51,7 @@ function run(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let K; try { K = loadCore(src); } catch (e) { return ["φόρτωση πυρήνα: " + e.message]; }
   try {
-    ok(K.SAG_KERNEL_VERSION === "v50.191 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.192 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     const XC = "phytophthora_xcambivora", CP = "cryphonectria_parasitica", PC = "phytophthora_citrophthora";
     const prof = (k) => Object.values(K.PATHOGEN_PROFILE).map((c) => c && c[k]).find(Boolean);
     ok(prof(XC).type === "Soilborne_Disease_Model" && prof(PC).type === "Soilborne_Disease_Model" && prof(CP).type === "Wound_Canker_Model", "Π1 τύποι μοντέλων");

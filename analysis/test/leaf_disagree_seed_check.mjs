@@ -1,4 +1,4 @@
-// Ελεγκτής v50.191 (9/11/2026) — T-LEAF-DISAGREE-01 + T-CASE-SEED-01.
+// Ελεγκτής v50.191/v50.192 (9/11/2026) — T-LEAF-DISAGREE-01 + T-CASE-SEED-01 + T-CASE-SEED-02.
 // (Α) Σκιασμένος αισθητήρας φύλλου στεγνός ενώ ο αέρας είναι στον κορεσμό: την 1η νύχτα ακυρώνει (κανόνας 24/9), τη 2η
 //     μετρά μόλις συμπληρωθούν 3 ώρες διαφωνίας· ο δακτύλιος συνεχίζει να γράφει νύχτες διαφωνίας και μετά την ενεργοποίηση (χωρίς
 //     ταλάντωση)· όταν ξανασυμφωνήσει για 10 νύχτες, ο κανόνας της 24/9 επανέρχεται· αισθητήρας που δείχνει νερό ή ξερός
@@ -15,7 +15,7 @@ const SRC = rawC.replace(/\r\n/g, "\n");
 const req = createRequire(corePath);
 function loadX(src) {
   const shimReq = (m) => (m === "@tago-io/sdk" ? req("./test/sdk-mock.js") : req(m));
-  const tail = "\nreturn { _sagLeafDisRing, _sagLeafDisState, _sagLeafDisFromPrev, _sagParseCaseSeed, _sagApplyCaseSeed, _sagDetectFaults, SAG_KERNEL_VERSION };";
+  const tail = "\nreturn { _sagLeafDisRing, _sagLeafDisState, _sagLeafDisFromPrev, _sagParseCaseSeed, _sagApplyCaseSeed, _sagDetectFaults, _SAG_CASE_SEEDS, _sagKernelCaseSeed, _SAG_CASE_SEED_STAMP, SAG_KERNEL_VERSION };";
   const f = new Function("require", "module", "exports", "process", "console", "__dirname", "__filename", src + tail);
   return f(shimReq, { exports: {} }, {}, { env: { RPERTICH_TEST_MODE: "true" }, exit() {}, on() {} }, { log() {}, warn() {}, error() {} }, path.dirname(corePath), corePath);
 }
@@ -41,7 +41,7 @@ const ringOf = (r) => { const v = r.state && r.state.leaf_disagree_ring; try { r
 function run(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let K; try { K = loadX(src); } catch (e) { return ["φόρτωση: " + e.message]; }
-  ok(K.SAG_KERNEL_VERSION === "v50.191 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+  ok(K.SAG_KERNEL_VERSION === "v50.192 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
   // ── Α1 κύριο σενάριο: 6 υγρές νύχτες, αισθητήρας στεγνός ──
   let A1; try { A1 = replayField(src, rows([1, 1, 1, 1, 1, 1]), O); } catch (e) { return f.concat(["Α1 εκτέλεση: " + e.message]); }
   const c1 = nightsOf(A1);
@@ -91,6 +91,17 @@ function run(src) {
   x = ap({ s: "spray", c: now - 1440, o: 1, p: 3 }); ok(x.d.length === 0 && x.rec.s === "spray", "Β5 ψεκασμός μετά την αρχή → αμετάβλητο");
   x = ap({ s: "insp", c: now - 8 * 1440 }); ok(x.d.length === 1 && x.rec.s === "open", "Β6 επιθεώρηση πριν την αρχή → ανοίγει");
   x = ap(null, [{ variable: "fir_message_botrytis_cinerea", value: "x" }]); ok(x.d.length === 0 && x.rec === null, "Β7 όχι σε καλλιέργεια χωρίς το παθογόνο");
+  // ── Β8 σπόροι μέσα στον πυρήνα (T-CASE-SEED-02) ──
+  const KS = K._SAG_CASE_SEEDS || {}; const nowSeed = 29903760;   // 9/11/2026 11:36 UTC
+  ok(Object.keys(KS).length >= 1 && Object.keys(KS).every((h) => /^[0-9a-f]{16}$/.test(h)), "Β8 κλειδιά = αποτυπώματα 16 χαρακτήρων");
+  ok(Object.values(KS).every((c) => Object.keys(K._sagParseCaseSeed({ cases: c }, nowSeed)).length === Object.keys(c).length), "Β8 κάθε σπόρος του πυρήνα είναι έγκυρος στις 9/11");
+  ok(Object.values(KS).every((c) => Object.keys(K._sagParseCaseSeed({ cases: c }, nowSeed + 15 * 1440)).length === 0), "Β8 μετά από 15 ημέρες κανένας σπόρος δεν ανοίγει");
+  ok(K._sagKernelCaseSeed("000000000000000000000000") === null && K._sagKernelCaseSeed(undefined) === null, "Β8 άγνωστος αγρός → τίποτα");
+  ok(!/'[0-9a-f]{24}'/.test(src), "Β8 καμία ταυτότητα 24 χαρακτήρων μέσα στον πυρήνα (δημόσιο αποθετήριο)");
+  ok(K._SAG_CASE_SEED_STAMP === "cs-20261109", "Β8 σφραγίδα");
+  ok(src.includes("const _ksd = _sagKernelCaseSeed(fields[i].id);"), "Γ6 οι σπόροι του πυρήνα διαβάζονται ανά αγρό");
+  ok(src.includes("String(_unpackDecl(_prevSharedDecl.case_seed_applied) || '') !== _SAG_CASE_SEED_STAMP"), "Γ7 εφάπαξ (σφραγίδα)");
+  ok(src.includes("_declIndicators.push({ variable: 'case_seed_applied', value: _SAG_CASE_SEED_STAMP"), "Γ8 η σφραγίδα αποθηκεύεται");
   // ── καλωδίωση ──
   ok(src.includes("data._sagLeafDis = _sagLeafDisFromPrev(_ringPrevBundle);"), "Γ1 η κατάσταση φτάνει στην κάρτα βλαβών");
   ok(/'declaration_undo', 'case_seed'\]/.test(src), "Γ2 ο σπόρος διαβάζεται μαζί με τις δηλώσεις");
@@ -121,6 +132,9 @@ const M = [
   ["σπόρος δεν ανοίγει αυτόματα κλεισμένη", "if (!pv || pv.s === 'auto') rec", "if (!pv) rec"],
   ["σπόρος σε ξένη καλλιέργεια", "if (!(indicators || []).some((x) => x && x.variable === 'fir_message_' + k)) continue;", ""],
   ["σπόρος δεν διαβάζεται", "'declaration_undo', 'case_seed'], // T-JOURNAL-01", "'declaration_undo'], // T-JOURNAL-01"],
+  ["σπόροι πυρήνα χωρίς σφραγίδα", "if (_ksd && String(_unpackDecl(_prevSharedDecl.case_seed_applied) || '') !== _SAG_CASE_SEED_STAMP) {", "if (_ksd) {"],
+  ["σφραγίδα δεν αποθηκεύεται", "_declIndicators.push({ variable: 'case_seed_applied', value: _SAG_CASE_SEED_STAMP, metadata: { internal: true } });", ""],
+  ["σπόροι πυρήνα δεν διαβάζονται", "const _ksd = _sagKernelCaseSeed(fields[i].id);", "const _ksd = null;"],
   ["σπόρος δεν εφαρμόζεται", "for (const _sk of _sagApplyCaseSeed(_seedCase, measurementsForCrop, indicatorsForCrop)) {", "for (const _sk of []) {"],
 ];
 let dead = 0;

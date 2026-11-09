@@ -35,7 +35,7 @@ async function check(core, page) {
   const n = core.indexOf("const _ncPurpose = _sagFieldPurpose(fields[i]);"), c = core.indexOf("continue;", n), br = core.slice(n, c);
   ok(/_sagNcInventory\(account, devices, Date\.now\(\)\)/.test(br), "ο κλάδος καλεί την απογραφή"); ok(/d: _ncInv,/.test(br), "ο κλάδος περνά τα όργανα"); ok(!/\bd: \[\],/.test(br), "έμεινε κενή λίστα");
   ok(/_SAG_FLEET\.length = 0;[^\n]*\r?\n\s*_SAG_NC_ALL = null;/.test(core), "μηδενισμός ανά εκτέλεση");
-  ok(core.includes("const SAG_KERNEL_VERSION = 'v50.191 · 2026-11-09';"), "έκδοση");
+  ok(core.includes("const SAG_KERNEL_VERSION = 'v50.192 · 2026-11-09';"), "έκδοση");
   /* σελίδα */
   const w = page.slice(page.indexOf("function why(r) {"), page.indexOf("/* Έτοιμο κείμενο για τον παραγωγό")); const why = new Function("age", w + "\nreturn why;")((h) => h + "ω");
   ok(/lse σιωπά 85ω/.test(why({ nc: 1, p: "automation", d: [{ n: "lse", h: 85 }], z: [], g: [] })), "αυτοματισμός: φαίνεται η σιωπή");
@@ -54,7 +54,7 @@ const MUT = [
   ["άγνωστη ηλικία γίνεται 0", "c", "Number.isFinite(t) ? Math.round((nowMs - t) / 360000) / 10 : null", "Number.isFinite(t) ? Math.round((nowMs - t) / 360000) / 10 : 0"],
   ["διπλές ταυτότητες", "c", " && out.indexOf(s) < 0) out.push(s);", ") out.push(s);"],
   ["πίνακες αγνοούνται", "c", "if (Array.isArray(v)) { v.forEach(walk); return; }", "if (Array.isArray(v)) { return; }"],
-  ["παλιά έκδοση", "c", "'v50.191 · 2026-11-09'", "'v50.187 · 2026-11-07'"],
+  ["παλιά έκδοση", "c", "'v50.192 · 2026-11-09'", "'v50.187 · 2026-11-07'"],
   ["ρύθμιση κρύβει τη σιωπή", "p", "if (r.nc && !ncDead && (r.p || 'agronomy') === 'agronomy') return", "if (r.nc) return"],
   ["σταθμός ξανά έλλειψη", "p", "if (r.nc && !ncDead && (r.p || 'agronomy') === 'agronomy') return", "if (r.nc && !ncDead) return"],
   ["γραμμή υγείας παλιά", "p", "if (r.nc && (r.p || 'agronomy') === 'agronomy') h.push(", "if (r.nc) h.push("],

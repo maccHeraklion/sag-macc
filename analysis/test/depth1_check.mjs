@@ -38,7 +38,7 @@ function run(core, form, sync, wid) {
     const K = load(core, COMMON + ", _sagDepth1Mask, _sagDevExpect, _sagDevStatsD1, _sagEcChansD1, _sagDepth1Of, _sagDepth1PortOf, _sagSplitPoints, _sagMergeDeviceData, _SAG_DEV_EXPECT, _SAG_EC_CHANNELS,"
       + " _setD1: (v, p) => { _SAG_DEPTH1_ACTIVE = v; _SAG_DEPTH1_PORT = p || 1; _SAG_D1_HINTS = []; }, _hints: () => _SAG_D1_HINTS");
     const O = load(OLD, COMMON), V = load(V167, COMMON), V8 = load(V168, COMMON);
-    ok(K.SAG_KERNEL_VERSION === "v50.191 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.192 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     // ── Δ: ΔΙΑΦΟΡΙΚΑ ──
     const DD = [{}, { sensorShallow_depth_cm: 15 }, { sensorShallow_depth_cm: 15, sensor_deep_depth_cm: 40 }, { sensor_deep_depth_cm: 60 }];
     const MV = [{}, { soil_moisture1: 22 }, { soil_moisture2: 30 }, { soil_moisture1: 22, soil_moisture2: 30 }, { soil_moisture: 18 }, { soil_moisture1: 9, soil_moisture2: 41, rain_height_daily: 3 }];

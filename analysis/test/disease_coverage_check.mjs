@@ -25,7 +25,7 @@ void loadCore;
 function run(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let K; try { K = loadCoreWith(src); } catch (e) { return ["φόρτωση: " + e.message]; }
-  ok(K.SAG_KERNEL_VERSION === "v50.191 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+  ok(K.SAG_KERNEL_VERSION === "v50.192 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
   // ── (3) οροφή ──
   const ring = (vals) => vals.map((v, i) => [20000 + i, v]);
   const kouts = K._sagRhCeiling(ring([87, 91, 92.5, 92.5, 92, 92.5, 92.5, 92.5, 92, 92.5, 92.5, 93 - 0.5, 92.5, 92.5, 92.5, 80, 88, 88, 86, 90, 92.5]));
@@ -128,7 +128,7 @@ const MUT = [
   ["κολλημένος: αρκεί ένας αισθητήρας", "return lf.length > 0 && lf.every((d) => d.lst.stuck);", "return lf.some((d) => d.lst.stuck);"],
   ["κολλημένος: ο αισθητήρας ακυρώνει ακόμη", "    leafMoisture: _leafStuck ? null : leafMoistureHour,   // T-PHASE0B-01: μέγιστο της ώρας · T-LEAF-STUCKDRY-01: κολλημένος = χωρίς αισθητήρα\n    leafTemp: leafTemp,\n    leafShaded: _leafStuck ? false : _lwsShaded,", "    leafMoisture: leafMoistureHour,\n    leafTemp: leafTemp,\n    leafShaded: _lwsShaded,"],
   ["κάρτα κολλημένου αισθητήρα λείπει", "if (dev.lst && dev.lst.stuck) {", "if (false) {"],
-  ["παλιά έκδοση", "'v50.191 · 2026-11-09'", "'v50.189 · 2026-11-09'"],
+  ["παλιά έκδοση", "'v50.192 · 2026-11-09'", "'v50.189 · 2026-11-09'"],
 ];
 let dead = 0;
 for (const [name, a, b] of MUT) {
