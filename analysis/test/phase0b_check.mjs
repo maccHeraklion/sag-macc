@@ -49,7 +49,7 @@ function run(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let K; try { K = loadCore(src); } catch (e) { return ["φόρτωση πυρήνα: " + e.message]; }
   try {
-    ok(K.SAG_KERNEL_VERSION === "v50.192 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.193 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     ok(typeof K._sagLeafHourRead === "function", "Ε2 υπάρχει _sagLeafHourRead");
     // ── Α · μέγιστο της ώρας ──
     { let st = { data: {} }, r;

@@ -103,7 +103,7 @@ function run(src, w) {
   const lw1 = K._sagLeafWetness({ T_air: 19, RH: 91 }), lw2 = K._sagLeafWetness({ T_air: 19, RH: 89 });
   ok(lw1.wet === true && lw1.source === "rh" && lw2.wet === false && lw2.source === "none", "Β5 εφεδρεία RH ≥ 90: 91 -> υγρό (rh), 89 -> στεγνό");
   // Β6 T-LWS-SHADED-DRY-01 (v50.156): στεγνός ΣΚΙΑΣΜΕΝΟΣ αισθητήρας υπερισχύει της ΕΚΤΙΜΗΣΗΣ δρόσου και της εφεδρείας RH
-  ok(src.includes("const SAG_KERNEL_VERSION = 'v50.192 · 2026-11-09';"), "έκδοση v50.156");
+  ok(src.includes("const SAG_KERNEL_VERSION = 'v50.193 · 2026-11-09';"), "έκδοση v50.156");
   const lw3 = K._sagLeafWetness({ leafMoisture: 0, leafShaded: true, leafTemp: 22, T_air: 19, RH: 96, dewPoint: 18.4 });
   ok(lw3.wet === false && lw3.source === "sensor_dry", "Β6 στεγνός σκιασμένος αισθητήρας + RH 96/εκτίμηση δρόσου -> ΣΤΕΓΝΟ (η μέτρηση υπερισχύει της εκτίμησης) — " + lw3.source);
   const lw4 = K._sagLeafWetness({ leafMoisture: 0, leafShaded: false, leafTemp: 22, T_air: 19, RH: 96, dewPoint: 18.4 });
@@ -130,8 +130,12 @@ function run(src, w) {
   ok(rC5.cnt("pseudoperonospora_cubensis") === 6 && rC5.lws && rC5.lws.value === "Σχετική υγρασία", "Γ5 ίδιο ΧΩΡΙΣ αισθητήρα φύλλου -> η εφεδρεία RH ≥ 90 κρατά τον περονόσπορο ενεργό (" + rC5.cnt("pseudoperonospora_cubensis") + ", " + (rC5.lws && rC5.lws.value) + ")");
   // ── Δ. παγώματα ──
   st = { data: {} }; for (let h = 1; h <= 5; h++) tick(K, st, h, { T: 24, RH: 70, lm: 0, lt: 23.5 });
-  const rD = tick(K, st, 6, { T: 24, RH: 70, lm: 0, lt: 23.5, ages: { temperature: 200, humidity: 200 } });
-  ok(rD.cnt("podosphaera_xanthii") === 5 && rD.status && /Σε παύση/.test(rD.status.value), "Δ1 παλιά μέτρηση αέρα (200΄ > 90΄): ο μετρητής ΠΑΓΩΝΕΙ στο 5 και το δηλώνει (" + (rD.status && rD.status.value) + ")");
+  const stD = JSON.parse(JSON.stringify(st));
+  const rD = tick(K, st, 6, { T: 24, RH: 70, lm: 0, lt: 23.5, ages: { temperature: 200, humidity: 200, leaf_temperature: 200, leaf_moisture: 200 } });
+  ok(rD.cnt("podosphaera_xanthii") === 5 && rD.status && /Σε παύση/.test(rD.status.value), "Δ1 παλιά μέτρηση αέρα (200΄ > 90΄) και παλιό φύλλο: ο μετρητής ΠΑΓΩΝΕΙ στο 5 και το δηλώνει (" + (rD.status && rD.status.value) + ")");
+  // v50.193 T-LEAF-FALLBACK-01: με φρέσκο αισθητήρα φύλλου η κάρτα λέει από πού μετρά· το ωίδιο μένει παγωμένο.
+  const rD1b = tick(K, stD, 6, { T: 24, RH: 70, lm: 0, lt: 23.5, ages: { temperature: 200, humidity: 200 } });
+  ok(rD1b.cnt("podosphaera_xanthii") === 5 && rD1b.status && rD1b.status.value === "Ώρες μόλυνσης: από τον αισθητήρα φύλλου", "Δ1β παλιός αέρας, φρέσκο φύλλο: ωίδιο παγωμένο στο 5, κάρτα εφεδρείας (" + (rD1b.status && rD1b.status.value) + ")");
   st = { data: {} }; for (let h = 1; h <= 3; h++) tick(K, st, h, { T: 19, RH: 97, lm: 60, lt: 18.5 });
   const rD2 = tick(K, st, 4, { T: 19, RH: 97, lm: 60, lt: 18.5, ages: { leaf_temperature: 200, leaf_moisture: 200 } });
   ok(rD2.cnt("pseudoperonospora_cubensis") === 3 && rD2.lws && /ΠΑΥΣΗ/.test(String(rD2.lws.metadata.text)), "Δ2 παλιός αισθητήρας φύλλου: ο περονόσπορος (θέλει διαβροχή) παγώνει στο 3 (" + rD2.cnt("pseudoperonospora_cubensis") + ")");
@@ -214,7 +218,7 @@ const MUT = [
   ["m11 ωίδιο αμπελιού ξανά στο αγγούρι", "    (c) => c && c.cultivation_type_general === \"vineCrops\"", "    (c) => true", "c"],
   ["m12 θερμοκήπιο δεν σιωπά", "    if (_SAG_COVERED_ACTIVE) return [];\n    const RH = Array.isArray(fcs.rh)", "    if (false) return [];\n    const RH = Array.isArray(fcs.rh)", "c"],
   ["m13 ο σκιασμένος στεγνός αισθητήρας ξανά πίσω από τη δρόσο", "  if (hasLm && o.leafShaded === true)\n    return { wet: false, weight: 0, source: 'sensor_dry', confidence: 'HIGH', lm: lmOut };\n  if (Number.isFinite(dp) && Number.isFinite(T)", "  if (hasLm && o.leafShaded === true && !Number.isFinite(dp) && !(RH >= 90))\n    return { wet: false, weight: 0, source: 'sensor_dry', confidence: 'HIGH', lm: lmOut };\n  if (Number.isFinite(dp) && Number.isFinite(T)", "c"],
-  ["m14 παλιά έκδοση", "'v50.192 · 2026-11-09'", "'v50.159 · 2026-10-04'", "c"],
+  ["m14 παλιά έκδοση", "'v50.193 · 2026-11-09'", "'v50.159 · 2026-10-04'", "c"],
   ["W1 widget χάνει το «σοβαρ»", 'function Ba(t){const s=String(t||"").toLowerCase();return s.includes("χαμηλ")?1:s.includes("μέτρι")||s.includes("μετρι")?2:s.includes("υψηλ")?3:s.includes("σοβαρ")?4:0}', 'function Ba(t){const s=String(t||"").toLowerCase();return s.includes("χαμηλ")?1:s.includes("μέτρι")||s.includes("μετρι")?2:s.includes("υψηλ")?3:0}', "w"],
   ["W2 κύρια κάρτα μόνο Σοβαρός", 'if(R<3&&!Vc)continue;const X=R===4?"b-red"', 'if(R<4&&!Vc)continue;const X=R===4?"b-red"', "w"],
 ];

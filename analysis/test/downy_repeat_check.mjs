@@ -11,7 +11,7 @@ function run(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let r;
   try { r = replay(src); } catch (e) { return ["επανάληψη: " + e.message]; }
-  ok(r.version === "v50.192 · 2026-11-09", "Ε έκδοση (" + r.version + ")");
+  ok(r.version === "v50.193 · 2026-11-09", "Ε έκδοση (" + r.version + ")");
   const D = r.days; const wetDays = Object.keys(D).filter((d) => d >= "10-15" && d <= "11-03");
   // Α · η προειδοποίηση υπάρχει κάθε ημέρα της περιόδου μολύνσεων (ο κανόνας RH 95 έδινε 0)
   ok(wetDays.every((d) => HI(D[d]) > 0), "Α1 Υψηλός/Σοβαρός κάθε ημέρα 15/10–3/11 (λείπουν: " + wetDays.filter((d) => !HI(D[d])).join(",") + ")");
@@ -54,7 +54,7 @@ const MUT = [
   ["κλιμάκωση και σε μέτριο", "level === 3 && !knownLow && msg", "level >= 2 && msg"],
   ["αερισμός και εκτός θερμοκηπίου/χωρίς", "_SAG_COVERED_ACTIVE ? ' Αερίστε ώστε να στεγνώνει το φύλλωμα τη νύχτα.' : ''", "_SAG_COVERED_ACTIVE ? '' : ''"],
   ["καλωδίωση πίσω στον κλάδο σονδών", "      if (hourTich && typeName === 'lms01_ls') await _sagLeafHourRead(device, deviceData, now, fieldName);\n", ""],
-  ["παλιά έκδοση", "'v50.192 · 2026-11-09'", "'v50.189 · 2026-11-09'"],
+  ["παλιά έκδοση", "'v50.193 · 2026-11-09'", "'v50.189 · 2026-11-09'"],
 ];
 let dead = 0;
 for (const [name, a, b] of MUT) {

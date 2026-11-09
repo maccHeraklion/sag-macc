@@ -23,7 +23,7 @@ function run(core) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   try {
     const K = load(core);
-    ok(K.SAG_KERNEL_VERSION === "v50.192 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.193 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     const faults = (range) => {
       const data = {}; for (const ch of K._sagDevExpect("se0x")) for (const a of [].concat(ch.a)) data[a] = [{ value: 20, time: T, device: "Δ" }];
       const dev = { n: "Δ", t: "se0x", qerr: 0, stats: { soil_temperature1: { n: 30, spanH: 24, range, min: 10, max: 10 + range } } };

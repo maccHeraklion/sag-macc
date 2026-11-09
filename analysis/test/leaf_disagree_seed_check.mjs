@@ -41,7 +41,7 @@ const ringOf = (r) => { const v = r.state && r.state.leaf_disagree_ring; try { r
 function run(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let K; try { K = loadX(src); } catch (e) { return ["φόρτωση: " + e.message]; }
-  ok(K.SAG_KERNEL_VERSION === "v50.192 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+  ok(K.SAG_KERNEL_VERSION === "v50.193 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
   // ── Α1 κύριο σενάριο: 6 υγρές νύχτες, αισθητήρας στεγνός ──
   let A1; try { A1 = replayField(src, rows([1, 1, 1, 1, 1, 1]), O); } catch (e) { return f.concat(["Α1 εκτέλεση: " + e.message]); }
   const c1 = nightsOf(A1);
