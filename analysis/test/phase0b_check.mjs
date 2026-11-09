@@ -49,7 +49,7 @@ function run(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let K; try { K = loadCore(src); } catch (e) { return ["φόρτωση πυρήνα: " + e.message]; }
   try {
-    ok(K.SAG_KERNEL_VERSION === "v50.189 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.190 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     ok(typeof K._sagLeafHourRead === "function", "Ε2 υπάρχει _sagLeafHourRead");
     // ── Α · μέγιστο της ώρας ──
     { let st = { data: {} }, r;
@@ -118,7 +118,7 @@ function run(src) {
 const base = run(SRC);
 console.log(base.length ? "ΒΑΣΗ: ΑΠΟΤΥΧΙΑ\n - " + base.join("\n - ") : "ΒΑΣΗ: ΟΚ");
 const MUT = [
-  ["m1 χωρίς μέγιστο ώρας στην κρίση", "    leafMoisture: leafMoistureHour,", "    leafMoisture: leafMoisture,"],
+  ["m1 χωρίς μέγιστο ώρας στην κρίση", "_leafStuck ? null : leafMoistureHour,", "_leafStuck ? null : leafMoisture,"],
   ["m2 χωρίς κάρτα διαβροχής", "indicators.push({ variable: 'leaf_wetting_event'", "void({ variable: 'leaf_wetting_event'"],
   ["m3 διαβροχή και με βροχή", "&& !(_lwsRain1h > _SAG_LWS_RAIN_MM)) {", "&& true) {"],
   ["m4 διαβροχή και υπαίθρια", "if (parameters && parameters.covered_cultivation === true && Number.isFinite(_wePrev)", "if (Number.isFinite(_wePrev)"],

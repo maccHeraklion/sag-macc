@@ -47,7 +47,7 @@ function run(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let K; try { K = loadCore(src); } catch (e) { return ["φόρτωση πυρήνα: " + e.message]; }
   try {
-    ok(K.SAG_KERNEL_VERSION === "v50.189 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.190 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     const CH = cropOf(K, "chestnut"), OR = cropOf(K, "orange"), TO = cropOf(K, "tomato");
     const XC = "phytophthora_xcambivora", CP = "cryphonectria_parasitica", PC = "phytophthora_citrophthora";
     // Α. καστανιά, 30 ώρες T 18 RH 97 χωρίς αισθητήρα φύλλου (πριν: μελάνωση 6 ω → Σοβαρός, έλκος 24 ω → Σοβαρός)
@@ -90,7 +90,7 @@ const base = run(SRC);
 if (base.length) { console.log("ΑΠΟΤΥΧΙΑ ΒΑΣΗΣ:\n  " + base.join("\n  ")); process.exit(1); }
 console.log("ΒΑΣΗ: όλοι οι έλεγχοι πέρασαν");
 const M = [
-  ["M1 χωρίς γκρι κάρτα όταν λείπει έδαφος (v50.180)", "if (_nfT) indicators = [...indicators, { variable: `fir_message_${pathogenKey}`, value: 'Μη διαθέσιμο',", "if (false) indicators = [...indicators, { variable: `fir_message_${pathogenKey}`, value: 'Μη διαθέσιμο',"],
+  ["M1 χωρίς γκρι κάρτα όταν λείπει έδαφος (v50.180)", "          indicators = [...indicators, { variable: `fir_message_${pathogenKey}`, value: 'Μη διαθέσιμο',\n            metadata: { color: 'grey', text: _nfT", "          if (false) indicators = [...indicators, { variable: `fir_message_${pathogenKey}`, value: 'Μη διαθέσιμο',\n            metadata: { color: 'grey', text: _nfT"],
   ["M2 ηλίανθος εκτός λίστας", "'fusarium_spp_corm_rot', 'plasmopara_halstedii'];", "'fusarium_spp_corm_rot'];"],
   ["M3 μετρητής συνεχίζει", "      if (_SAG_NONFOLIAR_SUSPENDED.indexOf(pathogenKey) >= 0) continue;   // T-NONFOLIAR-01: χωρίς μετρητή ωρών\n", ""],
   ["M4 κάρτα με κίνδυνο", "indicators = [...indicators, { variable: `fir_message_${pathogenKey}`, value: 'Μη διαθέσιμο',\n          metadata: { color: 'grey'", "indicators = [...indicators, { variable: `fir_message_${pathogenKey}`, value: 'Χαμηλός κίνδυνος',\n          metadata: { color: 'green'"],

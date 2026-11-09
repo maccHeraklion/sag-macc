@@ -6,7 +6,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const corePath = path.join(here, "..", "runPerTich.js");
 let SRC = fs.readFileSync(corePath, "utf8").replace(/\r\n/g, "\n");
 const OLD = process.argv.includes("--old");
-if (OLD) SRC = SRC.replace("const humidityOk = RH >= _rhMin || (needsWet && (_lwsMeasuredWet || _lwsRainWet));", "const humidityOk = RH >= Number(_oh.min);");
+if (OLD) SRC = SRC.replace("const humidityOk = RHd >= _rhMin || (needsWet && (_lwsMeasuredWet || _lwsRainWet));", "const humidityOk = RH >= Number(_oh.min);");
 const FX = JSON.parse(fs.readFileSync(path.join(here, "fixtures", "downy_greenhouse_hourly_2026-10-15_11-09.json"), "utf8"));
 const req = createRequire(corePath);
 function loadCore(src) {

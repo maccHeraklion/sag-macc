@@ -53,7 +53,7 @@ function run(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let K; try { K = loadCore(src); } catch (e) { return ["φόρτωση πυρήνα: " + e.message]; }
   try {
-    ok(K.SAG_KERNEL_VERSION === "v50.189 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.190 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     ok(K._SAG_LWS_COLD_DT === 3, "Ε2 όριο ψυχρού αισθητήρα 3 °C (" + K._SAG_LWS_COLD_DT + ")");
     const p = (k) => Object.values(K.PATHOGEN_PROFILE).map((c) => c && c[k]).find(Boolean);
     ok(p(PI).optimalHumidity.min === 90 && p(PI).requiredDurationHrs === 10 && p(AS).requiredDurationHrs === 6 && p(EN).requiredDurationHrs === 6, "Ε3 τα όρια των παθογόνων δεν άλλαξαν");

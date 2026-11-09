@@ -5,7 +5,7 @@ var import_sdk = require("@tago-io/sdk");
 const moment = require('moment-timezone');
 
 // ═══ ΕΚΔΟΣΗ ΠΥΡΗΝΑ — ενημερώνεται ΜΟΝΟ εδώ, σε κάθε νέα έκδοση ═══
-const SAG_KERNEL_VERSION = 'v50.189 · 2026-11-09';   // T-DOWNY-REPEAT-01 (περονόσποροι: ανοιχτή ειδοποίηση με ευνοϊκές συνθήκες πάνω από 2 ημέρες και χωρίς προστασία → «Σοβαρός — ψεκάστε προληπτικά») · T-LEAFHOUR-WIRE-01 (το μέγιστο υγρασίας φύλλου της ώρας διαβάζεται πραγματικά για τον αισθητήρα φύλλου) · T-APPROVAL-01 (SIVANTO PRIME από την έγκριση ΥΠΑΑΤ 14670: ουσία flupyradifurone, πίνακας χρήσεων ανά καλλιέργεια, PHI ανά καλλιέργεια από την έγκριση, συνώνυμα δηλώσεων) · T-PHASE1-01 (εποχικά παράθυρα εντόμων και ασθενειών ελιάς, θερινή παύση δάκου, ώρες διαβροχής ανά θερμοκρασία με κλάσεις, ευπάθεια ουδέτερη, προστασία ψεκασμού ως το μεσοδιάστημα, τζιτζικάκια + ανθράκνωση κολοκυνθοειδών + C. coccodes) · T-PHASE0B-01 (ώρα υγρή από ΟΛΑ τα δείγματα του αισθητήρα φύλλου, διαβροχή φύλλων σε θερμοκήπιο, πύλη ξενιστή ανά θέση καλλιέργειας) · T-PHASE0-01 (σφάλματα: ώρα βροχής και όριο RH, κρίση σκιάς στα μεσάνυχτα, αισθητήρας φύλλου εκτός χώρου ή με μηδενικά, ώρες στο κείμενο, διπλή μέτρηση μυκήτων) · T-BOTRYTIS-HOSTS-01 (βοτρύτης: +σταφίδα, αγγούρι, κολοκύθι, μελιτζάνα, πατάτα, λάχανο, ροδακινιά — μόνο ξενιστές) · T-SOILWOUND-01 (μελάνωση και γομμώσεις στο εδαφογενές μοντέλο, έλκος καστανιάς σε μοντέλο πληγών) · T-LITVALUES-01 (τιμές βιβλιογραφίας: αλτερνάρια, ωίδια, φώμοψη, ανθράκνωση + παράθυρα ΠΚΠΦΠ Ηρακλείου) · T-NONFOLIAR-01 (7 ασθένειες ριζών/φλοιού εκτός μηχανής φύλλου) · T-RH-CAP-90-01 (όριο RH ≤ 90 για ασθένειες υγρού φύλλου) · T-LEAFWET-RH-01 (μετρημένο υγρό φύλλο υπερισχύει του ορίου RH· περονόσποροι/βοτρύτης: επιθεώρηση) · T-MILDEW-INSPECT-01 (ωίδιο: επιθεώρηση αντί εντολής ψεκασμού) · T-ECE-NOFALLBACK-01 (χωρίς εφεδρεία ×2,5) · T-COVERED-WX-01 (κείμενα παγετού/καύσωνα σε θερμοκήπιο) · T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
+const SAG_KERNEL_VERSION = 'v50.190 · 2026-11-09';   // T-NOSILENT-CARD-01 (κάθε ασθένεια της καλλιέργειας έχει πάντα κάρτα· όσες δεν υπολογίζονται λένε γιατί) · T-RH-CEILING-01 (υγρασιόμετρο που σταματά πριν τον κορεσμό: ανίχνευση από τα ημερήσια μέγιστα 21 ημερών, διόρθωση ΜΟΝΟ για τις ασθένειες, ένδειξη βλάβης οργάνου) · T-LEAF-STUCKDRY-01 (αισθητήρας φύλλου που δεν δείχνει ποτέ νερό ≥ 5 ημέρες δεν ακυρώνει την εκτίμηση διαβροχής· ένδειξη βλάβης) · T-DOWNY-REPEAT-01 (περονόσποροι: ανοιχτή ειδοποίηση με ευνοϊκές συνθήκες πάνω από 2 ημέρες και χωρίς προστασία → «Σοβαρός — ψεκάστε προληπτικά») · T-LEAFHOUR-WIRE-01 (το μέγιστο υγρασίας φύλλου της ώρας διαβάζεται πραγματικά για τον αισθητήρα φύλλου) · T-APPROVAL-01 (SIVANTO PRIME από την έγκριση ΥΠΑΑΤ 14670: ουσία flupyradifurone, πίνακας χρήσεων ανά καλλιέργεια, PHI ανά καλλιέργεια από την έγκριση, συνώνυμα δηλώσεων) · T-PHASE1-01 (εποχικά παράθυρα εντόμων και ασθενειών ελιάς, θερινή παύση δάκου, ώρες διαβροχής ανά θερμοκρασία με κλάσεις, ευπάθεια ουδέτερη, προστασία ψεκασμού ως το μεσοδιάστημα, τζιτζικάκια + ανθράκνωση κολοκυνθοειδών + C. coccodes) · T-PHASE0B-01 (ώρα υγρή από ΟΛΑ τα δείγματα του αισθητήρα φύλλου, διαβροχή φύλλων σε θερμοκήπιο, πύλη ξενιστή ανά θέση καλλιέργειας) · T-PHASE0-01 (σφάλματα: ώρα βροχής και όριο RH, κρίση σκιάς στα μεσάνυχτα, αισθητήρας φύλλου εκτός χώρου ή με μηδενικά, ώρες στο κείμενο, διπλή μέτρηση μυκήτων) · T-BOTRYTIS-HOSTS-01 (βοτρύτης: +σταφίδα, αγγούρι, κολοκύθι, μελιτζάνα, πατάτα, λάχανο, ροδακινιά — μόνο ξενιστές) · T-SOILWOUND-01 (μελάνωση και γομμώσεις στο εδαφογενές μοντέλο, έλκος καστανιάς σε μοντέλο πληγών) · T-LITVALUES-01 (τιμές βιβλιογραφίας: αλτερνάρια, ωίδια, φώμοψη, ανθράκνωση + παράθυρα ΠΚΠΦΠ Ηρακλείου) · T-NONFOLIAR-01 (7 ασθένειες ριζών/φλοιού εκτός μηχανής φύλλου) · T-RH-CAP-90-01 (όριο RH ≤ 90 για ασθένειες υγρού φύλλου) · T-LEAFWET-RH-01 (μετρημένο υγρό φύλλο υπερισχύει του ορίου RH· περονόσποροι/βοτρύτης: επιθεώρηση) · T-MILDEW-INSPECT-01 (ωίδιο: επιθεώρηση αντί εντολής ψεκασμού) · T-ECE-NOFALLBACK-01 (χωρίς εφεδρεία ×2,5) · T-COVERED-WX-01 (κείμενα παγετού/καύσωνα σε θερμοκήπιο) · T-WAVE1-01 (κείμενο σόνδας, χρώμα αναστολής βροχής) · T-ZONES-01b (λίστα σονδών ημερήσια) · T-ZONES-01 (ζώνες άρδευσης, φάση 1) · T-DEPTH1-03 (δύο σημεία στο ίδιο βάθος) · T-DEPTH1-02 (θύρα σόνδας με ένα βάθος) · T-DEPTH1-01 (ένα βάθος αισθητήρα με δήλωση) ·   // T-SHADOW-HOUR-01 (σκιώδες, καμία αλλαγή συμβουλής) ·   // T-EC-LABEL-01: «Νερό ρίζας/πόρων» → «EC στη ρίζα» (μόνο κείμενα)
 const zlib = require('zlib');
 
 // Global variable name for packed field telemetry (used for both write + history reads)
@@ -8538,6 +8538,65 @@ const _SAG_LWS_COLD_DT    = 3;    // °C
 // T-RH-CAP-90-01 (v50.177, απόφαση Michalis 4/11): οροφή του ορίου RH για παθογόνα που απαιτούν υγρό φύλλο.
 // Η εκτίμηση διαβροχής χωρίς όργανο ξεκινά από RH 90· όριο 92/95 αντέφασκε μαζί της και τα em320 δεν το φτάνουν.
 const _SAG_WET_RH_CAP     = 90;   // % — ισχύει ΜΟΝΟ όταν requiresLeafWetness !== false
+// ── T-RH-CEILING-01 (v50.190 · 9/11/2026) · ΥΓΡΑΣΙΟΜΕΤΡΟ ΜΕ «ΟΡΟΦΗ» ─────────────────────────────────────────
+// ΤΟ ΕΥΡΗΜΑ (έλεγχος στόλου 9/11, 21 ημέρες): em320 που δεν ξεπερνούν ποτέ το 89,5 / 90,5 / 92,5 %, ενώ τα S2120 και τα
+// em300 της ίδιας περιόδου φτάνουν 98–100 %. Σε θερμοκήπιο με φύλλα βρεγμένα 16 ώρες το em320 έγραφε 92,5. Το όργανο
+// ΚΟΒΕΙ στον κορεσμό· η «οροφή» του είναι ο δικός του κορεσμός. Με όριο διαβροχής 90 % ένα όργανο με οροφή 89,5 % δεν
+// δείχνει ΠΟΤΕ υγρό φύλλο → όλες οι ασθένειες υγρού φύλλου τυφλές όταν δεν υπάρχει (ή σιωπά) αισθητήρας φύλλου.
+// ΑΝΙΧΝΕΥΣΗ: ημερήσια μέγιστα 21 ημερών ανά όργανο (ένα ερώτημα «max» την ημέρα). Οροφή = το μέγιστο, ΜΟΝΟ αν
+// (α) είναι 85–96 %, (β) το «αγγίζουν» (± 1 μονάδα) τουλάχιστον 5 διαφορετικές ημέρες — το αποτύπωμα του κοψίματος·
+// ένα ξηρό διάστημα δίνει διάσπαρτα μέγιστα και δεν ενεργοποιεί τίποτα· (γ) ≥ 7 ημέρες ιστορικού.
+// ΔΙΟΡΘΩΣΗ (μόνο για υγρασία φύλλου και πύλη RH των ασθενειών — ΟΧΙ για VPD/άρδευση): ένδειξη στην οροφή → 100 %·
+// από (οροφή − 8) ως την οροφή γραμμική απεικόνιση ως το 100· πιο κάτω αμετάβλητη. Αν έστω ένα όργανο αέρα του αγρού
+// φτάνει ≥ 96 % (επιβεβαιωμένα), ΚΑΜΙΑ διόρθωση.
+const _SAG_RHC_DAYS = 21, _SAG_RHC_MIN_DAYS = 7, _SAG_RHC_TOL = 1.0, _SAG_RHC_HITS = 5, _SAG_RHC_LO = 85, _SAG_RHC_HI = 96, _SAG_RHC_SPAN = 8;
+function _sagRhCeiling(hx) {
+  const v = (Array.isArray(hx) ? hx : []).map((e) => Number(Array.isArray(e) ? e[1] : NaN)).filter((x) => Number.isFinite(x) && x > 0 && x <= 100);
+  if (v.length < _SAG_RHC_MIN_DAYS) return null;
+  const top = Math.max.apply(null, v);
+  const hits = v.filter((x) => x >= top - _SAG_RHC_TOL).length;
+  return { top: top, hits: hits, n: v.length, clip: top >= _SAG_RHC_LO && top < _SAG_RHC_HI && hits >= _SAG_RHC_HITS };
+}
+function _sagFieldRhCeiling(measurements) {
+  const inv = (measurements && measurements.data && measurements.data._sagDevInv) || [];
+  const air = inv.filter((d) => d && (d.t === 's2120' || d.t === 'em300_th' || d.t === 'em320_th') && d.rhc);
+  if (air.some((d) => !d.rhc.clip && d.rhc.top >= _SAG_RHC_HI)) return null;
+  const cl = air.filter((d) => d.rhc.clip);
+  return cl.length ? Math.max.apply(null, cl.map((d) => d.rhc.top)) : null;
+}
+function _sagRhEff(rh, top) {
+  const r = Number(rh);
+  if (top === null || top === undefined || top === '' || !Number.isFinite(r) || !Number.isFinite(Number(top))) return r;
+  const t = Number(top);
+  if (r >= t - 0.5) return 100;
+  const lo = t - _SAG_RHC_SPAN;
+  if (r <= lo) return r;
+  return Math.min(100, lo + (r - lo) * (100 - lo) / (t - 0.5 - lo));
+}
+// ── T-LEAF-STUCKDRY-01 (v50.190 · 9/11/2026) · ΑΙΣΘΗΤΗΡΑΣ ΦΥΛΛΟΥ ΠΟΥ ΔΕΝ ΒΛΕΠΕΙ ΠΟΤΕ ΝΕΡΟ ───────────────────────────
+// ΤΟ ΕΥΡΗΜΑ (θερμοκήπιο ντομάτας, 21 νύχτες): LMS01 στο ~2 % κάθε νύχτα, ενώ σε γειτονικό θερμοκήπιο με το ίδιο όργανο
+// αέρα και ίδια RH το φύλλο ήταν υγρό όλη νύχτα. Ο «σκιασμένος» αισθητήρας υπερισχύει της εκτίμησης (T-LWS-SHADED-DRY-01),
+// άρα ΕΝΑΣ κολλημένος αισθητήρας τύφλωνε όλες τις ασθένειες υγρού φύλλου. Κανόνας: αν ΟΛΟΙ οι αισθητήρες φύλλου του αγρού
+// έχουν ≥ 5 ημέρες ιστορικού και ΚΑΝΕΝΑ ημερήσιο μέγιστο πάνω από 5 %, ο αισθητήρας λογίζεται «δεν δείχνει νερό»: το
+// «στεγνό» του δεν ακυρώνει τη δρόσο/RH (ό,τι θα γινόταν χωρίς αισθητήρα). Ένα πραγματικό υγρό δείγμα τον αποκαθιστά.
+const _SAG_LST_DAYS = 10, _SAG_LST_MIN_DAYS = 5, _SAG_LST_MAX = 5;
+function _sagLeafStuck(lx) {
+  const v = (Array.isArray(lx) ? lx : []).map((e) => Number(Array.isArray(e) ? e[1] : NaN)).filter((x) => Number.isFinite(x) && x >= 0 && x <= 100);
+  if (v.length < _SAG_LST_MIN_DAYS) return null;
+  const mx = Math.max.apply(null, v);
+  return { max: mx, n: v.length, stuck: mx < _SAG_LST_MAX };
+}
+function _sagFieldLeafStuck(measurements) {
+  const inv = (measurements && measurements.data && measurements.data._sagDevInv) || [];
+  const lf = inv.filter((d) => d && d.t === 'lms01_ls' && d.lst);
+  return lf.length > 0 && lf.every((d) => d.lst.stuck);
+}
+function _sagDewPointC(T, RH) {
+  const t = Number(T), h = Number(RH);
+  if (!Number.isFinite(t) || !Number.isFinite(h) || h <= 0) return NaN;
+  const a = 17.62, b = 243.12, g = Math.log(Math.min(100, h) / 100) + a * t / (b + t);
+  return b * g / (a - g);
+}
 const _SAG_LWS_SOURCE_EL = {
   rain: 'Βροχή', sensor: 'Αισθητήρας φύλλου', dew_leaf: 'Δρόσος (θερμ. φύλλου)',
   dew_air: 'Δρόσος (εκτίμηση)', rh: 'Σχετική υγρασία', none: 'Στεγνό',
@@ -8742,13 +8801,20 @@ function calculate_InfectionHours(hourTick, measurements, parameters) {
       ? (Number(measurements.data.rain_height?.[0]?.value) || 0) : 0;
   }
   const _lwsShaded = Number.isFinite(_lwsDtMax) && _lwsDtMax <= _SAG_LWS_SHADE_DT;
+  // T-RH-CEILING-01: όργανο υγρασίας που κόβει πριν τον κορεσμό → διορθωμένη RH και σημείο δρόσου ΜΟΝΟ για τις ασθένειες.
+  const _rhCeil = _sagFieldRhCeiling(measurements);
+  const RHd = _rhCeil !== null ? _sagRhEff(RH, _rhCeil) : RH;
+  const _dpD = (_rhCeil !== null && Number(RHd) !== Number(RH)) ? _sagDewPointC(T_air, RHd) : dewPoint;
+  if (_rhCeil !== null) indicators.push({ variable: 'rh_instrument_ceiling', value: _rhCeil, metadata: { internal: true, rh_raw: Number(RH), rh_eff: parseFloat(Number(RHd).toFixed(1)) } });
+  const _leafStuck = _sagFieldLeafStuck(measurements);   // T-LEAF-STUCKDRY-01
+  if (_leafStuck) indicators.push({ variable: 'leaf_sensor_stuck_dry', value: 1, metadata: { internal: true } });
   const _lws = _sagLeafWetness({
-    leafMoisture: leafMoistureHour,   // T-PHASE0B-01: μέγιστο της ώρας, όχι μόνο το τελευταίο δείγμα
+    leafMoisture: _leafStuck ? null : leafMoistureHour,   // T-PHASE0B-01: μέγιστο της ώρας · T-LEAF-STUCKDRY-01: κολλημένος = χωρίς αισθητήρα
     leafTemp: leafTemp,
-    leafShaded: _lwsShaded,
+    leafShaded: _leafStuck ? false : _lwsShaded,
     T_air: T_air,
-    RH: RH,
-    dewPoint: dewPoint,
+    RH: RHd,                 // T-RH-CEILING-01
+    dewPoint: _dpD,
     rain1h: _lwsRain1h,
   });
   const leafIsWet = _lws.wet;
@@ -8900,7 +8966,7 @@ function calculate_InfectionHours(hourTick, measurements, parameters) {
       // φύλλου ΜΕΤΡΑ νερό, δεν μπλοκάρει· τα em320 σταματούν στο 89,5–95 % και ο περονόσπορος είχε 0 ώρες.
       // Εκτίμηση (δρόσος αέρα, RH) και ωίδια (δεν θέλουν υγρό φύλλο): όπως πριν.
       const _rhMin = needsWet ? Math.min(Number(_oh.min), _SAG_WET_RH_CAP) : Number(_oh.min);   // T-RH-CAP-90-01
-      const humidityOk = RH >= _rhMin || (needsWet && (_lwsMeasuredWet || _lwsRainWet));   // T-PHASE0-01: και η βροχή
+      const humidityOk = RHd >= _rhMin || (needsWet && (_lwsMeasuredWet || _lwsRainWet));   // T-RH-CEILING-01: RHd   // T-PHASE0-01: και η βροχή
       const wetOk = needsWet ? leafIsWet : true;
 
       // B6 FIX: Rain inhibit for erysiphe (rain washes conidia)
@@ -9522,7 +9588,11 @@ function calculate_NematodeRisk(dailyTich, measurements, parameters) {
     const hostS = Number(hostEntry.susceptibility) || 0;
     if (hostS <= 0) continue;
     const st = _sagSoilTempRead(measurements);
-    if (st.v === null) continue;   // χωρίς αισθητήρα εδάφους: σιωπή
+    if (st.v === null) {   // T-NOSILENT-CARD-01: κάρτα, όχι σιωπή
+      indicators.push({ variable: 'fir_message_' + speciesKey, value: 'Μη διαθέσιμο', metadata: { color: 'grey',
+        text: 'Νηματώδεις: χωρίς μέτρηση θερμοκρασίας εδάφους η εξέλιξη των γενεών δεν υπολογίζεται.' } });
+      continue;
+    }
     const soilT = st.v;
     // 14ήμερη μνήμη θερμοκρασίας εδάφους (κατάσταση, όπως το ec_hist)
     let t14hist = [];
@@ -10385,8 +10455,11 @@ function calculate_FIR(hourTich, dailyTich, measurements, ipsiLast, parameters) 
           // χωρίς αισθητήρα εδάφους: καμία εκτίμηση, όχι ψευδο-μηδέν. Για όσες ήρθαν από τη μηχανή φύλλου (T-SOILWOUND-01)
           // η κάρτα λέει γιατί δεν υπολογίζεται και τι να κάνει ο παραγωγός· τα παλιά εδαφογενή μένουν σιωπηλά όπως πριν.
           const _nfT = _SAG_NONFOLIAR_TEXT[pathogenKey];
-          if (_nfT) indicators = [...indicators, { variable: `fir_message_${pathogenKey}`, value: 'Μη διαθέσιμο',
-            metadata: { color: 'grey', text: 'Ασθένεια ' + _nfT[0] + ': χωρίς αισθητήρα εδάφους (θερμοκρασία και υγρασία ριζοστρώματος) ο κίνδυνος δεν υπολογίζεται. ' + _nfT[1] } }];
+          // T-NOSILENT-CARD-01 (v50.190): και τα παλιά εδαφογενή λένε γιατί δεν υπολογίζονται — πριν έμεναν χωρίς κάρτα.
+          indicators = [...indicators, { variable: `fir_message_${pathogenKey}`, value: 'Μη διαθέσιμο',
+            metadata: { color: 'grey', text: _nfT
+              ? 'Ασθένεια ' + _nfT[0] + ': χωρίς αισθητήρα εδάφους (θερμοκρασία και υγρασία ριζοστρώματος) ο κίνδυνος δεν υπολογίζεται. ' + _nfT[1]
+              : 'Ασθένεια εδάφους: χωρίς μέτρηση θερμοκρασίας εδάφους ο κίνδυνος δεν υπολογίζεται. Χρειάζεται αισθητήρας εδάφους στον αγρό.' } }];
           continue;
         }
         // Χωρίς δηλωμένο ιστορικό ο συντελεστής μολύσματος είναι ουδέτερος (0,5):
@@ -10399,14 +10472,31 @@ function calculate_FIR(hourTich, dailyTich, measurements, ipsiLast, parameters) 
       } else if (erCalculationType === "Wound_Canker_Model") {
         // T-SOILWOUND-01: έλκος καστανιάς — πληγές ή βροχή σε ήπιο καιρό, μόνο στην περίοδο μόλυνσης.
         er = _computeWoundCankerER(pathogen, measurements, parameters);
-        if (er === null) continue; // χωρίς θερμοκρασία αέρα: καμία εκτίμηση
+        if (er === null) {   // T-NOSILENT-CARD-01: χωρίς θερμοκρασία αέρα — κάρτα, όχι σιωπή
+          indicators = [...indicators, { variable: `fir_message_${pathogenKey}`, value: 'Μη διαθέσιμο',
+            metadata: { color: 'grey', text: 'Δεν υπολογίστηκε — λείπει έγκυρη μέτρηση θερμοκρασίας αέρα. Ελέγξτε τον αισθητήρα ή τον μετεωρολογικό σταθμό του αγρού.' } }];
+          continue;
+        }
       } else if (erCalculationType === "Bacterial_Disease_Model") {
         er = _computeBacterialER(pathogen, measurements, parameters);
-        if (er === null) continue; // ούτε πληγές ούτε βροχή: κανένα σήμα, σιωπή
+        if (er === null) {   // T-NOSILENT-CARD-01: ούτε πληγές ούτε βροχή — κάρτα «Χαμηλός» με αιτία, ή «Μη διαθέσιμο» χωρίς βροχόμετρο
+          const _bRain = Number(getVal(measurements, 'rain_height_daily', getVal(measurements, 'current_rain_height_daily', NaN)));
+          const _bMin = Number((pathogen.risk_model_params || {}).rain_event_min_mm) || 5;
+          indicators = [...indicators, Number.isFinite(_bRain) || (parameters && parameters.covered_cultivation === true)
+            ? { variable: `fir_message_${pathogenKey}`, value: 'Χαμηλός κίνδυνος', metadata: { color: 'green',
+                text: 'Χωρίς βροχή ≥ ' + String(_bMin).replace('.', ',') + ' mm και χωρίς δηλωμένη πληγή. Μετά από κλάδεμα, ράβδισμα, χαλάζι ή παγετό δηλώστε το στη φόρμα — οι πληγές είναι η είσοδος της ασθένειας.' } }
+            : { variable: `fir_message_${pathogenKey}`, value: 'Μη διαθέσιμο', metadata: { color: 'grey',
+                text: 'Χωρίς μέτρηση βροχής ο κίνδυνος δεν κρίνεται. Μετά από κλάδεμα, ράβδισμα, χαλάζι ή παγετό δηλώστε το στη φόρμα και ψεκάστε χαλκούχο στις φρέσκες πληγές.' } }];
+          continue;
+        }
 
       } else if (erCalculationType === "Hybrid_Soilcanopy_Model") {
         er = _computeHybridER(pathogen, measurements, parameters);
-        if (er === null) continue;
+        if (er === null) {   // T-NOSILENT-CARD-01
+          indicators = [...indicators, { variable: `fir_message_${pathogenKey}`, value: 'Μη διαθέσιμο',
+            metadata: { color: 'grey', text: 'Χωρίς μέτρηση θερμοκρασίας εδάφους ο κίνδυνος δεν υπολογίζεται (τα σκληρώτια βλαστάνουν στο έδαφος). Χρειάζεται αισθητήρας εδάφους στον αγρό.' } }];
+          continue;
+        }
 
       } else if (erCalculationType === "fire_blight_blossom_model") {
         // Maryblyt (v4.1): μόνο στην άνθηση, λογιστική στις βαθμοώρες >18,3 °C.
@@ -16202,6 +16292,20 @@ function _sagDetectFaults(dev, data, ctx) {
       what: 'Δεν δίνει: ' + _absent.join(', ') + '· τα υπόλοιπα κανάλια κανονικά.',
       act: 'Έλεγχος επαφής/καλωδίου του αισθητηρίου· αλλιώς αντικατάσταση.' });
   }
+  // T-LEAF-STUCKDRY-01: ο αισθητήρας φύλλου δεν δείχνει ποτέ νερό.
+  if (dev.lst && dev.lst.stuck) {
+    out.push({ dev: nm, kill: false, title: 'Ο αισθητήρας φύλλου δεν δείχνει ποτέ νερό',
+      what: 'Μέγιστο ' + String(dev.lst.max).replace('.', ',') + ' % σε ' + dev.lst.n + ' ημέρες — ούτε τις νύχτες με υψηλή υγρασία. '
+        + 'Μέχρι να διορθωθεί, η διαβροχή εκτιμάται από την υγρασία και τη θερμοκρασία του αέρα.',
+      act: 'Έλεγχος θέσης (μέσα στο φύλλωμα, επιφάνεια προς τα πάνω, όχι κάτω από στέγαστρο), καθαρισμός της επιφάνειας· αλλιώς αντικατάσταση.' });
+  }
+  // T-RH-CEILING-01: το υγρασιόμετρο σταματά πριν τον κορεσμό.
+  if (dev.rhc && dev.rhc.clip) {
+    out.push({ dev: nm, kill: false, title: 'Η υγρασία αέρα δεν φτάνει ποτέ τον κορεσμό',
+      what: 'Το όργανο σταματά στο ' + String(dev.rhc.top).replace('.', ',') + ' % (' + dev.rhc.hits + ' από τις τελευταίες '
+        + dev.rhc.n + ' ημέρες) ενώ τις υγρές νύχτες ο αέρας φτάνει 100 %. Για τις ασθένειες γίνεται διόρθωση· οι ενδείξεις RH που βλέπετε μένουν οι αρχικές.',
+      act: 'Καθαρισμός/βαθμονόμηση ή αντικατάσταση του αισθητηρίου υγρασίας· σε θερμοκήπιο αισθητήρας φύλλου για ασφαλή εκτίμηση διαβροχής.' });
+  }
   return out;
 }
 
@@ -17998,7 +18102,11 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
       // Ξαναδιαβάζουμε στο ημερήσιο tick, ή αν δεν έχουμε τίποτα, ή αν ό,τι
       // έχουμε γέρασε (χαμένη ημερήσια εκτέλεση δεν επιτρέπεται να τυφλώσει).
       const _dNeed = !!dailyTich || _dPrev === null
-        || !Number.isFinite(_dAgeH) || _dAgeH > _SAG_DIAG_MAX_AGE_H || _dAgeH < 0;
+        || !Number.isFinite(_dAgeH) || _dAgeH > _SAG_DIAG_MAX_AGE_H || _dAgeH < 0
+        // T-RH-CEILING-01 / T-LEAF-STUCKDRY-01: ΜΙΑ ανανέωση αμέσως μετά το ανέβασμα, ώστε οι δακτύλιοι να γεμίσουν
+        // από τον πρώτο ωριαίο κύκλο και όχι στο επόμενο ημερήσιο (οι τυφλοί αγροί προστατεύονται από σήμερα).
+        || ((typeName === 's2120' || typeName === 'em300_th' || typeName === 'em320_th') && _dPrev && !Array.isArray(_dPrev.hx))
+        || (typeName === 'lms01_ls' && _dPrev && !Array.isArray(_dPrev.lx));
       if (_dNeed) {
         try {
           const _rawDiag = await device.getData({
@@ -18023,8 +18131,50 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
           }
           if (Number.isFinite(_bx)) _inv.bx = _bx;
           _inv.diagAgeH = 0;
-          if (Object.keys(_inv.stats).length || _bat) {
+          // T-RH-CEILING-01: ημερήσιο μέγιστο υγρασίας (ένα ερώτημα «max» 24ώρου)· αν το ιστορικό είναι λιγότερο από
+          // 7 ημέρες, ΜΙΑ φορά συμπλήρωση 20 ημερών (ένα «max» ανά ημέρα). Αποτυχία = κανένα ιστορικό, καμία διόρθωση.
+          let _hxOut = (_dPrev && Array.isArray(_dPrev.hx)) ? _dPrev.hx : null;
+          const _hv = typeName === 's2120' ? 'air_humidity' : ((typeName === 'em300_th' || typeName === 'em320_th') ? 'humidity' : null);
+          if (_hv) {
+            try {
+              const _day = Math.floor(_nowMin / 1440);
+              const _endMs = Date.parse(now);
+              const _hx = (_hxOut || []).filter((e) => Array.isArray(e) && Number.isFinite(Number(e[0])) && Number.isFinite(Number(e[1])) && _day - Number(e[0]) < _SAG_RHC_DAYS && _day - Number(e[0]) >= 0);
+              const _mx = async (a, z) => { const r = await device.getData({ variables: [_hv], query: 'max', start_date: new Date(a).toISOString(), end_date: new Date(z).toISOString() }); const v = Number(r && r[0] && r[0].value); return Number.isFinite(v) && v > 0 && v <= 100 ? v : null; };
+              const _put = (d, v) => { const i = _hx.findIndex((e) => Number(e[0]) === d); if (i >= 0) _hx[i] = [d, Math.max(Number(_hx[i][1]), v)]; else _hx.push([d, v]); };
+              const _v0 = await _mx(_endMs - 864e5, _endMs);
+              if (_v0 !== null) _put(_day, _v0);
+              if (_hx.length < _SAG_RHC_MIN_DAYS) {
+                const _bs = await Promise.all(Array.from({ length: _SAG_RHC_DAYS - 1 }, (_u, k) => _mx(_endMs - (k + 2) * 864e5, _endMs - (k + 1) * 864e5).catch(() => null)));
+                _bs.forEach((v, k) => { if (v !== null) _put(_day - (k + 1), v); });
+              }
+              _hx.sort((p, q) => Number(p[0]) - Number(q[0]));
+              _hxOut = _hx.slice(-_SAG_RHC_DAYS).map((e) => [Number(e[0]), Number(Number(e[1]).toFixed(1))]);
+            } catch (_eHx) { _hxOut = _hxOut || []; /* κρατάμε ό,τι υπήρχε· κενό = δοκιμάστηκε, όχι ξανά κάθε ώρα */ }
+          }
+          // T-LEAF-STUCKDRY-01: ημερήσιο μέγιστο υγρασίας φύλλου (ίδιο σχήμα με την υγρασία αέρα, 10 ημέρες).
+          let _lxOut = (_dPrev && Array.isArray(_dPrev.lx)) ? _dPrev.lx : null;
+          if (typeName === 'lms01_ls') {
+            try {
+              const _dayL = Math.floor(_nowMin / 1440);
+              const _endL = Date.parse(now);
+              const _lx = (_lxOut || []).filter((e) => Array.isArray(e) && Number.isFinite(Number(e[0])) && Number.isFinite(Number(e[1])) && _dayL - Number(e[0]) < _SAG_LST_DAYS && _dayL - Number(e[0]) >= 0);
+              const _lmx = async (a, z) => { const r = await device.getData({ variables: ['leaf_moisture'], query: 'max', start_date: new Date(a).toISOString(), end_date: new Date(z).toISOString() }); const v = Number(r && r[0] && r[0].value); return Number.isFinite(v) && v >= 0 && v <= 100 ? v : null; };
+              const _putL = (d, v) => { const i = _lx.findIndex((e) => Number(e[0]) === d); if (i >= 0) _lx[i] = [d, Math.max(Number(_lx[i][1]), v)]; else _lx.push([d, v]); };
+              const _w0 = await _lmx(_endL - 864e5, _endL);
+              if (_w0 !== null) _putL(_dayL, _w0);
+              if (_lx.length < _SAG_LST_MIN_DAYS) {
+                const _bl = await Promise.all(Array.from({ length: _SAG_LST_DAYS - 1 }, (_u, k) => _lmx(_endL - (k + 2) * 864e5, _endL - (k + 1) * 864e5).catch(() => null)));
+                _bl.forEach((v, k) => { if (v !== null) _putL(_dayL - (k + 1), v); });
+              }
+              _lx.sort((p, q) => Number(p[0]) - Number(q[0]));
+              _lxOut = _lx.slice(-_SAG_LST_DAYS).map((e) => [Number(e[0]), Number(Number(e[1]).toFixed(1))]);
+            } catch (_eLx) { _lxOut = _lxOut || []; /* κρατάμε ό,τι υπήρχε· κενό = δοκιμάστηκε, όχι ξανά κάθε ώρα */ }
+          }
+          if (Object.keys(_inv.stats).length || _bat || _hxOut || _lxOut) {
             const _rec = _bat ? { t: _nowMin, s: _inv.stats, b: _bat } : { t: _nowMin, s: _inv.stats };
+            if (_hxOut) _rec.hx = _hxOut;   // T-RH-CEILING-01
+            if (_lxOut) _rec.lx = _lxOut;   // T-LEAF-STUCKDRY-01
             if (Number.isFinite(_bx)) _rec.bx = Number(_bx.toFixed(2));
             deviceData[_dKey] = JSON.stringify(_rec);
           }
@@ -18047,6 +18197,14 @@ async function getMeasurements(hourTich, dailyTich, devices, fieldId, fieldName)
         deviceData[_dKey] = JSON.stringify(_dPrev);
       }
     }
+
+    // T-RH-CEILING-01: η οροφή του οργάνου από τον δακτύλιο της διαγνωστικής εγγραφής (όποιος κλάδος κι αν την έγραψε).
+    try {
+      const _dr = deviceData[_sagDiagKey(String(value))];
+      const _dro = typeof _dr === 'string' ? JSON.parse(_dr) : null;
+      if (_dro && Array.isArray(_dro.hx)) { const _c = _sagRhCeiling(_dro.hx); if (_c) _inv.rhc = _c; }
+      if (_dro && Array.isArray(_dro.lx)) { const _l = _sagLeafStuck(_dro.lx); if (_l) _inv.lst = _l; }   // T-LEAF-STUCKDRY-01
+    } catch (_eRc) { /* χωρίς οροφή */ }
 
     // T-HOURPACKET-01: σκιώδες, μόνο στον ωριαίο παλμό, μία φορά ανά όργανο. Δεν γράφει στο deviceData.
     if (hourTich) await _sagHourPacket(device, typeName, value, info?.name || value, fieldName, now);

@@ -117,8 +117,8 @@ const base = run(SRC);
 if (base.length) { console.log("ΑΠΟΤΥΧΙΑ ΒΑΣΗΣ:\n  " + base.join("\n  ")); process.exit(1); }
 console.log("ΒΑΣΗ: όλοι οι έλεγχοι πέρασαν");
 const M = [
-  ["M1 χωρίς παράκαμψη", "const humidityOk = RH >= _rhMin || (needsWet && (_lwsMeasuredWet || _lwsRainWet));", "const humidityOk = RH >= _rhMin;"],
-  ["M2 παράκαμψη και για ωίδια", "const humidityOk = RH >= _rhMin || (needsWet && (_lwsMeasuredWet || _lwsRainWet));", "const humidityOk = RH >= _rhMin || _lwsMeasuredWet;"],
+  ["M1 χωρίς παράκαμψη", "const humidityOk = RHd >= _rhMin || (needsWet && (_lwsMeasuredWet || _lwsRainWet));", "const humidityOk = RHd >= _rhMin;"],
+  ["M2 παράκαμψη και για ωίδια", "const humidityOk = RHd >= _rhMin || (needsWet && (_lwsMeasuredWet || _lwsRainWet));", "const humidityOk = RHd >= _rhMin || _lwsMeasuredWet;"],
   ["M3 κάθε υγρό φύλλο (και εκτίμηση)", "const _lwsMeasuredWet = leafIsWet && (_lws.source === 'sensor' || _lws.source === 'dew_leaf');", "const _lwsMeasuredWet = leafIsWet;"],
   ["M4 χωρίς δρόσο φύλλου", "(_lws.source === 'sensor' || _lws.source === 'dew_leaf')", "(_lws.source === 'sensor')"],
   ["M5 βοτρύτης εκτός λίστας", "'brassica_downy_mildew', 'botrytis_cinerea'];", "'brassica_downy_mildew'];"],

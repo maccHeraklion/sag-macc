@@ -11,7 +11,7 @@ function run(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let r;
   try { r = replay(src); } catch (e) { return ["επανάληψη: " + e.message]; }
-  ok(r.version === "v50.189 · 2026-11-09", "Ε έκδοση (" + r.version + ")");
+  ok(r.version === "v50.190 · 2026-11-09", "Ε έκδοση (" + r.version + ")");
   const D = r.days; const wetDays = Object.keys(D).filter((d) => d >= "10-15" && d <= "11-03");
   // Α · η προειδοποίηση υπάρχει κάθε ημέρα της περιόδου μολύνσεων (ο κανόνας RH 95 έδινε 0)
   ok(wetDays.every((d) => HI(D[d]) > 0), "Α1 Υψηλός/Σοβαρός κάθε ημέρα 15/10–3/11 (λείπουν: " + wetDays.filter((d) => !HI(D[d])).join(",") + ")");
@@ -46,7 +46,7 @@ const base = run(SRC);
 if (base.length) { console.log("ΑΠΟΤΥΧΙΑ:\n  " + base.join("\n  ")); process.exit(1); }
 console.log("downy_repeat_check: όλα ✔");
 const MUT = [
-  ["όριο RH 95 (πριν τον v50.176)", "const humidityOk = RH >= _rhMin || (needsWet && (_lwsMeasuredWet || _lwsRainWet));", "const humidityOk = RH >= Number(_oh.min);"],
+  ["όριο RH 95 (πριν τον v50.176)", "const humidityOk = RHd >= _rhMin || (needsWet && (_lwsMeasuredWet || _lwsRainWet));", "const humidityOk = RH >= Number(_oh.min);"],
   ["χωρίς κλιμάκωση", "if (_run !== undefined && level === 3", "if (false && level === 3"],
   ["48 ω από το άνοιγμα, όχι από τη σειρά", "(_run === undefined || !Number.isFinite(_pH)", "(false && _run === undefined || !Number.isFinite(_pH)"],
   ["κλιμάκωση αμέσως", "const _SAG_DOWNY_REPEAT_MIN = 48 * 60;", "const _SAG_DOWNY_REPEAT_MIN = 0;"],
@@ -54,7 +54,7 @@ const MUT = [
   ["κλιμάκωση και σε μέτριο", "level === 3 && !knownLow && msg", "level >= 2 && msg"],
   ["αερισμός και εκτός θερμοκηπίου/χωρίς", "_SAG_COVERED_ACTIVE ? ' Αερίστε ώστε να στεγνώνει το φύλλωμα τη νύχτα.' : ''", "_SAG_COVERED_ACTIVE ? '' : ''"],
   ["καλωδίωση πίσω στον κλάδο σονδών", "      if (hourTich && typeName === 'lms01_ls') await _sagLeafHourRead(device, deviceData, now, fieldName);\n", ""],
-  ["παλιά έκδοση", "'v50.189 · 2026-11-09'", "'v50.188 · 2026-11-07'"],
+  ["παλιά έκδοση", "'v50.190 · 2026-11-09'", "'v50.189 · 2026-11-09'"],
 ];
 let dead = 0;
 for (const [name, a, b] of MUT) {
