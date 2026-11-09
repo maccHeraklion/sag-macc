@@ -1,0 +1,99 @@
+{
+  "_about": "Μητρώο προδιαγραφών οργάνων SAG. Μόνο τιμές από επίσημα έγγραφα κατασκευαστή (πηγή ανά μοντέλο). null = δεν δηλώνεται από τον κατασκευαστή. Ενημέρωση 2026-11-09. Κάθε νέο μοντέλο μπαίνει εδώ ΠΡΙΝ τοποθετηθεί. Έκθεση: ΠΡΟΔΙΑΓΡΑΦΕΣ_ΟΡΓΑΝΩΝ_2026-11-09.md",
+  "s2120": {
+    "model": "SenseCAP S2120 LoRaWAN 8-in-1 Weather Station",
+    "sources": ["https://www.seeedstudio.com/sensecap-s2120-lorawan-8-in-1-weather-sensor-p-5436.html", "https://files.seeedstudio.com/products/SenseCAP/101990961_SenseCAP%20S2120/SenseCAP%20S2120%20LoRaWAN%208-in-1%20Weather%20Station%20User%20Guide.pdf", "https://github.com/Seeed-Solution/SenseCAP-Decoder/blob/main/S2120/TTN/SenseCAP_S2120_TTN_Decoder.js"],
+    "operating": { "temp_c": [-20, 60], "temp_c_lithium": [-40, 60], "rh_pct": [0, 99], "condensing": null, "heater": null, "ip": null },
+    "channels": {
+      "air_temperature": { "range": [-40, 80], "accuracy": "±0.5 °C (0..80), ±0.6 °C (-40..0)", "resolution": 0.1 },
+      "air_humidity": { "range": [1, 99], "accuracy": "±3 %RH (1..90), ±4 %RH (90..99)", "resolution": 1 },
+      "light_intensity": { "range": [0, 200000], "accuracy": "±5 %", "resolution": 1 },
+      "uv_index": { "range": [0, 16], "accuracy": "±10 %", "resolution": 0.1 },
+      "wind_speed": { "range_m_s": [0, 50], "accuracy": "±0.5 m/s (<5), ±10 % (>5)", "resolution_m_s": 0.1, "method": "cup anemometer" },
+      "wind_direction": { "range": [0, 360], "accuracy": "±8°", "resolution": 1 },
+      "rain_gauge": { "range_mm_h": [0, 450], "accuracy": "±7 %", "resolution_mm_h": 0.254, "method": "tipping bucket; intensity = last 10 min × 6" },
+      "rain_accumulation": { "firmware_min": "2.0", "resolution_mm": 0.254, "rollover": 999999999 },
+      "barometric_pressure_hpa": { "range": [540, 1100], "accuracy": "±5 hPa (700..1100), ±8 hPa (540..699)", "resolution": 1 }
+    },
+    "notes": "Δεν δίνει σημείο δρόσου (υπολογίζεται κατάντη). T/RH/φως/UV/άνεμος στο ίδιο πλαίσιο με κατεύθυνση/βροχή/πίεση. Προεπιλογή αποστολής 60΄."
+  },
+  "em320_th": {
+    "model": "Milesight EM320-TH",
+    "sources": ["https://resource.milesight.com/milesight/iot/document/em320-th-datasheet-en.pdf", "https://resource.milesight.com/milesight/iot/document/em320-th-user-guide-en.pdf", "https://www.milesight.com/iot/product/lorawan-sensor/em320-th"],
+    "sensor_chip": "Sensirion SHT41 (σελίδα προϊόντος)",
+    "operating": { "temp_c": [-30, 60], "rh_pct": [0, 95], "condensing": null, "heater": null, "ip": "IP67" },
+    "channels": {
+      "temperature": { "range": [-30, 60], "accuracy": "±0.3 °C (-30..0), ±0.2 °C (0..60)", "resolution": 0.1 },
+      "humidity": { "range": [0, 100], "accuracy": "±2 %RH typ (25 °C)", "resolution": 0.5 }
+    },
+    "fleet_observation_2026_11_09": "Όλα τα ζωντανά όργανα: μέγιστο 87–95 % σε 21 ημέρες (em300/S2120 ίδιας περιόδου 99–100). Αιτία μη δημοσιευμένη — ερώτηση Milesight, έλεγχος διόρθωσης ToolBox.",
+    "suitability": "Όχι για ανίχνευση κορεσμού/διαβροχής (λειτουργία ≤ 95 % RH). Σε θερμοκήπιο: μόνο μαζί με αισθητήρα φύλλου."
+  },
+  "em300_th": {
+    "model": "Milesight EM300-TH",
+    "sources": ["https://resource.milesight.com/milesight/iot/document/em300-th-datasheet-en.pdf", "https://resource.milesight.com/milesight/iot/document/em300-th-user-guide-en.pdf"],
+    "operating": { "temp_c": [-30, 70], "rh_pct": [0, 100], "condensing": false, "heater": null, "ip": "IP67" },
+    "channels": {
+      "temperature": { "range": [-30, 70], "accuracy": "±0.6 °C (-30..0), ±0.3 °C (0..70)", "resolution": 0.1 },
+      "humidity": { "range": [0, 100], "accuracy": "±3 %RH (10..90), ±5 %RH (0..10, 90..100)", "resolution": 0.5 }
+    }
+  },
+  "lms01_ls": {
+    "model": "Dragino LMS01-LB / LMS01-LS",
+    "sources": ["https://wiki.dragino.com/docs/LoRaWAN-End-Node/soil-agriculture-sensors/lms01-lb/"],
+    "operating": { "temp_c": [-40, 85], "ip": "IP66 (περίβλημα), IP67 (αισθητήριο)" },
+    "channels": {
+      "leaf_moisture": { "range": [0, 100], "meaning": "ποσοστό της επιφάνειας με σταγόνες νερού", "accuracy": "±3 % (0..50), ±6 % (>50)", "resolution": 0.1, "wet_threshold": null },
+      "leaf_temperature": { "range": [-50, 80], "accuracy": "<±0.5 °C (-10..70), <±1.0 °C αλλιώς", "resolution": 0.1 }
+    },
+    "notes": "Ο κατασκευαστής δεν δίνει όριο «υγρό φύλλο» ούτε οδηγίες γωνίας/καθαρισμού. Το 15 % του SAG είναι δική μας βαθμονόμηση."
+  },
+  "lse01": {
+    "model": "Dragino LSE01",
+    "sources": ["https://wiki.dragino.com/docs/LoRaWAN-End-Node/soil-agriculture-sensors/lse01/", "https://www.dragino.com/downloads/downloads/LoRa_End_Node/LSE01/Calibrate_to_other_Soil_20230522.pdf"],
+    "operating": { "temp_c": null, "ip": "IP66 (περίβλημα)" },
+    "calibration": "εργοστασιακή για ορυκτά εδάφη (saline-alkali, loamy)· άλλα μέσα με βαθμονόμηση 3 σημείων· στον κοκοφοίνικα ~½ της πραγματικής υγρασίας",
+    "channels": {
+      "soil_moisture": { "range": [0, 100], "accuracy": "±3 % (0..53), ±5 % (>53)", "resolution": 0.01, "method": "FDR" },
+      "temp_soil": { "range": [-40, 85], "accuracy": "<0.3 °C (-10..50), <0.6 °C αλλιώς", "resolution": 0.01 },
+      "conduct_soil": { "range_uS_cm": [0, 20000], "accuracy": "2%FS", "resolution": 1, "reference_temp_c": 25, "kind": null }
+    },
+    "measurement_volume": "κύλινδρος 7 cm × 10 cm"
+  },
+  "se0x": {
+    "model": "Dragino SE01-LB / SE02-LB (SE02: 2 σόνδες)",
+    "sources": ["https://wiki.dragino.com/docs/LoRaWAN-End-Node/soil-agriculture-sensors/se01-lb/", "https://wiki.dragino.com/docs/LoRaWAN-End-Node/soil-agriculture-sensors/se02-lb/"],
+    "operating": { "temp_c": [-40, 85], "ip": "IP66 (περίβλημα)" },
+    "calibration": "ίδια με LSE01",
+    "channels": {
+      "soil_moisture": { "range": [0, 100], "accuracy": "±3 % (0..53), ±5 % (>53)", "resolution": 0.01 },
+      "soil_temperature": { "range": [-40, 85], "accuracy": "<0.3 °C (-10..50), <0.6 °C αλλιώς", "resolution": 0.01 },
+      "conduct_soil": { "range_uS_cm": [0, 20000], "accuracy": "2%FS", "resolution": 1, "reference_temp_c": 25, "kind": null }
+    }
+  },
+  "lse02": { "same_as": "se0x", "notes": "Ετικέτα τύπου στο TagoIO για σόνδα 2 βαθών· ίδιο αισθητήριο Dragino." },
+  "sph01": {
+    "model": "Dragino SPH01-LB / SPH01-LS",
+    "sources": ["https://wiki.dragino.com/docs/LoRaWAN-End-Node/soil-agriculture-sensors/sph01-lb/"],
+    "operating": { "temp_c": [-40, 85], "ip": "IP66 (περίβλημα), IP68 (αισθητήριο)" },
+    "channels": {
+      "soil_ph": { "range": [3, 10], "accuracy": "±2 % (0..50 °C)", "resolution": 0.01, "temp_compensation_c": [0, 50] },
+      "temp_soil": { "range": [-40, 85], "accuracy": "<±0.5 °C (-10..40), <±0.8 °C αλλιώς", "resolution": 0.1 }
+    },
+    "maintenance": "καθαρισμός ηλεκτροδίου κάθε 3–6 μήνες· βαθμονόμηση με ρυθμιστικό 4,00 / 6,86 / 9,18"
+  },
+  "aglwpp01": {
+    "model": "Makerfabs AgroSense Pipe Pressure AGLWPP01",
+    "sources": ["https://makerfabs.com/agrosense-pipe-pressure-sensor-lorawanr.html", "https://github.com/Makerfabs/Agrosense-Decoder"],
+    "operating": { "temp_c": [-20, 85], "ip": "IP68" },
+    "channels": {
+      "pressure": { "range_bar": [0, 16], "accuracy": "±0.5 % FS (±0.08 bar)", "resolution_kpa": 1, "overload_bar": 30, "conversion": "kPa = (mV/1000 − 0.483) × 400 (τρέχων decoder· ο παλιός ×250 είναι λάθος για 1,6 MPa)" }
+    }
+  },
+  "uc511": {
+    "model": "Milesight UC511",
+    "sources": ["https://resource.milesight.com/milesight/iot/document/uc51x-series-datasheet-en.pdf"],
+    "operating": { "temp_c": [-20, 60], "rh_pct": [0, 95], "condensing": false, "ip": "IP68 (τρέχον), IP67 (v3)" },
+    "notes": "Δεν μετρά νερό· μόνο μετρητής παλμών από εξωτερικό υδρόμετρο (≤ 4000 Hz). Πίεση μόνο στις εκδόσεις AI (PS02/PS03, 0–16 bar)."
+  }
+}
