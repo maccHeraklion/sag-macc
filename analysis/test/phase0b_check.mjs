@@ -25,6 +25,7 @@ function mkMeas(prevData, t0, hour, o) {
   data.temperature = [{ value: T }]; data.humidity = [{ value: RH }]; data.dew_point = [{ value: dp }];
   if (o.lm !== undefined) data.leaf_moisture = [{ value: o.lm }]; else delete data.leaf_moisture;
   if (o.lmMax !== undefined) data.leaf_moisture_hour_max = [{ value: o.lmMax }]; else delete data.leaf_moisture_hour_max;
+  if (o.lmMed !== undefined) data.leaf_moisture_hour_med = [{ value: o.lmMed }]; else delete data.leaf_moisture_hour_med;
   if (o.lt !== undefined) data.leaf_temperature = [{ value: o.lt }]; else delete data.leaf_temperature;
   if (o.rain !== undefined) data.rain_height_hourly = [{ value: o.rain }]; else delete data.rain_height_hourly;
   data.ipsi_avg = [{ value: 2 }];
@@ -49,21 +50,21 @@ function run(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let K; try { K = loadCore(src); } catch (e) { return ["φόρτωση πυρήνα: " + e.message]; }
   try {
-    ok(K.SAG_KERNEL_VERSION === "v50.193 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.194 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     ok(typeof K._sagLeafHourRead === "function", "Ε2 υπάρχει _sagLeafHourRead");
     // ── Α · μέγιστο της ώρας ──
     { let st = { data: {} }, r;
       r = tick(K, st, T0, 1, DRYLAST, TOM);
       ok(r.cnt(PI) === 0, "Α1 τελευταίο δείγμα στεγνό (σκιασμένο), χωρίς μέγιστο: δεν μετρά (" + r.cnt(PI) + ")");
       let s2 = { data: {} };
-      r = tick(K, s2, T0, 1, Object.assign({}, DRYLAST, { lmMax: 60 }), TOM);
-      ok(r.cnt(PI) === 1, "Α2 τελευταίο στεγνό αλλά μέγιστο ώρας 60: η ώρα είναι ΥΓΡΗ (" + r.cnt(PI) + ")");
+      r = tick(K, s2, T0, 1, Object.assign({}, DRYLAST, { lmMed: 60, lmMax: 60 }), TOM);
+      ok(r.cnt(PI) === 1, "Α2 (v50.194) τελευταίο στεγνό αλλά τα μισά δείγματα υγρά (άνω διάμεσος 60): η ώρα είναι ΥΓΡΗ (" + r.cnt(PI) + ")");
       ok(r.get("leaf_wetness_source") && /αισθητ/i.test(String(r.get("leaf_wetness_source").value)), "Α3 πηγή = αισθητήρας (" + (r.get("leaf_wetness_source") || {}).value + ")");
-      r = tick(K, s2, T0, 2, Object.assign({}, DRYLAST, { lmMax: 8 }), TOM);
-      ok(r.cnt(PI) === 0, "Α4 μέγιστο ώρας 8 (όλα στεγνά): μηδενίζει (" + r.cnt(PI) + ")");
+      r = tick(K, s2, T0, 2, Object.assign({}, DRYLAST, { lmMed: 8, lmMax: 60 }), TOM);
+      ok(r.cnt(PI) === 0, "Α4 (v50.194) ένα υγρό δείγμα (μέγιστο 60) αλλά πλειοψηφία στεγνή (διάμεσος 8): ΔΕΝ μετρά, μηδενίζει (" + r.cnt(PI) + ")");
       let s3 = { data: {} };
-      r = tick(K, s3, T0, 1, { T: 16, RH: 96, lm: 60, lt: 16, lmMax: 5 }, TOM);
-      ok(r.cnt(PI) === 1, "Α5 τελευταίο υγρό, μέγιστο μικρότερο (παλιό): max(60,5) υγρό (" + r.cnt(PI) + ")");
+      r = tick(K, s3, T0, 1, { T: 16, RH: 96, lm: 60, lt: 16 }, TOM);
+      ok(r.cnt(PI) === 1, "Α5 χωρίς ανάγνωση ώρας: κρίνει το τελευταίο δείγμα (60 υγρό) (" + r.cnt(PI) + ")");
       const lmMaxT = r.get("leaf_moisture_max_today");
       ok(lmMaxT && Number(lmMaxT.value) === 60, "Α6 το διαγνωστικό μέγιστο ημέρας μένει από το ΤΕΛΕΥΤΑΙΟ δείγμα (" + (lmMaxT || {}).value + ")");
     }
@@ -118,7 +119,8 @@ function run(src) {
 const base = run(SRC);
 console.log(base.length ? "ΒΑΣΗ: ΑΠΟΤΥΧΙΑ\n - " + base.join("\n - ") : "ΒΑΣΗ: ΟΚ");
 const MUT = [
-  ["m1 χωρίς μέγιστο ώρας στην κρίση", "_leafStuck ? null : leafMoistureHour,", "_leafStuck ? null : leafMoisture,"],
+  ["m1 χωρίς τιμή ώρας στην κρίση", "_leafStuck ? null : leafMoistureHour,", "_leafStuck ? null : leafMoisture,"],
+  ["m1β ξανά το μέγιστο (οποιοδήποτε δείγμα)", "const _lmHourMed = Number(getVal(measurements, \"leaf_moisture_hour_med\", NaN));", "const _lmHourMed = Number(getVal(measurements, \"leaf_moisture_hour_max\", NaN));"],
   ["m2 χωρίς κάρτα διαβροχής", "indicators.push({ variable: 'leaf_wetting_event'", "void({ variable: 'leaf_wetting_event'"],
   ["m3 διαβροχή και με βροχή", "&& !(_lwsRain1h > _SAG_LWS_RAIN_MM)) {", "&& true) {"],
   ["m4 διαβροχή και υπαίθρια", "if (parameters && parameters.covered_cultivation === true && Number.isFinite(_wePrev)", "if (Number.isFinite(_wePrev)"],

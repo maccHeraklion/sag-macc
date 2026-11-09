@@ -47,7 +47,7 @@ function run(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let K; try { K = loadCore(src); } catch (e) { return ["φόρτωση πυρήνα: " + e.message]; }
   try {
-    ok(K.SAG_KERNEL_VERSION === "v50.193 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.194 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     const CH = cropOf(K, "chestnut"), OR = cropOf(K, "orange"), TO = cropOf(K, "tomato");
     const XC = "phytophthora_xcambivora", CP = "cryphonectria_parasitica", PC = "phytophthora_citrophthora";
     // Α. καστανιά, 30 ώρες T 18 RH 97 χωρίς αισθητήρα φύλλου (πριν: μελάνωση 6 ω → Σοβαρός, έλκος 24 ω → Σοβαρός)
