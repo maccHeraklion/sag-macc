@@ -93,6 +93,9 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 720; letter-spacing: -.01em; }
 .leaflet-container { font: inherit; }
 #mapveil { position: absolute; inset: 0; z-index: 800; display: flex; align-items: flex-end; justify-content: center;
   padding-bottom: 14px; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.maphint { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 790; border: 1px solid var(--line2);
+  background: var(--s2); color: var(--tx); font: inherit; font-size: .82rem; padding: 6px 12px; border-radius: 999px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+.maphint:hover { border-color: var(--accent); }
 #mapveil span { background: rgba(17,24,39,.85); color: #fff; font-size: .8rem; padding: 7px 13px; border-radius: 999px; }
 .side { display: flex; flex-wrap: wrap; gap: 10px; min-width: 0; align-items: flex-start; }
 .side > * { flex: 1 1 300px; min-width: 0; }
@@ -767,6 +770,7 @@ function noPosition(v) {
     <div>
       <div class="mapwrap">
         <div id="map"></div>
+        <button type="button" id="panelHint" class="maphint" hidden>Λεπτομέρειες ↓</button>
         <div id="mapveil" hidden><span>Πατήστε για να μετακινήσετε τον χάρτη</span></div>
       </div>
       <div class="card" style="margin-top:10px">
@@ -897,7 +901,7 @@ function drawMap(v) {
     if (grp.suspect) label += ' · ύποπτη θέση';
     var m = L.marker([grp.p.lat, grp.p.lng], { icon: pinIcon(s, single ? 'f' : 'grp', text, sub, grp.suspect, isSel, kind ? kind.svg : null, (!single && kind) ? list.length : null), title: label, alt: label,
       zIndexOffset: isSel ? PIN_TOP : fieldsZ(list), riseOnHover: true, riseOffset: PIN_TOP + 1000 });
-    m.on('click', function () { select_(single ? { kind: 'field', key: list[0].key } : { kind: 'group', key: grp.key }); reveal('panel'); });
+    m.on('click', function () { UI.userMoved = true; select_(single ? { kind: 'field', key: list[0].key } : { kind: 'group', key: grp.key }, { fromMap: true }); });
     m.addTo(UI.layer);
     pts.push([grp.p.lat, grp.p.lng]);
   });
@@ -909,7 +913,7 @@ function drawMap(v) {
     var label = g.name + ': ' + g.st.w + (g.posKind === 'suspect' ? ' · ύποπτη θέση' : '');
     var m = L.marker([g.p.lat, g.p.lng], { icon: pinIcon(g.st, 'gw', 'Πύλη', badgeOf(g.st, null), g.posKind === 'suspect', !!selGw && selGw === g, GW_SVG),
       title: label, alt: label, zIndexOffset: (!!selGw && selGw === g) ? PIN_TOP : gwZ(g), riseOnHover: true, riseOffset: PIN_TOP + 1000 });
-    m.on('click', function () { select_({ kind: 'gw', key: g.key }); reveal('panel'); });
+    m.on('click', function () { UI.userMoved = true; select_({ kind: 'gw', key: g.key }, { fromMap: true }); });
     m.addTo(UI.layer);
     pts.push([g.p.lat, g.p.lng]);
   });
@@ -980,6 +984,7 @@ function panelGw(g) {
   }
   h += '<div class="meta">Θέση: ' + (g.p ? '<span class="mono">' + g.p.lat.toFixed(5) + ', ' + g.p.lng.toFixed(5) + '</span>' : 'άγνωστη')
     + (g.posWhy ? ' (' + esc(g.posWhy) + ')' : '') + '</div>';
+  if (g.p) h += '<div class="meta"><button type="button" class="btn" data-frame>Εστίαση του χάρτη στην πύλη</button></div>';
   h += '<h3>Επιβεβαιωμένη λήψη (' + plural(g.heardList.length, 'αγρός', 'αγροί') + ')</h3>';
   if (g.heardList.length) {
     h += '<ul class="list">' + g.heardList.map(function (x) {
@@ -1065,7 +1070,7 @@ function renderPanel() {
   var el = $('panel'), sel = UI.sel, h = '';
   var obj = !sel ? null : (sel.kind === 'gw' ? byKey(MODEL.gws, sel.key) : (sel.kind === 'field' ? byKey(MODEL.fields, sel.key) : byKey(MODEL.groups, sel.key)));
   if (!obj) {
-    UI.sel = null;
+    UI.sel = null; hint(false);
     el.innerHTML = '<h2>Λεπτομέρειες</h2><div class="note">Πάτησε μια πύλη ή έναν αγρό στον χάρτη ή στη λίστα.</div>';
     return;
   }
@@ -1093,12 +1098,18 @@ function frameGateway(g) {
 function reveal(id) {
   try { var el = $(id); if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: id === 'map' ? 'start' : 'nearest' }); } catch (e) {}
 }
-function select_(s) {
+/* T-GWMAP-11 (9/11): επιλογή ΑΠΟ ΤΟΝ ΧΑΡΤΗ δεν κουνά ούτε τον χάρτη ούτε τη σελίδα· ένα κουμπί πάνω στον χάρτη οδηγεί στις
+   λεπτομέρειες. Επιλογή από τη λίστα (κάτω από τον χάρτη) τον φέρνει στο στοιχείο, όπως πριν. */
+function hint(show) { var b = $('panelHint'); if (b) b.hidden = !show; }
+function select_(s, o) {
+  var fromMap = !!(o && o.fromMap);
   var same = UI.sel && UI.sel.kind === s.kind && UI.sel.key === s.key;
   UI.sel = s;
   renderPanel();
-  if (s.kind === 'gw' && !same) frameGateway(byKey(MODEL.gws, s.key));
+  if (s.kind === 'gw' && !same && !fromMap) frameGateway(byKey(MODEL.gws, s.key));
   drawMap(visible(MODEL, UI.flt));
+  hint(fromMap);
+  if (fromMap) return;
   /* Στο κινητό ο χάρτης έρχεται στην κορυφή: το πλαίσιο αρχίζει ακριβώς κάτω του, άρα φαίνονται και οι γραμμές και τα στοιχεία. */
   if (window.innerWidth <= 900) { try { document.querySelector('.mapwrap').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {} }
 }
@@ -1237,8 +1248,10 @@ $('bFit').onclick = function () {
   if (UI.map && UI.lastPts && UI.lastPts.length) { try { UI.map.fitBounds(UI.lastPts, { padding: [36, 36], maxZoom: 13 }); } catch (e) {} }
 };
 document.addEventListener('click', function (e) {
-  var t = e.target.closest ? e.target.closest('[data-sel],[data-close]') : null;
+  var t = e.target.closest ? e.target.closest('[data-sel],[data-close],[data-frame],#panelHint') : null;
   if (!t) return;
+  if (t.id === 'panelHint') { hint(false); reveal('panel'); return; }
+  if (t.hasAttribute('data-frame')) { if (UI.sel && UI.sel.kind === 'gw') frameGateway(byKey(MODEL.gws, UI.sel.key)); reveal('map'); return; }
   if (t.hasAttribute('data-close')) { UI.sel = null; renderPanel(); drawMap(visible(MODEL, UI.flt)); return; }
   var kind = t.getAttribute('data-sel'), key = t.getAttribute('data-key');
   select_({ kind: kind, key: key });
