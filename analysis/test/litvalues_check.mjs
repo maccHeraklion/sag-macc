@@ -50,7 +50,7 @@ function run(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let K; try { K = loadCore(src); } catch (e) { return ["φόρτωση πυρήνα: " + e.message]; }
   try {
-    ok(K.SAG_KERNEL_VERSION === "v50.188 · 2026-11-07", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.189 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     const AS = "alternaria_solani", EN = "erysiphe_necator", LT = "leveillula_taurica", PV = "phomopsis_viticola", CG = "colletotrichum_gloeosporioides";
     const prof = (k) => Object.values(K.PATHOGEN_PROFILE).map((c) => c && c[k]).find(Boolean);
     const pAS = prof(AS), pPV = prof(PV);
