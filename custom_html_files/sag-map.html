@@ -407,7 +407,7 @@ function buildGateways(raw) {
   var ros = list.filter(function (r) { return r && r.id; }).map(function (r) {
     var p = pointOf(r.lat, r.lng);
     return { key: 'dev:' + r.id, id: String(r.id), code: null, net: false, name: String(r.name || r.dev || r.id), dev: r.dev || '',
-      age: null, st: r.storage ? GSTATE.g_storage : (r.off ? GSTATE.g_off : GSTATE.g_unid), storage: !!r.storage, off: r.off || null, lrr: r.lrr || null, conflict: !!r.conflict, p: p,
+      age: null, st: r.storage ? GSTATE.g_storage : (r.off ? GSTATE.g_off : GSTATE.g_unid), storage: !!r.storage, off: r.off || null, lrr: r.lrr || null, tp: r.tp || null, conflict: !!r.conflict, p: p,
       posKind: p ? 'ok' : 'none', posWhy: p ? '' : (r.storage ? 'στην αποθήκη, χωρίς δηλωμένη θέση' : 'η ετικέτα coordinates δεν δίνει θέση'),
       rowFields: [], heard: {}, orphans: [], merged: false };
   });
@@ -418,6 +418,7 @@ function buildGateways(raw) {
     if (!n) return;
     n.linkedRoster = true; r.merged = true;
     n.storage = r.storage; n.conflict = r.conflict; n.dev = r.dev; n.off = r.off; n.lrr = r.lrr;
+    n.tp = r.tp;   // T-TPREAD-02
     if (!n.p && r.p) { n.p = r.p; n.posKind = 'ok'; n.posWhy = ''; n.sharedP = null; }
     if (!n.nameSure) { n.name = r.name; n.nameGuess = ''; }
   });
@@ -436,6 +437,7 @@ function buildGateways(raw) {
     var rivals = pairs.filter(function (Q, j) { return j !== i && (Q.n === P.n || Q.r === P.r); }).length;
     P.n.linkedRoster = true; P.r.merged = true;
     P.n.storage = P.r.storage; P.n.conflict = P.r.conflict; P.n.dev = P.r.dev; P.n.off = P.r.off;
+    P.n.tp = P.r.tp;   // T-TPREAD-02
     if (!P.n.nameSure) {
       if (rivals === 0) { P.n.name = P.r.name; P.n.nameGuess = ''; }
       else P.n.nameGuess = P.r.name + ' (' + Math.round(P.d) + ' m, υπάρχει κι άλλη κοντά)';
@@ -454,6 +456,8 @@ function buildGateways(raw) {
   var all = nets.concat(free);
   all.forEach(function (g) {
     if (g.p && g.conflict) { g.posKind = 'suspect'; g.posWhy = 'διπλή ετικέτα coordinates με διαφορετικές τιμές'; }
+    /* T-TPREAD-02: το ThingPark ξέρει αν η πύλη είναι συνδεδεμένη· αποσυνδεδεμένη = ΕΚΤΟΣ ΔΙΚΤΥΟΥ, όποια κι αν είναι η μαρτυρία. */
+    if (g.tp && g.tp.c === 'DISC' && !g.storage) g.st = GSTATE.g_off;
   });
   return all;
 }
@@ -981,6 +985,14 @@ function panelGw(g) {
     if (g.absent) h += '<div class="note">Δεν εμφανίστηκε στον τελευταίο κύκλο σάρωσης, η ηλικία υπολογίζεται από την τελευταία της κάρτα.</div>';
   } else {
     h += '<div class="note">Κανένας αισθητήρας δεν την κατονομάζει, άρα δεν ξέρουμε αν ζει ούτε τι ακούει. Δεν σημαίνει ότι είναι εκτός λειτουργίας.</div>';
+  }
+  if (g.tp) {
+    var tpUpH = g.tp.u ? (Date.now() - g.tp.u) / 36e5 : null;
+    var tpWord = g.tp.c === 'CNX' ? 'συνδεδεμένη' : (g.tp.c === 'DISC' ? 'αποσυνδεδεμένη' : 'άγνωστη κατάσταση');
+    h += '<div class="meta">ThingPark: ' + tpWord + (g.tp.s ? ' από ' + esc(new Date(g.tp.s).toLocaleString('el-GR', { hour12: false, timeZone: 'Europe/Athens' })) : '')
+      + ' · τελευταίο πακέτο ' + esc(tpUpH == null ? 'ποτέ' : ageWords(tpUpH)) + (g.tp.a ? ' · ' + g.tp.a + ' ενεργοί συναγερμοί' : '') + '</div>';
+    if (g.tp.c === 'CNX' && (tpUpH == null || tpUpH > 24)) h += '<div class="note">Η πύλη είναι συνδεδεμένη στο δίκτυο, αλλά δεν έχει περάσει κανένα πακέτο από αυτήν (' + esc(tpUpH == null ? 'ποτέ' : ageWords(tpUpH)) + '): δεν ακούει κανένα όργανο.</div>';
+    if (g.tp.c === 'DISC') h += '<div class="note">Η πύλη έχασε τη σύνδεσή της με το δίκτυο (internet ή ρεύμα), όχι απαραίτητα η κεραία. Τα όργανα που ακούγονται μόνο από αυτήν δεν φτάνουν.</div>';
   }
   h += '<div class="meta">Θέση: ' + (g.p ? '<span class="mono">' + g.p.lat.toFixed(5) + ', ' + g.p.lng.toFixed(5) + '</span>' : 'άγνωστη')
     + (g.posWhy ? ' (' + esc(g.posWhy) + ')' : '') + '</div>';

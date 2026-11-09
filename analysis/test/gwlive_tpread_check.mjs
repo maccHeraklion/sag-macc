@@ -1,6 +1,6 @@
 /* T-TPREAD-01 (9/11/2026) — ΕΛΕΓΧΟΣ: η δοκιμή ThingPark στο gatewayLiveness (α) τρέχει μόνο με scope {tp_probe:true},
    (β) δεν καλεί ΚΑΘΟΛΟΥ το API του TagoIO (τίποτα δεν διαβάζεται ούτε γράφεται εκεί), (γ) δεν τυπώνει ποτέ το secret,
-   (δ) χωρίς scope η ωριαία δουλειά ξεκινά όπως πριν. Τρέχει το πραγματικό αρχείο σε node:vm με ψεύτικο fetch. */
+   (δ) χωρίς scope ξεκινά η ωριαία δουλειά. Τρέχει το πραγματικό αρχείο σε node:vm με ψεύτικο fetch. */
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
@@ -38,7 +38,7 @@ async function check(src) {
     ok(!a.logs.join("\n").includes(SECRET) && !a.logs.join("\n").includes("AT\""), "Γ1 το secret δεν τυπώνεται");
     ok(a.logs.some((l) => l.includes("τίποτα δεν γράφτηκε")), "Α4 δηλώνει ότι δεν έγραψε");
     const b = await runOnce(src, []);
-    ok(b.calls.some((u) => u.includes("tago.io")) && !b.calls.some((u) => u.includes("actility")), "Δ1 χωρίς scope: ωριαία δουλειά, καμία κλήση στο ThingPark");
+    ok(b.calls.some((u) => u.includes("tago.io")) && !b.logs.some((l) => l.includes("ΔΟΚΙΜΗ THINGPARK")), "Δ1 χωρίς scope: ξεκινά η ωριαία δουλειά, όχι η δοκιμή (στάδιο 2: η ωριαία διαβάζει και το ThingPark)");
   } catch (e) { bad.push("εξαίρεση " + e.message); }
   return bad;
 }

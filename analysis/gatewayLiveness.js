@@ -562,6 +562,72 @@ async function tpProbe() {
   } catch (e) { console.log(P + "συσκευές: " + e.message); }
 }
 
+// ── T-TPREAD-02 (9/11/2026) · ΣΤΑΔΙΟ 2: ΩΡΙΑΙΑ ΑΝΑΓΝΩΣΗ THINGPARK ─────────────────────────────────────────────────────────────
+// Κάθε ωριαία εκτέλεση: πύλες (κατάσταση σύνδεσης, υγεία, τελευταίο πακέτο), ενεργοί συναγερμοί πυλών, συσκευές (τελευταίο
+// πακέτο, χαμένα πακέτα, μπαταρία). Η κατάσταση του ThingPark μπαίνει στον κατάλογο (`gateway_roster`) για τις πύλες με
+// ετικέτα network_lrrid και αντικαθιστά το στιγμιότυπο της 7/11: αποσυνδεδεμένη → `off` = ημέρα τελευταίου πακέτου,
+// συνδεδεμένη → φεύγει το `off`. Μία εγγραφή `tp_network` στην εποπτεία με τη σύνοψη. Αποτυχία ThingPark = παλιά συμπεριφορά.
+// Κόστος: ~5 κλήσεις στο ThingPark (όχι στο TagoIO), +1 εγγραφή/ώρα. Τιμές συσκευών ΩΜΕΣ (κλίμακα PER/μπαταρίας ΥΠΟ ΕΛΕΓΧΟ).
+const TP_SILENT_H = 24;
+async function tpReadNetwork(env) {
+  const { token } = await tpToken(env);
+  const bs = new Map();
+  for (let page = 1; page <= 5; page++) {
+    const j = await tpGet(token, `/partners/mine/bss?pageSize=100&pageIndex=${page}&sort=lrrID,asc`);
+    for (const b of (j && j.briefs) || []) {
+      const up = b.upFrame && b.upFrame.last && b.upFrame.last.date;
+      bs.set(String(b.lrrID || "").toUpperCase(), { l: String(b.lrrID || "").toUpperCase(), n: String(b.name || "").slice(0, 40),
+        c: b.cnxState || null, h: b.healthState || null, s: Number(b.cnxStateSince) || null, u: Number(up) || null, a: 0 });
+    }
+    if (!j || !j.more) break;
+  }
+  try {
+    for (let page = 1; page <= 3; page++) {
+      const j = await tpGet(token, `/partners/mine/bss/alarms?pageSize=100&pageIndex=${page}&state=3`);
+      for (const x of (j && j.briefs) || []) { const k = String((x.bs && x.bs.lrrID) || "").toUpperCase(); if (bs.has(k)) bs.get(k).a++; }
+      if (!j || !j.more) break;
+    }
+  } catch (e) { console.log("TP|συναγερμοί: " + e.message); }
+  const devs = [];
+  try {
+    for (let page = 1; page <= 6; page++) {
+      const j = await tpGet(token, `/subscriptions/mine/devices?pageSize=100&pageIndex=${page}`);
+      for (const d of (j && j.briefs) || []) devs.push({ n: String(d.name || "").slice(0, 40), e: String(d.EUI || "").slice(-4),
+        u: Number(d.lastUpTimestamp) || null, p: d.lastMeanPER == null ? null : Number(d.lastMeanPER),
+        b: d.lastBatLevel == null ? null : Number(d.lastBatLevel), r: d.avgRSSI == null ? null : Number(d.avgRSSI) });
+      if (!j || !j.more) break;
+    }
+  } catch (e) { console.log("TP|συσκευές: " + e.message); }
+  return { bs, devs };
+}
+function tpApplyRoster(roster, bs) {
+  let n = 0;
+  for (const r of roster || []) {
+    const b = r && r.lrr ? bs.get(String(r.lrr).toUpperCase()) : null;
+    if (!b) continue;
+    n++;
+    r.tp = { c: b.c, h: b.h, s: b.s, u: b.u, a: b.a };
+    if (b.c === "DISC") { const d = b.u || b.s; if (d) r.off = new Date(d).toISOString().slice(0, 10); }
+    else if (b.c === "CNX") delete r.off;
+  }
+  return n;
+}
+function tpNetworkRecord(bs, devs, roster, now) {
+  const list = Array.from(bs.values());
+  const inRoster = new Set((roster || []).map((r) => String(r.lrr || "").toUpperCase()).filter(Boolean));
+  const cnx = list.filter((b) => b.c === "CNX").length, disc = list.filter((b) => b.c === "DISC").length;
+  const quiet = list.filter((b) => b.c === "CNX" && (!b.u || now - b.u > TP_SILENT_H * 36e5)).length;
+  const silent = devs.filter((d) => !d.u || now - d.u > TP_SILENT_H * 36e5);
+  const top = silent.slice().sort((x, y) => (y.u || 0) - (x.u || 0)).slice(0, 25);
+  const md = { t: new Date(now).toISOString(), bs: list, not_in_roster: list.filter((b) => !inRoster.has(b.l)).map((b) => b.l),
+    dev: { total: devs.length, silent_24h: silent.length, silent_top: top },
+    color: disc > 0 ? "orange" : "green",
+    text: `ThingPark: ${list.length} πύλες, ${cnx} συνδεδεμένες, ${disc} αποσυνδεδεμένες, ${quiet} συνδεδεμένες χωρίς πακέτο 24 ωρών.`
+      + ` Συσκευές ${devs.length}, ${silent.length} χωρίς πακέτο 24 ωρών.` };
+  if (JSON.stringify(md).length > 9000) md.dev.silent_top = top.slice(0, 5);
+  return { variable: "tp_network", value: `${cnx}/${list.length} πύλες συνδεδεμένες`, metadata: md };
+}
+
 (async () => {
   const t0 = Date.now();
   if (readScope().tp_probe) {
@@ -769,6 +835,15 @@ async function tpProbe() {
         + ` μόνο αυτοί αναφέρουν ποιο gateway τους παρέλαβε. Όσα gateways`
         + ` εξυπηρετούν τους υπόλοιπους ΕΙΝΑΙ ΑΟΡΑΤΑ εδώ — ΤΕΧΝΙΚΑ ΑΓΝΩΣΤΑ,`
         + ` ΟΧΙ χαλασμένα. Οι συσκευές-gateway της TagoIO ΔΕΝ στέλνουν δικά τους δεδομένα.` } });
+
+  // 4α · T-TPREAD-02: η κατάσταση του ThingPark στον κατάλογο + σύνοψη. Αποτυχία = ο κατάλογος μένει με τις ετικέτες.
+  try {
+    const tpn = await tpReadNetwork(readEnvMap());
+    const nApplied = tpApplyRoster(roster, tpn.bs);
+    const rec = tpNetworkRecord(tpn.bs, tpn.devs, roster, Date.now());
+    out.push(rec);
+    console.log(`TP|πύλες=${tpn.bs.size}|στον κατάλογο=${nApplied}|συσκευές=${tpn.devs.length}|${rec.value}|χωρίς πακέτο 24ω=${rec.metadata.dev.silent_24h}`);
+  } catch (e) { console.log("TP|ΣΦΑΛΜΑ|" + ((e && e.message) || e) + " — ο κατάλογος μένει με τις ετικέτες"); }
 
   // 4β · T-GWMAP-02: ο κατάλογος — ΜΟΝΟ αν διαβάστηκε (ένας άδειος κατάλογος θα έσβηνε τον χάρτη).
   if (roster.length) {
