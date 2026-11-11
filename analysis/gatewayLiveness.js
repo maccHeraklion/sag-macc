@@ -466,6 +466,7 @@ function heardList(heard, id, latest, now) {
 // Αξιόπιστη θέση πύλης = δηλωμένη (ετικέτα) ή μοναδική (θέση που μοιράζονται ≥2 πύλες είναι η θέση καταχώρισης, άγνωστη).
 // Κοινόχρηστα όργανα δεν είναι μάρτυρες (ο σταθμός του δήμου ακούγεται από τη δική του πύλη). 0 νέες αναγνώσεις.
 const REG_NEAR_KM = WRONG_FIELD_KM;   // ίδιο όριο με το «λάθος αγρός»
+const REG_FAR_KM = 30;               // T-FIELDREG-02: 15–30 km = ασυνήθιστα μακριά (edge)· πάνω από αυτό = σχεδόν σίγουρα λάθος (far)
 function regFold(s) {
   return String(s == null ? "" : s).replace(/^Field_/i, "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
     .replace(/ς/g, "σ").replace(/ει|οι|[ηυ]/g, "ι").replace(/ω/g, "ο").replace(/[^a-z0-9α-ω]+/g, " ").trim();
@@ -490,7 +491,7 @@ function regGatewayPositions(pos, gw) {
    rc.a/ak: το ΑΛΛΟ αντίγραφο θέσης (tag/form) που συμφωνεί με την πύλη · rc.x="tagold": η πύλη επιβεβαιώνει τη φόρμα, η ετικέτα
    είναι παλιά · rc.nm: dup (ίδιο όνομα με rc.nd άλλες εγγραφές) / ren (όνομα εγγραφής ≠ όνομα συσκευής rc.on). */
 function regCheckRows(rows, fields, gpos, shared6) {
-  const sum = { n: 0, ok: 0, far: 0, nogw: 0, nopos: 0, dup: 0, ren: 0, list: [] };
+  const sum = { n: 0, ok: 0, edge: 0, far: 0, nogw: 0, nopos: 0, dup: 0, ren: 0, list: [] };
   const fById = new Map((fields || []).map((f) => [String(f.id), f]));
   const byName = new Map();
   for (const r of rows || []) { const k = regFold(r.metadata.n); if (k) byName.set(k, (byName.get(k) || 0) + 1); }
@@ -526,9 +527,9 @@ function regCheckRows(rows, fields, gpos, shared6) {
         rc.v = "ok"; sum.ok++;
         if (m.ps === "form" && tag && haversineKm(form.lat, form.lng, tag.lat, tag.lng) > MAP_DIFF_KM) rc.x = "tagold";
       } else {
-        rc.v = "far"; sum.far++;
+        if (b.km <= REG_FAR_KM) { rc.v = "edge"; sum.edge++; } else { rc.v = "far"; sum.far++; }
         if (alt) { const ab = near({ lat: alt.lat, lon: alt.lng }); if (ab && ab.km <= REG_NEAR_KM) { rc.a = m.ps === "form" ? "tag" : "form"; rc.ak = Math.round(ab.km * 10) / 10; } }
-        sum.list.push(truncName(m.n, 40) + "|" + rc.km + " km|" + (rc.a ? "συμφωνεί η " + (rc.a === "tag" ? "ετικέτα" : "φόρμα") : "κανένα αντίγραφο δεν συμφωνεί"));
+        sum.list.push(rc.v + "|" + truncName(m.n, 40) + "|" + rc.km + " km|" + (rc.a ? "συμφωνεί η " + (rc.a === "tag" ? "ετικέτα" : "φόρμα") : "κανένα αντίγραφο δεν συμφωνεί"));
       }
     }
     m.rc = rc;
@@ -976,8 +977,8 @@ function tpNetworkRecord(bs, devs, roster, now) {
     // T-FIELDREG-01: έλεγχος καταχώρησης (όνομα · θέση · πύλη). Δικό του try: αν σκάσει, ο χάρτης γράφεται όπως πριν.
     try {
       const rg = regCheckRows(mapRows, fieldRecs, regGatewayPositions(pos, gw), MAP_SHARED);
-      console.log(`ΚΑΤΑΧΩΡΗΣΕΙΣ|αγροί=${rg.n}|επιβεβαιωμένες=${rg.ok}|μακριά από την πύλη=${rg.far}|χωρίς μάρτυρα=${rg.nogw}|χωρίς θέση=${rg.nopos}|διπλό όνομα=${rg.dup}|όνομα≠συσκευή=${rg.ren}`);
-      for (const l of rg.list.slice(0, 15)) console.log("ΚΑΤ|μακριά|" + l);
+      console.log(`ΚΑΤΑΧΩΡΗΣΕΙΣ|αγροί=${rg.n}|επιβεβαιωμένες=${rg.ok}|15–30 km=${rg.edge}|πάνω από 30 km=${rg.far}|χωρίς μάρτυρα=${rg.nogw}|χωρίς θέση=${rg.nopos}|διπλό όνομα=${rg.dup}|όνομα≠συσκευή=${rg.ren}`);
+      for (const l of rg.list.slice(0, 15)) console.log("ΚΑΤ|" + l);
     } catch (e) { console.log("ΚΑΤΑΧΩΡΗΣΕΙΣ|σφάλμα " + ((e && e.name) || "άγνωστο")); }
     if (mapRows.length) await api(`/device/${OVERSEER}/data`, { method: "POST", body: JSON.stringify(mapRows) });
     console.log(`ΧΑΡΤΗΣ|${mapRows.length} γραμμές map_field`);

@@ -35,6 +35,7 @@ function world() {
     GB: { lat: 35.40, lon: 23.85, decl: 1 },       // ίδια δηλωμένη θέση: μετρά (δηλωμένη)
     GC: { lat: 35.30, lon: 25.10, decl: 1 },       // Ηράκλειο, δηλωμένη
     GX: { lat: 35.3397, lon: 25.1623 }, GY: { lat: 35.3397, lon: 25.1623 },   // θέση γραφείου σε δύο πύλες = άγνωστη
+    GE: { lat: 35.30, lon: 25.32, decl: 1 },       // ~20 km από HER2: «ασυνήθιστα μακριά»
     GZ: { lat: 35.31, lon: 25.12 },                // μοναδική θέση δικτύου (2 km από τον αγρό): μετρά
   };
   const fields = [
@@ -47,6 +48,7 @@ function world() {
     { id: "f7", name: "Field_Κτίριο V3", tags: [T("name", "Κτίριο V3"), cfg(...HER2)] },
     { id: "f8", name: "Field_Κτήριο V11", tags: [T("name", "Υπόσκαφο"), cfg(...HER2)] },
     { id: "f9", name: "Field_Αγρός Θ", tags: [T("name", "Αγρός Θ"), cfg(...HER2)] },
+    { id: "f10", name: "Field_Αγρός Ι", tags: [T("name", "Αγρός Ι"), cfg(...HER2)] },
   ];
   const row = (i, n, p, ps, dv) => ({ variable: "map_field", metadata: { i, n, y: p ? p[0] : null, x: p ? p[1] : null, ps, pq: "ok", dv } });
   const rows = [
@@ -59,6 +61,7 @@ function world() {
     row("f7", "Κτίριο V3", HER2, "form", [{ i: "aaaaa7", g: "GC" }]),
     row("f8", "Υπόσκαφο", HER2, "form", [{ i: "aaaaa8", g: "GZ" }]),
     row("f9", "Αγρός Θ", HER2, "form", [{ i: "aaaaa9", g: "GX" }]),                      // μόνο πύλη με θέση γραφείου
+    row("f10", "Αγρός Ι", HER2, "form", [{ i: "aaaa10", g: "GE" }]),                    // ~20 km
   ];
   return { pos, fields, rows };
 }
@@ -82,7 +85,8 @@ async function check(AN, HT) {
     want("Ζ2 όνομα ≠ όνομα συσκευής", [rc("f8").nm, rc("f8").on], ["ren", "Field_Κτήριο V11"]);
     want("Ζ3 μοναδική θέση δικτύου μετρά", rc("f8").v, "ok");
     want("Θ1 μόνο πύλη γραφείου → χωρίς μάρτυρα", rc("f9").v, "nogw");
-    want("Σ1 σύνοψη", [sum.n, sum.ok, sum.far, sum.nogw, sum.nopos, sum.dup, sum.ren], [9, 4, 2, 2, 1, 2, 1]);
+    want("Λ1 15–30 km = ασυνήθιστα μακριά", [rc("f10").v, rc("f10").km > 15 && rc("f10").km < 30], ["edge", true]);
+    want("Σ1 σύνοψη", [sum.n, sum.ok, sum.edge, sum.far, sum.nogw, sum.nopos, sum.dup, sum.ren], [10, 4, 1, 2, 2, 1, 2, 1]);
     // κοινόχρηστα από τις ετικέτες συσκευών
     X.mapDeviceTypes([{ id: "x".repeat(18) + "ssssss", tags: [T("type", "s2120"), T("shared_instrument", "yes")] }, { id: "y".repeat(18) + "nnnnnn", tags: [T("type", "se0x")] }]);
     want("Κ1 η mapDeviceTypes σημειώνει τα κοινόχρηστα", [X.MAP_SHARED.has("ssssss"), X.MAP_SHARED.has("nnnnnn")], [true, false]);
@@ -92,6 +96,8 @@ async function check(AN, HT) {
     want("Σ2 σελίδα: επιβεβαίωση με σύνδεσμο πύλης", [h1.includes("✔ Η θέση επιβεβαιώνεται"), h1.includes('data-key="gw:GA"'), h1.includes("παλιά θέση")], [true, true, true]);
     want("Σ3 σελίδα: μακριά + ποιο αντίγραφο συμφωνεί", [h3.includes("⚠"), h3.includes("της ετικέτας coordinates απέχει μόνο")], [true, true]);
     want("Σ4 σελίδα: ονόματα", [h6.includes("άλλη μία εγγραφή"), h8.includes("Field_Κτήριο V11")], [true, true]);
+    const h10 = P.regBlock(f(rc("f10")));
+    want("Σ6 σελίδα: ασυνήθιστα μακριά χωρίς ⚠", [h10.includes("ασυνήθιστα μακριά"), h10.includes("⚠")], [true, false]);
     want("Σ5 σελίδα: χωρίς rc τίποτα", P.regBlock({ rc: null }), "");
   } catch (e) { bad.push("εξαίρεση " + (e && e.stack || e)); }
   return bad;
@@ -109,8 +115,10 @@ const MUT = [
   ["an", "η/ι ως διαφορετικά", '.replace(/ει|οι|[ηυ]/g, "ι")', ""],
   ["an", "αγνοεί τις άλλες πύλες (gs)", "for (const x of d.gs || []) if (x && x[0]) codes.add(String(x[0]).toUpperCase());", ""],
   ["an", "χωρίς μετονομασία", 'rc.nm = "ren"', 'rc.nm = undefined'],
+  ["an", "χωρίς βαθμίδα 15–30 km", 'if (b.km <= REG_FAR_KM) { rc.v = "edge"; sum.edge++; } else', "if (false) {} else"],
+  ["ht", "σελίδα: χωρίς κείμενο βαθμίδας", "} else if (rc.v === 'edge') {", "} else if (false) {"],
   ["an", "χωρίς σήμανση κοινόχρηστων", "MAP_SHARED.add(String(d.id).slice(-6));", ";"],
-  ["ht", "σελίδα: χωρίς εναλλακτικό", "if (rc.a) h +=", "if (false) h +="],
+  ["ht", "σελίδα: χωρίς εναλλακτικό", "if (rc.a) h += '<div class=\"note\">Η θέση ' + (rc.a === 'tag' ? 'της ετικέτας coordinates' : 'της φόρμας') + ' απέχει μόνο ' + regKm(rc.ak) + ' από την πύλη — ", "if (false) h += '<div class=\"note\">Η θέση ' + (rc.a === 'tag' ? 'της ετικέτας coordinates' : 'της φόρμας') + ' απέχει μόνο ' + regKm(rc.ak) + ' από την πύλη — "],
   ["ht", "σελίδα: χωρίς παλιά ετικέτα", "if (rc.x === 'tagold') h +=", "if (false) h +="],
 ];
 let k = 0;

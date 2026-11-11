@@ -1047,8 +1047,11 @@ function regBlock(f) {
   if (rc.v === 'ok') {
     h += '<div class="meta">✔ Η θέση επιβεβαιώνεται: τα όργανα ακούγονται από ' + gwLink(rc.g) + ', ' + regKm(rc.km) + ' από τον αγρό.</div>';
     if (rc.x === 'tagold') h += '<div class="note">Η ετικέτα coordinates έχει άλλη, παλιά θέση. Σωστή είναι η φόρμα (την επιβεβαιώνει η πύλη)· η ετικέτα διορθώνεται μόνη της με την επόμενη αποθήκευση της φόρμας.</div>';
+  } else if (rc.v === 'edge') {
+    h += '<div class="meta">Η πλησιέστερη πύλη που ακούει τα όργανα (' + gwLink(rc.g) + ') απέχει ' + regKm(rc.km) + '. Είναι ασυνήθιστα μακριά αλλά εφικτό για πύλη σε ύψωμα· αξίζει έλεγχος αν ο αγρός είναι καινούριος.</div>';
+    if (rc.a) h += '<div class="note">Η θέση ' + (rc.a === 'tag' ? 'της ετικέτας coordinates' : 'της φόρμας') + ' απέχει μόνο ' + regKm(rc.ak) + ' από την πύλη.</div>';
   } else if (rc.v === 'far') {
-    h += '<div class="note">⚠ Τα όργανα του αγρού ακούγονται από ' + gwLink(rc.g) + ', που απέχει ' + regKm(rc.km) + ' από τη θέση του χάρτη (όριο ' + REG_KM + ' km). Είτε η θέση είναι λάθος είτε τα όργανα είναι δηλωμένα σε λάθος αγρό.</div>';
+    h += '<div class="note">⚠ Τα όργανα του αγρού ακούγονται από ' + gwLink(rc.g) + ', που απέχει ' + regKm(rc.km) + ' από τη θέση του χάρτη (πάνω από ' + REG_KM + ' km). Είτε η θέση είναι λάθος είτε τα όργανα είναι δηλωμένα σε λάθος αγρό.</div>';
     if (rc.a) h += '<div class="note">Η θέση ' + (rc.a === 'tag' ? 'της ετικέτας coordinates' : 'της φόρμας') + ' απέχει μόνο ' + regKm(rc.ak) + ' από την πύλη — πιθανότατα αυτή είναι η σωστή.</div>';
   } else if (rc.v === 'nogw') {
     h += '<div class="meta">Δεν ελέγχεται: κανένα όργανο (εκτός κοινόχρηστων) δεν αναφέρει πύλη με γνωστή θέση.</div>';
@@ -1059,7 +1062,7 @@ function regBlock(f) {
   if (rc.nm === 'ren') h += '<div class="note">Το όνομα της εγγραφής διαφέρει από το όνομα της συσκευής («' + esc(rc.on) + '»).</div>';
   return h;
 }
-var REG_KM = 15;
+var REG_KM = 30;
 function panelField(f) {
   var s = primaryState(f), ss = subState(f);
   var h = '<div class="panelHead"><div><h2>' + esc(f.name) + '</h2></div><button type="button" class="x" data-close aria-label="Κλείσιμο">✕</button></div>'
