@@ -496,7 +496,7 @@ function makeField(row, fl, newestMap) {
   if (devs.some(function (d) { return d.st.k === 'silent'; })) keys.push('silent');
   if (devs.some(function (d) { return d.st.k === 'gaps'; })) keys.push('gaps');
   return { key: md ? 'f:' + id : 'x:' + i6 + ':' + rec.f, id: id, i6: i6, name: md ? String(md.n || id) : String(rec.f), altName: rec ? String(rec.f) : '',
-    client: (md && md.c) ? String(md.c) : '', p: p, ps: md ? (md.ps || null) : (p ? 'form' : null), pq: md ? (md.pq || 'ok') : null,
+    client: (md && md.c) ? String(md.c) : '', p: p, ps: md ? (md.ps || null) : (p ? 'form' : null), pq: md ? (md.pq || 'ok') : null, rc: (md && md.rc) || null,
     noMapRow: !md, absent: !!(md && newestMap - tnum(row.time) > 3 * 36e5), s: rec ? rec.s : null, computed: computed, reason: reason,
     rec: rec, devs: devs, kind: kindOf(devs, md ? md.c : ''), dc: (md && md.dc) || 0, keys: keys, suspect: false, gws: {} };
 }
@@ -969,7 +969,7 @@ function drawMap(v) {
 function fieldRowHtml(f, extra) {
   var s = primaryState(f), ss = subState(f);
   return '<li><button type="button" class="row" data-sel="field" data-key="' + esc(f.key) + '"><div class="rowT">' + esc(f.name) + '</div>'
-    + '<div class="chips">' + chip(s) + (ss ? chip(ss) : '') + (f.suspect ? '<span class="st c-check">! ύποπτη θέση</span>' : '') + '</div>'
+    + '<div class="chips">' + chip(s) + (ss ? chip(ss) : '') + (f.suspect ? '<span class="st c-check">! ύποπτη θέση</span>' : '') + (f.rc && f.rc.v === 'far' ? '<span class="st c-check">! θέση ≠ πύλη</span>' : '') + '</div>'
     + '<div class="rowM">' + esc(f.client || 'χωρίς παραγωγό') + (extra ? ' · ' + extra : '') + '</div></button></li>';
 }
 function panelGw(g) {
@@ -1033,10 +1033,37 @@ function nearHtml(g) {
   if (n.skipped) h += '<div class="note">' + plural(n.skipped, 'αγρός', 'αγροί') + ' με ύποπτη θέση ' + (n.skipped === 1 ? 'δεν μετρήθηκε' : 'δεν μετρήθηκαν') + '.</div>';
   return h;
 }
+/* T-FIELDREG-01: έλεγχος καταχώρησης — όνομα, θέση στον χάρτη, πύλη που ακούει τα όργανα (το συμπέρασμα το βγάζει το gatewayLiveness). */
+function regKm(v) { return (Math.round(v * 10) / 10).toFixed(1).replace('.', ',') + ' km'; }
+function regBlock(f) {
+  var rc = f.rc;
+  if (!rc) return '';
+  var gwLink = function (code) {
+    var g = null;
+    Object.keys(f.gws || {}).forEach(function (k) { if (String(f.gws[k].code).toUpperCase() === String(code).toUpperCase()) g = f.gws[k]; });
+    return g ? '<button type="button" class="link" data-sel="gw" data-key="' + esc(g.key) + '">' + esc(g.name) + '</button>' : 'πύλη ' + esc(code);
+  };
+  var h = '<h3>Έλεγχος καταχώρησης</h3>';
+  if (rc.v === 'ok') {
+    h += '<div class="meta">✔ Η θέση επιβεβαιώνεται: τα όργανα ακούγονται από ' + gwLink(rc.g) + ', ' + regKm(rc.km) + ' από τον αγρό.</div>';
+    if (rc.x === 'tagold') h += '<div class="note">Η ετικέτα coordinates έχει άλλη, παλιά θέση. Σωστή είναι η φόρμα (την επιβεβαιώνει η πύλη)· η ετικέτα διορθώνεται μόνη της με την επόμενη αποθήκευση της φόρμας.</div>';
+  } else if (rc.v === 'far') {
+    h += '<div class="note">⚠ Τα όργανα του αγρού ακούγονται από ' + gwLink(rc.g) + ', που απέχει ' + regKm(rc.km) + ' από τη θέση του χάρτη (όριο ' + REG_KM + ' km). Είτε η θέση είναι λάθος είτε τα όργανα είναι δηλωμένα σε λάθος αγρό.</div>';
+    if (rc.a) h += '<div class="note">Η θέση ' + (rc.a === 'tag' ? 'της ετικέτας coordinates' : 'της φόρμας') + ' απέχει μόνο ' + regKm(rc.ak) + ' από την πύλη — πιθανότατα αυτή είναι η σωστή.</div>';
+  } else if (rc.v === 'nogw') {
+    h += '<div class="meta">Δεν ελέγχεται: κανένα όργανο (εκτός κοινόχρηστων) δεν αναφέρει πύλη με γνωστή θέση.</div>';
+  } else if (rc.v === 'nopos') {
+    h += '<div class="meta">Δεν ελέγχεται: ο αγρός δεν έχει θέση.</div>';
+  }
+  if (rc.nm === 'dup') h += '<div class="note">Το ίδιο όνομα έχουν και ' + (rc.nd === 1 ? 'άλλη μία εγγραφή' : rc.nd + ' άλλες εγγραφές') + ': μπερδεύει παραγωγούς, χρεώσεις και αναφορές.</div>';
+  if (rc.nm === 'ren') h += '<div class="note">Το όνομα της εγγραφής διαφέρει από το όνομα της συσκευής («' + esc(rc.on) + '»).</div>';
+  return h;
+}
+var REG_KM = 15;
 function panelField(f) {
   var s = primaryState(f), ss = subState(f);
   var h = '<div class="panelHead"><div><h2>' + esc(f.name) + '</h2></div><button type="button" class="x" data-close aria-label="Κλείσιμο">✕</button></div>'
-    + '<div class="chips">' + chip(s) + (ss ? chip(ss) : '') + (f.suspect ? '<span class="st c-check">! ύποπτη θέση</span>' : '') + '</div>'
+    + '<div class="chips">' + chip(s) + (ss ? chip(ss) : '') + (f.suspect ? '<span class="st c-check">! ύποπτη θέση</span>' : '') + (f.rc && f.rc.v === 'far' ? '<span class="st c-check">! θέση ≠ πύλη</span>' : '') + '</div>'
     + '<div class="meta">Παραγωγός: ' + esc(f.client || 'χωρίς παραγωγό') + '</div>';
   if (!f.computed) h += '<div class="meta">Γιατί χωρίς υπολογισμό: ' + esc(f.reason) + '</div>';
   var src = f.ps === 'form' ? 'από τη φόρμα' : (f.ps === 'tag' ? 'από την ετικέτα' : '');
@@ -1044,6 +1071,7 @@ function panelField(f) {
   if (f.suspect) h += '<div class="note">Ίδιο σημείο με άλλον παραγωγό: η θέση μάλλον δεν είναι του αγρού.</div>';
   if (f.pq === 'diff') h += '<div class="note">Η φόρμα και η ετικέτα διαφέρουν πάνω από 1 km.</div>';
   if (f.pq === 'dup') h += '<div class="note">Διπλή ετικέτα coordinates με διαφορετικές τιμές.</div>';
+  h += regBlock(f);
   if (f.groupN > 1) h += '<div class="note">Στο ίδιο σημείο υπάρχουν ' + f.groupN + ' εγγραφές. <button type="button" class="link" data-sel="group" data-key="' + esc(f.groupKey) + '">Δες τες</button></div>';
   if (f.absent) h += '<div class="note">Η εγγραφή δεν ανανεώθηκε στον τελευταίο κύκλο.</div>';
   if (f.noMapRow) h += '<div class="note">Δεν έχει φτάσει map_field για αυτή την εγγραφή: όργανα και θέση έρχονται μόνο από τον πίνακα στόλου.</div>';
