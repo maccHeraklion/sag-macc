@@ -148,7 +148,7 @@ async function syncPage(st, req) {
   if (!/^[0-9a-f]{40}$/.test(String(req.commit || "")) || !/^[0-9a-f]{64}$/.test(String(req.sha256 || ""))) { console.log("PAGE|STOP|χρειάζεται commit (40 hex) και sha256 (64 hex)"); return; }
   const r = await fetch(`${REPO_RAW}/${req.commit}/custom_html_files/public/station.html`);
   if (!r.ok) { console.log("PAGE|STOP|GitHub " + r.status); return; }
-  let s = Buffer.from(await r.arrayBuffer()).toString("utf8").replace(/^﻿/, "").replace(/\r\n/g, "\n");
+  let s = Buffer.from(await r.arrayBuffer()).toString("utf8").replace(/^\uFEFF/, "").replace(/\r\n/g, "\n");
   const body = Buffer.from(s, "utf8"); const h = crypto.createHash("sha256").update(body).digest("hex");
   if (h !== req.sha256) { console.log(`PAGE|STOP|sha256 ${h.slice(0, 12)}… ≠ αναμενόμενο ${req.sha256.slice(0, 12)}…`); return; }
   const target = `public/${st.slug}/index.html`;
