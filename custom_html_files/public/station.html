@@ -6,7 +6,9 @@
 <title>Μετεωρολογικός σταθμός</title>
 <!-- T-PUBWX-01 (17/11/2026): δημόσια σελίδα μόνο για προβολή. Διαβάζει ΜΟΝΟ το latest.json δίπλα της (γράφεται κάθε 15΄
      από την analysis publicStationSnapshot). Κανένα token, καμία κλήση στο API της TagoIO. Ενσωματώνεται με <iframe>.
-     Παράμετροι URL: ?theme=dark|light (προεπιλογή: όπως το σύστημα) · ?compact=1 (μόνο οι 4 βασικές κάρτες). -->
+     Παράμετροι URL (μετά το # ή το ?): theme=dark|light (προεπιλογή: όπως το σύστημα) · compact=1 (μόνο οι 4 βασικές
+     κάρτες), π.χ. index.html#theme=light&compact=1 — με # γιατί το redirect του api.tago.io/file κόβει το ?… -->
+
 <style>
   :root { --bg:#f6f8f5; --card:#ffffff; --ink:#17251b; --muted:#5d6b61; --line:#dfe6e0; --accent:#2f8f4e; --warn:#b26a00; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#111712; --card:#1a221c; --ink:#e7efe8; --muted:#9aaa9e; --line:#2a352d; --accent:#5cc27e; --warn:#e3a34a; } }
@@ -44,7 +46,8 @@
 <script>
 (function () {
   "use strict";
-  var qs = new URLSearchParams(location.search);
+  // παράμετροι και από το #… : το redirect του api.tago.io/file πετάει το ?… αλλά κρατά το #…
+  var qs = new URLSearchParams(location.search + "&" + location.hash.replace(/^#/, ""));
   if (qs.get("theme") === "dark" || qs.get("theme") === "light") document.documentElement.setAttribute("data-theme", qs.get("theme"));
   var compact = qs.get("compact") === "1";
   var REFRESH_MS = 5 * 60 * 1000, STALE_MIN = 60;
