@@ -10,6 +10,8 @@
   συσκευή «SAG Εποπτεία» (6a98855ca06e41000bfae024), που γράφει το analysis subscriptionManage.
   Οι ενέργειες στέλνουν μία γραμμή subs_command. Καμία ενέργεια δεν γίνεται αυτόματα: θέλει πάντα κλικ,
   αιτιολογία και επιβεβαίωση. Η λήξη μόνο εμφανίζεται, δεν προκαλεί παύση.
+  23/11/2026: «Ανανέωση» ανά αγρό: διάρκεια ή ημερομηνία λήξης + ποσό, προαιρετική ειδοποίηση πελάτη. Το analysis
+  ενημερώνει ετικέτες, subscription_until και, αν χρειάζεται, κάνει επαναφορά πρόσβασης.
 -->
 <style>
 :root{
@@ -73,6 +75,9 @@ h3{font-size:14px; margin:16px 0 8px; color:var(--muted); font-weight:600}
 .box h2{font-size:17px; margin:0 0 10px}
 .box ul{margin:6px 0 10px; padding-left:20px; font-size:13.5px}
 .box label{display:block; font-size:13.5px; margin:10px 0 4px; font-weight:600}
+.box input[type=date],.box input[type=text],.box select{width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:9px; font:inherit; color:var(--ink); background:#fff}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:0 10px}
+button.act.blue{color:var(--blue); border-color:#c5d7fb}
 .box textarea{width:100%; min-height:64px; padding:8px 10px; border:1px solid var(--line); border-radius:9px; font:inherit; color:var(--ink)}
 .box .row{display:flex; gap:8px; justify-content:flex-end; margin-top:14px}
 .check{display:flex; gap:8px; align-items:flex-start; font-weight:400 !important}
@@ -101,8 +106,11 @@ var ACTION = {
   stop:   { title:'Διακοπή', verb:'διακοπή', cls:'danger',
             text:'Ίδιο με την παύση, και η συνδρομή σημειώνεται ανενεργή (subscriptionActive=no). Τα δεδομένα δεν σβήνονται.' },
   resume: { title:'Επαναφορά', verb:'επαναφορά', cls:'good',
-            text:'Ο πελάτης ξαναβλέπει τον αγρό όπως πριν.' }
+            text:'Ο πελάτης ξαναβλέπει τον αγρό όπως πριν.' },
+  renew:  { title:'Ανανέωση', verb:'ανανέωση', cls:'blue',
+            text:'Ορίζει νέα λήξη και ποσό. Ενημερώνονται οι ετικέτες του αγρού, η ημερομηνία που βλέπει ο πελάτης στην εφαρμογή και οι ειδοποιήσεις λήξης.' }
 };
+var MONTHS = [1, 3, 6, 12, 24];
 var STATE = { active:'Ενεργή', paused:'Σε παύση', stopped:'Διακοπή' };
 
 var S = { rows:{}, clients:[], fields:[], logs:[], summary:null, snap:null, sel:null, q:'', me:'', pending:null, seen:{}, result:null };
@@ -113,6 +121,13 @@ function fmtDate(d){ var p = String(d || '').split('-'); return p.length === 3 ?
 function fmtTime(t){ var d = new Date(t); return isNaN(d) ? '' : d.toLocaleString('el-GR', { hour12:false, dateStyle:'short', timeStyle:'short' }); }
 function daysLeft(d){ if (!d) return null; return Math.round((Date.parse(d + 'T00:00:00Z') - Date.parse(new Date().toISOString().slice(0,10) + 'T00:00:00Z')) / 864e5); }
 function norm(s){ return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+function todayGr(){ return new Intl.DateTimeFormat('en-CA', { timeZone:'Europe/Athens', year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date()); }
+function addMonths(date, n){
+  var p = String(date).split('-').map(Number), first = new Date(Date.UTC(p[0], p[1] - 1 + Number(n), 1));
+  var last = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
+  first.setUTCDate(Math.min(p[2], last)); return first.toISOString().slice(0, 10);
+}
+function renewBase(f){ var t = todayGr(); return f.e && f.e >= t ? f.e : t; }
 function newReq(){ return String(Date.now()) + '-' + Math.floor(Math.random() * 1e6); }
 
 /* ═══ ΔΕΔΟΜΕΝΑ ═══ */
@@ -218,6 +233,8 @@ function renderDetail(){
       + '<div class="small">' + (f.u.length ? 'Έχουν πρόσβαση: ' + f.u.map(esc).join(', ') : 'Κανένας πελάτης δεν έχει πρόσβαση σε αυτό το dashboard.') + (f.pub ? ' · Δημόσιο dashboard.' : '') + '</div>'
       + (f.at && f.s !== 'active' ? '<div class="small">Από ' + esc(fmtTime(f.at)) + '</div>' : '')
       + '<div class="btns">';
+    var exp = f.e && daysLeft(f.e) <= 30;
+    h += '<button class="act ' + (exp ? 'blue' : '') + '" data-a="renew" data-f="' + f.i + '"' + (busy ? ' disabled' : '') + '>Ανανέωση</button>';
     if (f.s === 'active') {
       var can = (f.u.length || f.pub) && !f.nod;
       h += '<button class="act warn" data-a="pause" data-f="' + f.i + '"' + (busy || !can ? ' disabled' : '') + '>Παύση</button>'
@@ -235,6 +252,8 @@ function renderDetail(){
     h += '<h3>Ιστορικό</h3>' + logs.map(function(r){
       var m = r.metadata, a = ACTION[m.action];
       return '<div class="log"><b>' + esc(a ? a.title : m.action) + '</b> · ' + esc(m.field) + ' · ' + esc(fmtTime(m.at)) + ' · ' + esc(m.by)
+        + (m.renew ? '<div class="small">' + (m.renew.from ? esc(fmtDate(m.renew.from)) + ' → ' : 'Λήξη ') + esc(fmtDate(m.renew.to)) + ' · ' + esc(String(m.renew.amount).replace('.', ',')) + ' €'
+          + (m.renew.months ? ' · ' + m.renew.months + ' μήν.' : '') + (m.resumed ? ' · με επαναφορά' : '') + (m.renew.notified ? ' · ειδοποιήθηκαν ' + m.renew.notified : '') + '</div>' : '')
         + (m.reason ? '<div class="small">' + esc(m.reason) + '</div>' : '') + '</div>';
     }).join('');
   }
@@ -272,14 +291,58 @@ function openModal(action, ids, openWarning){
     send(action, ids, reason, !!openWarning);
   };
 }
+function openRenew(id){
+  var f = S.fields.filter(function(x){ return x.i === id; })[0];
+  if (!f) return;
+  var base = renewBase(f), amount = f.cost !== '' && f.cost != null ? f.cost : (f.list || '');
+  var h = '<h2>Ανανέωση: ' + esc(f.n) + '</h2><div class="note">' + esc(ACTION.renew.text) + '</div>'
+    + '<div class="small"><b>Τρέχουσα λήξη:</b> ' + (f.e ? esc(fmtDate(f.e)) + (f.e < todayGr() ? ' (έχει λήξει, η νέα περίοδος μετρά από σήμερα)' : '') : 'καμία') + '</div>';
+  if (f.s !== 'active') h += '<div class="note ok" style="margin-top:10px">Ο αγρός είναι ' + (f.s === 'paused' ? 'σε παύση' : 'σε διακοπή') + '. Με την ανανέωση ο πελάτης τον ξαναβλέπει αμέσως.</div>';
+  h += '<div class="grid2"><div><label for="r_m">Διάρκεια</label><select id="r_m">'
+    + MONTHS.map(function(m){ return '<option value="' + m + '"' + (m === 12 ? ' selected' : '') + '>' + (m === 1 ? '1 μήνας' : m + ' μήνες') + '</option>'; }).join('')
+    + '<option value="0">Άλλη ημερομηνία</option></select></div>'
+    + '<div><label for="r_end">Ισχύει έως και</label><input type="date" id="r_end" min="' + todayGr() + '" /></div></div>'
+    + '<label for="r_amt">Ποσό (€)</label><input type="text" id="r_amt" inputmode="decimal" value="' + esc(amount) + '" />'
+    + (f.list ? '<div class="small">Τιμοκατάλογος: ' + esc(f.list) + ' €</div>' : '')
+    + '<label for="reason">Σημείωση (προαιρετική)</label><textarea id="reason" maxlength="200" placeholder="π.χ. πληρωμή με κατάθεση 20/11"></textarea>'
+    + '<label class="check"><input type="checkbox" id="r_notify" checked /> Να σταλεί ειδοποίηση στον πελάτη (TagoRUN) ότι ανανεώθηκε</label>'
+    + '<div class="note" id="r_sum" style="margin-top:10px"></div>'
+    + '<div class="row"><button class="act" id="m_no">Άκυρο</button><button class="act blue" id="m_yes">Ανανέωση</button></div>';
+  $('box').innerHTML = h;
+  $('modal').classList.add('on');
+  var sync = function(){
+    var m = Number($('r_m').value);
+    if (m) $('r_end').value = addMonths(base, m);
+    summary();
+  };
+  var summary = function(){
+    var end = $('r_end').value, amt = $('r_amt').value.trim();
+    $('r_sum').textContent = end ? 'Νέα λήξη ' + fmtDate(end) + (amt ? ' · ποσό ' + amt + ' €' : '') : 'Διάλεξε ημερομηνία.';
+  };
+  $('r_m').onchange = sync;
+  $('r_end').oninput = function(){ $('r_m').value = '0'; summary(); };
+  $('r_amt').oninput = summary;
+  sync();
+  $('m_no').onclick = closeModal;
+  $('m_yes').onclick = function(){
+    var end = $('r_end').value, amt = $('r_amt').value.trim().replace(/\s|€/g, '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(end) || end < todayGr()) { $('r_end').focus(); return; }
+    if (!/^\d+([.,]\d{1,2})?$/.test(amt)) { $('r_amt').focus(); return; }
+    var extra = { end_date:end, amount:amt.replace(',', '.'), months:Number($('r_m').value) || null, notify:$('r_notify').checked };
+    var reason = $('reason').value.trim();
+    closeModal();
+    send('renew', [id], reason, false, extra);
+  };
+}
 function closeModal(){ $('modal').classList.remove('on'); }
 
-function send(action, ids, reason, confirmOpen){
+function send(action, ids, reason, confirmOpen, extra){
   var req = newReq();
   S.pending = { req:req, action:action, ids:ids, reason:reason, started:Date.now() };
   S.result = null;
   render();
   var row = { variable:'subs_command', value:action, metadata:{ action:action, field_ids:ids, reason:reason, confirm_open:!!confirmOpen, by:S.me, req:req } };
+  if (extra) for (var k in extra) row.metadata[k] = extra[k];
   Promise.resolve(window.TagoIO.sendData([row])).catch(function(e){
     S.pending = null;
     S.result = '<div class="note err">Η εντολή δεν στάλθηκε: ' + esc(e && e.message || e) + '</div>';
@@ -306,7 +369,7 @@ function onResult(m){
   var dry = rs.filter(function(r){ return r.status === 'dry_run'; });
   var a = ACTION[m.action] || { title:m.action };
   var h = '';
-  if (ok.length) h += '<div class="note ok">' + esc(a.title) + ' έγινε: ' + ok.map(function(r){ return esc(r.name); }).join(', ') + '</div>';
+  if (ok.length) h += '<div class="note ok">' + esc(a.title) + ' έγινε: ' + ok.map(function(r){ return esc(r.name) + (m.action === 'renew' && r.msg ? ' (' + esc(r.msg) + ')' : ''); }).join(', ') + '</div>';
   if (dry.length) h += '<div class="note">' + dry.map(function(r){ return esc(r.name) + ': ' + esc(r.msg); }).join('<br>') + '</div>';
   if (fail.length) h += '<div class="note err">Δεν έγινε: ' + fail.map(function(r){ return esc(r.name) + ': ' + esc(r.msg); }).join('<br>') + '</div>';
   (m.warnings || []).forEach(function(w){ h += '<div class="note warn">' + esc(w) + '</div>'; });
@@ -321,6 +384,7 @@ document.addEventListener('click', function(e){
   var c = e.target.closest('[data-c]');
   if (c) { S.sel = c.getAttribute('data-c'); S.result = null; render(); return; }
   var b = e.target.closest('[data-a]');
+  if (b && !b.disabled && b.getAttribute('data-a') === 'renew') { openRenew(b.getAttribute('data-f')); return; }
   if (b && !b.disabled) { openModal(b.getAttribute('data-a'), [b.getAttribute('data-f')]); return; }
   var all = e.target.closest('[data-all]');
   if (all && !all.disabled) {

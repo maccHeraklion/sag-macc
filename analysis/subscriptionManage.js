@@ -29,6 +29,12 @@
 // ΦΑΣΗ 1Β (8/11, Μιχάλης): κάθε αγρός έχει και cat (περίπτωση), cn (πελάτης), sg (όργανα ανά τύπο με σήματα και
 // κλίμακα χρέωσης). Το subs_summary έχει και pricing (τιμές συνδρομών TagoIO), signals, tiers. Μόνο ανάγνωση.
 //
+// ΑΝΑΝΕΩΣΗ (23/11/2026, αίτημα Κώστα): ενέργεια «renew» από το widget, μόνο με κλικ του υπεύθυνου. Ορίζει νέα λήξη
+// (subscriptionEnd = «ΗΗ 23:59:59» ώρα Ελλάδας) και ποσό (subscriptionCurrentCost), βάζει subscriptionActive=yes,
+// γράφει τη μεταβλητή subscription_until του αγρού (τη διαβάζει το sagMain για το μήνυμα λήξης και το subscriptionControl
+// για τις ειδοποιήσεις), και αν ο αγρός είναι σε παύση/διακοπή κάνει και επαναφορά. Προαιρετικά στέλνει ειδοποίηση
+// TagoRUN στους χρήστες του αγρού. Η τιμή καταλόγου (subscriptionCost) δεν αλλάζει.
+//
 // ΑΠΑΙΤΕΙ την πολιτική «[Analysis] SAG subscriptionManage». Χωρίς αυτήν το script αποτυγχάνει με Authorization Denied.
 
 const TOKEN = process.env.T_ANALYSIS_TOKEN;
@@ -140,6 +146,89 @@ function planAction(action, field, dashboard) {
     dashboardTags: (dashboard.tags || []).filter((t) => !(t.key === "access" && t.value !== MANAGER)),
   };
 }
+
+/* ═══ ΑΝΑΝΕΩΣΗ ═══ */
+
+/* Η ημέρα σήμερα στην Ελλάδα, «YYYY-MM-DD». */
+const todayAthens = (now = new Date()) =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Athens", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+
+/* Η μετατόπιση ώρας Ελλάδας εκείνη την ημέρα: «+02:00» τον χειμώνα, «+03:00» το καλοκαίρι. */
+function athensOffset(date) {
+  const part = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Athens", timeZoneName: "shortOffset" })
+    .formatToParts(new Date(date + "T12:00:00Z")).find((x) => x.type === "timeZoneName");
+  const h = Number(((part && part.value) || "").match(/[+-]\d+/) || 2);
+  return (h < 0 ? "-" : "+") + String(Math.abs(h)).padStart(2, "0") + ":00";
+}
+
+/* Η τιμή της ετικέτας λήξης: ισχύει ΕΩΣ ΚΑΙ εκείνη την ημέρα. Το 23:59:59 με τη σωστή ζώνη δίνει την ίδια ημέρα και στο
+   parseEnd, και στο subscriptionControl (UTC), και στο sagMain. */
+const endTagValue = (date) => `${date}T23:59:59${athensOffset(date)}`;
+
+/* +n μήνες σε «YYYY-MM-DD». Στο τέλος μήνα κρατά την τελευταία ημέρα (31/1 + 1 → 28 ή 29/2). */
+function addMonths(date, n) {
+  const [y, m, d] = String(date).split("-").map(Number);
+  const first = new Date(Date.UTC(y, m - 1 + Number(n), 1));
+  const last = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
+  first.setUTCDate(Math.min(d, last));
+  return first.toISOString().slice(0, 10);
+}
+
+/* Από πότε μετρά η ανανέωση: από την τρέχουσα λήξη αν δεν έχει περάσει, αλλιώς από σήμερα. */
+const renewBase = (endDate, today) => (endDate && endDate >= today ? endDate : today);
+
+/* Ποσό σε ευρώ από κείμενο («90», «90,5»). null αν δεν είναι έγκυρο. */
+function parseAmount(raw) {
+  const s = String(raw == null ? "" : raw).trim().replace(/\s|€/g, "").replace(",", ".");
+  if (!/^\d+(\.\d{1,2})?$/.test(s)) return null;
+  const n = Number(s);
+  return n >= 0 && n <= 100000 ? n : null;
+}
+const amountText = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(2));
+
+/* Τι θα γίνει στην ανανέωση ενός αγρού, χωρίς να γράφει τίποτα. Επιστρέφει { error } ή
+   { end, endTag, prevEnd, cost, state, resume (σχέδιο επαναφοράς ή null), fieldTags, dashboardTags }. */
+function planRenew(field, dashboard, md, today = todayAthens()) {
+  const allowedField = tagOf(field, "isField") === "yes" || tagOf(field, "subscriptionSandbox") === "yes";
+  if (!allowedField) return { error: "Η συσκευή δεν είναι αγρός." };
+  const end = String((md && md.end_date) || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(end) || isNaN(Date.parse(end + "T00:00:00Z")) || new Date(end + "T00:00:00Z").toISOString().slice(0, 10) !== end) {
+    return { error: "Μη έγκυρη ημερομηνία λήξης." };
+  }
+  if (end < today) return { error: "Η νέα λήξη είναι στο παρελθόν." };
+  if (end > addMonths(today, 61)) return { error: "Η νέα λήξη είναι πάνω από 5 χρόνια μπροστά." };
+  const cost = parseAmount(md && md.amount);
+  if (cost === null) return { error: "Μη έγκυρο ποσό." };
+
+  const state = tagOf(field, "subscriptionState") || "active";
+  const newTags = [
+    { key: "subscriptionEnd", value: endTagValue(end) },
+    { key: "subscriptionCurrentCost", value: amountText(cost) },
+    { key: "subscriptionRenewedAt", value: new Date().toISOString() },
+  ];
+  const drop = ["subscriptionEnd", "subscriptionCurrentCost", "subscriptionRenewedAt", "subscriptionActive"];
+  const base = { end, endTag: endTagValue(end), prevEnd: parseEnd(tagOf(field, "subscriptionEnd")).date, cost, state };
+
+  if (state === "active") {
+    return { ...base, resume: null, dashboardTags: null,
+      fieldTags: [...withoutKeys(field.tags, drop), { key: "subscriptionActive", value: "yes" }, ...newTags] };
+  }
+  const r = planAction("resume", field, dashboard);
+  if (r.error) return { error: "Η ανανέωση θέλει και επαναφορά, που δεν γίνεται: " + r.error };
+  return { ...base, resume: r, dashboardTags: r.dashboardTags,
+    fieldTags: [...withoutKeys(r.fieldTags, drop), { key: "subscriptionActive", value: "yes" }, ...newTags] };
+}
+
+/* Οι χρήστες πελάτη που βλέπουν τον αγρό: ίδια λογική με την εικόνα (access του dashboard, ή το αντίγραφο σε παύση). */
+function fieldCustomerUsers(field, dashboard, users) {
+  let live = dashboard ? customerAccess(dashboard.tags) : [];
+  if (tagOf(field, "subscriptionState")) { try { live = JSON.parse(tagOf(field, "subscriptionSavedAccess")) || []; } catch (_) { live = []; } }
+  const values = new Set(live.map((t) => String(t.value)).filter((v) => v !== PUBLIC && v !== MANAGER));
+  const accessOf = (u) => (u.tags || []).filter((t) => t.key === "access").map((t) => String(t.value));
+  return (users || []).filter((u) => !accessOf(u).includes(MANAGER) && accessOf(u).some((v) => values.has(v)));
+}
+
+const fmtGr = (d) => { const p = String(d || "").split("-"); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : String(d || ""); };
 
 /* Οι ετικέτες του dashboard «Ανανέωση Συνδρομής»: όσες χρειάζονται οι αγροί που είναι τώρα σε παύση/διακοπή.
    Το public δεν μπαίνει ποτέ: το μήνυμα είναι για συνδεδεμένους πελάτες. */
@@ -470,6 +559,59 @@ async function applyToField(action, fieldId, md) {
   return { id: fieldId, name, status: "ok", msg: "", client: tagOf(field, "clientName"), state: plan.state };
 }
 
+/* Ανανέωση ενός αγρού. */
+async function renewField(fieldId, md) {
+  const field = await api(`/device/${fieldId}`);
+  const name = tagOf(field, "name") || field.name;
+  const did = tagOf(field, "fieldId");
+  const dashboard = did ? await api(`/dashboard/${did}`).catch(() => null) : null;
+
+  const plan = planRenew(field, dashboard, md);
+  if (plan.error) return { id: fieldId, name, status: "fail", msg: plan.error };
+  const what = `έως ${fmtGr(plan.end)}, ${amountText(plan.cost)} €` + (plan.resume ? ", με επαναφορά πρόσβασης" : "");
+
+  if (md.dry_run) {
+    console.log(`DRY_RUN|renew|${name}|${plan.prevEnd || "-"}→${plan.end}|${plan.cost}€|επαναφορά=${!!plan.resume}`);
+    return { id: fieldId, name, status: "dry_run", msg: `Δοκιμή: καμία αλλαγή. Θα γινόταν ανανέωση ${what}.` };
+  }
+
+  // Ίδια σειρά με την επαναφορά: πρώτα επιστρέφει η πρόσβαση, μετά αλλάζουν οι ετικέτες του αγρού.
+  if (plan.dashboardTags) await api(`/dashboard/${did}`, { method: "PUT", body: JSON.stringify({ tags: plan.dashboardTags }) });
+  await api(`/device/${fieldId}`, { method: "PUT", body: JSON.stringify({ tags: plan.fieldTags }) });
+
+  const warnings = [];
+  // Η μεταβλητή που διαβάζει το sagMain: αλλιώς ο πελάτης βλέπει «η συνδρομή σας δεν είναι ενεργή» μέχρι τον
+  // επόμενο κύκλο του subscriptionControl (μία φορά τη μέρα).
+  try {
+    await api(`/device/${fieldId}/data`, { method: "POST", body: JSON.stringify([{ variable: "subscription_until", value: plan.endTag }]) });
+  } catch (e) {
+    warnings.push(`${name}: δεν γράφτηκε η subscription_until (θα τη διορθώσει το subscriptionControl): ` + String((e && e.message) || e).slice(0, 100));
+  }
+
+  let notified = 0;
+  if (md.notify) {
+    try {
+      const users = fieldCustomerUsers(field, dashboard, await listUsers());
+      for (const u of users) {
+        try {
+          await api("/run/notification/", { method: "POST", body: JSON.stringify({
+            run_user: u.id, title: "Ανανέωση Συνδρομής",
+            message: `Η συνδρομή σας για την εγκατάσταση ${name} ανανεώθηκε και ισχύει έως ${fmtGr(plan.end)}. Ευχαριστούμε!`,
+          }) });
+          notified++;
+        } catch (e) { warnings.push(`${name}: δεν στάλθηκε ειδοποίηση σε ${u.name || u.email}.`); }
+      }
+      if (!users.length) warnings.push(`${name}: κανένας χρήστης πελάτη για ειδοποίηση.`);
+    } catch (e) {
+      warnings.push(`${name}: δεν στάλθηκαν ειδοποιήσεις: ` + String((e && e.message) || e).slice(0, 100));
+    }
+  }
+
+  return { id: fieldId, name, status: "ok", msg: what + (md.notify ? ` · ειδοποιήθηκαν ${notified}` : ""),
+    client: tagOf(field, "clientName"), state: "active", resumed: !!plan.resume,
+    renew: { from: plan.prevEnd, to: plan.end, amount: plan.cost, months: Number(md.months) || null, notified }, warnings };
+}
+
 async function writeSnapshot(force) {
   const t0 = Date.now();
   const [clients, fields, dashboards, users] = await Promise.all([
@@ -547,7 +689,7 @@ async function main() {
   const results = [];
   for (const id of ids) {
     try {
-      results.push(await applyToField(action, id, md));
+      results.push(action === "renew" ? await renewField(id, md) : await applyToField(action, id, md));
     } catch (e) {
       results.push({ id, name: id, status: "fail", msg: String((e && e.message) || e).slice(0, 200) });
     }
@@ -555,8 +697,8 @@ async function main() {
   for (const r of results) console.log(`ΑΠΟΤΕΛΕΣΜΑ|${action}|${r.name}|${r.status}|${r.msg}`);
 
   const done = results.filter((r) => r.status === "ok");
-  const warnings = [];
-  if (done.length) {
+  const warnings = [].concat(...results.map((r) => r.warnings || []));
+  if (done.length && (action !== "renew" || done.some((r) => r.resumed))) {
     try {
       const n = await syncRenewDashboard();
       console.log(`ΑΝΑΝΕΩΣΗ|ετικέτες πελατών=${n}`);
@@ -569,7 +711,8 @@ async function main() {
   const at = new Date().toISOString();
   const rows = done.map((r) => ({
     variable: "subs_log", value: `${action}: ${r.name}`,
-    metadata: { at, by: String(md.by || "—").slice(0, 80), action, field_id: r.id, field: r.name, client: r.client || "", reason: String(md.reason || "").slice(0, 200) },
+    metadata: { at, by: String(md.by || "—").slice(0, 80), action, field_id: r.id, field: r.name, client: r.client || "", reason: String(md.reason || "").slice(0, 200),
+      ...(r.renew ? { renew: r.renew, resumed: !!r.resumed } : {}) },
   }));
   rows.push({
     variable: "subs_result", value: results.every((r) => r.status === "ok" || r.status === "dry_run") ? "ok" : "attention",
@@ -587,6 +730,6 @@ if (require.main === module || process.env.T_ANALYSIS_TOKEN) {
   });
 }
 if (typeof module !== "undefined") {
-  module.exports = { parseEnd, controllersOf, planAction, renewTags, chunkBySize, buildItems, customerAccess, tagOf,
+  module.exports = { planRenew, addMonths, renewBase, endTagValue, athensOffset, parseAmount, todayAthens, fieldCustomerUsers, parseEnd, controllersOf, planAction, renewTags, chunkBySize, buildItems, customerAccess, tagOf,
     siteClassOf, signalsOf, sharedOf, billingOwners, deviceIdsOf, tierOf, pricingOf, SIGNALS, TIERS, BILLING_PAYS, BILLING_TEST };
 }

@@ -250,4 +250,82 @@ t("εικόνα: sh, dup και μοναδικά ονόματα αναφοράς
   assert.deepEqual(by.a1.sg, [["s2120", 1, 8, 8], ["uc511", 1, 2, 3]]); assert.equal(by.a1.sh, undefined);
 });
 
+/* ═══ ΑΝΑΝΕΩΣΗ (23/11) ═══ */
+const R = (f, d, md, today = "2026-11-23") => M.planRenew(f, d, md, today);
+const tv = (tags, k) => M.tagOf({ tags }, k);
+t("ανανέωση: μήνες, τέλος μήνα, δίσεκτο", () => {
+  assert.equal(M.addMonths("2026-11-23", 12), "2027-11-23");
+  assert.equal(M.addMonths("2027-01-31", 1), "2027-02-28");
+  assert.equal(M.addMonths("2028-01-31", 1), "2028-02-29");
+  assert.equal(M.addMonths("2026-12-15", 1), "2027-01-15");
+});
+t("ανανέωση: βάση = τρέχουσα λήξη αν δεν πέρασε, αλλιώς σήμερα", () => {
+  assert.equal(M.renewBase("2027-03-01", "2026-11-23"), "2027-03-01");
+  assert.equal(M.renewBase("2026-08-04", "2026-11-23"), "2026-11-23");
+  assert.equal(M.renewBase("", "2026-11-23"), "2026-11-23");
+});
+t("ανανέωση: ζώνη Ελλάδας χειμώνα/καλοκαίρι και ίδια ημέρα παντού", () => {
+  assert.equal(M.endTagValue("2027-01-10"), "2027-01-10T23:59:59+02:00");
+  assert.equal(M.endTagValue("2027-07-10"), "2027-07-10T23:59:59+03:00");
+  for (const d of ["2027-01-10", "2027-07-10"]) {
+    const v = M.endTagValue(d);
+    assert.equal(parseEnd(v).date, d);
+    assert.equal(parseEnd(v).odd, false);
+    assert.equal(new Date(v).toISOString().slice(0, 10), d); // όπως το subscriptionControl
+  }
+});
+t("ανανέωση: ποσό", () => {
+  assert.equal(M.parseAmount("90"), 90); assert.equal(M.parseAmount("90,5"), 90.5); assert.equal(M.parseAmount("0"), 0);
+  assert.equal(M.parseAmount("-1"), null); assert.equal(M.parseAmount("abc"), null); assert.equal(M.parseAmount(""), null);
+  assert.equal(M.parseAmount("1,234"), null);
+});
+t("ανανέωση: ενεργός αγρός → νέα λήξη, ποσό, active=yes, χωρίς αλλαγή dashboard, τιμοκατάλογος ίδιος", () => {
+  const f = field([tag("subscriptionCurrentCost", "50"), tag("subscriptionCost", "90")]);
+  const p = R(f, null, { end_date: "2027-11-23", amount: "80" });
+  assert.equal(p.error, undefined);
+  assert.equal(p.dashboardTags, null); assert.equal(p.resume, null);
+  assert.equal(tv(p.fieldTags, "subscriptionEnd"), "2027-11-23T23:59:59+02:00");
+  assert.equal(tv(p.fieldTags, "subscriptionCurrentCost"), "80");
+  assert.equal(tv(p.fieldTags, "subscriptionCost"), "90");
+  assert.equal(tv(p.fieldTags, "subscriptionActive"), "yes");
+  assert.equal(p.fieldTags.filter((x) => x.key === "subscriptionEnd").length, 1);
+  assert.equal(p.fieldTags.filter((x) => x.key === "subscriptionActive").length, 1);
+  assert.equal(tv(p.fieldTags, "fieldId"), "d1");
+  assert.equal(p.prevEnd, "2027-03-01");
+});
+t("ανανέωση: αγρός σε διακοπή → επαναφορά πρόσβασης + active=yes + καθαρή κατάσταση", () => {
+  const stopped = planAction("stop", field(), dash());
+  const f = { ...field(), tags: stopped.fieldTags };
+  const d = { ...dash(), tags: stopped.dashboardTags };
+  const p = R(f, d, { end_date: "2027-11-23", amount: "90" });
+  assert.equal(p.error, undefined);
+  assert.ok(p.resume);
+  assert.deepEqual(accessValues(p.dashboardTags).sort(), ["MACC_Manager", "p@x.gr"]);
+  assert.equal(tv(p.fieldTags, "subscriptionActive"), "yes");
+  assert.equal(tv(p.fieldTags, "subscriptionState"), "");
+  assert.equal(tv(p.fieldTags, "subscriptionSavedAccess"), "");
+  assert.equal(tv(p.fieldTags, "subscriptionEnd"), "2027-11-23T23:59:59+02:00");
+});
+t("ανανέωση: παύση χωρίς αντίγραφο → άρνηση, τίποτα δεν γράφεται", () => {
+  assert.ok(R(field([tag("subscriptionState", "paused")]), dash(), { end_date: "2027-11-23", amount: "90" }).error);
+});
+t("ανανέωση: άρνηση σε λάθος ημερομηνία/ποσό/συσκευή", () => {
+  assert.ok(R(field(), null, { end_date: "2026-11-22", amount: "90" }).error);
+  assert.ok(R(field(), null, { end_date: "2026-02-30", amount: "90" }).error);
+  assert.ok(R(field(), null, { end_date: "2032-01-01", amount: "90" }).error);
+  assert.ok(R(field(), null, { end_date: "2027-11-23", amount: "" }).error);
+  assert.ok(R({ id: "x", tags: [tag("fieldId", "d1")] }, null, { end_date: "2027-11-23", amount: "9" }).error);
+  assert.equal(R(field(), null, { end_date: "2026-11-23", amount: "9" }).error, undefined); // σήμερα επιτρέπεται
+});
+t("ανανέωση: χρήστες για ειδοποίηση = πελάτες του dashboard, όχι MACC, όχι public", () => {
+  const users = [
+    { id: "u1", name: "Π", tags: [tag("access", "p@x.gr")] },
+    { id: "u2", name: "Μ", tags: [tag("access", "MACC_Manager"), tag("access", "p@x.gr")] },
+    { id: "u3", name: "Ά", tags: [tag("access", "other")] },
+  ];
+  assert.deepEqual(M.fieldCustomerUsers(field(), dash([tag("access", "public")]), users).map((u) => u.id), ["u1"]);
+  const paused = planAction("pause", field(), dash());
+  assert.deepEqual(M.fieldCustomerUsers({ ...field(), tags: paused.fieldTags }, { ...dash(), tags: paused.dashboardTags }, users).map((u) => u.id), ["u1"]);
+});
+
 console.log(`\n${n}/${n} OK`);
