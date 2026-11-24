@@ -398,6 +398,10 @@ document.addEventListener('click', function(e){
 $('q').addEventListener('input', function(){ S.q = this.value; renderClients(); });
 
 if (window.TagoIO && window.TagoIO.ready) {
+  /* 24/11/2026: ΧΩΡΙΣ αυτό το sendData δεν ξέρει σε ποια συσκευή γράφει και δεν ξεκινά το analysis_run:
+     κανένα κλικ (παύση, διακοπή, επαναφορά, ανανέωση) δεν έφτανε ποτέ στο subscriptionManage. Ίδιο με τη φόρμα
+     ρυθμίσεων και το sagMain (autoFill με κεφαλαίο F). Μην το κάνετε false. */
+  window.TagoIO.autoFill = true;
   window.TagoIO.onStart(function(w){ try { if (w && Array.isArray(w.data)) ingest(flatten(w.data)); } catch (_e) {} render(); });
   window.TagoIO.onRealtime(function(d){ try { ingest(flatten(d)); render(); } catch (_e) {} });
   if (window.TagoIO.onSyncUserInformation) window.TagoIO.onSyncUserInformation(function(u){ S.me = (u && (u.name || u.email)) || ''; });
