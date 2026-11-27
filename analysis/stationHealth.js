@@ -11,7 +11,7 @@
  *   H1  νυχτερινή σιωπή: ≥ 3 ώρες χωρίς μετρήσεις, ≥ 70 % από αυτές τη νύχτα (18:00–07:59 ώρα Ελλάδας) → άδειες μπαταρίες AA
  *   H1b διακοπές: ≥ 3 ώρες χωρίς μετρήσεις χωρίς νυχτερινό μοτίβο
  *   H2  σιωπηλός σταθμός: καμία θερμοκρασία στις 3 τελευταίες πλήρεις ώρες (τροφοδοσία ή πύλη)
- *   Ελέγχονται μόνο σταθμοί που ανήκουν σε αγρό (ετικέτα devices) και δεν είναι στην αποθήκη (storage = yes).
+ *   Εκτός ελέγχου: σταθμοί στην αποθήκη (storage = yes) και σταθμοί χωρίς αγρό που δεν έστειλαν τίποτα το 24ωρο (αποσυρμένοι).
  *   H3  πίεση: ωριαίος μέσος εκτός 850–1085 hPa, ή μεταβολή > 6 hPa από ώρα σε ώρα (ο καιρός σπάνια ξεπερνά 3 hPa/ώρα)
  *   H4  χαμένη μεταβλητή: θερμοκρασία σε ≥ 6 ώρες αλλά καμία τιμή πίεσης / κατεύθυνσης ανέμου / βροχής
  *   H6  βροχή που δεν υπολογίζεται: θερμοκρασία σε ≥ 12 ώρες αλλά καμία ωριαία εγγραφή βροχής
@@ -148,26 +148,30 @@ async function run(R, nowMs, log) {
     let map = {}; try { map = JSON.parse(dt ? dt.value : "{}"); } catch (e) { map = {}; }
     for (const v of Object.values(map)) for (const id of [].concat(v)) if (typeof id === "string") { linked.add(id); if (c && !coordOf.has(id)) coordOf.set(id, c); }
   }
-  // Μόνο σταθμοί σε λειτουργία: ανήκουν σε αγρό και δεν είναι στην αποθήκη (ετικέτα storage = yes).
+  // Εκτός ελέγχου: σταθμοί στην αποθήκη (ετικέτα storage = yes). Σταθμοί χωρίς αγρό (παλαιότερες εγκαταστάσεις πελατών)
+  // ελέγχονται κανονικά ΑΝ έστειλαν μετρήσεις το τελευταίο 24ωρο· αλλιώς θεωρούνται αποσυρμένοι (βλ. παρακάτω).
   const all = list || [];
   const inStorage = (d) => (d.tags || []).some((t) => t.key === "storage" && t.value === "yes");
-  const skipped = all.filter((d) => !linked.has(d.id) || inStorage(d));
-  list = all.filter((d) => linked.has(d.id) && !inStorage(d));
-  log(`stationHealth: ${list.length} σταθμοί σε λειτουργία (${coordOf.size} συσκευές με θέση αγρού)· εκτός ελέγχου ${skipped.length}: ` + skipped.map((d) => d.name + (inStorage(d) ? " [αποθήκη]" : " [χωρίς αγρό]")).join(", "));
+  const skipped = all.filter((d) => inStorage(d));
+  list = all.filter((d) => !inStorage(d));
+  log(`stationHealth: ${list.length} σταθμοί (${list.filter((d) => linked.has(d.id)).length} σε αγρό)· στην αποθήκη ${skipped.length}: ` + skipped.map((d) => d.name).join(", "));
   // 5 σταθμοί παράλληλα (όριο εκτέλεσης 2΄ στο node-rt2025)· η σειρά των αποτελεσμάτων = σειρά της λίστας
   const slots = new Array((list || []).length);
   let next = 0;
   async function worker() {
     while (next < slots.length) {
       const i = next++; const d = list[i];
-      const dev = { id: d.id, name: d.name, weatherStation: (d.tags || []).some((t) => t.key === "topalidouType" && t.value === "weatherStation"), coords: coordOf.get(d.id) || null };
+      const dev = { id: d.id, name: d.name, linked: linked.has(d.id), weatherStation: (d.tags || []).some((t) => t.key === "topalidouType" && t.value === "weatherStation"), coords: coordOf.get(d.id) || null };
       const read = (q) => R.devices.getDeviceData(d.id, q);
       try { slots[i] = { dev, ...(await inspect(read, dev, nowMs)) }; }
       catch (e) { log(`stationHealth: ${d.name} σφάλμα ανάγνωσης ${e && e.message ? e.message : e}`); }
     }
   }
   await Promise.all(Array.from({ length: CONCURRENCY }, worker));
-  const res = slots.filter(Boolean);
+  // Σταθμός χωρίς αγρό και χωρίς καμία μέτρηση στο 24ωρο = αποσυρμένος· δεν γράφεται εγγραφή υγείας.
+  const retired = slots.filter((a) => a && !a.dev.linked && a.tHours === 0);
+  if (retired.length) log(`stationHealth: χωρίς αγρό και χωρίς μετρήσεις (αποσυρμένοι, εκτός ελέγχου) ${retired.length}: ` + retired.map((a) => a.dev.name).join(", "));
+  const res = slots.filter((a) => a && (a.dev.linked || a.tHours > 0));
   // H10 — σύγκριση με γείτονες
   for (const a of res) {
     if (a.rain3 == null || a.rain3 >= SILENT_MM || !a.dev.coords) continue;

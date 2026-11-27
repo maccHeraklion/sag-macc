@@ -40,6 +40,7 @@ function fleet() {
     station("KBDI", { weatherStation: true, kbdi: -7.86 }),
     station("ΑΠΟΘΗΚΗ", { storage: true, has: () => false }),
     station("ΧΩΡΙΣ_ΑΓΡΟ", { unlinked: true, has: () => false }),
+    station("ΠΑΛΙΟΣ_ΠΕΛΑΤΗΣ", { unlinked: true, has: (h) => { const x = localHour(h); return x >= 8 && x < 18; }, last: Date.parse("2026-11-28T06:40:00Z") }),
   ];
 }
 function fakeR(F, prev) {
@@ -78,7 +79,7 @@ function fakeR(F, prev) {
     },
   };
 }
-const EXPECT = { "ΥΓΙΗΣ": [], "ΝΥΧΤΑ": ["H1"], "ΣΙΩΠΗ": ["H2"], "ΣΙΩΠΗ5": ["H2", "H1"], "ΚΕΝΑ": ["H1b"], "ΠΙΕΣΗ": ["H3"], "ΒΗΜΑ": ["H3s"], "ΣΦΑΛΜΑ": ["H4"], "ΧΩΡΙΣ_ΩΡΙΑΙΑ": ["H6"], "ΒΡΟΧΟΜΕΤΡΟ": ["H10"], "ΜΑΚΡΙΑ": [], "KBDI": ["H7k"] };
+const EXPECT = { "ΥΓΙΗΣ": [], "ΝΥΧΤΑ": ["H1"], "ΣΙΩΠΗ": ["H2"], "ΣΙΩΠΗ5": ["H2", "H1"], "ΚΕΝΑ": ["H1b"], "ΠΙΕΣΗ": ["H3"], "ΒΗΜΑ": ["H3s"], "ΣΦΑΛΜΑ": ["H4"], "ΧΩΡΙΣ_ΩΡΙΑΙΑ": ["H6"], "ΒΡΟΧΟΜΕΤΡΟ": ["H10"], "ΜΑΚΡΙΑ": [], "KBDI": ["H7k"], "ΠΑΛΙΟΣ_ΠΕΛΑΤΗΣ": ["H1"] };
 
 async function check(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
@@ -104,8 +105,8 @@ async function check(src) {
   const h10 = got["ΒΡΟΧΟΜΕΤΡΟ"] && got["ΒΡΟΧΟΜΕΤΡΟ"].metadata.checks.find((c) => c.id === "H10");
   ok(h10 && h10.ev.mm === 15 && h10.ev.km < 2, "Σ6 H10 με γείτονα < 2 km και 15 mm (" + JSON.stringify(h10 && h10.ev) + ")");
   ok(R.sent.every((x) => x.variable === "station_health" && x.metadata.shadow === true), "Σ7 μόνο station_health, σκιώδες");
-  ok(R.sent.length === 12, "Σ8 μία εγγραφή ανά σταθμό σε λειτουργία (" + R.sent.length + ")");
-  ok(!got["ΑΠΟΘΗΚΗ"] && !got["ΧΩΡΙΣ_ΑΓΡΟ"], "Σ8β σταθμοί αποθήκης / χωρίς αγρό δεν ελέγχονται");
+  ok(R.sent.length === 13, "Σ8 μία εγγραφή ανά σταθμό σε λειτουργία (" + R.sent.length + ")");
+  ok(!got["ΑΠΟΘΗΚΗ"] && !got["ΧΩΡΙΣ_ΑΓΡΟ"] && got["ΠΑΛΙΟΣ_ΠΕΛΑΤΗΣ"], "Σ8β αποθήκη / αποσυρμένος χωρίς αγρό εκτός· ενεργός χωρίς αγρό ελέγχεται");
   ok(K.parseCoords([{ key: "coordinates", value: "39.10001234567890, 23.10009876543210" }]).lon > 23.1, "Σ9 μορφή «πλάτος, μήκος» του αγρού (επινοημένες τιμές)");
   ok(K.parseCoords([{ key: "coordinates", value: "0,0" }]) === null && K.parseCoords([]) === null, "Σ10 άκυρες συντεταγμένες = καμία");
   ok(K.fmt(Date.parse("2026-10-25T00:30:00Z")) === "25/10 03:30" && K.fmt(Date.parse("2026-10-25T01:30:00Z")) === "25/10 03:30" && K.athensHour(Date.parse("2026-11-28T22:10:00Z")) === 0, "Σ11 ώρα Ελλάδας χωρίς βιβλιοθήκη (θερινή/χειμερινή, μεσάνυχτα)");
@@ -127,8 +128,9 @@ const MUT = [
   ["H7k ποτέ", "if (kb && !(Number(kb.value) >= 0 && Number(kb.value) <= KBDI_MAX))", "if (false)"],
   ["χωρίς «από»", "  for (const c of checks) c.since = prevMap.get(c.id) || nowIso;", "  for (const c of checks) c.since = nowIso;"],
   ["warning πάνω από fault", 'checks.some((c) => c.sev === "fault") ? "fault"', 'false ? "fault"'],
-  ["ελέγχει και την αποθήκη", "list = all.filter((d) => linked.has(d.id) && !inStorage(d));", "list = all.filter((d) => linked.has(d.id));"],
-  ["ελέγχει και χωρίς αγρό", "list = all.filter((d) => linked.has(d.id) && !inStorage(d));", "list = all.filter((d) => !inStorage(d));"],
+  ["ελέγχει και την αποθήκη", "list = all.filter((d) => !inStorage(d));", "list = all;"],
+  ["γράφει και αποσυρμένους", "const res = slots.filter((a) => a && (a.dev.linked || a.tHours > 0));", "const res = slots.filter(Boolean);"],
+  ["αγνοεί ενεργούς χωρίς αγρό", "const res = slots.filter((a) => a && (a.dev.linked || a.tHours > 0));", "const res = slots.filter((a) => a && a.dev.linked);"],
   ["H1b ποτέ", "    else C.push({ id: \"H1b\"", "    else if (false) C.push({ id: \"H1b\""],
 ];
 let dead = 0;
