@@ -10,7 +10,8 @@
  * ΕΛΕΓΧΟΙ (τελευταίες 24 πλήρεις ώρες, εκτός αν γράφεται αλλιώς):
  *   H1  νυχτερινή σιωπή: ≥ 3 ώρες χωρίς μετρήσεις, ≥ 70 % από αυτές τη νύχτα (18:00–07:59 ώρα Ελλάδας) → άδειες μπαταρίες AA
  *   H1b διακοπές: ≥ 3 ώρες χωρίς μετρήσεις χωρίς νυχτερινό μοτίβο
- *   H2  σιωπηλός σταθμός: τελευταία μέτρηση πριν από > 3 ώρες
+ *   H2  σιωπηλός σταθμός: καμία θερμοκρασία στις 3 τελευταίες πλήρεις ώρες (τροφοδοσία ή πύλη)
+ *   Ελέγχονται μόνο σταθμοί που ανήκουν σε αγρό (ετικέτα devices) και δεν είναι στην αποθήκη (storage = yes).
  *   H3  πίεση: ωριαίος μέσος εκτός 850–1085 hPa, ή μεταβολή > 6 hPa από ώρα σε ώρα (ο καιρός σπάνια ξεπερνά 3 hPa/ώρα)
  *   H4  χαμένη μεταβλητή: θερμοκρασία σε ≥ 6 ώρες αλλά καμία τιμή πίεσης / κατεύθυνσης ανέμου / βροχής
  *   H6  βροχή που δεν υπολογίζεται: θερμοκρασία σε ≥ 12 ώρες αλλά καμία ωριαία εγγραφή βροχής
@@ -89,7 +90,7 @@ async function inspect(read, dev, nowMs) {
   const tH = temp.size;
   // H2 σιωπηλός: καμία θερμοκρασία στις 3 τελευταίες πλήρεις ώρες
   if (lastH == null || lastH < end - 3 * H) {
-    C.push({ id: "H2", sev: "fault", aud: "user", text_el: lastMs ? `Ο σταθμός δεν στέλνει μετρήσεις από περίπου ${fmt(lastMs)} (ώρα Ελλάδας). Ελέγξτε την τροφοδοσία (μπαταρίες AA, φωτοβολταϊκό).` : "Ο σταθμός δεν έστειλε καμία μέτρηση το τελευταίο 24ωρο. Ελέγξτε την τροφοδοσία (μπαταρίες AA, φωτοβολταϊκό).", ev: { last_hour_end: lastMs ? new Date(lastMs).toISOString() : null } });
+    C.push({ id: "H2", sev: "fault", aud: "user", text_el: lastMs ? `Ο σταθμός δεν στέλνει μετρήσεις από περίπου ${fmt(lastMs)} (ώρα Ελλάδας). Πιθανές αιτίες: τροφοδοσία του σταθμού (μπαταρίες AA, φωτοβολταϊκό) ή η πύλη (gateway) της περιοχής.` : "Ο σταθμός δεν έστειλε καμία μέτρηση το τελευταίο 24ωρο. Πιθανές αιτίες: τροφοδοσία του σταθμού (μπαταρίες AA, φωτοβολταϊκό) ή η πύλη (gateway) της περιοχής.", ev: { last_hour_end: lastMs ? new Date(lastMs).toISOString() : null } });
   }
   // H1 νυχτερινή σιωπή / διακοπές
   const missing = [];
@@ -137,17 +138,22 @@ function mergeSince(checks, prev, nowIso) {
 function worst(checks) { return checks.some((c) => c.sev === "fault") ? "fault" : checks.some((c) => c.sev === "warning") ? "warning" : "ok"; }
 
 async function run(R, nowMs, log) {
-  const list = await R.devices.list({ page: 1, amount: 200, fields: ["id", "name", "tags"], filter: { tags: [{ key: "type", value: "s2120" }] } });
+  let list = await R.devices.list({ page: 1, amount: 200, fields: ["id", "name", "tags"], filter: { tags: [{ key: "type", value: "s2120" }] } });
   // συντεταγμένες από τους αγρούς (ετικέτα devices → σταθμός)
   const fields = await R.devices.list({ page: 1, amount: 200, fields: ["id", "name", "tags"], filter: { tags: [{ key: "isField", value: "yes" }] } });
-  const coordOf = new Map();
+  const coordOf = new Map(), linked = new Set();
   for (const f of fields || []) {
-    const c = parseCoords(f.tags); if (!c) continue;
+    const c = parseCoords(f.tags);
     const dt = (f.tags || []).find((x) => x.key === "devices");
     let map = {}; try { map = JSON.parse(dt ? dt.value : "{}"); } catch (e) { map = {}; }
-    for (const v of Object.values(map)) for (const id of [].concat(v)) if (typeof id === "string" && !coordOf.has(id)) coordOf.set(id, c);
+    for (const v of Object.values(map)) for (const id of [].concat(v)) if (typeof id === "string") { linked.add(id); if (c && !coordOf.has(id)) coordOf.set(id, c); }
   }
-  log(`stationHealth: ${(list || []).length} σταθμοί, ${coordOf.size} με θέση από αγρό — ξεκινά`);
+  // Μόνο σταθμοί σε λειτουργία: ανήκουν σε αγρό και δεν είναι στην αποθήκη (ετικέτα storage = yes).
+  const all = list || [];
+  const inStorage = (d) => (d.tags || []).some((t) => t.key === "storage" && t.value === "yes");
+  const skipped = all.filter((d) => !linked.has(d.id) || inStorage(d));
+  list = all.filter((d) => linked.has(d.id) && !inStorage(d));
+  log(`stationHealth: ${list.length} σταθμοί σε λειτουργία (${coordOf.size} συσκευές με θέση αγρού)· εκτός ελέγχου ${skipped.length}: ` + skipped.map((d) => d.name + (inStorage(d) ? " [αποθήκη]" : " [χωρίς αγρό]")).join(", "));
   // 5 σταθμοί παράλληλα (όριο εκτέλεσης 2΄ στο node-rt2025)· η σειρά των αποτελεσμάτων = σειρά της λίστας
   const slots = new Array((list || []).length);
   let next = 0;
@@ -189,7 +195,7 @@ async function run(R, nowMs, log) {
     } catch (e) { log(`stationHealth: ${a.dev.name} σφάλμα εγγραφής ${e && e.message ? e.message : e}`); }
   }
   await Promise.all(Array.from({ length: CONCURRENCY }, writer));
-  log(`stationHealth ${HEALTH_VERSION}${SHADOW ? " (σκιώδες)" : ""}: ${res.length}/${(list || []).length} σταθμοί · με ευρήματα ${nBad} · με συντεταγμένες ${res.filter((a) => a.dev.coords).length}`);
+  log(`stationHealth ${HEALTH_VERSION}${SHADOW ? " (σκιώδες)" : ""}: ${res.length}/${list.length} σταθμοί · με ευρήματα ${nBad} · με συντεταγμένες ${res.filter((a) => a.dev.coords).length}`);
   return res;
 }
 

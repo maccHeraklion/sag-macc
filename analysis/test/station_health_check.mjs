@@ -38,6 +38,8 @@ function fleet() {
     station("ΒΡΟΧΟΜΕΤΡΟ", { coords: "39.1050, 23.1080", rainVar: "rain_height_acc", daily: [0, 0, 0] }),
     station("ΜΑΚΡΙΑ", { coords: "37.5000,24.5000", daily: [0, 0, 0] }),
     station("KBDI", { weatherStation: true, kbdi: -7.86 }),
+    station("ΑΠΟΘΗΚΗ", { storage: true, has: () => false }),
+    station("ΧΩΡΙΣ_ΑΓΡΟ", { unlinked: true, has: () => false }),
   ];
 }
 function fakeR(F, prev) {
@@ -48,8 +50,8 @@ function fakeR(F, prev) {
     devices: {
       async list(q) {
         const t = q.filter.tags[0];
-        if (t.key === "type") return F.map((s) => ({ id: s.id, name: s.name, tags: [{ key: "type", value: "s2120" }].concat(s.weatherStation ? [{ key: "topalidouType", value: "weatherStation" }] : []) }));
-        if (t.key === "isField") return F.map((s) => ({ id: "F_" + s.id, name: "Field_" + s.id, tags: [{ key: "coordinates", value: s.coords }, { key: "devices", value: JSON.stringify({ s2120: s.id }) }] }));
+        if (t.key === "type") return F.map((s) => ({ id: s.id, name: s.name, tags: [{ key: "type", value: "s2120" }].concat(s.weatherStation ? [{ key: "topalidouType", value: "weatherStation" }] : [], s.storage ? [{ key: "storage", value: "yes" }] : []) }));
+        if (t.key === "isField") return F.filter((s) => !s.unlinked).map((s) => ({ id: "F_" + s.id, name: "Field_" + s.id, tags: [{ key: "coordinates", value: s.coords }, { key: "devices", value: JSON.stringify({ s2120: s.id }) }] }));
         return [];
       },
       async getDeviceData(id, q) {
@@ -102,7 +104,8 @@ async function check(src) {
   const h10 = got["ΒΡΟΧΟΜΕΤΡΟ"] && got["ΒΡΟΧΟΜΕΤΡΟ"].metadata.checks.find((c) => c.id === "H10");
   ok(h10 && h10.ev.mm === 15 && h10.ev.km < 2, "Σ6 H10 με γείτονα < 2 km και 15 mm (" + JSON.stringify(h10 && h10.ev) + ")");
   ok(R.sent.every((x) => x.variable === "station_health" && x.metadata.shadow === true), "Σ7 μόνο station_health, σκιώδες");
-  ok(R.sent.length === 12, "Σ8 μία εγγραφή ανά σταθμό (" + R.sent.length + ")");
+  ok(R.sent.length === 12, "Σ8 μία εγγραφή ανά σταθμό σε λειτουργία (" + R.sent.length + ")");
+  ok(!got["ΑΠΟΘΗΚΗ"] && !got["ΧΩΡΙΣ_ΑΓΡΟ"], "Σ8β σταθμοί αποθήκης / χωρίς αγρό δεν ελέγχονται");
   ok(K.parseCoords([{ key: "coordinates", value: "39.10001234567890, 23.10009876543210" }]).lon > 23.1, "Σ9 μορφή «πλάτος, μήκος» του αγρού (επινοημένες τιμές)");
   ok(K.parseCoords([{ key: "coordinates", value: "0,0" }]) === null && K.parseCoords([]) === null, "Σ10 άκυρες συντεταγμένες = καμία");
   ok(K.fmt(Date.parse("2026-10-25T00:30:00Z")) === "25/10 03:30" && K.fmt(Date.parse("2026-10-25T01:30:00Z")) === "25/10 03:30" && K.athensHour(Date.parse("2026-11-28T22:10:00Z")) === 0, "Σ11 ώρα Ελλάδας χωρίς βιβλιοθήκη (θερινή/χειμερινή, μεσάνυχτα)");
@@ -124,6 +127,8 @@ const MUT = [
   ["H7k ποτέ", "if (kb && !(Number(kb.value) >= 0 && Number(kb.value) <= KBDI_MAX))", "if (false)"],
   ["χωρίς «από»", "  for (const c of checks) c.since = prevMap.get(c.id) || nowIso;", "  for (const c of checks) c.since = nowIso;"],
   ["warning πάνω από fault", 'checks.some((c) => c.sev === "fault") ? "fault"', 'false ? "fault"'],
+  ["ελέγχει και την αποθήκη", "list = all.filter((d) => linked.has(d.id) && !inStorage(d));", "list = all.filter((d) => linked.has(d.id));"],
+  ["ελέγχει και χωρίς αγρό", "list = all.filter((d) => linked.has(d.id) && !inStorage(d));", "list = all.filter((d) => !inStorage(d));"],
   ["H1b ποτέ", "    else C.push({ id: \"H1b\"", "    else if (false) C.push({ id: \"H1b\""],
 ];
 let dead = 0;
