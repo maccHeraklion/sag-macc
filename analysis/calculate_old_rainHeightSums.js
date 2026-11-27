@@ -87,6 +87,25 @@ async function _sagRainFromCounter(device, startISO, endISO, endPt, maxLeadMin) 
 }
 // ═══ ΤΕΛΟΣ ΑΝΤΙΓΡΑΦΟΥ ΠΥΡΗΝΑ ═══
 
+// ---------- T-READMETER-01 (27/11/2026): μετρητής αναγνώσεων — ΜΟΝΟ καταγραφή, δεν αλλάζει κανένα αποτέλεσμα ----------
+// Μετρά κλήσεις getData και εγγραφές που επιστράφηκαν, χωριστά τα ερωτήματα «sum» (το TagoIO μπορεί να χρεώνει όσες σαρώνει).
+const _RM = { calls: 0, recs: 0, agg: 0, byKey: new Map() };
+function _rmWrap(device) {
+  const raw = device.getData.bind(device);
+  device.getData = async function (q) {
+    const r = await raw(q);
+    try {
+      const n = Array.isArray(r) ? r.length : (r == null ? 0 : 1);
+      const k = (q && q.variables ? q.variables.join('+') : '?') + (q && q.query ? '·' + q.query : '');
+      _RM.calls++; if (q && q.query) _RM.agg++; else _RM.recs += n;
+      const e = _RM.byKey.get(k) || [0, 0]; e[0]++; e[1] += n; _RM.byKey.set(k, e);
+    } catch (_e) {}
+    return r;
+  };
+  return device;
+}
+function _rmTake() { const o = { calls: _RM.calls, recs: _RM.recs, agg: _RM.agg }; return o; }
+
 // ---------- Βοηθητικά ----------
 const iso = (ms) => new Date(ms).toISOString();
 const r3 = (x) => Math.round(x * 1000) / 1000;
@@ -424,14 +443,23 @@ async function startAnalysis(context) {
     if (!moment.tz.zone(TZ) || !Number.isFinite(cutMs)) return console.log("Άκυρο RAIN_TZ / RAIN_CUTOVER");
     const list = await listDevicesToProcess();
     console.log(`Βροχή ${RAIN_VERSION} · ${TZ} από ${iso(cutMs)} · σταθμοί ${list.length}`);
+    const _rmPer = []; _RM.calls = 0; _RM.recs = 0; _RM.agg = 0; _RM.byKey.clear();
     for (const d of list) {
       try {
-        const device = new Device({ token: await getOrCreateDeviceTokenById(account, d.id) });
+        const device = _rmWrap(new Device({ token: await getOrCreateDeviceTokenById(account, d.id) }));
+        const _b = _rmTake();
         await computeForDevice(device, d.name || d.id, { TZ, cutMs });
+        const _a = _rmTake();
+        _rmPer.push([d.name || d.id, _a.recs - _b.recs, _a.calls - _b.calls, _a.agg - _b.agg]);
       } catch (err) {
         console.log(`[${d.name || d.id}] σφάλμα: ${err?.message || err}`);
       }
     }
+    try {   // T-READMETER-01: σύνοψη αναγνώσεων της εκτέλεσης (μόνο καταγραφή)
+      const top = [..._RM.byKey.entries()].sort((a, b) => b[1][1] - a[1][1]).slice(0, 10).map(([k, v]) => k + ' ' + v[1] + '/' + v[0]);
+      const heavy = _rmPer.sort((a, b) => b[1] - a[1]).slice(0, 8).map(x => x[0].replace(/sensecap_s?2120_/i, '') + ' ' + x[1] + (x[3] ? '+Σ' + x[3] : ''));
+      console.log(`[T-READMETER-01] αναγνώσεις: ${_RM.recs} εγγραφές σε ${_RM.calls} κλήσεις · ερωτήματα sum ${_RM.agg} · ανά είδος (εγγραφές/κλήσεις): ${top.join(' · ')} · βαρύτεροι σταθμοί: ${heavy.join(' · ')}`);
+    } catch (_e) {}
     console.log("Aggregation completed.");
   } catch (error) {
     console.log(`Fatal error: ${error?.message || error}`);

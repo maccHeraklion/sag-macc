@@ -26,7 +26,7 @@ async function run(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let K; try { K = loadCore(src); } catch (e) { return ["φόρτωση: " + e.message]; }
   try {
-    ok(K.SAG_KERNEL_VERSION === "v50.194 · 2026-11-09", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
+    ok(K.SAG_KERNEL_VERSION === "v50.195 · 2026-11-27", "Ε έκδοση (" + K.SAG_KERNEL_VERSION + ")");
     const cases = [
       ["W1 1 υγρό από 3: στεγνή ώρα", [60, 8, 5], 8, 1],
       ["W2 2 υγρά από 3: υγρή ώρα", [60, 40, 5], 40, 2],
