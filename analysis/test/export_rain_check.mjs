@@ -2,7 +2,8 @@
 // Τρέχει ολόκληρη την init με ψεύτικο SDK (ίδιο σχήμα με export_disease_check.mjs) για:
 //   Α · σταθμό ΜΕ μετρητή: στήλες rain_gauge, rain_height_acc και η αύξηση ανά μέτρηση (κενό, μηδενισμός, αδύνατο βήμα, μεγάλο κενό)·
 //   Β · ωριαία βροχή: μία τιμή ανά ώρα (v34 > v33, μεγαλύτερη κάλυψη), αρχή/τέλος ώρας, κάλυψη, ποιότητα (μερική, v33, συμπλήρωση)·
-//   Γ · σταθμό ΧΩΡΙΣ μετρητή: τίποτα από τα παραπάνω δεν εμφανίζεται άδειο· Δ · περιγραφή στο email· Ε · ζεύγη στηλών.
+//   Γ · σταθμό ΧΩΡΙΣ μετρητή: τίποτα από τα παραπάνω δεν εμφανίζεται άδειο· Δ · περιγραφή στο email· Ε · ζεύγη στηλών·
+//   Η · ημερήσιοι δείκτες: μόνο οι εγγραφές kbdi-v2 (T-KBDI-FIX-01).
 // Κάθε μετάλλαξη του κώδικα πρέπει να σκοτώνεται.
 import fs from "node:fs"; import path from "node:path";
 import { fileURLToPath } from "node:url"; import { createRequire } from "node:module";
@@ -40,6 +41,10 @@ function makeData(counter) {
   add("rain_height_hourly", 0.5, T("07:30"), { ...per34("07", "08"), alg: "v34", status: "measured", partial: true, coverage: 0.5 });
   add("rain_height_hourly", 0.9, T("07:30").replace(":00.000Z", ":01.000Z"), { ...per34("07", "08"), alg: "v34", status: "measured", partial: true, coverage: 0.9 });
   add("rain_height_hourly", 2.5, "2026-11-20T07:00:11.999Z", { ...per("06"), source_variable: counter ? "rain_height_acc" : "rain_height" });
+  // T-KBDI-FIX-01: παλιά (v1, άκυρη) και διορθωμένη (kbdi-v2) τιμή της ίδιας ημέρας
+  add("kbdi1", -7.86, "2026-11-20T21:59:50.430Z", {});   // όπως οι πραγματικές v1: metadata κενό
+  add("kbdi1", 41.25, "2026-11-20T21:59:50.000Z", { alg: "kbdi-v2", period_key: "2026-11-20" });
+  add("vpd1", 0.018, "2026-11-20T21:59:50.430Z", {});
   return { [FIELD]: [], [STATION]: S };
 }
 
@@ -143,6 +148,11 @@ async function check(src) {
   // ---- Ε · ζεύγη στηλών ----
   const RP = parseCsv(P.mails[0].attachment.archive);
   ok(RP[1].includes("Βροχόπτωση Μέτρησης από Μετρητή (mm)") && RP[1].includes("Ποιότητα Τιμής"), "Ε1 ζεύγη στηλών: νέες στήλες παρούσες");
+  // ---- Η · ημερήσιοι δείκτες μόνο kbdi-v2 ----
+  const K = block(R, "(Ημερήσιοι Δείκτες)");
+  const kv = (K["Δείκτης Ξηρασίας KBDI (mm)"] || []).filter((x) => x !== "");
+  ok(kv.length === 1 && kv[0] === "41.25", "Η1 μόνο η διορθωμένη τιμή KBDI (" + kv.join(",") + ")");
+  ok(!K._headers.includes("Έλλειμμα Πίεσης Υδρατμών VPD (kPa)"), "Η2 η παλιά vpd1 δεν εξάγεται (" + K._headers.join(" | ") + ")");
   ok(A.valid.at(-1).metadata.type === "success", "Ζ1 πράσινο μήνυμα");
   return f;
 }
@@ -162,6 +172,7 @@ const MUT = [
   ["χωρίς «μερική ώρα»", '  if (m.alg === "v34" && m.partial) s += en ? " · partial hour" : " · μερική ώρα";', ""],
   ["χωρίς στήλες διαστήματος", "        const groupVarList = group.withPeriod ? group.vars.concat(RAIN_HOURLY_META) : group.vars;", "        const groupVarList = group.vars;"],
   ["χωρίς rain_gauge", '    "rain_gauge",\n    "rain_height_acc",\n  ],', '    "rain_height_acc",\n  ],'],
+  ["χωρίς φίλτρο kbdi-v2", "dp.metadata.alg === group.onlyAlg);", "true);"],
   ["κάλυψη σε κλάσμα", "Math.round(Math.max(0, Math.min(1, c)) * 1000) / 10", "Math.round(Math.max(0, Math.min(1, c)) * 1000) / 1000"],
 ];
 let dead = 0;

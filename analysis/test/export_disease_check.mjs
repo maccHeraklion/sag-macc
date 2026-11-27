@@ -32,7 +32,7 @@ const card = (v, text) => ({ value: v, metadata: { color: "x", text } });
 function makeData(variant) {
   const D = { [FIELD]: [], [STATION]: [] };
   D[STATION].push({ variable: "air_temperature", value: 18.2, time: "2026-11-20T10:00:00.000Z", id: "s1" });
-  if (variant === "kbdi") D[STATION].push({ variable: "kbdi1", value: 12.5, time: "2026-11-20T21:59:50.000Z", id: "k1" });
+  if (variant === "kbdi") D[STATION].push({ variable: "kbdi1", value: 12.5, time: "2026-11-20T21:59:50.000Z", id: "k1", metadata: { alg: "kbdi-v2" } });   // T-KBDI-FIX-01: εξάγεται μόνο η kbdi-v2
   if (variant === "nomodel") return D;
   D[FIELD].push({ variable: "configuration", time: "2026-11-01T00:00:00Z", id: "cfg",
     value: JSON.stringify({ crops: [{ id: "vegetablecrops:tomato:1", cultivation_type: "tomato" }] }) });
@@ -140,7 +140,7 @@ const parse = (csv) => csv.replace(/^﻿/, "").trim().split("\n");
   const { mails, mod } = await run("kbdi", undefined);
   const m = mails[0];
   ok(/Χρόνος αναφοράς/.test(m.message) && /\[air_temperature\]/.test(m.message) && m.message.includes("sag-changelog.html"), "Ζ1 η περιγραφή συνοδεύει το email");
-  ok(m.message.includes("⚠ Γνωστό ζήτημα: SC-0005"), "Ζ2 γνωστό ζήτημα KBDI στο email");
+  ok(/\[kbdi1\][^\n]*⚠ Γνωστό ζήτημα: SC-\d{4}/.test(m.message), "Ζ2 γνωστό ζήτημα KBDI στο email");
   ok(/Τελευταίες αλλαγές συστήματος \(SC-\d{4}\)/.test(m.message), "Ζ3 τελευταίες αλλαγές συστήματος");
   ok(m.attachment.filename.includes("_2026-11-19_2026-11-22_UTC_") && / UTC\)$/.test(m.subject), "Ζ4 όνομα αρχείου/θέμα σε UTC (" + m.attachment.filename + " | " + m.subject + ")");
   const T = mod.exports._test;

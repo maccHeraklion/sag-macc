@@ -305,7 +305,8 @@ const EXTRA_BLOCK_GROUPS = {
     },
     // Written back onto the station once a day at 23:59:50 by the Keetch-Byram
     // Drought Index analysis - not sent by the sensor at all.
-    { label: "dailyIndices", vars: ["kbdi1", "soil_moisture_condition1", "vpd1", "stress_level1"] },
+    // T-KBDI-FIX-01: only the corrected kbdi-v2 records (the v1 ones are invalid, changelog SC-0005).
+    { label: "dailyIndices", vars: ["kbdi1", "soil_moisture_condition1", "vpd1", "stress_level1"], onlyAlg: "kbdi-v2" },
   ],
 };
 
@@ -1296,6 +1297,14 @@ async function init(context, scope) {
             groupValues[v] = await fetchAllData(read, v, startDate, endDate, (m) => context.log(m), readErrors);
           })
         );
+        // T-KBDI-FIX-01: μόνο εγγραφές του διορθωμένου υπολογισμού (οι παλιές είναι άκυρες και έχουν τον ίδιο χρόνο).
+        if (group.onlyAlg) {
+          for (const v of group.vars) {
+            const all = groupValues[v] || [];
+            groupValues[v] = all.filter((dp) => dp && dp.metadata && dp.metadata.alg === group.onlyAlg);
+            if (groupValues[v].length !== all.length) context.log(`${info.name}: ${v} ${all.length} -> ${groupValues[v].length} (μόνο ${group.onlyAlg})`);
+          }
+        }
         // T-EXPORT-RAIN-01: μία τιμή ανά ώρα + διάστημα / κάλυψη / ποιότητα από τα metadata της εγγραφής.
         if (group.withPeriod) {
           const src = groupValues[group.vars[0]] || [];
