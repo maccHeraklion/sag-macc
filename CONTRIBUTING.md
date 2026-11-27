@@ -22,6 +22,12 @@ you deploy *from* the repo, never the other way around. No more editing live wit
    - **Or:** `cd deploy && npm install && node deploy.mjs <name>` (terminal/CI).
 5. Verify on TagoIO (`get_analysis` shows a fresh `updated_at`, or check the dashboard).
 
+## Change protocol (27/11/2026) — read before any change that users can feel
+**`docs/ΠΡΩΤΟΚΟΛΛΟ_ΑΛΛΑΓΩΝ_ΚΑΙ_ΔΗΜΙΟΥΡΓΙΑΣ.md`**: time reference is **UTC**; every change or creation that affects data,
+calculations, exports or what users see gets an entry in `changelog/system_changelog.json` (append-only — never edit or
+delete an entry) and, for new/changed variables, `changelog/data_dictionary.json`. Run
+`node analysis/test/changelog_check.mjs` before committing. Messages to producers/researchers go out only with Michalis's approval.
+
 ## Before you upload anything to TagoIO
 `git pull`, then open **`deploy/DEPLOY_LOG.md`**: its first line says whether someone is uploading
 right now (🔴) or the system is free (🟢). Set it to 🔴 with your name + what you upload, push, upload,

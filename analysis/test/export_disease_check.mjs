@@ -9,6 +9,15 @@ const file = path.join(here, "..", "fieldExportData.js");
 const core = fs.readFileSync(path.join(here, "..", "runPerTich.js"), "utf8");
 const req = createRequire(file);
 
+const DAYJS_SHIM = createRequire(import.meta.url)("./shims/dayjs-shim.cjs");
+// T-EXPORT-UTC-01: τα δημόσια JSON της περιγραφής σερβίρονται από το repo· FETCH_FAIL προσομοιώνει μη διαθέσιμα αρχεία.
+let FETCH_FAIL = false;
+const PUB = { "sag-data-dictionary.json": path.join(here, "..", "..", "changelog", "data_dictionary.json"), "sag-changelog.json": path.join(here, "..", "..", "changelog", "system_changelog.json") };
+globalThis.fetch = async (url) => {
+  const name = Object.keys(PUB).find((k) => String(url).includes("/html_files/" + k));
+  if (FETCH_FAIL || !name) return { ok: false, json: async () => null };
+  return { ok: true, json: async () => JSON.parse(fs.readFileSync(PUB[name], "utf8")) };
+};
 const FIELD = "f".repeat(24), STATION = "a".repeat(24), FORM = "c".repeat(24);
 const grab = (name) => { const i = core.indexOf("const " + name + " = ["); const j = core.indexOf("];", i); return new Function("return " + core.slice(i + name.length + 9, j + 1))(); };
 const KP = grab("_SAG_KEYMAP_PATHOGENS"), KR = grab("_SAG_KEYMAP_PREFIXES");
@@ -23,6 +32,7 @@ const card = (v, text) => ({ value: v, metadata: { color: "x", text } });
 function makeData(variant) {
   const D = { [FIELD]: [], [STATION]: [] };
   D[STATION].push({ variable: "air_temperature", value: 18.2, time: "2026-11-20T10:00:00.000Z", id: "s1" });
+  if (variant === "kbdi") D[STATION].push({ variable: "kbdi1", value: 12.5, time: "2026-11-20T21:59:50.000Z", id: "k1" });
   if (variant === "nomodel") return D;
   D[FIELD].push({ variable: "configuration", time: "2026-11-01T00:00:00Z", id: "cfg",
     value: JSON.stringify({ crops: [{ id: "vegetablecrops:tomato:1", cultivation_type: "tomato" }] }) });
@@ -30,6 +40,8 @@ function makeData(variant) {
   D[FIELD].push(bundle("2026-11-20T08:00:00.000Z", [{ id: "vegetablecrops:tomato:1", ind: { fir_message_phytophthora_infestans: card("Υψηλός κίνδυνος", "κείμενο Υ"), fir_message_botrytis_cinerea: card("Χαμηλός κίνδυνος", "χ") } }]));
   D[FIELD].push(bundle("2026-11-20T09:00:00.000Z", [{ id: "vegetablecrops:tomato:1", ind: { fir_message_phytophthora_infestans: card("Σοβαρός κίνδυνος", "κείμενο Σ, με κόμμα") } }]));
   D[FIELD].push(bundle("2026-11-20T10:00:00.000Z", [{ id: "vegetablecrops:tomato:1", ind: { fir_message_phytophthora_infestans: card("Υψηλός κίνδυνος", "κείμενο Υ2") } }]));
+  // T-EXPORT-UTC-01: 20/11 23:00 UTC = 21/11 01:00 ώρα Ελλάδας → ανήκει στην ημέρα UTC 20/11.
+  D[FIELD].push(bundle("2026-11-20T23:00:00.000Z", [{ id: "olive:koroneiki:2", ind: { fir_message_spilocaea_oleagina: card("Μέτριος κίνδυνος", "νυχτερινό") } }]));
   // 21/11: Μέτριος only, crop id not in config → parsed from id
   D[FIELD].push(bundle("2026-11-21T12:00:00.000Z", [{ id: "olive:koroneiki:2", ind: { fir_message_spilocaea_oleagina: card("Μέτριος κίνδυνος", "μέτριο") } }]));
   if (variant === "lowonly") { D[FIELD] = D[FIELD].filter((x) => x.variable !== "field_bundle"); D[FIELD].push(bundle("2026-11-20T08:00:00.000Z", [{ id: "x:tomato:1", ind: { fir_message_botrytis_cinerea: card("Χαμηλός κίνδυνος", "χ") } }])); }
@@ -63,7 +75,12 @@ function run(variant, includeDiseases, failBundles = false) {
     Services: class { constructor() { this.email = { send: async (m) => mails.push(m) }; } },
     Device: class {},
   };
-  const shim = (m) => (m === "@tago-io/sdk" ? sdk : req(m));
+  const shim = (m) => {
+    if (m === "@tago-io/sdk") return sdk;
+    // dayjs: το πραγματικό αν υπάρχει (NODE_PATH), αλλιώς το υποκατάστατο πάνω στο moment-timezone (shims/dayjs-shim.cjs).
+    if (m === "dayjs" || m.startsWith("dayjs/plugin/")) { try { return req(m); } catch (e) { return m === "dayjs" ? DAYJS_SHIM : () => {}; } }
+    return req(m);
+  };
   const mod = { exports: {} };
   new Function("require", "module", "exports", fs.readFileSync(file, "utf8"))(shim, mod, mod.exports);
   const scope = [
@@ -81,22 +98,24 @@ const parse = (csv) => csv.replace(/^﻿/, "").trim().split("\n");
   const { mails, valid } = await run("full", undefined);
   const L = parse(mails[0].attachment.archive);
   ok(mails.length === 1 && !L[0].includes("Ασθένειες"), "Α1 χωρίς τη σημαία δεν εμφανίζονται ασθένειες");
-  ok(L.length === 3 && L[1].startsWith("Χρονοσήμανση,Θερμοκρασία Αέρα"), "Α2 κεφαλίδες σταθμού αμετάβλητες (" + L[1] + ")");
+  ok(L.length === 3 && L[1].startsWith("Χρόνος UTC,Ώρα Ελλάδας (με ζώνη),Θερμοκρασία Αέρα"), "Α2 κεφαλίδες σταθμού: UTC + ώρα Ελλάδας (" + L[1] + ")");
+  ok(L[2].startsWith("2026-11-20T10:00:00Z,2026-11-20 12:00 +02:00,18.2"), "Α2β γραμμή σε UTC + ώρα Ελλάδας με ζώνη (" + L[2] + ")");
   ok(valid.at(-1).metadata.type === "success", "Α3 πράσινο μήνυμα");
 }
 { // Β · με τη σημαία
   const { mails, valid } = await run("full", "yes");
   const L = parse(mails[0].attachment.archive);
   ok(L[0].includes("Δοκιμή - Ασθένειες - Ημερήσιος κίνδυνος") && L[0].includes("Δοκιμή - Ασθένειες - Δηλώσεις"), "Β1 δύο νέα μπλοκ");
-  ok(L[1].includes("Ημερομηνία,Καλλιέργεια,Ασθένεια / Εχθρός,Μέγιστος κίνδυνος,Ώρες σε υψηλό ή σοβαρό,Σχόλιο συστήματος"), "Β2 στήλες κινδύνου");
+  ok(L[1].includes("Ημερομηνία (UTC),Καλλιέργεια,Ασθένεια / Εχθρός,Μέγιστος κίνδυνος,Ώρες σε υψηλό ή σοβαρό,Σχόλιο συστήματος"), "Β2 στήλες κινδύνου");
   const body = L.slice(2).join("\n");
-  ok(body.includes('20-11-2026,Ντομάτα,Περονόσπορος Σολανωδών,Σοβαρός κίνδυνος,3,"κείμενο Σ, με κόμμα"'), "Β3 μέγιστο/ώρες/κείμενο κορυφής 20/11");
-  ok(body.includes("21-11-2026,Κορωνέικη,Κυκλοκόνιο Ελιάς,Μέτριος κίνδυνος,0,μέτριο"), "Β4 καλλιέργεια από το id, Μέτριος");
+  ok(body.includes('2026-11-20,Ντομάτα,Περονόσπορος Σολανωδών,Σοβαρός κίνδυνος,3,"κείμενο Σ, με κόμμα"'), "Β3 μέγιστο/ώρες/κείμενο κορυφής 20/11");
+  ok(body.includes("2026-11-20,Κορωνέικη,Κυκλοκόνιο Ελιάς,Μέτριος κίνδυνος,0,νυχτερινό"), "Β4β ημέρα UTC (23:00 UTC = 01:00 Ελλάδας)");
+  ok(body.includes("2026-11-21,Κορωνέικη,Κυκλοκόνιο Ελιάς,Μέτριος κίνδυνος,0,μέτριο"), "Β4 καλλιέργεια από το id, Μέτριος");
   ok(!body.includes("Τεφρά Σήψη,Χαλκός") && !/Τεφρά Σήψη,Χαμηλός/.test(body), "Β5 ο Χαμηλός δεν εξάγεται");
-  ok(body.includes("20-11-2026 13:00,Ψεκασμός,Περονόσπορος Σολανωδών,Ridomil,7,20-11-2026"), "Β6 ψεκασμός");
-  ok(body.includes("21-11-2026 09:00,Επιθεώρηση - χωρίς προσβολή,Τεφρά Σήψη"), "Β7 επιθεώρηση");
-  ok(body.includes("21-11-2026 10:00,Αναίρεση ψεκασμού της 20-11-2026 13:00,Περονόσπορος Σολανωδών"), "Β8 αναίρεση");
-  ok(body.includes("21-11-2026 10:30,Ημερολόγιο - Πρόβλημα: Κηλίδες περονόσπορου | Ενέργεια: Αφαίρεση φύλλων,,Χαλκός"), "Β9 ημερολόγιο");
+  ok(body.includes("2026-11-20T11:00:00Z,Ψεκασμός,Περονόσπορος Σολανωδών,Ridomil,7,2026-11-20"), "Β6 ψεκασμός");
+  ok(body.includes("2026-11-21T07:00:00Z,Επιθεώρηση - χωρίς προσβολή,Τεφρά Σήψη"), "Β7 επιθεώρηση");
+  ok(body.includes("2026-11-21T08:00:00Z,Αναίρεση ψεκασμού της 2026-11-20T11:00:00Z,Περονόσπορος Σολανωδών"), "Β8 αναίρεση");
+  ok(body.includes("2026-11-21T08:30:00Z,Ημερολόγιο - Πρόβλημα: Κηλίδες περονόσπορου | Ενέργεια: Αφαίρεση φύλλων,,Χαλκός"), "Β9 ημερολόγιο");
   ok(!body.includes("init"), "Β10 οι σπόροι 'init' δεν εμφανίζονται");
   const widths = L.map((l) => l.split(",").length);
   ok(L[2].split(",").length >= 2 + 6 + 6, "Β11 πλάτος γραμμής");
@@ -116,6 +135,21 @@ const parse = (csv) => csv.replace(/^﻿/, "").trim().split("\n");
 { // Ε · αποτυχία ανάγνωσης bundle → κίτρινο, όχι σιωπηλή επιτυχία
   const { mails, valid } = await run("full", "yes", true);
   ok(mails.length === 1 && valid.at(-1).metadata.type === "warning" && /καταγραφή ασθενειών/.test(valid.at(-1).value), "Ε1 ελλιπής εξαγωγή δηλώνεται");
+}
+{ // Ζ · T-EXPORT-UTC-01: περιγραφή, ονόματα αρχείων, θερινή ώρα
+  const { mails, mod } = await run("kbdi", undefined);
+  const m = mails[0];
+  ok(/Χρόνος αναφοράς/.test(m.message) && /\[air_temperature\]/.test(m.message) && m.message.includes("sag-changelog.html"), "Ζ1 η περιγραφή συνοδεύει το email");
+  ok(m.message.includes("⚠ Γνωστό ζήτημα: SC-0005"), "Ζ2 γνωστό ζήτημα KBDI στο email");
+  ok(/Τελευταίες αλλαγές συστήματος \(SC-\d{4}\)/.test(m.message), "Ζ3 τελευταίες αλλαγές συστήματος");
+  ok(m.attachment.filename.includes("_2026-11-19_2026-11-22_UTC_") && / UTC\)$/.test(m.subject), "Ζ4 όνομα αρχείου/θέμα σε UTC (" + m.attachment.filename + " | " + m.subject + ")");
+  const T = mod.exports._test;
+  ok(T.fmtLocal("2026-10-25T00:30:00Z") === "2026-10-25 03:30 +03:00" && T.fmtLocal("2026-10-25T01:30:00Z") === "2026-10-25 03:30 +02:00", "Ζ5 η διπλή ώρα της 25/10 ξεχωρίζει με τη ζώνη");
+  ok(T.fmtUtc("2026-10-25T01:30:00+02:00") === "2026-10-24T23:30:00Z", "Ζ6 UTC από οποιαδήποτε ζώνη");
+  FETCH_FAIL = true;
+  const r2 = await run("full", undefined);
+  FETCH_FAIL = false;
+  ok(r2.mails.length === 1 && /δεν ήταν διαθέσιμη/.test(r2.mails[0].message), "Ζ7 χωρίς δημόσια αρχεία: η εξαγωγή φεύγει και λέει πού είναι η περιγραφή");
 }
 { // ΣΤ · ο πίνακας κλειδιών ίδιος με του πυρήνα
   const src = fs.readFileSync(file, "utf8");
