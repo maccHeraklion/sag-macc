@@ -49,6 +49,7 @@ const grab = (name) => { const i = exportSrc.indexOf("const " + name + " = {"); 
 const exported = new Set();
 for (const vs of Object.values(grab("DEVICE_TYPE_VARIABLES"))) vs.forEach((v) => exported.add(v));
 for (const gs of Object.values(grab("EXTRA_BLOCK_GROUPS"))) gs.forEach((g) => g.vars.forEach((v) => exported.add(v)));
+for (const vs of Object.values(grab("DERIVED_EXPORT_VARIABLES"))) vs.forEach((v) => exported.add(v));   // T-EXPORT-RAIN-01: στήλες που υπολογίζει η εξαγωγή
 for (const v of exported) if (!dict.variables[v]) bad.push(`η μεταβλητή ${v} εξάγεται χωρίς περιγραφή`);
 for (const [v, d] of Object.entries(dict.variables)) {
   for (const k of ["label_el", "source", "meaning_el", "sampling_el"]) if (d[k] === undefined || d[k] === "") bad.push(`${v}: λείπει ${k}`);
