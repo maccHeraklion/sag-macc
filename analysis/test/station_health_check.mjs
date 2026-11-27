@@ -29,6 +29,7 @@ function fleet() {
     station("ΥΓΙΗΣ", { daily: [6, 5, 4] }),
     station("ΝΥΧΤΑ", { has: (h) => { const x = localHour(h); return x >= 8 && x < 18; }, last: Date.parse("2026-11-28T06:40:00Z") }),
     station("ΣΙΩΠΗ", { has: (h) => h < START, last: START - H }),
+    station("ΣΙΩΠΗ5", { has: (h) => h < END - 5 * H }),
     station("ΚΕΝΑ", { has: (h) => { const x = localHour(h); return !(x >= 11 && x < 15); } }),
     station("ΠΙΕΣΗ", { pressure: () => 510 }),
     station("ΒΗΜΑ", { pressure: (h) => (h >= END - 6 * H ? 953 : 976) }),
@@ -65,7 +66,6 @@ function fakeR(F, prev) {
           }
           return out;
         }
-        if (v === "air_temperature") return [{ time: new Date(s.last).toISOString(), value: 10 }];
         if (v === "rain_height_hourly") return s.hourlyRain ? Array.from({ length: 24 }, (_, i) => ({ value: 0, time: new Date(START + i * H + H / 2).toISOString() })) : [];
         if (v === "rain_height_daily") return s.daily.map((mm, k) => ({ value: mm, time: new Date(day(k).s + 43200000).toISOString(), metadata: { alg: "v34", coverage: 1, period_start_utc: new Date(day(k).s).toISOString(), period_end_utc: new Date(day(k).e).toISOString() } }));
         if (v === "kbdi1") return s.kbdi == null ? [] : [{ value: s.kbdi, time: "2026-11-27T21:59:50Z", metadata: { alg: "kbdi-v2" } }];
@@ -76,7 +76,7 @@ function fakeR(F, prev) {
     },
   };
 }
-const EXPECT = { "ΥΓΙΗΣ": [], "ΝΥΧΤΑ": ["H1"], "ΣΙΩΠΗ": ["H2"], "ΚΕΝΑ": ["H1b"], "ΠΙΕΣΗ": ["H3"], "ΒΗΜΑ": ["H3s"], "ΣΦΑΛΜΑ": ["H4"], "ΧΩΡΙΣ_ΩΡΙΑΙΑ": ["H6"], "ΒΡΟΧΟΜΕΤΡΟ": ["H10"], "ΜΑΚΡΙΑ": [], "KBDI": ["H7k"] };
+const EXPECT = { "ΥΓΙΗΣ": [], "ΝΥΧΤΑ": ["H1"], "ΣΙΩΠΗ": ["H2"], "ΣΙΩΠΗ5": ["H2", "H1"], "ΚΕΝΑ": ["H1b"], "ΠΙΕΣΗ": ["H3"], "ΒΗΜΑ": ["H3s"], "ΣΦΑΛΜΑ": ["H4"], "ΧΩΡΙΣ_ΩΡΙΑΙΑ": ["H6"], "ΒΡΟΧΟΜΕΤΡΟ": ["H10"], "ΜΑΚΡΙΑ": [], "KBDI": ["H7k"] };
 
 async function check(src) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
@@ -91,6 +91,8 @@ async function check(src) {
     ok(r && JSON.stringify(ids) === JSON.stringify(exp.slice().sort()), `${id}: αναμενόταν [${exp}] βρέθηκε [${ids}]`);
   }
   ok(got["ΥΓΙΗΣ"] && got["ΥΓΙΗΣ"].value === "ok", "Σ1 υγιής = ok");
+  const h2 = got["ΣΙΩΠΗ5"] && got["ΣΙΩΠΗ5"].metadata.checks.find((c) => c.id === "H2");
+  ok(h2 && /από περίπου 28\/11 04:00/.test(h2.text_el), "Σ2β H2 λέει από πότε (" + (h2 && h2.text_el) + ")");
   ok(got["ΝΥΧΤΑ"] && got["ΝΥΧΤΑ"].value === "warning" && got["ΣΦΑΛΜΑ"].value === "fault" && got["ΣΙΩΠΗ"].value === "fault", "Σ2 βαρύτητα warning/fault");
   const h1 = got["ΝΥΧΤΑ"] && got["ΝΥΧΤΑ"].metadata.checks.find((c) => c.id === "H1");
   ok(h1 && h1.since === "2026-11-20T07:30:00.000Z", "Σ3 το «από» του προηγούμενου κρατιέται (" + (h1 && h1.since) + ")");
@@ -100,7 +102,7 @@ async function check(src) {
   const h10 = got["ΒΡΟΧΟΜΕΤΡΟ"] && got["ΒΡΟΧΟΜΕΤΡΟ"].metadata.checks.find((c) => c.id === "H10");
   ok(h10 && h10.ev.mm === 15 && h10.ev.km < 2, "Σ6 H10 με γείτονα < 2 km και 15 mm (" + JSON.stringify(h10 && h10.ev) + ")");
   ok(R.sent.every((x) => x.variable === "station_health" && x.metadata.shadow === true), "Σ7 μόνο station_health, σκιώδες");
-  ok(R.sent.length === 11, "Σ8 μία εγγραφή ανά σταθμό (" + R.sent.length + ")");
+  ok(R.sent.length === 12, "Σ8 μία εγγραφή ανά σταθμό (" + R.sent.length + ")");
   ok(K.parseCoords([{ key: "coordinates", value: "39.10001234567890, 23.10009876543210" }]).lon > 23.1, "Σ9 μορφή «πλάτος, μήκος» του αγρού (επινοημένες τιμές)");
   ok(K.parseCoords([{ key: "coordinates", value: "0,0" }]) === null && K.parseCoords([]) === null, "Σ10 άκυρες συντεταγμένες = καμία");
   ok(K.fmt(Date.parse("2026-10-25T00:30:00Z")) === "25/10 03:30" && K.fmt(Date.parse("2026-10-25T01:30:00Z")) === "25/10 03:30" && K.athensHour(Date.parse("2026-11-28T22:10:00Z")) === 0, "Σ11 ώρα Ελλάδας χωρίς βιβλιοθήκη (θερινή/χειμερινή, μεσάνυχτα)");
@@ -112,7 +114,7 @@ if (base.length) { console.log("ΑΠΟΤΥΧΙΑ " + base.length + ":\n  " + bas
 console.log("station_health_check: όλα ΟΚ");
 const MUT = [
   ["H1 χωρίς νυχτερινό κριτήριο", "if (night / missing.length >= 0.7)", "if (false)"],
-  ["H2 όριο 30 ωρών", "nowMs - lastMs > 3 * H", "nowMs - lastMs > 30 * H"],
+  ["H2 όριο 30 ωρών", "lastH < end - 3 * H", "lastH < end - 30 * H"],
   ["H3 χωρίς όρια", "const bad = pv.filter(([, v]) => v < P_MIN || v > P_MAX);", "const bad = [];"],
   ["H3 χωρίς βήμα", "Math.abs(pv[i][1] - pv[i - 1][1]) > P_STEP", "false"],
   ["H4 χωρίς πίεση", '    if (pres.size === 0) lost.push("πίεση");', ""],

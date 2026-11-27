@@ -27,6 +27,7 @@ const P_MIN = 850, P_MAX = 1085, P_STEP = 6;
 const RAIN_MAX_MMH = 450, KBDI_MAX = 203.2;
 const NEIGH_KM = 15, NEIGH_MM = 10, SILENT_MM = 0.5;
 const RAIN_VARS = ["rain_height", "rain_height_acc", "rain_gauge"];
+const CONCURRENCY = 5;
 
 // ---------- βοηθητικά ----------
 const r1 = (x) => Math.round(x * 10) / 10;
@@ -78,17 +79,17 @@ async function inspect(read, dev, nowMs) {
   const wdir = await hourly(read, "wind_direction_sensor", start, end);
   const rainHours = new Set();
   for (const v of RAIN_VARS) for (const h of (await hourly(read, v, start, end)).keys()) rainHours.add(h);
-  const lastT = (await read({ variables: ["air_temperature"], qty: 1 }) || [])[0];
-  const lastMs = lastT ? Date.parse(lastT.time) : null;
-  const rh = await read({ variables: ["rain_height_hourly"], start_date: new Date(start).toISOString(), end_date: new Date(end + H).toISOString(), qty: 100 });
+  const lastH = temp.size ? Math.max(...temp.keys()) : null;          // τελευταία ώρα με θερμοκρασία (χωρίς επιπλέον κλήση)
+  const lastMs = lastH == null ? null : lastH + H;
+  const rh =await read({ variables: ["rain_height_hourly"], start_date: new Date(start).toISOString(), end_date: new Date(end + H).toISOString(), qty: 100 });
   const dailyRecs = await read({ variables: ["rain_height_daily"], start_date: new Date(end - 6 * 86400000).toISOString(), end_date: new Date(nowMs).toISOString(), qty: 30 });
   const kb = dev.weatherStation ? (await read({ variables: ["kbdi1"], qty: 5 }) || []).find((x) => x.metadata && x.metadata.alg === "kbdi-v2") : null;
 
   const C = [];
   const tH = temp.size;
-  // H2 σιωπηλός
-  if (lastMs == null || nowMs - lastMs > 3 * H) {
-    C.push({ id: "H2", sev: "fault", aud: "user", text_el: lastMs ? `Ο σταθμός δεν στέλνει μετρήσεις από ${fmt(lastMs)} (ώρα Ελλάδας). Ελέγξτε την τροφοδοσία (μπαταρίες AA, φωτοβολταϊκό).` : "Ο σταθμός δεν έχει στείλει ποτέ μετρήσεις.", ev: { last: lastT ? lastT.time : null } });
+  // H2 σιωπηλός: καμία θερμοκρασία στις 3 τελευταίες πλήρεις ώρες
+  if (lastH == null || lastH < end - 3 * H) {
+    C.push({ id: "H2", sev: "fault", aud: "user", text_el: lastMs ? `Ο σταθμός δεν στέλνει μετρήσεις από περίπου ${fmt(lastMs)} (ώρα Ελλάδας). Ελέγξτε την τροφοδοσία (μπαταρίες AA, φωτοβολταϊκό).` : "Ο σταθμός δεν έστειλε καμία μέτρηση το τελευταίο 24ωρο. Ελέγξτε την τροφοδοσία (μπαταρίες AA, φωτοβολταϊκό).", ev: { last_hour_end: lastMs ? new Date(lastMs).toISOString() : null } });
   }
   // H1 νυχτερινή σιωπή / διακοπές
   const missing = [];
@@ -146,13 +147,21 @@ async function run(R, nowMs, log) {
     let map = {}; try { map = JSON.parse(dt ? dt.value : "{}"); } catch (e) { map = {}; }
     for (const v of Object.values(map)) for (const id of [].concat(v)) if (typeof id === "string" && !coordOf.has(id)) coordOf.set(id, c);
   }
-  const res = [];
-  for (const d of list || []) {
-    const dev = { id: d.id, name: d.name, weatherStation: (d.tags || []).some((t) => t.key === "topalidouType" && t.value === "weatherStation"), coords: coordOf.get(d.id) || null };
-    const read = (q) => R.devices.getDeviceData(d.id, q);
-    try { res.push({ dev, ...(await inspect(read, dev, nowMs)) }); }
-    catch (e) { log(`stationHealth: ${d.name} σφάλμα ανάγνωσης ${e && e.message ? e.message : e}`); }
+  log(`stationHealth: ${(list || []).length} σταθμοί, ${coordOf.size} με θέση από αγρό — ξεκινά`);
+  // 5 σταθμοί παράλληλα (όριο εκτέλεσης 2΄ στο node-rt2025)· η σειρά των αποτελεσμάτων = σειρά της λίστας
+  const slots = new Array((list || []).length);
+  let next = 0;
+  async function worker() {
+    while (next < slots.length) {
+      const i = next++; const d = list[i];
+      const dev = { id: d.id, name: d.name, weatherStation: (d.tags || []).some((t) => t.key === "topalidouType" && t.value === "weatherStation"), coords: coordOf.get(d.id) || null };
+      const read = (q) => R.devices.getDeviceData(d.id, q);
+      try { slots[i] = { dev, ...(await inspect(read, dev, nowMs)) }; }
+      catch (e) { log(`stationHealth: ${d.name} σφάλμα ανάγνωσης ${e && e.message ? e.message : e}`); }
+    }
   }
+  await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+  const res = slots.filter(Boolean);
   // H10 — σύγκριση με γείτονες
   for (const a of res) {
     if (a.rain3 == null || a.rain3 >= SILENT_MM || !a.dev.coords) continue;
@@ -167,7 +176,9 @@ async function run(R, nowMs, log) {
   // εγγραφή
   const nowIso = new Date(nowMs).toISOString();
   let nBad = 0;
-  for (const a of res) {
+  let wi = 0;
+  async function writer() { while (wi < res.length) { const a = res[wi++]; await writeOne(a); } }
+  async function writeOne(a) {
     try {
       const prev = (await R.devices.getDeviceData(a.dev.id, { variables: ["station_health"], qty: 1 }) || [])[0];
       const checks = mergeSince(a.checks, prev, nowIso);
@@ -177,6 +188,7 @@ async function run(R, nowMs, log) {
         metadata: { version: HEALTH_VERSION, shadow: SHADOW, checks, window_end: new Date(Math.floor(nowMs / H) * H).toISOString(), temp_hours: a.tHours, rain3_mm: a.rain3 == null ? null : r1(a.rain3), has_coords: !!a.dev.coords } }]);
     } catch (e) { log(`stationHealth: ${a.dev.name} σφάλμα εγγραφής ${e && e.message ? e.message : e}`); }
   }
+  await Promise.all(Array.from({ length: CONCURRENCY }, writer));
   log(`stationHealth ${HEALTH_VERSION}${SHADOW ? " (σκιώδες)" : ""}: ${res.length}/${(list || []).length} σταθμοί · με ευρήματα ${nBad} · με συντεταγμένες ${res.filter((a) => a.dev.coords).length}`);
   return res;
 }
@@ -187,7 +199,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function restClient(token) {
   async function call(method, path, body) {
     for (let k = 0; k < 4; k++) {
-      await sleep(250);
+      await sleep(60);
       const r = await fetch(API + path, { method, headers: { Authorization: token, "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
       if (r.status === 429) { await sleep(1000 * (Number(r.headers.get("retry-after")) || 20)); continue; }
       const j = await r.json().catch(() => ({}));
