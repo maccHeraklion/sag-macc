@@ -20,6 +20,9 @@
  *  8. ΧΡΟΝΟΣ ΕΓΓΡΑΦΗΣ. Οι κλειστές περίοδοι γράφονται στο ΜΕΣΟ της περιόδου (η ημέρα έχει τη σωστή ημερομηνία).
  *  9. Τα τρέχοντα σύνολα ξαναγράφονται όταν αλλάξουν ή κάθε 150΄ (παλμός ζωής): το widget δείχνει «—»
  *     όταν η τελευταία εγγραφή είναι παλαιότερη από 4 ω (σιωπηλός σταθμός).
+ * 10. ΑΥΞΗΤΙΚΗ (v34.4, 27/11/2026 · T-RAIN-INC-01): πλήρης κύκλος μία φορά την ημέρα· οι άλλοι διαβάζουν μόνο τις
+ *     τελευταίες 3 ώρες και το «σήμερα». Τα κλειστά μέρη εβδομάδας/μήνα/έτους φυλάσσονται στο metadata.inc των
+ *     τρεχόντων συνόλων. Ίδιοι τύποι, ίδιο αποτέλεσμα· καθυστερημένα δεδομένα > 3 ω μπαίνουν στον επόμενο πλήρη κύκλο.
  *
  * Το παλαιότερο ιστορικό (εγγραφές v33) ΔΕΝ σβήνεται ούτε ξαναγράφεται.
  * ΔΕΝ αγγίζει άρδευση, ηλεκτροβάνες, ελεγκτές. Γράφει μόνο τις μεταβλητές βροχής των σταθμών S2120.
@@ -33,7 +36,7 @@ const { Analysis, Resources, Account, Device } = require("@tago-io/sdk");
 const moment = require("moment-timezone");
 
 const RAIN_ALG = "v34";
-const RAIN_VERSION = "v34.3 · 2026-11-09";
+const RAIN_VERSION = "v34.4 · 2026-11-27";
 const DEFAULT_TZ = "Europe/Athens";
 const DEFAULT_CUTOVER = "2026-10-04T21:00:00.000Z";   // Δευτέρα 5/10/2026 00:00 ώρα Ελλάδας
 const HOURS_BACK = 24;          // κλειστές ώρες προς έλεγχο
@@ -43,6 +46,13 @@ const FULL_COV = 0.995;         // ≥ αυτό = πλήρης κάλυψη
 const MIN_COV = 0.02;           // < αυτό = άγνωστο (δεν γράφεται)
 const HEARTBEAT_MIN = 150;      // τρέχοντα σύνολα: ξαναγράφονται τουλάχιστον τόσο συχνά
 const PTD_EPS = 0.0005;
+// T-RAIN-INC-01 (v34.4 · 27/11/2026, απόφαση Μιχάλη «κάνε τη βροχή αυξητική»): ΠΛΗΡΗΣ ανάγνωση μία φορά την ημέρα
+// (πρώτη εκτέλεση μετά τα μεσάνυχτα Ελλάδας ή όταν λείπει η κατάσταση)· στις άλλες εκτελέσεις ΜΟΝΟ η νέα ώρα + σήμερα,
+// και τα σύνολα εβδομάδας/μήνα/έτους = κλειστό μέρος (αποθηκευμένο) + σήμερα — ΙΔΙΟΙ τύποι, ίδιο αποτέλεσμα.
+// Η μόνη διαφορά: μερικές περίοδοι παλαιότερες από 3 ώρες ξαναελέγχονται για καθυστερημένα δεδομένα μία φορά την
+// ημέρα αντί για κάθε ώρα. RAIN_INC=off στο περιβάλλον = πάντα πλήρης (ακριβώς η v34.3).
+const INC_V = 1;
+const INC_HOURS = 3;            // ελαφρύς κύκλος: πόσες κλειστές ώρες ξαναελέγχονται
 
 // ═══ ΑΝΤΙΓΡΑΦΟ ΠΥΡΗΝΑ (runPerTich.js · T-RAIN-ACC-01) — ΜΗΝ ΤΟ ΑΛΛΑΞΕΙΣ ΕΔΩ ═══
 const _SAG_RAIN_MAX_MMH = 450;          // όριο οργάνου S2120 (datasheet 0–450 mm/h): έλεγχος ευλογοφάνειας
@@ -189,6 +199,7 @@ async function rainRateWindow(device, startISO, endISO) {
 
 // ---------- Περίοδοι (ώρα Ελλάδας, με γέφυρα προς τα όρια UTC της v33) ----------
 const UNITS = { hour: 'hour', day: 'day', week: 'isoWeek', month: 'month', year: 'year' };
+const PTD_VARS = ['current_rain_height_daily', 'current_rain_height_weekly', 'current_rain_height_monthly', 'current_rain_height_yearly'];
 function periodContaining(unit, ms, TZ, cutMs) {
   const u = UNITS[unit];
   const z = (unit === 'hour') ? moment.utc(ms) : moment.tz(ms, TZ);
@@ -298,12 +309,31 @@ async function computeForDevice(device, name, cfg) {
     return res;
   };
   const out = [];
+  const hNow = periodContaining('hour', now, TZ, cutMs);
+  const dNow = periodContaining('day', now, TZ, cutMs), wNow = periodContaining('week', now, TZ, cutMs);
+  const mNow = periodContaining('month', now, TZ, cutMs), yNow = periodContaining('year', now, TZ, cutMs);
+
+  // T-RAIN-INC-01: η κατάσταση ταξιδεύει στο metadata.inc των τρεχόντων συνόλων (διαβάζονταν ήδη για τον έλεγχο «ίδιο»).
+  const lastPtd = {};
+  for (const v of PTD_VARS) lastPtd[v] = (await device.getData({ variables: [v], qty: 1, ordination: 'descending' }) || [])[0] || null;
+  let st = null;
+  if (!cfg.forceFull) for (const v of PTD_VARS) {
+    const m = lastPtd[v] && lastPtd[v].metadata, x = m && m.inc;
+    if (x && x.v === INC_V && x.day === dNow.key && m.alg === RAIN_ALG && x.w && x.m && x.y) { st = x; break; }
+  }
+  let full = !st, hRecs = null;
+  if (!full) {
+    hRecs = indexRecords(await fetchRecords(device, 'rain_height_hourly', hNow.s - (INC_HOURS + 2) * 3600000, now + 3600000), ctx);
+    const newest = Math.max(-Infinity, ...hRecs.keys());
+    // κενό ωριαίων εγγραφών ενώ ο σταθμός έχει πρόσφατα δεδομένα (π.χ. η ανάλυση δεν έτρεξε) → πλήρης
+    if (lastMs != null && lastMs > hNow.s - INC_HOURS * 3600000 && !(newest >= hNow.s - (INC_HOURS + 1) * 3600000)) full = true;
+  }
+  const HB = full ? HOURS_BACK : INC_HOURS;
+  if (full) hRecs = indexRecords(await fetchRecords(device, 'rain_height_hourly', hNow.s - (HOURS_BACK + 2) * 3600000, now + 3600000), ctx);
 
   // 1) ΩΡΕΣ (κλειστές) — από τα ωμά δεδομένα, κενό πριν την ώρα ≤ 30΄ (όπως ο πυρήνας)
-  const hNow = periodContaining('hour', now, TZ, cutMs);
-  const hRecs = indexRecords(await fetchRecords(device, 'rain_height_hourly', hNow.s - (HOURS_BACK + 2) * 3600000, now + 3600000), ctx);
   let hWritten = 0;
-  for (let i = 1, p = previousPeriod(hNow, TZ, cutMs); i <= HOURS_BACK; i++, p = previousPeriod(p, TZ, cutMs)) {
+  for (let i = 1, p = previousPeriod(hNow, TZ, cutMs); i <= HB; i++, p = previousPeriod(p, TZ, cutMs)) {
     const have = hRecs.get(p.s);
     if (have && have.cov >= FULL_COV) continue;
     const res = await windowRain(p.s, p.e, 30);
@@ -313,9 +343,10 @@ async function computeForDevice(device, name, cfg) {
   }
   if (hWritten) log.push('ώρες +' + hWritten);
 
+  // 2–4) ΜΟΝΟ στον πλήρη κύκλο· ο ελαφρύς παίρνει τα κλειστά μέρη από την κατάσταση (st).
+  let inc = st, mRecs = null;
+  if (full) {
   // 2) ΗΜΕΡΕΣ (κλειστές, μετά την αλλαγή) — από τα ωμά δεδομένα, κενό πριν ≤ 180΄ (όπως ο πυρήνας)
-  const dNow = periodContaining('day', now, TZ, cutMs), wNow = periodContaining('week', now, TZ, cutMs);
-  const mNow = periodContaining('month', now, TZ, cutMs), yNow = periodContaining('year', now, TZ, cutMs);
   let dFrom = Math.min(mNow.s, wNow.s, dNow.s - (DAYS_BACK + 1) * 86400000);
   let pw = wNow, pm = mNow;
   for (let i = 0; i < WEEKS_BACK; i++) pw = previousPeriod(pw, TZ, cutMs);
@@ -358,7 +389,7 @@ async function computeForDevice(device, name, cfg) {
   }
 
   // 4) ΕΤΟΣ (κλειστό) — από τις μηνιαίες εγγραφές
-  const mRecs = indexRecords(await fetchRecords(device, 'rain_height_monthly', yNow.s - 400 * 86400000, now + 2 * 86400000), ctx);
+  mRecs = indexRecords(await fetchRecords(device, 'rain_height_monthly', yNow.s - 400 * 86400000, now + 2 * 86400000), ctx);
   for (const [k, v] of (cfg._mRecs || new Map())) if (!mRecs.has(k) || v.alg === RAIN_ALG) mRecs.set(k, v);
   const fromMonths = (p, extraMs, extra) => {
     const sm = sumIndex(mRecs, p.s, extraMs != null ? extraMs : p.e);
@@ -378,12 +409,19 @@ async function computeForDevice(device, name, cfg) {
     if (!res.known || (yr && res.coverage <= yr.cov + 0.01)) continue;
     out.push(payload('rain_height_yearly', p, res, { since: res.since }));
   }
+  // T-RAIN-INC-01: κλειστά μέρη των τρεχόντων συνόλων (ό,τι ΔΕΝ είναι «σήμερα»), με τους ίδιους τύπους
+  const yFirst = [...mRecs.values()].filter(r => r.s >= yNow.s && r.cov > 0).sort((a, b) => a.s - b.s)[0];
+  const cut3 = (x) => ({ mm: x.mm, cov: x.covered, est: !!x.est });
+  inc = { v: INC_V, day: dNow.key, w: cut3(sumIndex(dRecs, wNow.s, dNow.s)), m: cut3(sumIndex(dRecs, mNow.s, dNow.s)),
+    y: Object.assign(cut3(sumIndex(mRecs, yNow.s, mNow.s)), { since: yFirst ? moment.tz(yFirst.s + 86400000, TZ).format('YYYY-MM') : null }) };
+  }   // τέλος πλήρους κύκλου
 
   // 5) ΤΡΕΧΟΝΤΑ ΣΥΝΟΛΑ (ημέρα, εβδομάδα, μήνας, έτος ως τώρα)
   const day = await windowRain(dNow.s, now, 180);
   const dayPart = day.known ? { known: true, mm: day.mm, covered: day.coverage * (now - dNow.s), status: day.status } : { known: false, covered: 0 };
-  const ptdOf = (p) => {   // κλειστές ημέρες της περιόδου + σήμερα
-    const sm = sumIndex(dRecs, p.s, dNow.s);
+  const closedOf = (p) => (p === wNow ? inc.w : inc.m);
+  const ptdOf = (p) => {   // κλειστές ημέρες της περιόδου (από την κατάσταση) + σήμερα
+    const c = closedOf(p), sm = { mm: c.mm, covered: c.cov, est: c.est };
     let mm = sm.mm, covered = sm.covered, est = sm.est;
     if (dayPart.known) { mm = r3(mm + dayPart.mm); covered += dayPart.covered; if (dayPart.status === 'estimate') est = true; }
     const coverage = clamp01(covered / Math.max(now - p.s, 1));
@@ -395,24 +433,31 @@ async function computeForDevice(device, name, cfg) {
   ptd.push(['current_rain_height_weekly', wNow, ptdOf(wNow)]);
   const mPtd = ptdOf(mNow);
   ptd.push(['current_rain_height_monthly', mNow, mPtd]);
-  const yPtd = fromMonths(yNow, mNow.s, mPtd.known ? { known: true, mm: mPtd.mm, covered: mPtd.coverage * (now - mNow.s), status: mPtd.status, endMs: now } : { known: false, covered: 0, endMs: now });
+  const yPtd = (() => {   // = fromMonths(yNow, mNow.s, extra) της v34.3, με το κλειστό μέρος από την κατάσταση
+    const extra = mPtd.known ? { known: true, mm: mPtd.mm, covered: mPtd.coverage * (now - mNow.s), status: mPtd.status, endMs: now } : { known: false, covered: 0, endMs: now };
+    let mm = inc.y.mm, covered = inc.y.cov, est = inc.y.est;
+    if (extra && extra.known) { mm = r3(mm + extra.mm); covered += extra.covered; if (extra.status === 'estimate') est = true; }
+    const coverage = clamp01(covered / (extra.endMs - yNow.s));
+    return { known: coverage >= MIN_COV, mm, coverage, partial: coverage < FULL_COV, status: est ? 'estimate' : 'measured', method: 'sum_of_months', since: inc.y.since };
+  })();
   ptd.push(['current_rain_height_yearly', yNow, yPtd]);
   for (const [variable, p, res] of ptd) {
     if (!res.known) continue;
     const group = 'current_' + p.unit + '_' + p.key;
-    const last = (await device.getData({ variables: [variable], qty: 1, ordination: 'descending' }) || [])[0];
+    const last = lastPtd[variable];
     const lm = last && last.metadata || {};
     const same = last && String(last.group || '') === group && Math.abs(Number(last.value) - r3(res.mm)) <= PTD_EPS
       && lm.alg === RAIN_ALG && lm.status === res.status && !!lm.partial === !!res.partial
-      && (now - Date.parse(last.time)) / 60000 < HEARTBEAT_MIN;
+      && (now - Date.parse(last.time)) / 60000 < HEARTBEAT_MIN
+      && JSON.stringify(lm.inc || null) === JSON.stringify(inc);   // T-RAIN-INC-01: νέα κατάσταση = νέα εγγραφή
     if (same) continue;
-    const pl = payload(variable, { unit: p.unit, s: p.s, e: now, key: p.key }, res, { mode: 'period_to_date', since: res.since || undefined });
+    const pl = payload(variable, { unit: p.unit, s: p.s, e: now, key: p.key }, res, { mode: 'period_to_date', since: res.since || undefined, inc });
     pl.time = iso(now); pl.group = group;
     out.push(pl);
   }
 
   if (out.length) await device.sendData(out);
-  console.log(`[${name}] ${counter ? 'μετρητής' : 'ρυθμός (εκτίμηση)'} · εγγραφές ${out.length}` + (log.length ? ' · ' + log.join(' · ') : '')
+  console.log(`[${name}] ${counter ? 'μετρητής' : 'ρυθμός (εκτίμηση)'} · ${full ? 'πλήρης' : 'ελαφρύς'} · εγγραφές ${out.length}` + (log.length ? ' · ' + log.join(' · ') : '')
     + ` · σήμερα ${day.known ? r3(day.mm) + ' mm' + (day.partial ? ' ≥' : '') : '—'} · φέτος ${yPtd.known ? yPtd.mm + ' mm' + (yPtd.partial ? ' ≥ από ' + yPtd.since : '') : '—'}`);
 }
 
@@ -448,7 +493,7 @@ async function startAnalysis(context) {
       try {
         const device = _rmWrap(new Device({ token: await getOrCreateDeviceTokenById(account, d.id) }));
         const _b = _rmTake();
-        await computeForDevice(device, d.name || d.id, { TZ, cutMs });
+        await computeForDevice(device, d.name || d.id, { TZ, cutMs, forceFull: String(getOptionalEnv(context, "RAIN_INC", "on")).toLowerCase() === "off" });
         const _a = _rmTake();
         _rmPer.push([d.name || d.id, _a.recs - _b.recs, _a.calls - _b.calls, _a.agg - _b.agg]);
       } catch (err) {

@@ -54,9 +54,9 @@ function counterSeries(t0, t1, rainFn, resetAt) {
   for (let t = t0; t <= t1; t += 300000) { if (resetAt && t === resetAt) acc = 0; acc = Math.round((acc + rainFn(t)) * 1000) / 1000; out.push({ t, v: acc }); }
   return out;
 }
-async function runAt(A, nowIso, dev) {
+async function runAt(A, nowIso, dev, forceFull) {
   const real = Date.now; Date.now = () => Z(nowIso); const n0 = dev.sent.length;
-  try { await A.computeForDevice(dev, "δοκιμή", { TZ, cutMs: cut }); } finally { Date.now = real; }
+  try { await A.computeForDevice(dev, "δοκιμή", { TZ, cutMs: cut, forceFull: !!forceFull }); } finally { Date.now = real; }
   return dev.sent.slice(n0);   // μόνο ό,τι έγραψε ΑΥΤΗ η εκτέλεση
 }
 const by = (sent, v) => sent.filter(x => x.variable === v);
@@ -66,7 +66,7 @@ async function run(src) {
   const blk = coreBlock(CORE);
   ok(blk && src.includes(blk), "U0 το τμήμα μετρητή είναι ΑΥΤΟΥΣΙΟ αντίγραφο του πυρήνα");
   let A; try { A = load(src); } catch (e) { return ["φόρτωση: " + e.message]; }
-  ok(A.RAIN_VERSION === "v34.3 · 2026-11-09", "U1 έκδοση v34.3");
+  ok(A.RAIN_VERSION === "v34.4 · 2026-11-27", "U1 έκδοση v34.4");
 
   // U2 · περίοδοι: γέφυρα και ώρα Ελλάδας
   const P = (u, t) => A.periodContaining(u, Z(t), TZ, cut);
@@ -115,7 +115,7 @@ async function run(src) {
     const pP = by(sP, "current_rain_height_daily")[0];
     ok(pP && pP.metadata.partial && Math.abs(pP.value - 3.048) < 1e-6, "U4ε σήμερα μερικό 3,048 με " + (open ? "ανοιχτό" : "κλειστό") + " end_date (" + JSON.stringify(pP && [pP.value, pP.metadata.partial]) + ")");
   }
-  const s4b = await runAt(A, "2026-10-06T10:02:00Z", dvS);
+  const s4b = await runAt(A, "2026-10-06T10:02:00Z", dvS, true);   // πλήρης κύκλος: ο κανόνας «μόνο αν βελτιώθηκε»
   ok(by(s4b, "rain_height_daily").length === 0, "U4δ μερική περίοδος δεν ξαναγράφεται χωρίς βελτίωση κάλυψης");
 
   // U4ζ · μερική κάλυψη (σιωπή στο τέλος): άγκυρα = σημείο 2΄ ΠΡΙΝ την αρχή, βροχή στο πρώτο βήμα μέσα στην ημέρα
@@ -193,7 +193,7 @@ const MUT = [
   ["m14 άγκυρα μόνο μέσα στο παράθυρο", "  for (let i = 0; i < P.length; i++) if (P[i].t <= S) i0 = i;", "  for (let i = 0; i < P.length; i++) if (P[i].t < 0) i0 = i;"],
   ["m15 μηδενισμός στη μερική = 0", "    if (d < -0.001) d = P[i].v;                                                     // μηδενισμός", "    if (d < -0.001) d = 0;                                                     // μηδενισμός"],
   ["m9 ξαναγράφει μερικές περιόδους", "    if (!res.known || (have && res.coverage <= have.cov + 0.01)) continue;\n    out.push(payload('rain_height_daily', p, res));", "    if (!res.known) continue;\n    out.push(payload('rain_height_daily', p, res));"],
-  ["m10 φέτος χωρίς μερικό", "partial: coverage < FULL_COV, status: est ? 'estimate' : 'measured', method: 'sum_of_months'", "partial: false, status: est ? 'estimate' : 'measured', method: 'sum_of_months'"],
+  ["m10 φέτος χωρίς μερικό", "partial: coverage < FULL_COV, status: est ? 'estimate' : 'measured', method: 'sum_of_months', since: inc.y.since", "partial: false, status: est ? 'estimate' : 'measured', method: 'sum_of_months', since: inc.y.since"],
   ["m11 χρόνος στο τέλος", "const mid = Math.floor((p.s + p.e) / 2);", "const mid = p.e;"],
   ["m12 σιωπηλός σταθμός v33 = μέτρηση", "    : (ctx.lastMs < e - _SAG_RAIN_ACC_FRESH_MIN * 60000) ? clamp01((ctx.lastMs - s) / (e - s)) : 1;", "    : 1;"],
   ["m14 Β-20 ποτέ πηγή = μέτρηση", "  const silentCov = (ctx.lastMs == null) ? 0", "  const silentCov = (ctx.lastMs == null) ? 1"],
