@@ -24,6 +24,11 @@
  *     τελευταίες 3 ώρες και το «σήμερα». Τα κλειστά μέρη εβδομάδας/μήνα/έτους φυλάσσονται στο metadata.inc των
  *     τρεχόντων συνόλων. Ίδιοι τύποι, ίδιο αποτέλεσμα· καθυστερημένα δεδομένα > 3 ω μπαίνουν στον επόμενο πλήρη κύκλο.
  *
+ * 11. UTC ΑΠΟ 1/12 (v34.5, 28/11/2026 · T-RAIN-UTC-01, απόφαση Μιχάλη «χρόνος αναφοράς UTC», SC-0006/SC-0017):
+ *     ημέρα / εβδομάδα / μήνας / έτος σε UTC από Τρίτη 1/12/2026 00:00 UTC. Η περίοδος που περιέχει την αλλαγή
+ *     ξεκινά στην αρχή της αντίστοιχης περιόδου ώρας Ελλάδας: ημέρα 1/12 = 30/11 22:00Z–2/12 00:00Z (26 ω), εβδομάδα
+ *     W49 = 29/11 22:00Z–7/12 00:00Z, Δεκέμβριος = 30/11 22:00Z–1/1/2027 00:00Z. Οι εγγραφές 5/10–30/11 μένουν σε ώρα Ελλάδας.
+ *
  * Το παλαιότερο ιστορικό (εγγραφές v33) ΔΕΝ σβήνεται ούτε ξαναγράφεται.
  * ΔΕΝ αγγίζει άρδευση, ηλεκτροβάνες, ελεγκτές. Γράφει μόνο τις μεταβλητές βροχής των σταθμών S2120.
  *
@@ -36,9 +41,11 @@ const { Analysis, Resources, Account, Device } = require("@tago-io/sdk");
 const moment = require("moment-timezone");
 
 const RAIN_ALG = "v34";
-const RAIN_VERSION = "v34.4 · 2026-11-27";
+const RAIN_VERSION = "v34.5 · 2026-11-28";
 const DEFAULT_TZ = "Europe/Athens";
 const DEFAULT_CUTOVER = "2026-10-04T21:00:00.000Z";   // Δευτέρα 5/10/2026 00:00 ώρα Ελλάδας
+const DEFAULT_UTC_FROM = "2026-12-01T00:00:00.000Z";  // T-RAIN-UTC-01: Τρίτη 1/12/2026 00:00 UTC — από εδώ περίοδοι σε UTC
+let UTC_FROM_MS = Date.parse(DEFAULT_UTC_FROM);       // RAIN_UTC_FROM στο περιβάλλον = άλλη ημερομηνία· «off» = ποτέ
 const HOURS_BACK = 24;          // κλειστές ώρες προς έλεγχο
 const DAYS_BACK = 15;           // κλειστές ημέρες προς έλεγχο (καθυστερημένα δεδομένα)
 const WEEKS_BACK = 2, MONTHS_BACK = 2, YEARS_BACK = 1;
@@ -201,6 +208,25 @@ async function rainRateWindow(device, startISO, endISO) {
 const UNITS = { hour: 'hour', day: 'day', week: 'isoWeek', month: 'month', year: 'year' };
 const PTD_VARS = ['current_rain_height_daily', 'current_rain_height_weekly', 'current_rain_height_monthly', 'current_rain_height_yearly'];
 function periodContaining(unit, ms, TZ, cutMs) {
+  // T-RAIN-UTC-01: από την αρχή της παλιάς περιόδου που περιέχει το UTC_FROM και μετά → περίοδοι UTC· η πρώτη
+  // περίοδος UTC (αυτή που περιέχει το UTC_FROM) ξεκινά στην αρχή εκείνης της παλιάς περιόδου.
+  if (unit !== 'hour' && Number.isFinite(UTC_FROM_MS) && cutMs < UTC_FROM_MS) {
+    const old = periodContainingTz(unit, UTC_FROM_MS, TZ, cutMs);
+    if (ms >= old.s) {
+      const u2 = UNITS[unit];
+      const st = moment.utc(Math.max(ms, UTC_FROM_MS)).startOf(u2);
+      const e = st.clone().add(1, unit === 'week' ? 'week' : u2).valueOf();
+      const first = st.valueOf() <= UTC_FROM_MS && e > UTC_FROM_MS;   // η περίοδος που περιέχει την αλλαγή
+      const s = first ? old.s : st.valueOf();
+      const key = unit === 'week' ? st.format('GGGG-[W]WW') : unit === 'day' ? st.format('YYYY-MM-DD')
+        : unit === 'month' ? st.format('YYYY-MM') : st.format('YYYY');
+      // st0 = πραγματική αρχή (για previousPeriod): στην πρώτη, εκείνη της παλιάς περιόδου (π.χ. έτος 2026 → πριν = 2025)
+      return { unit, s, e, st0: first ? old.st0 : s, key, utc: true };
+    }
+  }
+  return periodContainingTz(unit, ms, TZ, cutMs);
+}
+function periodContainingTz(unit, ms, TZ, cutMs) {
   const u = UNITS[unit];
   const z = (unit === 'hour') ? moment.utc(ms) : moment.tz(ms, TZ);
   const st = z.clone().startOf(u);
@@ -486,8 +512,9 @@ async function startAnalysis(context) {
     const TZ = getOptionalEnv(context, "RAIN_TZ", DEFAULT_TZ);
     const cutMs = Date.parse(getOptionalEnv(context, "RAIN_CUTOVER", DEFAULT_CUTOVER));
     if (!moment.tz.zone(TZ) || !Number.isFinite(cutMs)) return console.log("Άκυρο RAIN_TZ / RAIN_CUTOVER");
+    { const uf = String(getOptionalEnv(context, "RAIN_UTC_FROM", DEFAULT_UTC_FROM)); UTC_FROM_MS = uf === "off" ? NaN : Date.parse(uf); }   // T-RAIN-UTC-01
     const list = await listDevicesToProcess();
-    console.log(`Βροχή ${RAIN_VERSION} · ${TZ} από ${iso(cutMs)} · σταθμοί ${list.length}`);
+    console.log(`Βροχή ${RAIN_VERSION} · ${TZ} από ${iso(cutMs)} · UTC από ${Number.isFinite(UTC_FROM_MS) ? iso(UTC_FROM_MS) : "—"} · σταθμοί ${list.length}`);
     const _rmPer = []; _RM.calls = 0; _RM.recs = 0; _RM.agg = 0; _RM.byKey.clear();
     for (const d of list) {
       try {
@@ -511,5 +538,5 @@ async function startAnalysis(context) {
   }
 }
 
-if (typeof module !== "undefined" && module.exports) module.exports = { computeForDevice, periodContaining, previousPeriod, readRecord, indexRecords, sumIndex, rainCounterWindow, rainRateWindow, RAIN_VERSION };
+if (typeof module !== "undefined" && module.exports) module.exports = { computeForDevice, periodContaining, periodContainingTz, setUtcFrom: (ms) => { UTC_FROM_MS = ms; }, previousPeriod, readRecord, indexRecords, sumIndex, rainCounterWindow, rainRateWindow, RAIN_VERSION };
 Analysis.use(startAnalysis);

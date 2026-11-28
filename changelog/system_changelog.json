@@ -334,6 +334,36 @@
       ],
       "user_action_el": "Σε εξαγωγές μετά τις 28/11 οι στήλες heat_index/wind_chill/thw_indexc έχουν τιμή περίπου μία φορά την ώρα· για ανά λεπτό τιμές υπολογίζονται από θερμοκρασία, υγρασία και άνεμο.",
       "source": "T-PARSER-SLIM-02 · payload_parsers/device_slim_filter_v2_2026-11-28.js (sha 5c25496d6d33a4c3), probe deploy/probes/apply_parser_slim02_2026-11-28.js, ελεγκτής analysis/test/parser_slim_v2_check.mjs (12/12 μεταλλάξεις) · έκθεση ΧΩΡΟΣ_ΕΓΓΡΑΦΩΝ_TAGOIO_2026-10-31.md §6–§7 · απόφαση Μιχάλη 28/11."
+    },
+    {
+      "id": "SC-0017",
+      "date_utc": "2026-11-28T13:30:00Z",
+      "effective_utc": "2026-11-29T22:00:00Z",
+      "kind": "time_reference",
+      "audience": [
+        "researchers",
+        "producers",
+        "operators"
+      ],
+      "reconstructed": false,
+      "title_el": "Αθροίσματα βροχής και δείκτης KBDI: ξανά σε ημέρα UTC από 1/12/2026",
+      "summary_el": "Από Τρίτη 1/12/2026 00:00 UTC η ημέρα, η εβδομάδα, ο μήνας και το έτος της βροχής μετρούν σε UTC, και ο δείκτης ξηρασίας KBDI ακολουθεί τις ίδιες ημέρες (βήμα 2 της απόφασης SC-0006). Οι τιμές 5/10–30/11/2026 ΜΕΝΟΥΝ σε ημέρα Ελλάδας (SC-0003): οι σταθμοί είναι συσκευές που δεν επιτρέπουν διαγραφή μεμονωμένων εγγραφών, και ένας επανυπολογισμός θα άφηνε διπλές τιμές. Για να μετρά κάθε ώρα ακριβώς μία φορά, η περίοδος που περιέχει την αλλαγή ξεκινά στο όριο ώρας Ελλάδας: η ημέρα 1/12 καλύπτει 30/11 22:00 έως 2/12 00:00 UTC (26 ώρες), η εβδομάδα W49 29/11 22:00 έως 7/12 00:00 UTC, ο Δεκέμβριος από 30/11 22:00 UTC, το έτος 2026 τελειώνει 1/1/2027 00:00 UTC. Οι ωριαίες τιμές ήταν πάντα σε UTC και δεν αλλάζουν. Ο υπολογισμός KBDI τρέχει πλέον στις 00:40 UTC (μετά το κλείσιμο της ημέρας UTC). Το δημόσιο ταμπλό καιρού Cretaweather υπολογίζει μόνο του το «σήμερα» σε ώρα Ελλάδας και δεν αλλάζει σε αυτό το βήμα. Τα ημερήσια κείμενα του πυρήνα (βήμα 3) θα ακολουθήσουν χωριστά.",
+      "affects": [
+        "rain_height_daily",
+        "rain_height_weekly",
+        "rain_height_monthly",
+        "rain_height_yearly",
+        "current_rain_height_daily",
+        "current_rain_height_weekly",
+        "current_rain_height_monthly",
+        "current_rain_height_yearly",
+        "kbdi1",
+        "vpd1",
+        "soil_moisture_condition1",
+        "stress_level1"
+      ],
+      "user_action_el": "Σε συγκρίσεις ημερήσιας βροχής ανάμεσα σε Οκτώβριο–Νοέμβριο 2026 και Δεκέμβριο 2026 και μετά, λάβετε υπόψη ότι η ημέρα μετατοπίζεται κατά 2 ώρες και ότι η 1/12 έχει 26 ώρες. Οι εγγραφές δείχνουν ακριβώς το διάστημα στα metadata.period_start_utc / period_end_utc.",
+      "source": "T-RAIN-UTC-01 · analysis/calculate_old_rainHeightSums.js v34.5 (ανάλυση 690e3217…) και analysis/kbdi.js kbdi-v2.1 (681bb24d…), patcher deploy/patchers/patch_rain_utc01.py, ελεγκτής analysis/test/rain_utc_check.mjs (9/9 μεταλλάξεις) · rain_unified_check 16/16, rain_incremental_check 8/8, kbdi_check 11/11 · απόφαση Μιχάλη 28/11 «Ναι στη βροχή σε UTC, ο πυρήνας αργότερα» και «από 1/12 μόνο»."
     }
   ]
 }

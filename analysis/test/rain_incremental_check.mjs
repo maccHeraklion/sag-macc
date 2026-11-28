@@ -136,7 +136,7 @@ async function scenario(Anew, Aold, kind, opts) {
 async function run(srcNew) {
   const f = []; const ok = (c, m) => { if (!c) f.push(m); };
   let An, Ao; try { An = load(srcNew); Ao = load(OLD); } catch (e) { return ["φόρτωση: " + e.message]; }
-  ok(An.RAIN_VERSION === "v34.4 · 2026-11-27" && Ao.RAIN_VERSION === "v34.3 · 2026-11-09", "I0 εκδόσεις v34.4 / v34.3");
+  ok(An.RAIN_VERSION === "v34.5 · 2026-11-28" && Ao.RAIN_VERSION === "v34.3 · 2026-11-09", "I0 εκδόσεις v34.5 / v34.3");
   for (const kind of ["acc", "rate"]) {
     const r = await scenario(An, Ao, kind);
     f.push(...r.f);

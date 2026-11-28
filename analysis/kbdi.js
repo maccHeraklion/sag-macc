@@ -33,9 +33,10 @@ const { Analysis, Resources, Utils, Account, Device } = require("@tago-io/sdk");
 const moment = require("moment-timezone");
 
 const KBDI_ALG = "kbdi-v2";
-const KBDI_VERSION = "kbdi-v2 · 2026-11-28";
+const KBDI_VERSION = "kbdi-v2.1 · 2026-11-28";
 const TZ = "Europe/Athens";
 const CUTOVER_MS = Date.parse("2026-10-04T21:00:00.000Z");   // ίδιο με τον υπολογισμό βροχής (v34)
+const UTC_FROM_MS = Date.parse("2026-12-01T00:00:00.000Z");   // T-RAIN-UTC-01: ημέρες UTC από 1/12, ίδιο με τη βροχή v34.5
 const START_DAY_MS = Date.parse("2026-05-01T00:00:00.000Z");
 const Q_MAX = 203.2;
 const RAIN_INTERCEPT_MM = 5.1;
@@ -46,6 +47,16 @@ const FULL_COV = 0.995;
 
 // ---------- ημέρα, ίδια με τον υπολογισμό βροχής ----------
 function dayContaining(ms) {
+  // T-RAIN-UTC-01: ίδια όρια με τη βροχή v34.5 — από 30/11 22:00Z ημέρες UTC· η 1/12 = 30/11 22:00Z → 2/12 00:00Z.
+  const old = dayContainingTz(UTC_FROM_MS);
+  if (ms >= old.s) {
+    const st = moment.utc(Math.max(ms, UTC_FROM_MS)).startOf("day");
+    const e = st.clone().add(1, "day").valueOf();
+    return { s: st.valueOf() === UTC_FROM_MS ? old.s : st.valueOf(), e, key: st.format("YYYY-MM-DD") };
+  }
+  return dayContainingTz(ms);
+}
+function dayContainingTz(ms) {
   const st = moment.tz(ms, TZ).startOf("day");
   const en = st.clone().add(1, "day");
   let s = st.valueOf(), e = en.valueOf();

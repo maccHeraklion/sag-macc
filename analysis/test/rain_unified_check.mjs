@@ -66,7 +66,7 @@ async function run(src) {
   const blk = coreBlock(CORE);
   ok(blk && src.includes(blk), "U0 το τμήμα μετρητή είναι ΑΥΤΟΥΣΙΟ αντίγραφο του πυρήνα");
   let A; try { A = load(src); } catch (e) { return ["φόρτωση: " + e.message]; }
-  ok(A.RAIN_VERSION === "v34.4 · 2026-11-27", "U1 έκδοση v34.4");
+  ok(A.RAIN_VERSION === "v34.5 · 2026-11-28", "U1 έκδοση v34.5 (T-RAIN-UTC-01)");
 
   // U2 · περίοδοι: γέφυρα και ώρα Ελλάδας
   const P = (u, t) => A.periodContaining(u, Z(t), TZ, cut);
