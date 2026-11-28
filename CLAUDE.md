@@ -31,6 +31,8 @@
 >   δεδομένα, υπολογισμούς, εξαγωγές ή ό,τι βλέπουν οι χρήστες, διάβασε `docs/ΠΡΩΤΟΚΟΛΛΟ_ΑΛΛΑΓΩΝ_ΚΑΙ_ΔΗΜΙΟΥΡΓΙΑΣ.md`: εγγραφή στο
 >   `changelog/system_changelog.json` (ΜΟΝΟ προσθήκες, ποτέ αλλαγή/διαγραφή παλιάς), περιγραφή στο `changelog/data_dictionary.json`,
 >   `node analysis/test/changelog_check.mjs` πράσινο. Ποτέ τοπική ώρα χωρίς ζώνη σε ό,τι φεύγει από το σύστημα.
+> - **📨 28/11 (Michalis) → Κώστα:** 6 αναλύσεις downlink βανών/ελεγκτών είναι ενεργές αλλά αχρησιμοποίητες — ο Κώστας αποφασίζει
+>   κατάργηση· δες `analysis/ΕΛΕΓΧΟΣ/ΠΡΟΣ_ΚΩΣΤΑ_ΑΝΑΛΥΣΕΙΣ_DOWNLINK_2026-11-28.md` (και push του subscriptionControl, τηλέφωνα KEKFlood).
 > - **Never remove or reorder dashboard tabs** (even empty hidden ones): sagMain opens tabs by fixed index
 >   (`ys={patho:1,irrig:4,config:3}`).
 
