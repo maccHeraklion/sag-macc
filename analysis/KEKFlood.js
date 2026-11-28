@@ -53,7 +53,7 @@ async function myAnalysis(context, scope) {
     }
     const account = new Account({ token: account_token });
 
-
+    
     var infobib_api_key;
     const my_infobib_api_key = context.environment.find(env_var => env_var.key === 'INFOBIB_API_KEY');
     if (my_infobib_api_key) {
@@ -62,7 +62,7 @@ async function myAnalysis(context, scope) {
     } else {
       return console.log('infobip API key not found!');
     }
-
+  
 
   const analysisID = context.analysis_id;
   const info  = await account.analysis.info(analysisID);
@@ -94,7 +94,7 @@ async function myAnalysis(context, scope) {
 
       console.log("🚨 Rising edge detected → SEND SMS");
       console.log(text);
-
+    
       try {
         const apiResponse = await sendInfobipSMS(
           infobib_api_key,

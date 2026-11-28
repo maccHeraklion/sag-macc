@@ -136,10 +136,10 @@ async function startAnalysis(context) {
     const adminTitle = "Λήξη Συνδρομής Εγκατάστασης";
     const adminMessage = `Εγκατάσταση ${fieldName}: Η συνδρομή λήγει σε ${daysLabel}.`;
 
-    // await Promise.all([
-    //   ...fieldUsers.map((u) => sendPush(account, u.id, userTitle, userMessage)),
-    //   ...adminUsers.map((u) => sendPush(account, u.id, adminTitle, adminMessage)),
-    // ]);
+    await Promise.all([
+      ...fieldUsers.map((u) => sendPush(account, u.id, userTitle, userMessage)),
+      ...adminUsers.map((u) => sendPush(account, u.id, adminTitle, adminMessage)),
+    ]);
 
     context.log(
       `Notifications sent for "${fieldName}": ${fieldUsers.length} field user(s), ${adminUsers.length} admin(s)`
