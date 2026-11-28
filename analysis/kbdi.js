@@ -95,6 +95,31 @@ function stressLevel(vpd) {
 }
 const r3 = (x) => Math.round(x * 1000) / 1000;
 
+// ---------- T-READMETER-02 (28/11/2026): μετρητής αναγνώσεων — ΜΟΝΟ καταγραφή, δεν αλλάζει κανένα αποτέλεσμα ----------
+// calls = κλήσεις ανάγνωσης δεδομένων · recs = εγγραφές που επέστρεψε η πλατφόρμα · agg/aggRows = ερωτήματα συνάθροισης και γραμμές τους.
+const _RM = { calls: 0, recs: 0, agg: 0, aggRows: 0, byKey: new Map() };
+function _rmCount(key, isAgg, r) {
+  try {
+    const n = Array.isArray(r) ? r.length : (r == null ? 0 : 1);
+    _RM.calls++; if (isAgg) { _RM.agg++; _RM.aggRows += n; } else _RM.recs += n;
+    const e = _RM.byKey.get(key) || [0, 0]; e[0]++; e[1] += n; _RM.byKey.set(key, e);
+  } catch (_e) { /* μόνο καταγραφή */ }
+}
+function _rmLine() {
+  const top = [..._RM.byKey.entries()].sort((a, b) => b[1][1] - a[1][1]).slice(0, 8).map(([k, v]) => k + " " + v[1] + "/" + v[0]);
+  return "[T-READMETER-02] αναγνώσεις: " + _RM.recs + " εγγραφές σε " + (_RM.calls - _RM.agg) + " κλήσεις · ερωτήματα συνάθροισης " + _RM.agg +
+    " (" + _RM.aggRows + " γραμμές) · ανά είδος (εγγραφές/κλήσεις): " + top.join(" · ");
+}
+function _rmWrap(device) {
+  const raw = device.getData.bind(device);
+  device.getData = async function (q) {
+    const r = await raw(q);
+    _rmCount((q && q.variables ? q.variables.join("+") : "?") + (q && q.query ? "·" + q.query + (q.function ? ":" + q.function : "") : ""), !!(q && q.query), r);
+    return r;
+  };
+  return device;
+}
+
 // ---------- δεδομένα ----------
 async function hourlyAgg(device, variable, fn, fromMs, toMs) {
   const out = new Map();
@@ -193,11 +218,12 @@ async function startAnalysis(context) {
   let total = 0;
   for (const info of devices) {
     try {
-      const device = new Device({ token: await Utils.getTokenByName(account, info.id) });
+      const device = _rmWrap(new Device({ token: await Utils.getTokenByName(account, info.id) }));   // T-READMETER-02
       total += await processStation(device, info, nowMs, (m) => context.log(m));
     } catch (e) { context.log(`KBDI: ${info.name || info.id} σφάλμα ${e && e.message ? e.message : e}`); }
   }
   context.log(`KBDI ${KBDI_VERSION}: ${devices.length} σταθμοί · ${total} εγγραφές`);
+  try { context.log(_rmLine()); } catch (_e) { /* μόνο καταγραφή */ }
 }
 
 if (typeof module !== "undefined" && module.exports) module.exports = { dayContaining, nextDay, droughtFactor, kbdiStep, es, soilCondition, stressLevel, bestDailyRain, processStation, KBDI_VERSION };
