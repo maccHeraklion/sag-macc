@@ -364,6 +364,43 @@
       ],
       "user_action_el": "Σε συγκρίσεις ημερήσιας βροχής ανάμεσα σε Οκτώβριο–Νοέμβριο 2026 και Δεκέμβριο 2026 και μετά, λάβετε υπόψη ότι η ημέρα μετατοπίζεται κατά 2 ώρες και ότι η 1/12 έχει 26 ώρες. Οι εγγραφές δείχνουν ακριβώς το διάστημα στα metadata.period_start_utc / period_end_utc.",
       "source": "T-RAIN-UTC-01 · analysis/calculate_old_rainHeightSums.js v34.5 (ανάλυση 690e3217…) και analysis/kbdi.js kbdi-v2.1 (681bb24d…), patcher deploy/patchers/patch_rain_utc01.py, ελεγκτής analysis/test/rain_utc_check.mjs (9/9 μεταλλάξεις) · rain_unified_check 16/16, rain_incremental_check 8/8, kbdi_check 11/11 · απόφαση Μιχάλη 28/11 «Ναι στη βροχή σε UTC, ο πυρήνας αργότερα» και «από 1/12 μόνο»."
+    },
+    {
+      "id": "SC-0018",
+      "date_utc": "2026-11-28T18:04:00Z",
+      "effective_utc": "2026-11-28T18:04:00Z",
+      "kind": "data",
+      "audience": [
+        "operators"
+      ],
+      "reconstructed": false,
+      "title_el": "Πρόγνωση 5 ημερών των δημόσιων ταμπλό πόλεων: από AccuWeather σε Open-Meteo",
+      "summary_el": "Η πρόγνωση 5 ημερών και οι «τρέχουσες συνθήκες» των συσκευών πόλεων (ετικέτα device_type=accuweather) έρχονται πλέον από το Open-Meteo, την ίδια πηγή με την πρόγνωση των αγρών, αντί για την AccuWeather. Τα ονόματα μεταβλητών, οι μονάδες και η μορφή των τιμών μένουν ίδια (θερμοκρασίες °C, άνεμος km/h, πίεση mb στη στάθμη θάλασσας, ορατότητα km, πιθανότητα υετού %, αριθμός εικονιδίου καιρού 1–44, κείμενο καιρού στα αγγλικά), ώστε τα ταμπλό να συνεχίσουν χωρίς αλλαγή. Ημέρα 1 = σήμερα (ημερομηνία Ελλάδας)· «ημέρα» = 07:00–19:00 και «νύχτα» = 19:00–07:00 ώρα Ελλάδας, με το ακριβές παράθυρο σε UTC στα metadata (window_start_utc / window_end_utc). Διαφορές από την AccuWeather: οι «τρέχουσες συνθήκες» είναι τιμή μοντέλου, όχι παρατήρηση σταθμού· ο άνεμος της ημέρας είναι η μέγιστη ωριαία μέση ταχύτητα (όχι ριπή)· ο καιρός της ημέρας/νύχτας είναι ο σημαντικότερος του παραθύρου, και μια ώρα με υετό μετρά μόνο αν η πιθανότητά της είναι τουλάχιστον 30 %. Οι παλιές εγγραφές AccuWeather μένουν όπως είναι.",
+      "affects": [
+        "temperature",
+        "wind_speed",
+        "wind_direction",
+        "pressure",
+        "visibility",
+        "humidity",
+        "feel_temperature",
+        "precipitation",
+        "cloud",
+        "date1..5",
+        "min_temp1..5",
+        "max_temp1..5",
+        "day_icon1..5",
+        "day1..5",
+        "night1..5",
+        "precipitation_day1..5",
+        "precipitation_night1..5",
+        "wind_speed1..5",
+        "wind_direction1..5",
+        "humidity_min1..5",
+        "humidity_max1..5"
+      ],
+      "user_action_el": "Καμία. Οι τιμές σε σύγκριση με παλιότερες ημέρες μπορεί να διαφέρουν λίγο επειδή άλλαξε το μοντέλο πρόγνωσης· η πηγή κάθε εγγραφής φαίνεται στα metadata.source.",
+      "source": "T-OM-CITY-01 · analysis/accuweatherForecast.js om-city-v2 (ανάλυση 67ff75b5…, ενέργεια 680f31fb αμετάβλητη) · απόφαση Μιχάλη 28/11 «αντικατέστησε τα δεδομένα με Openmeteo»."
     }
   ]
 }
