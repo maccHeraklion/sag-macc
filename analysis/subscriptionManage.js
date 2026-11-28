@@ -472,11 +472,31 @@ function buildItems(clients, fields, dashboards, users, typeById) {
 
 /* ═══ ΚΛΗΣΕΙΣ ΣΤΟ TAGOIO ═══ */
 
+// ---------- T-READMETER-03 (28/11/2026): μετρητής αναγνώσεων — ΜΟΝΟ καταγραφή, δεν αλλάζει κανένα αποτέλεσμα ----------
+// calls = κλήσεις ανάγνωσης δεδομένων · recs = εγγραφές που επέστρεψε η πλατφόρμα · agg/aggRows = ερωτήματα συνάθροισης και γραμμές τους.
+const _RM = { calls: 0, recs: 0, agg: 0, aggRows: 0, byKey: new Map() };
+function _rmCount(key, isAgg, r) {
+  try {
+    const n = Array.isArray(r) ? r.length : (r == null ? 0 : 1);
+    _RM.calls++; if (isAgg) { _RM.agg++; _RM.aggRows += n; } else _RM.recs += n;
+    const e = _RM.byKey.get(key) || [0, 0]; e[0]++; e[1] += n; _RM.byKey.set(key, e);
+  } catch (_e) { /* μόνο καταγραφή */ }
+}
+function _rmLine() {
+  const top = [..._RM.byKey.entries()].sort((a, b) => b[1][1] - a[1][1]).slice(0, 8).map(([k, v]) => k + " " + v[1] + "/" + v[0]);
+  return "[T-READMETER-03] αναγνώσεις: " + _RM.recs + " εγγραφές σε " + (_RM.calls - _RM.agg) + " κλήσεις · ερωτήματα συνάθροισης " + _RM.agg +
+    " (" + _RM.aggRows + " γραμμές) · ανά είδος (εγγραφές/κλήσεις): " + top.join(" · ");
+}
 async function api(path, opts = {}) {
   const headers = { Authorization: TOKEN, "Content-Type": "application/json" };
   const r = await fetch(API + path, { ...opts, headers });
   const j = await r.json().catch(() => ({}));
   if (!j.status) throw new Error(path.slice(0, 60) + " -> " + JSON.stringify(j.message || j).slice(0, 160));
+  // T-READMETER-03: μόνο αναγνώσεις δεδομένων συσκευών (GET …/data), μόνο καταγραφή
+  if ((!opts.method || opts.method === "GET") && /\/device\/[^/]+\/data(\?|$)/.test(path)) {
+    const vs = [...path.matchAll(/variables\[\]=([^&]+)/g)].map((m) => m[1]).join("+") || "?";
+    _rmCount(vs + (/[?&]query=/.test(path) ? "·query" : ""), /[?&]query=/.test(path), j.result);
+  }
   return j.result;
 }
 
@@ -727,7 +747,7 @@ if (require.main === module || process.env.T_ANALYSIS_TOKEN) {
   main().catch((e) => {
     console.log("ΣΦΑΛΜΑ|" + ((e && e.message) || e));
     console.log("══ ΤΕΛΟΣ ΜΕ ΣΦΑΛΜΑ ══");
-  });
+  }).finally(() => { try { console.log(_rmLine()); } catch (_e) { /* μόνο καταγραφή */ } });
 }
 if (typeof module !== "undefined") {
   module.exports = { planRenew, addMonths, renewBase, endTagValue, athensOffset, parseAmount, todayAthens, fieldCustomerUsers, parseEnd, controllersOf, planAction, renewTags, chunkBySize, buildItems, customerAccess, tagOf,
