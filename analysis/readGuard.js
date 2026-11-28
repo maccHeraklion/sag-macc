@@ -77,7 +77,12 @@ async function main() {
   const r = evaluate(now, prevHist);
   const meta = { checks: r.checks, used: now.used, limit: now.limit, last_hour: r.last_hour, per_day: r.per_day, per_day_input: r.per_day_input,
     proj_output: r.proj_output, proj_input: r.proj_input, hist: r.hist, thresholds: TH, ver: "T-READGUARD-01" };
-  await api("POST", `/device/${OVERSEER}/data`, [{ variable: "read_guard", value: r.status, metadata: meta }]);
+  const pct = (u, l) => (l ? Math.round(100 * u / l) + " %" : "—");
+  const head = "αναγνώσεις " + pct(now.used.output, now.limit.output) + " · είσοδος " + pct(now.used.input, now.limit.input) + " · αποθήκευση " + pct(now.used.data_records, now.limit.data_records);
+  const text = r.status === "ok" ? "✅ Όρια TagoIO κανονικά · " + head
+    : (r.status === "fault" ? "⛔ " : "⚠️ ") + r.checks.map((c) => c.text_el).join(" · ") + " (" + head + ")";
+  meta.status = r.status;
+  await api("POST", `/device/${OVERSEER}/data`, [{ variable: "read_guard", value: text, metadata: meta }]);
   console.log("[readGuard] " + r.status + " · ώρα " + (r.last_hour == null ? "—" : Math.round(r.last_hour)) + " · 24ω " + (r.per_day == null ? "—" : Math.round(r.per_day)) +
     " · πρόβλεψη αναγνώσεων " + (r.proj_output == null ? "—" : Math.round(r.proj_output)) + "/" + now.limit.output + " · εισόδου " + (r.proj_input == null ? "—" : Math.round(r.proj_input)) + "/" + now.limit.input +
     " · αποθήκευση " + now.used.data_records + "/" + now.limit.data_records + " · " + r.checks.map((c) => c.id + ":" + c.sev).join(" "));
